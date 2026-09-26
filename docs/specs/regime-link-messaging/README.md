@@ -25,7 +25,8 @@
 
 - exchange `regime-link`(direct, durable), 큐 `regime-link.jobs`(quorum, `x-delivery-limit=1`,
   DLX `regime-link.dlx` → `regime-link.jobs.dlq`), `regime-link.events`.
-- routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.
+- routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`, DLX → DLQ `regime-link.job.dead`
+  (작업 routing key 를 그대로 쓰지 않는다. 백테스트의 `backtest.job.dead`와 같은 방식).
 - 속성: `content_type=application/json`, `delivery_mode=2`, header `schemaVersion: 1`,
   작업 `message_id = "RLJ-" + linkId + "-" + attempt`, `correlation_id = linkId`.
 - **토폴로지는 백엔드가 선언한다.** 워커는 선언하지 않고, 큐가 없으면 만들지 않고 종료한다.

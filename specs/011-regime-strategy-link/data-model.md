@@ -79,7 +79,7 @@ regime_link_filter ──< regime_link_search ──< regime_link_use >── re
 | `end_month` | DATE NOT NULL | 사례 식별자 뒷부분. 010 `regime_search_case.end_month`와 같은 뜻 |
 | `scenario` | VARCHAR(16) NOT NULL | `CONTINUOUS`(전체 기간 연속 운용의 구간) \| `FRESH_CASH`(그날 현금 시작) |
 | `post_window` | JSONB NOT NULL | `{d0, d21, d63, lastAvailable, completedTradingDays, complete21, complete63}` — d0 = 관측 종료 후 첫 거래일. research R4 달력으로 산정. `lastAvailable`은 이 사례 구간 안에서 자료가 있는 마지막 거래일이며, 필터 `definition.dataAsOf`(자료 전체의 마감일)와 다른 값이다 |
-| `availability` | JSONB NOT NULL | `{state: NORMAL\|DATA_INSUFFICIENT\|POST_INCOMPLETE, reason?: UNLISTED\|WARMUP_SHORT\|SECTOR_UNMAPPED\|RECENT\|DELISTED, partial?: true, delistedOn?}` — 판정 시점의 저장 값. 재판정하지 않는다. `OUT_OF_PERIOD`는 원래 요청의 기간과 사례의 관계라 링크가 아니라 검색의 `shown_cases`와 가용성 응답에만 있다(확인 뒤에는 전체 기간 실행의 링크가 만들어진다) |
+| `availability` | JSONB NOT NULL | `{state: NORMAL\|DATA_INSUFFICIENT\|POST_INCOMPLETE, reason?: UNLISTED\|WARMUP_SHORT\|SECTOR_UNMAPPED\|RECENT\|DELISTED, partial?: true, delistedOn?, completedTradingDays}` — 판정 시점의 저장 값. 재판정하지 않는다. `completedTradingDays`는 그 실행이 사후 구간에서 실제로 확보한 거래일 수다 — 작업 조립(`lastAvailable`)과 링크 조회가 판정을 다시 하지 않고 이 값을 읽는다. 키가 없는 행(이 필드를 담기 전의 행)은 0으로 읽는다(T111). `OUT_OF_PERIOD`는 원래 요청의 기간과 사례의 관계라 링크가 아니라 검색의 `shown_cases`와 가용성 응답에만 있다(확인 뒤에는 전체 기간 실행의 링크가 만들어진다) |
 | `status` | VARCHAR(16) NOT NULL | `PENDING_RUN` \| `QUEUED` \| `RUNNING` \| `COMPLETED` \| `FAILED`. §7 |
 | `failure` | JSONB | `{code, message}`. code ∈ `INPUT_TOO_LARGE` `INPUT_INCOMPLETE` `MARKET_DATA_MISSING` `INVALID_REQUEST` `ENGINE_ERROR` `SYSTEM_FAILURE` `RUN_FAILED`(입력 실행이 실패). `DATA_INSUFFICIENT`는 실패 코드가 아니다(research R13) |
 | `job_message_id` | VARCHAR(64) | 마지막으로 발행한 작업 메시지 id (`RLJ-` + link_id + `-` + attempt) |

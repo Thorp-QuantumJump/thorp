@@ -1,12 +1,16 @@
 package com.ssafy.thorp.regimelink.presentation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;
 import com.ssafy.thorp.macro.support.MacroRegistrySeed;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.MarketCatalogSeed;
@@ -21,6 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -56,6 +61,9 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbc;
+
+    /** 한 요청이 자료 버전을 몇 번 읽는지 센다(T110). 판정 동작은 그대로다. */
+    @MockitoSpyBean private MarketMetadataPort marketMetadata;
 
     @BeforeEach
     void seed() {
@@ -143,6 +151,41 @@ class AvailabilityControllerIT extends IntegrationTestSupport {
         assertThat(data.get("cases").get(0).get("shownInFiltered").asBoolean()).isTrue();
         assertThat(data.get("cases").get(0).get("postWindow").get("completedTradingDays").asInt())
                 .isEqualTo(63);
+    }
+
+    @Test
+    @DisplayName("한 요청이 자료 버전을 읽는 수는 달력 질의 수와 무관하다 (T110)")
+    void 자료_버전을_요청마다_한_번만_읽는다() throws Exception {
+        clearInvocations(marketMetadata);
+        mockMvc.perform(availabilityRequest()).andExpect(status().isOk());
+        // 필터 키가 한 번, 달력은 요청 안의 트랜잭션마다 한 번이다. 달력 질의가 각자 읽던 때는 이 조건에서 96번이었다
+        // (2026-09-26 측정). 사례·실행이 늘어도 이 수는 늘지 않는다.
+        verify(marketMetadata, atMost(4)).currentDataVersion();
+    }
+
+    @Test
+    @DisplayName("가용성 조회 30회 순차 응답 시간을 잰다 (T110, plan R9 p95 300ms 대조용 — 통과 조건이 아니다)")
+    void 가용성_조회_응답_시간() throws Exception {
+        mockMvc.perform(availabilityRequest()).andExpect(status().isOk()); // 준비 호출
+        List<Long> millis = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            long started = System.nanoTime();
+            mockMvc.perform(availabilityRequest()).andExpect(status().isOk());
+            millis.add((System.nanoTime() - started) / 1_000_000);
+        }
+        List<Long> sorted = millis.stream().sorted().toList();
+        long p95 = sorted.get((int) Math.ceil(0.95 * sorted.size()) - 1);
+        System.out.printf(
+                "regime-link availability p95=%dms max=%dms (n=30)%n", p95, sorted.get(29));
+        assertThat(p95).isPositive();
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder availabilityRequest() {
+        return get("/regime-links/availability")
+                .param("base", BASE_TOKEN)
+                .param("compare", COMPARE_TOKEN)
+                .param("snapshotKey", SNAPSHOT_KEY)
+                .param("entryPath", "STRATEGY_RESULT");
     }
 
     @Test
