@@ -55,7 +55,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
           <g key={tick} className={styles.chartGrid}>
             <line x1={plot.left} x2={plot.right} y1={chart.y(tick)} y2={chart.y(tick)} />
             <text x={plot.left - 10} y={chart.y(tick)} dy=".35em" textAnchor="end">
-              {new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 2 }).format(tick)}
+              {new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(tick)}
             </text>
           </g>
         ))}

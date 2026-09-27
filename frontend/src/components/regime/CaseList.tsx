@@ -25,6 +25,14 @@ interface CaseListProps {
 export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot, onBrowseFields }: CaseListProps) {
   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)
   const [showReferences, setShowReferences] = useState(false)
+  const [expandedCases, setExpandedCases] = useState<Set<string>>(() => new Set())
+  const toggleCase = (endMonth: string) =>
+    setExpandedCases((current) => {
+      const next = new Set(current)
+      if (next.has(endMonth)) next.delete(endMonth)
+      else next.add(endMonth)
+      return next
+    })
   const references = result.referenceCases ?? []
   const renderCase = (item: RegimeCaseSummary) => (
     <li key={item.endMonth} className={styles.case}>
@@ -34,35 +42,57 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p
       <p className={styles.months}>
         관측 구간 <span>{item.observationMonths.join(' · ')}</span>
       </p>
-      <div className={styles.reasons}>
-        <section>
-          <h4>비슷한 점</h4>
-          <ul>{item.similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
-        </section>
-        <section>
-          <h4>다른 점</h4>
-          <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
-        </section>
-      </div>
-      {item.context && item.context.length > 0 && (
-        <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>
-          <h4>당시 맥락</h4>
-          <p>{copy.contextNote}</p>
-          <ul>
-            {item.context.map((link) => (
-              <li key={`${link.kind}-${link.date}-${link.title}`}>
-                <time dateTime={link.date}>{link.date}</time>{' '}
-                {link.url ? (
-                  <a href={link.url} target="_blank" rel="noopener noreferrer">{link.title}</a>
-                ) : (
-                  <span>{link.title}</span>
-                )}
-                <span className={styles.contextSource}> · {link.source}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {(() => {
+        // 문장이 많은 사례(종합 비교)는 처음에 한 문장씩만 보인다(S15P21E205-450). 문장은 서버가 만든 그대로이고
+        // 화면은 몇 개를 먼저 보일지만 정한다.
+        const expanded = expandedCases.has(item.endMonth)
+        const hidden = Math.max(0, item.similar.length - 1) + Math.max(0, item.different.length - 1)
+        const similar = expanded ? item.similar : item.similar.slice(0, 1)
+        const different = expanded ? item.different : item.different.slice(0, 1)
+        return (
+          <>
+            <div className={styles.reasons}>
+              <section>
+                <h4>비슷한 점</h4>
+                <ul>{similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
+              </section>
+              <section>
+                <h4>다른 점</h4>
+                <ul>{different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>
+              </section>
+            </div>
+            {(hidden > 0 || (item.context?.length ?? 0) > 0) && (
+              <button
+                type="button"
+                className={styles.moreReasons}
+                aria-expanded={expanded}
+                onClick={() => toggleCase(item.endMonth)}
+              >
+                {expanded ? '설명 접기' : '설명 더 보기'}
+              </button>
+            )}
+            {expanded && item.context && item.context.length > 0 && (
+              <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>
+                <h4>당시 맥락</h4>
+                <p>{copy.contextNote}</p>
+                <ul>
+                  {item.context.map((link) => (
+                    <li key={`${link.kind}-${link.date}-${link.title}`}>
+                      <time dateTime={link.date}>{link.date}</time>{' '}
+                      {link.url ? (
+                        <a href={link.url} target="_blank" rel="noopener noreferrer">{link.title}</a>
+                      ) : (
+                        <span>{link.title}</span>
+                      )}
+                      <span className={styles.contextSource}> · {link.source}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        )
+      })()}
       {item.detailAvailable && (
         <button
           type="button" className={styles.detailButton}

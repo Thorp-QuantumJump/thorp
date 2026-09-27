@@ -121,7 +121,8 @@ describe('SimilarPastMarket (002 FR-018)', () => {
     )
     renderWithRouter(<SimilarPastMarket caseId={null} />)
     expect(await screen.findByText(/설정된 종합 유사성 기준을 충족하는 사례가 없습니다/)).toBeTruthy()
-    expect(screen.getByRole('link', { name: /참고 사례 보기/ }).getAttribute('href')).toContain('searchId=S-1')
+    // 종합 비교가 선택된 상태로 '비슷했던 때 보기'를 연다(S15P21E205-450).
+    expect(screen.getByRole('link', { name: /참고 사례 보기/ }).getAttribute('href')).toBe('/regime-search?mode=composite')
     fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))
     await waitFor(() =>
       expect(vi.mocked(getRegimeSearch).mock.calls.at(-1)?.[0]).toEqual({ mode: 'field', field: 'production', limit: 3 }),

@@ -45,6 +45,8 @@ export function RegimeSearchPage() {
   // 남고, 주소를 건네면 같은 검색을 볼 수 있다.
   const entryField = params.get('field')
   const entryMonth = params.get('month')
+  // 전략 진단의 '지금과 비슷했던 과거 시장'에서 종합 비교를 보다가 넘어온 경우(S15P21E205-450).
+  const entryComposite = params.get('mode') === 'composite'
   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query, savedSearchId)
   const location = useLocation()
   // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037).
@@ -94,6 +96,12 @@ export function RegimeSearchPage() {
   // **한 번만 연다.** 사용자가 화면에서 분야를 바꾼 뒤에도 주소는 그대로라, 다시 열면 사용자가
   // 고른 것을 주소가 덮는다.
   const entryOpened = useRef(false)
+  useEffect(() => {
+    if (entryOpened.current || savedSearchId || !baselines || !entryComposite || entryField) return
+    if (!baselines.composite) return
+    entryOpened.current = true
+    setQuery({ mode: 'composite' })
+  }, [baselines, entryComposite, entryField, savedSearchId])
   useEffect(() => {
     if (entryOpened.current || savedSearchId || !baselines || !entryField) return
     const field = baselines.byField.find((candidate) => candidate.id === entryField)
@@ -191,7 +199,13 @@ export function RegimeSearchPage() {
               </div>
             )}
             <button type="submit" disabled={!fieldId || isLoading}>과거 사례 찾기</button>
-            <button type="button" disabled={!baselines.composite || isLoading} onClick={openComposite} className={styles.compositeButton}>
+            <button
+              type="button"
+              disabled={!baselines.composite || isLoading}
+              onClick={openComposite}
+              className={styles.compositeButton}
+              aria-pressed={result?.mode === 'COMPOSITE'}
+            >
               Thorp 종합 비교
             </button>
           </form>
@@ -257,8 +271,10 @@ export function RegimeSearchPage() {
                       const caseId = buildCaseId(result.searchId, item.endMonth)
                       if (caseId === null) return undefined
                       return (
-                        <p>
-                          <Link to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 전략 비교</Link>
+                        <p className={styles.caseActionRow}>
+                          <Link className={styles.caseAction} to={buildRegimeLinkStartPath({ caseId })}>
+                            이 기간으로 전략 비교
+                          </Link>
                         </p>
                       )
                     }}

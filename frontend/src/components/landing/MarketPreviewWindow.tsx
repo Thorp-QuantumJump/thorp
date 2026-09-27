@@ -101,7 +101,7 @@ function toMarkets(indicators: Indicator[]): Market[] {
     return {
       ...market,
       base: indicator && indicator.value > 0 ? indicator.value : 1,
-      decimals: indicator?.decimals ?? 2,
+      decimals: indicator?.decimals ?? 1,
     }
   })
 }
@@ -114,7 +114,7 @@ function format(value: number, decimals: number) {
 }
 
 function formatChange(change: number) {
-  return `${change > 0 ? '+' : ''}${change.toFixed(2)}%`
+  return `${change > 0 ? '+' : ''}${change.toFixed(1)}%`
 }
 
 function directionOf(change: number) {

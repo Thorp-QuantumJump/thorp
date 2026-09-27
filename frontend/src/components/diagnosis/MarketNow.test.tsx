@@ -31,7 +31,7 @@ describe('MarketNow (002 FR-018, 009 FR-017)', () => {
     const readings = container.querySelectorAll('[data-direction]')
     expect(readings[0].getAttribute('data-direction')).toBe('up')
     expect(readings[0].textContent).toContain('2,650')
-    expect(readings[0].textContent).toContain('+1.92%')
+    expect(readings[0].textContent).toContain('+1.9%')
     expect(readings[1].getAttribute('data-direction')).toBe('down')
     // 출처와 기준일은 카드 아래 한 줄이다.
     expect(screen.getByText(/기준 · 출처 KRX/)).toBeTruthy()
