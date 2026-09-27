@@ -24,7 +24,7 @@ describe('후보 집합의 뜻 안내', () => {
     // 고른 대상을 매번 모두 보유한다는 뜻이 아니라는 사실이 문장에 있어야 한다.
     expect(text).toMatch(/모두 보유한다는 뜻이\s*아니며/)
     // 비중을 어디서 정하는지 알린다. 이 화면에는 그 입력이 없다.
-    expect(text).toContain('고정 비중')
+    expect(text).toContain('내가 정한 비율대로')
     expect(text).toContain('다음 단계')
   })
 
