@@ -398,12 +398,20 @@ export function AnalysisConditionsPanel({
         onClick={() => setOpen((current) => !current)}
       >
         <span>분석 조건</span>
-        <ChevronDown
-          className={styles.toggleIcon}
-          size={16}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
+        <span className={styles.toggleEnd}>
+          {/* 접혀 있을 때만 여는 자리임을 알린다(S15P21E205-451). 버튼 이름에는 넣지 않는다. */}
+          {open ? null : (
+            <span className={styles.toggleHint} aria-hidden="true">
+              직접 선택해보세요
+            </span>
+          )}
+          <ChevronDown
+            className={styles.toggleIcon}
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </span>
       </button>
       {summary}
 

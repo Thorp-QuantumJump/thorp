@@ -20,6 +20,24 @@
   min-width: 0;
 }
 
+/*
+  요약 탭의 작은 제목(S15P21E205-451). 조건 줄과 해석 문장이 같은 흰 글자로 이어져 어디서 무엇이 시작하는지
+  읽히지 않았다. 강조색 작은 제목으로 두 묶음을 가르고, 제목 바로 아래 내용은 붙여 둔다.
+*/
+.summaryLabel {
+  margin: 0 0 -12px;
+  color: var(--thorp-accent-soft, var(--thorp-copy));
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.summaryLabel:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--thorp-line);
+}
+
 /* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */
 .result {
   display: flex;
