@@ -501,6 +501,7 @@ describe('MyRecordsPage', () => {
 
     // 다음 조회는 응답하지 않게 두어 불러오는 중 상태를 붙잡는다.
     apiMocks.fetchMyRecords.mockReturnValue(new Promise(() => {}))
+    await user.click(screen.getByText('상세 필터'))
     await user.click(screen.getByRole('checkbox', { name: '경제환경' }))
 
     await waitFor(() =>
