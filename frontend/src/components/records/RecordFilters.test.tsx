@@ -19,8 +19,8 @@ describe('RecordFilters', () => {
     const details = detailsOf(summary)
     expect(details.open).toBe(false)
     expect(screen.queryByText(/개 적용/)).toBeNull()
-    // 접혀 있어도 기본 보기가 완료한 항목만임은 보인다.
-    expect(summary.textContent).toContain('완료한 항목만 보입니다')
+    // 기본 보기가 완료한 항목만임은 상태 제목 옆에 있다.
+    expect(screen.getByRole('group', { name: /^상태/ }).textContent).toContain('완료한 항목만 보입니다')
     // 종류·상태 체크박스는 접힌 details 안에 있다(jsdom 은 닫힌 details 의 내용을 숨기지 않으므로 소속으로 확인한다).
     expect(details.contains(screen.getByRole('checkbox', { name: '실패' }))).toBe(true)
     expect(details.contains(screen.getByRole('checkbox', { name: '분석' }))).toBe(true)

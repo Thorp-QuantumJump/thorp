@@ -40,8 +40,8 @@ export const STATUS_OPTIONS: MyRecordStatus[] = [
 
 /** 정렬 선택지. 수익률·하락 폭·비용은 없다(research R7, quickstart S13-4). */
 export const SORT_OPTIONS = [
-  { value: 'SAVED_AT_DESC', label: '저장일 최신순' },
-  { value: 'SAVED_AT_ASC', label: '저장일 오래된순' },
+  { value: 'SAVED_AT_DESC', label: '최신순' },
+  { value: 'SAVED_AT_ASC', label: '오래된순' },
   { value: 'NAME_ASC', label: '이름순' },
 ] as const
 
