@@ -82,6 +82,21 @@
   gap: 14px 28px;
 }
 
+/* 상태는 분석·탐색 묶음 한 줄, 경제환경 한 줄이다. 값이 다른 이유가 줄 이름으로 읽힌다. */
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  width: 100%;
+}
+
+.statusRow > .rowLabel {
+  min-width: 6.5em;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+}
+
 /* 묶음 제목 옆의 짧은 안내. 제목보다 한 단 작고 가늘다. */
 .legendHint {
   margin-left: 6px;
@@ -643,7 +658,7 @@
 :global(:root:not([data-design='classic'])) .chips { gap: 6px; }
 :global(:root:not([data-design='classic'])) .chips li { padding: 1px 8px; border-color: var(--thorp-line-strong); border-radius: var(--thorp-radius-control); color: var(--thorp-copy); }
 
-/* 상태 표: 알약 대신 6px 모서리. 끝난 기록(완료·문턱 적용)은 파랑으로 확인됨을 알린다. */
+/* 상태 표: 알약 대신 6px 모서리. 끝난 기록(완료·기준 충족 판정)은 파랑으로 확인됨을 알린다. */
 :global(:root:not([data-design='classic'])) .status { padding: 2px 8px; border-radius: var(--thorp-radius-control); font-weight: 600; }
 :global(:root:not([data-design='classic'])) .status[data-status='COMPLETED'],
 :global(:root:not([data-design='classic'])) .status[data-status='THRESHOLD_APPLIED'] {

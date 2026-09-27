@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { MyRecordKind, MyRecordListQuery, MyRecordSort, MyRecordStatus } from '@/types/myRecords'
 import type { SectorCatalog } from '@/types/sector'
 import type { StrategyView } from '@/types/strategyRegistry'
-import { KIND_LABEL, SORT_OPTIONS, STATUS_LABEL, STATUS_OPTIONS } from './recordLabels'
+import { KIND_LABEL, SORT_OPTIONS, STATUS_GROUPS, STATUS_LABEL } from './recordLabels'
 import styles from './records.module.css'
 import { DateField } from '@/components/common/DateField'
 
@@ -116,17 +116,25 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {
               {/* 기본 보기는 완료 항목뿐이다 — 실패·취소는 상태 필터로 본다(006 FR-004). */}
               <span className={styles.legendHint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</span>
             </legend>
-            {STATUS_OPTIONS.map((status) => (
-              <label key={status} className={styles.check}>
-                <input
-                  type="checkbox"
-                  checked={query.status?.includes(status) ?? false}
-                  onChange={(event) =>
-                    onChange({ ...query, status: toggle<MyRecordStatus>(query.status, status, event.target.checked) })
-                  }
-                />
-                {STATUS_LABEL[status]}
-              </label>
+            {STATUS_GROUPS.map((group) => (
+              <div key={group.label} className={styles.statusRow}>
+                <span className={styles.rowLabel}>{group.label}</span>
+                {group.statuses.map((status) => (
+                  <label key={status} className={styles.check}>
+                    <input
+                      type="checkbox"
+                      checked={query.status?.includes(status) ?? false}
+                      onChange={(event) =>
+                        onChange({
+                          ...query,
+                          status: toggle<MyRecordStatus>(query.status, status, event.target.checked),
+                        })
+                      }
+                    />
+                    {STATUS_LABEL[status]}
+                  </label>
+                ))}
+              </div>
             ))}
           </fieldset>
 
