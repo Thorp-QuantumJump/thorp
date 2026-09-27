@@ -33,6 +33,44 @@
   line-height: 1.7;
 }
 
+/*
+  시장 흐름 화면(MarketFlowPage .hero·.heroAside)과 같은 머리. 좁은 화면에서는 한 칸으로 쌓고 인용 선을 뗀다.
+*/
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.hero .title {
+  margin-bottom: 0;
+}
+
+.hero .lead {
+  max-width: 440px;
+  margin: 0;
+  padding: 0 0 3px 22px;
+  border-left: 1px solid var(--thorp-line-strong);
+  font-size: var(--thorp-text-body, 0.84rem);
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+@media (max-width: 800px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .hero .lead {
+    max-width: 540px;
+    padding: 0;
+    border: 0;
+  }
+}
+
 .loading {
   margin: 0;
   color: var(--thorp-copy);
