@@ -44,7 +44,7 @@ function directionOf(change: number | null) {
 
 function formatChange(change: number) {
   const sign = change > 0 ? '+' : change < 0 ? '−' : ''
-  return `${sign}${Math.abs(change).toFixed(2)}%`
+  return `${sign}${Math.abs(change).toFixed(1)}%`
 }
 
 export function MarketNow() {
@@ -81,7 +81,7 @@ export function MarketNow() {
             <li key={reading.code} className={styles.card}>
               <span className={styles.name}>{reading.label}</span>
               <span className={styles.reading} data-direction={direction}>
-                <strong>{reading.value.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}</strong>
+                <strong>{reading.value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}</strong>
                 {reading.change === null ? null : <em>{formatChange(reading.change)}</em>}
               </span>
             </li>

@@ -75,6 +75,9 @@ describe('사례 목록', () => {
     }
     render(<CaseList result={withContext} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
     expect(screen.getByText(withContext.phaseNote as string)).toBeTruthy()
+    // 당시 맥락은 '설명 더 보기' 안에 있다(S15P21E205-450).
+    expect(screen.queryByRole('link', { name: 'KDI 경제동향 2009년 1월호' })).toBeNull()
+    fireEvent.click(screen.getAllByRole('button', { name: '설명 더 보기' })[0])
     const link = screen.getByRole('link', { name: 'KDI 경제동향 2009년 1월호' })
     expect(link.getAttribute('rel')).toContain('noopener')
     expect(screen.getByText('경기 저점').tagName).toBe('SPAN')
@@ -127,5 +130,33 @@ describe('사례 목록', () => {
     fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))
     expect(onBrowseFields).toHaveBeenCalledOnce()
     expect(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' })).toBeTruthy()
+  })
+
+  it('문장이 많은 사례는 한 문장씩만 먼저 보이고 설명 더 보기로 펼친다', () => {
+    const base = result(1, 1, 1)
+    const long: RegimeSearchResult = {
+      ...base,
+      cases: [
+        {
+          ...base.cases[0],
+          similar: ['비슷 1', '비슷 2'],
+          different: ['다름 1', '다름 2', '다름 3'],
+        },
+      ],
+    }
+    render(<CaseList result={long} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
+    expect(screen.getByText('비슷 1')).toBeTruthy()
+    expect(screen.queryByText('비슷 2')).toBeNull()
+    expect(screen.queryByText('다름 3')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '설명 더 보기' }))
+    expect(screen.getByText('비슷 2')).toBeTruthy()
+    expect(screen.getByText('다름 3')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '설명 접기' }))
+    expect(screen.queryByText('다름 3')).toBeNull()
+  })
+
+  it('한 문장씩인 사례에는 펼치기 버튼이 없다', () => {
+    render(<CaseList result={result(1, 1, 1)} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
+    expect(screen.queryByRole('button', { name: '설명 더 보기' })).toBeNull()
   })
 })
