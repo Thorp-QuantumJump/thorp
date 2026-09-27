@@ -283,6 +283,8 @@ describe('MyRecordsPage', () => {
     renderPage()
     await screen.findByRole('list', { name: '내 기록' })
 
+    // 상태는 접힌 상세 필터 안에 있다. 사용자처럼 먼저 펼친다.
+    await user.click(screen.getByText('상세 필터'))
     await user.click(screen.getByRole('checkbox', { name: '실패' }))
 
     expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith(
