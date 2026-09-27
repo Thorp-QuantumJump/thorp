@@ -361,13 +361,18 @@ export function SectorSelectionPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="sector-selection-title">
-        <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
-        <h1 id="sector-selection-title" className={styles.title}>
-          투자 대상 <em className={heading.emphasis}>고르기</em>
-        </h1>
-        <p className={styles.lead}>
-          백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
-        </p>
+        {/* 시장 흐름 화면과 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다(S15P21E205-451). */}
+        <header className={styles.hero}>
+          <div>
+            <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
+            <h1 id="sector-selection-title" className={styles.title}>
+              투자 대상 <em className={heading.emphasis}>고르기</em>
+            </h1>
+          </div>
+          <p className={styles.lead}>
+            백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
+          </p>
+        </header>
 
         {result === null ? (
           <p className={styles.loading} role="status">

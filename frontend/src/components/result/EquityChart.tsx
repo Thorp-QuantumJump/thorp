@@ -380,7 +380,8 @@ export function EquityChart(props: EquityChartProps) {
     () => (zoomed ? allRows.slice(view[0], view[1] + 1) : allRows),
     [allRows, view, zoomed],
   )
-  const margin = { top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }
+  // 아래 여백은 두 줄(연·월) 눈금 글자가 최대 하락 음영과 붙지 않게 한 칸 띄운다(S15P21E205-451).
+  const margin = { top: 18, right: compact ? 18 : 88, bottom: 58, left: compact ? 55 : 58 }
   const chartRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
   // 휠·끌기 처리기는 한 번만 붙인다. 처리기가 읽는 값은 여기에 담아 늘 최신으로 둔다.

@@ -313,3 +313,32 @@
     padding: var(--thorp-pad-card, 18px 16px);
   }
 }
+
+/*
+  디자인 개편(S15P21E205-451): 탭 안의 항목을 하나씩 상자에 담고, 제목은 밝은 글자·한 단계 큰 크기로 본문(회색)과
+  가른다. 제목과 본문이 같은 색·크기라 무엇이 제목인지 읽히지 않았다.
+*/
+:global(:root:not([data-design='classic'])) .grid > .item,
+:global(:root:not([data-design='classic'])) .stack > .item {
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-control, 10px);
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+}
+
+:global(:root:not([data-design='classic'])) .itemTitle {
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-heading, 1.05rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:global(:root:not([data-design='classic'])) .subTitle {
+  color: var(--thorp-foreground);
+}
+
+:global(:root:not([data-design='classic'])) .value {
+  color: var(--thorp-foreground);
+  font-size: 1.25rem;
+}

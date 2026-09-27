@@ -76,3 +76,52 @@
     transition: none;
   }
 }
+
+/*
+  디자인 개편(S15P21E205-451): 펼침 줄을 버튼 모양으로 둔다. 글자와 화살표만 있으면 눌러서 여는 자리로
+  읽히지 않았다. 접혀 있을 때는 '직접 선택해보세요'를 붙인다.
+*/
+.toggleEnd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.toggleHint {
+  display: none;
+}
+
+:global(:root:not([data-design='classic'])) .panel {
+  padding-top: 0;
+  border-top: 0;
+}
+
+:global(:root:not([data-design='classic'])) .toggle {
+  padding: var(--thorp-control-pad-block, 10px) 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+  color: var(--thorp-foreground);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+:global(:root:not([data-design='classic'])) .toggle:hover {
+  border-color: var(--thorp-accent);
+}
+
+:global(:root:not([data-design='classic'])) .toggle[aria-expanded='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted, var(--thorp-surface-raised));
+}
+
+:global(:root:not([data-design='classic'])) .toggleHint {
+  display: inline;
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 600;
+}
+
+:global(:root:not([data-design='classic'])) .toggleHint::before {
+  content: '← ';
+}
