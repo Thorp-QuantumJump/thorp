@@ -94,6 +94,8 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {
         <summary>
           상세 필터
           {detailCount > 0 ? <span className={styles.count}>{detailCount}개 적용</span> : null}
+          {/* 접혀 있을 때도 기본 보기가 완료한 항목만임을 알린다 — 실패·취소는 상태 필터로 본다(006 FR-004). */}
+          <span className={styles.summaryHint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</span>
         </summary>
         <div className={styles.filterColumn}>
           <fieldset className={styles.group}>
@@ -124,7 +126,6 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {
                 {STATUS_LABEL[status]}
               </label>
             ))}
-            <p className={styles.hint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</p>
           </fieldset>
 
           {catalog ? (

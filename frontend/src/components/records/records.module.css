@@ -67,14 +67,24 @@
   min-width: 0;
 }
 
+/* summary 는 list-item 그대로 둔다 — display 를 바꾸면 여닫기 표식(::marker)이 사라진다. */
 .details > summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   width: fit-content;
   color: var(--thorp-copy);
   font-size: var(--thorp-text-small, 0.78rem);
   cursor: pointer;
+}
+
+/* classic 은 .filterColumn 이 contents 라 details 안에서 묶음이 붙어 버린다. 바깥 .filters 와 같은 간격으로 흘린다. */
+.details > .filterColumn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+}
+
+.summaryHint {
+  margin-left: 10px;
+  color: var(--thorp-muted);
 }
 
 .details > summary:focus-visible {
@@ -88,6 +98,7 @@
 
 /* 접혀 있어도 그 안에 켜진 것이 있음을 알린다. */
 .count {
+  margin-left: 8px;
   padding: 1px 8px;
   border-radius: 999px;
   color: var(--thorp-foreground);
@@ -501,8 +512,8 @@
   gap: 16px 24px;
 }
 
-:global(:root:not([data-design='classic'])) .primary > fieldset { flex: 2 1 320px; }
-:global(:root:not([data-design='classic'])) .primary > div { flex: 1 1 160px; }
+:global(:root:not([data-design='classic'])) .primary > .side { flex: 2 1 320px; }
+:global(:root:not([data-design='classic'])) .primary > .side:has(select) { flex: 1 1 160px; }
 
 /* 시작·끝 날짜는 한 줄에 반씩 선다. */
 :global(:root:not([data-design='classic'])) .dateBox {
