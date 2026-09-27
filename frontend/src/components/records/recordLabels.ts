@@ -21,21 +21,18 @@ export const STATUS_LABEL: Record<MyRecordStatus, string> = {
   PARTIAL: '부분 완료',
   NOT_COMPUTABLE: '계산 불가',
   NEAREST_ONLY: '가까운 순서만',
-  THRESHOLD_APPLIED: '문턱 적용',
+  // 010 의 THRESHOLD_APPLIED. 교정된 유사성 기준으로 사례를 판정한 정상 완료 상태라 그 뜻을 이름으로 쓴다.
+  THRESHOLD_APPLIED: '기준 충족 판정',
   WITHDRAWN: '더 볼 수 없음',
 }
 
-/** 상태 필터 선택지. 기본 보기(완료·문턱 적용)가 앞이다. */
-export const STATUS_OPTIONS: MyRecordStatus[] = [
-  'COMPLETED',
-  'THRESHOLD_APPLIED',
-  'RUNNING',
-  'PARTIAL',
-  'FAILED',
-  'CANCELLED',
-  'NEAREST_ONLY',
-  'NOT_COMPUTABLE',
-  'WITHDRAWN',
+/**
+ * 상태 필터 선택지. 값이 다른 이유가 종류라서 두 줄로 나눈다 — 분석·탐색 묶음은 실행 상태, 경제환경은 010 이 정한
+ * 판정 상태다(FR-004). 각 줄은 기본 보기(완료·기준 충족 판정)가 앞이다.
+ */
+export const STATUS_GROUPS: readonly { label: string; statuses: readonly MyRecordStatus[] }[] = [
+  { label: '분석·탐색 묶음', statuses: ['COMPLETED', 'RUNNING', 'PARTIAL', 'FAILED', 'CANCELLED'] },
+  { label: '경제환경', statuses: ['THRESHOLD_APPLIED', 'NEAREST_ONLY', 'NOT_COMPUTABLE', 'WITHDRAWN'] },
 ]
 
 /** 정렬 선택지. 수익률·하락 폭·비용은 없다(research R7, quickstart S13-4). */

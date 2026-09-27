@@ -265,7 +265,7 @@ describe('MyRecordsPage', () => {
     await screen.findByRole('list', { name: '내 기록' })
 
     expect(apiMocks.fetchMyRecords).toHaveBeenCalledWith({}, expect.any(AbortSignal))
-    for (const status of ['완료', '문턱 적용', '실패', '취소']) {
+    for (const status of ['완료', '기준 충족 판정', '실패', '취소']) {
       expect((screen.getByRole('checkbox', { name: status }) as HTMLInputElement).checked).toBe(false)
     }
     const sort = screen.getByRole('combobox', { name: '정렬' })
