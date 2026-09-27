@@ -165,6 +165,7 @@ function ResultView({
   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.
   const summaryBlock = (
     <div className={styles.summaryStack}>
+      <h3 className={styles.summaryLabel}>분석 조건</h3>
       <ResultConditionLine
         detail={detail}
         targets={drawn.map((target) => ({ detail: target.compatible!, name: names.get(target.key)! }))}
@@ -181,6 +182,7 @@ function ResultView({
             : undefined
         }
       />
+      {summary ? <h3 className={styles.summaryLabel}>결과 해석</h3> : null}
       {summary
         ? // 해석 요약은 비교 대상마다 한 문장이다(FR-006). 대상이 없으면 기준의 세 숫자만 말한다.
           (drawn.length === 0 ? [null] : drawn).map((target, index) => (

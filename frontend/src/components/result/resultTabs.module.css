@@ -97,3 +97,18 @@
     overflow-y: visible;
   }
 }
+
+/*
+  디자인 개편(S15P21E205-451): 고른 탭은 밑줄뿐 아니라 글자도 강조색이다. 요약 탭도 다른 탭처럼 상자에 담는다 —
+  상자 밖에 문장만 떠 있으면 위 지표 상자와 다른 층으로 읽혔다.
+*/
+:global(:root:not([data-design='classic'])) .tab[aria-selected='true'] {
+  color: var(--thorp-accent);
+  font-weight: 700;
+}
+
+:global(:root:not([data-design='classic'])) .panel[data-tab-id='summary'] {
+  padding: var(--thorp-pad-card, 20px 24px);
+  border: 1px solid var(--thorp-line);
+  background: var(--thorp-surface);
+}
