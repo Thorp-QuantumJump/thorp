@@ -272,7 +272,7 @@ describe('MyRecordsPage', () => {
     const options = within(sort)
       .getAllByRole('option')
       .map((option) => option.textContent)
-    expect(options).toEqual(['저장일 최신순', '저장일 오래된순', '이름순'])
+    expect(options).toEqual(['최신순', '오래된순', '이름순'])
     expect(options.join(' ')).not.toMatch(performanceWords)
   })
 

@@ -82,9 +82,12 @@
   gap: 14px 28px;
 }
 
-.summaryHint {
-  margin-left: 10px;
+/* 묶음 제목 옆의 짧은 안내. 제목보다 한 단 작고 가늘다. */
+.legendHint {
+  margin-left: 6px;
   color: var(--thorp-muted);
+  font-size: 0.88em;
+  font-weight: 400;
 }
 
 .details > summary:focus-visible {
