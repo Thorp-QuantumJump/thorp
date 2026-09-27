@@ -428,9 +428,9 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
 
 /** 시장 흐름에서 전략 비교로 이어지는 자리. 값은 예시다. */
 const EXAMPLE_RULES = [
-  { name: '역변동성', net: '+24.6%', drawdown: '−12.1%', cost: '84,200원', selected: true },
-  { name: '동일 비중', net: '+13.2%', drawdown: '−18.7%', cost: '61,000원' },
-  { name: '최소분산', net: '+9.8%', drawdown: '−9.4%', cost: '72,500원' },
+  { name: '덜 흔들린 곳에 더 담기', net: '+24.6%', drawdown: '−12.1%', cost: '84,200원', selected: true },
+  { name: '똑같이 나눠 담기', net: '+13.2%', drawdown: '−18.7%', cost: '61,000원' },
+  { name: '전체 흔들림 가장 줄이기', net: '+9.8%', drawdown: '−9.4%', cost: '72,500원' },
 ] as const
 
 function RuleComparison() {
