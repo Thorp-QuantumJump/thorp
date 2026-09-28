@@ -80,7 +80,12 @@ public enum ErrorCode {
     // 저장 자리 한도(409)와 실행 자원 한도(EXECUTION_LIMIT, 429)를 다른 코드로 나눈다 — 사용자가
     // 할 일이 다르다. 앞은 기존 기록을 지워야 풀리고 뒤는 기다리면 풀린다(spec FR-018).
     RECORD_LIMIT_REACHED(HttpStatus.CONFLICT, "저장할 수 있는 탐색 묶음 개수에 도달했습니다. 기존 항목을 지운 뒤 다시 시작해 주세요."),
-    RECORD_WITHDRAWN(HttpStatus.GONE, "더 볼 수 없는 검색 결과입니다.");
+    RECORD_WITHDRAWN(HttpStatus.GONE, "더 볼 수 없는 검색 결과입니다."),
+
+    // spec 015 화면 맥락 도우미. 계약은 specs/015-context-assistant/contracts/assistant-api.md §1.
+    // 토큰 판정(400/404/409/410)은 005의 코드를 그대로 쓴다 — 같은 거절을 다른 코드로 내면 화면이 두 벌로 분기한다.
+    ASSISTANT_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "질문 한도에 도달했습니다. 잠시 후 다시 시도해 주세요."),
+    ASSISTANT_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.");
 
     private final HttpStatus status;
     private final String message;

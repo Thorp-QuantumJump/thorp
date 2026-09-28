@@ -21,6 +21,16 @@ export const sampleDataNote = '이 결과는 아직 확정되지 않은 예시 �
 /** 동일가중이 설계 선택임을 밝힌다(spec FR-010). 중요성이 같다는 뜻으로 적지 않는다. */
 export const equalWeightNote = '분야별 거리를 같은 비중으로 합치는 것은 Thorp의 설계 선택입니다.'
 
+/**
+ * v3 종합의 블록 구성과 동일가중이 설계 선택임을 밝힌다(spec 010 v3 개정안 §3.2·§5.2).
+ * 통계적 요인이나 KDI 공식 판단처럼 읽히지 않게 쓴다.
+ */
+export const blockWeightNote =
+    '지표를 경제 흐름별 블록으로 묶고, 블록 안 지표와 블록 사이를 같은 비중으로 합치는 것은 Thorp의 설계 선택입니다.'
+
+/** 당시 맥락 링크가 순위의 근거로 읽히지 않게 한다(spec 010 v3 개정안 §4). */
+export const contextNote = '같은 기간에 나온 공식 발간물과 사건입니다. 검색에 쓰지 않았고, 사례를 고른 이유가 아닙니다.'
+
 /** 저장된 척도가 없어 손계산 대조를 할 수 없는 지표에 붙는다(spec FR-028). */
 export const scaleMissingNote = '공통 척도 정보를 확인할 수 없습니다.'
 
@@ -60,3 +70,10 @@ export const savedSearchNote = '저장된 검색을 다시 봅니다(동일 버�
 
 /** 로그인 사용자의 검색을 내 기록에 남기지 못했을 때(006 T037). 검색 결과는 그대로다 — 기록만 남지 않았다. */
 export const recordFailedNote = '이 검색을 내 기록에 남기지 못했습니다. 결과는 그대로 볼 수 있습니다.'
+
+/** 교정된 결과에서 따로 여는 목록의 이름. 서버가 `referenceLabel`을 주지 않을 때만 쓴다(spec FR-021). */
+export const referenceLabel = '기준 미충족 참고 사례'
+
+/** 참고 사례를 열었을 때 붙는 안내 — 기준을 넘지 못했다는 사실만 말하고 등급을 매기지 않는다(FR-018·FR-021). */
+export const referenceNote = 'Thorp가 정한 유사성 기준을 넘지 못한, 가까운 순서의 참고 사례입니다.'
+

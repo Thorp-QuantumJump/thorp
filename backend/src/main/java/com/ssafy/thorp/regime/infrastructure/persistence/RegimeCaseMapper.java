@@ -31,10 +31,32 @@ final class RegimeCaseMapper {
                 source.get("contribution") == null
                         ? null
                         : JsonReader.object(source, "contribution");
+        Map<String, Object> blockContribution =
+                source.get("blockContribution") == null
+                        ? null
+                        : JsonReader.object(source, "blockContribution");
         return new CaseDistance(
                 JsonReader.decimal(source, "value"),
                 decimalMap(JsonReader.object(source, "byField")),
-                contribution == null ? null : decimalMap(contribution));
+                contribution == null ? null : decimalMap(contribution),
+                blocks(source),
+                blockContribution == null ? null : decimalMap(blockContribution),
+                source.get("meetsThreshold") instanceof Boolean meets ? meets : null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<CaseDistance.BlockGap> blocks(Map<String, Object> source) {
+        // v1 결과에는 키가 없다. 빈 목록이 "블록으로 재지 않았다"와 같은 뜻이다.
+        return JsonReader.array(source, "blocks").stream()
+                .map(raw -> (Map<String, Object>) raw)
+                .map(
+                        body ->
+                                new CaseDistance.BlockGap(
+                                        JsonReader.text(body, "id"),
+                                        JsonReader.text(body, "name"),
+                                        JsonReader.decimal(body, "gap"),
+                                        JsonReader.decimal(body, "spread")))
+                .toList();
     }
 
     private static Map<String, BigDecimal> decimalMap(Map<String, Object> source) {
@@ -66,8 +88,26 @@ final class RegimeCaseMapper {
         return Map.copyOf(values);
     }
 
+    @SuppressWarnings("unchecked")
     private static CaseExplanation explanation(Map<String, Object> source) {
-        return new CaseExplanation(strings(source, "similar"), strings(source, "different"));
+        List<CaseExplanation.ContextLink> context =
+                JsonReader.array(source, "context").stream()
+                        .map(raw -> (Map<String, Object>) raw)
+                        .map(
+                                body ->
+                                        new CaseExplanation.ContextLink(
+                                                JsonReader.text(body, "kind"),
+                                                JsonReader.date(body, "date"),
+                                                JsonReader.text(body, "title"),
+                                                JsonReader.text(body, "url"),
+                                                JsonReader.text(body, "source")))
+                        .toList();
+        return new CaseExplanation(
+                strings(source, "similar"),
+                strings(source, "different"),
+                Boolean.TRUE.equals(source.get("unusual")),
+                JsonReader.text(source, "queryNote"),
+                context);
     }
 
     private static List<String> strings(Map<String, Object> source, String key) {

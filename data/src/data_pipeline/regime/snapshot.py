@@ -19,12 +19,18 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Final
 
+from data_pipeline.regime import phase_snapshot
 from data_pipeline.regime.candidates import (
     EXCLUSION_REASONS,
     CandidateSelection,
     select_candidates,
 )
-from data_pipeline.regime.comparison import QUERY_INPUT_MISSING, comparison_months_for
+from data_pipeline.regime.comparison import (
+    COMPARISON_OFFSETS,
+    QUERY_INPUT_MISSING,
+    comparison_months_for,
+)
+from data_pipeline.regime.context import ContextEvent, events_within
 from data_pipeline.regime.distance import (
     CandidateDistance,
     DistanceModel,
@@ -43,8 +49,9 @@ from data_pipeline.regime.macro.types import (
     format_month,
     require_month,
 )
+from data_pipeline.regime.phase import PhaseConfig, PhaseModel, build_phase_model, phase_inputs
 from data_pipeline.regime.rounding import to_storage_text
-from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, SCALE_ZERO, Scale
+from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, SCALE_ZERO, Scale, shift_month
 
 #: 010 모델 버전 (data-model §6). 배치가 상수로 들고 다니며 식별 키와 저장 행에 실린다.
 #:
@@ -58,10 +65,13 @@ from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, SCALE_ZERO, Scale
 #: - 시대별 위치 판정 경계값 — `era.SIMILAR_THRESHOLD`(FR-017)
 #: - 후보 제한(12개월·±6개월·동률), 표시 개수(FR-012·FR-013)
 #: - 문턱(FR-019·FR-020), decimal 반올림 자릿수(research R4)
+#: - 문장의 값 표기 자릿수 — `explain.SENTENCE_DECIMALS`
+#:
+#: 이력: REGIME-V1 → REGIME-V1.1 (S15P21E205-447, 문장 값을 소수 첫째 자리로). 계산은 같다.
 #:
 #: ⚠ d21-amendment의 v2 검증 제안은 **기본 계산 경로에 들어가지 않는다**(PD-08 미확정).
 #: 제안을 여기에 미리 반영하면 검증 전 모델이 운영 값이 된다.
-MODEL_VERSION: Final[str] = "REGIME-V1"
+MODEL_VERSION: Final[str] = "REGIME-V1.1"
 
 MODE_FIELD: Final[str] = "FIELD"
 MODE_COMPOSITE: Final[str] = "COMPOSITE"
@@ -72,8 +82,9 @@ COMPOSITE_SCOPE: Final[str] = "ALL"
 
 STATUS_NOT_COMPUTABLE: Final[str] = "NOT_COMPUTABLE"
 STATUS_NEAREST_ONLY: Final[str] = "NEAREST_ONLY"
-#: PD-09(문턱)이 교정된 뒤에 생기는 상태. **지금 이 값을 만드는 경로는 없다**(research R6).
-#: 어휘를 미리 두는 것은 저장 값의 목록이고, 문턱 값을 코드에 두는 것과 다르다.
+#: PD-09(문턱)이 교정된 검색 방식의 상태(threshold-calibration.md §6). 사유는 없다.
+#: 지금은 종합 비교만 이 상태를 만든다 — 분야 검색은 교정에 실패해 `NEAREST_ONLY`로 남는다(§7.2).
+#: 문턱 값은 코드가 아니라 모델 설정(`regime-phase-v3.json`의 ``threshold``)에 있다.
 STATUS_THRESHOLD_APPLIED: Final[str] = "THRESHOLD_APPLIED"
 
 #: 유효 후보가 0건이다 (data-model §2.1).
@@ -160,6 +171,9 @@ class SearchStatus:
         elif self.status == STATUS_NEAREST_ONLY:
             if self.reason != THRESHOLD_NOT_CALIBRATED:
                 raise SnapshotError(f"NEAREST_ONLY의 사유가 아니다: {self.reason!r}")
+        elif self.status == STATUS_THRESHOLD_APPLIED:
+            if self.reason is not None:
+                raise SnapshotError(f"THRESHOLD_APPLIED에는 사유가 없다: {self.reason!r}")
         else:
             raise SnapshotError(f"배치가 만들 수 있는 상태가 아니다: {self.status!r}")
 
@@ -180,6 +194,9 @@ def not_computable(reason: str) -> SearchStatus:
 NEAREST_ONLY: Final[SearchStatus] = SearchStatus(
     status=STATUS_NEAREST_ONLY, reason=THRESHOLD_NOT_CALIBRATED
 )
+
+#: 교정된 기준으로 사례를 나눈 상태. 사례마다 ``distance.meetsThreshold``가 붙는다.
+THRESHOLD_APPLIED: Final[SearchStatus] = SearchStatus(status=STATUS_THRESHOLD_APPLIED, reason=None)
 
 
 def status_for_model(model: DistanceModel | ModelUnavailable) -> SearchStatus | None:
@@ -395,6 +412,8 @@ class SnapshotBuilder:
         publication: Callable[[str, date], Publication | None],
         versions: Versions,
         era_cache: EraPositionCache | None = None,
+        phase_config: PhaseConfig | None = None,
+        context_events: Sequence[ContextEvent] = (),
     ) -> None:
         self._registry = registry
         self._series = series_by_indicator
@@ -402,6 +421,12 @@ class SnapshotBuilder:
         self._versions = versions
         self._era = era_cache if era_cache is not None else EraPositionCache(series_by_indicator)
         self._entries = {entry.id: entry for entry in registry.indicators}
+        # 종합 비교만 v3 국면 모델로 잰다(v3-experiment.md §6 채택). 분야 검색은 v1 그대로다.
+        self._phase_config = phase_config
+        self._phase_series = (
+            None if phase_config is None else phase_inputs(phase_config, series_by_indicator)
+        )
+        self._context = tuple(context_events)
 
     @property
     def registry(self) -> IndicatorRegistry:
@@ -409,6 +434,16 @@ class SnapshotBuilder:
 
     @property
     def versions(self) -> Versions:
+        return self._versions
+
+    def versions_for(self, scope: SearchScope) -> Versions:
+        """범위의 버전 셋. v3가 켜진 종합은 모델 버전이 설정의 버전이다 — 식별 키가 v1과 갈린다."""
+        if scope.field_id is None and self._phase_config is not None:
+            return Versions(
+                data=self._versions.data,
+                registry=self._versions.registry,
+                model=self._phase_config.version,
+            )
         return self._versions
 
     @property
@@ -442,6 +477,8 @@ class SnapshotBuilder:
         entries = self.indicators_of(scope)
         if not entries:
             raise SnapshotError(f"등록표에 지표가 없는 범위다: {scope.scope_id}")
+        if scope.field_id is None and self._phase_config is not None:
+            return self._build_phase(scope, baseline_month, entries)
         scoped_series = {entry.id: self._series[entry.id] for entry in entries}
 
         model = build_model(
@@ -495,6 +532,96 @@ class SnapshotBuilder:
             cases=cases,
         )
 
+    # -- v3 종합 ------------------------------------------------------------------------
+
+    def _build_phase(
+        self, scope: SearchScope, baseline_month: date, entries: Sequence[IndicatorEntry]
+    ) -> Snapshot:
+        """v3 국면 모델의 종합 snapshot (개정안 §3·§5).
+
+        본문 모양은 v1과 같다 — 사례의 ``distance``에 블록 거리가 더해지고 ``byField``가 빈다.
+        """
+        assert self._phase_config is not None and self._phase_series is not None
+        versions = self.versions_for(scope)
+        data_asof = self._data_asof(entries, baseline_month)
+        model = build_phase_model(self._phase_config, baseline_month, self._phase_series)
+        if isinstance(model, ModelUnavailable):
+            return self._unavailable(
+                scope,
+                baseline_month,
+                entries,
+                not_computable(model.reason),
+                data_asof,
+                versions=versions,
+            )
+
+        selection = select_candidates(model)
+        status = status_for_selection(selection)
+        if status.computable and model.config.threshold is not None:
+            status = THRESHOLD_APPLIED
+        cases = self._phase_cases(model, selection.displayed) if status.computable else ()
+        offsets = tuple(shift_month(baseline_month, offset) for offset in COMPARISON_OFFSETS)
+        return Snapshot(
+            scope=scope,
+            baseline_month=baseline_month,
+            versions=versions,
+            status=status,
+            scale={
+                indicator_id: _scale_body(scale)
+                for indicator_id, scale in sorted(model.scales.items())
+            },
+            comparison_months=phase_snapshot.comparison_body(model, offsets),
+            ranked_candidates=[
+                {
+                    "endMonth": format_month(item.end_month),
+                    "distance": to_storage_text(item.distance),
+                    "rank": item.rank,
+                }
+                for item in selection.ranked
+            ],
+            candidate_counts={
+                "evaluated": selection.counts.evaluated,
+                "excluded": dict(sorted(selection.counts.excluded.items())),
+            },
+            data_asof=data_asof,
+            cases=cases,
+        )
+
+    def _phase_cases(
+        self, model: PhaseModel, displayed: Sequence[Any]
+    ) -> tuple[SnapshotCase, ...]:
+        threshold = phase_snapshot.residual_threshold(model)
+        note = phase_snapshot.query_note(model, threshold)
+        indicators = self.indicators_of(SearchScope.composite())
+        cases: list[SnapshotCase] = []
+        for rank, distance in enumerate(displayed, start=1):
+            explanation = phase_snapshot.explanation_for(model, distance, self._entries, threshold)
+            body: dict[str, Any] = {
+                "similar": list(explanation.similar),
+                "different": list(explanation.different),
+                "unusual": explanation.unusual,
+            }
+            if note is not None:
+                body["queryNote"] = note
+            if explanation.unusual:
+                # 특이 사례에만 같은 기간의 공식 발간물·사건을 링크로 붙인다(개정안 §4.2).
+                context = events_within(self._context, model.case_months_for(distance.end_month))
+                if context:
+                    body["context"] = [event.body() for event in context]
+            cases.append(
+                SnapshotCase(
+                    rank=rank,
+                    end_month=distance.end_month,
+                    distance=phase_snapshot.distance_body(model, distance),
+                    indicator_values=phase_snapshot.indicator_values_body(
+                        model, distance, self._entries
+                    ),
+                    explanation=body,
+                    era_position=self._era_body(indicators, distance.end_month),
+                )
+            )
+        return tuple(cases)
+
     # -- 계산 불가 ---------------------------------------------------------------------
 
     def _unavailable(
@@ -504,6 +631,8 @@ class SnapshotBuilder:
         entries: Sequence[IndicatorEntry],
         status: SearchStatus,
         data_asof: dict[str, Any],
+        *,
+        versions: Versions | None = None,
     ) -> Snapshot:
         """계산을 시작하지 못한 기준월의 snapshot.
 
@@ -521,7 +650,7 @@ class SnapshotBuilder:
         return Snapshot(
             scope=scope,
             baseline_month=baseline_month,
-            versions=self._versions,
+            versions=self._versions if versions is None else versions,
             status=status,
             scale={},
             comparison_months=dict(sorted(comparison.items())),

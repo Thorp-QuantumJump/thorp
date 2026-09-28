@@ -3,6 +3,7 @@ package com.ssafy.thorp.marketflow.domain.model;
 import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.Direction;
 import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.SelectedSubject;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /** 등록된 문장 틀만 사용해 실제 값의 방향과 지속 기간을 설명한다. */
@@ -56,8 +57,16 @@ public class NarrativeFormatter {
                         movement);
     }
 
-    private static String formatValue(BigDecimal value) {
-        return value == null ? "값 없음 " : value.stripTrailingZeros().toPlainString();
+    /** 문장 값은 소수 첫째 자리까지 쓴다(S15P21E205-447). 저장·응답의 값은 그대로다. */
+    static final int SENTENCE_DECIMALS = 1;
+
+    static String formatValue(BigDecimal value) {
+        if (value == null) {
+            return "값 없음 ";
+        }
+        return value.setScale(SENTENCE_DECIMALS, RoundingMode.HALF_UP)
+                .stripTrailingZeros()
+                .toPlainString();
     }
 
     private static String subjectMarker(String word) {

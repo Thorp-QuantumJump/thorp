@@ -16,21 +16,27 @@
 }
 
 .primary {
-  min-height: 46px;
-  padding: 11px 26px;
+  min-height: var(--thorp-control-cta, 46px);
+  padding: var(--thorp-control-pad-block, 11px) 26px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 9px;
+  border-radius: var(--thorp-radius-control, 9px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: var(--thorp-control-font, var(--thorp-text-body, 0.92rem));
+  font-weight: var(--thorp-control-weight, 700);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  transition: transform 180ms ease, background-color 180ms ease;
 }
 
 .primary:hover:not([aria-disabled='true']) {
-  border-color: var(--thorp-accent-soft);
-  background: var(--thorp-accent-soft);
+  border-color: var(--thorp-accent-hover, var(--thorp-accent-soft));
+  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+  transform: translateY(var(--thorp-cta-lift, 0));
 }
 
 /* 우회로. 글자와 화살표만 두어 주된 행동과 무게를 가른다. */
@@ -38,13 +44,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 46px;
+  min-height: var(--thorp-control-cta, 46px);
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   cursor: pointer;
   text-align: left;
 }
@@ -84,13 +90,13 @@
   gap: 4px 8px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.76rem;
+  font-size: var(--thorp-text-caption, 0.76rem);
   line-height: 1.55;
 }
 
 .reasonLabel {
   color: var(--thorp-muted);
-  font-size: 0.68rem;
+  font-size: var(--thorp-text-label, 0.68rem);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -109,5 +115,16 @@
   .secondary {
     order: 1;
     min-height: 34px;
+  }
+}
+
+/* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
+@media (prefers-reduced-motion: reduce) {
+  .primary {
+    transition: none;
+  }
+
+  .primary:hover:not([aria-disabled='true']) {
+    transform: none;
   }
 }

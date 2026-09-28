@@ -265,14 +265,14 @@ describe('MyRecordsPage', () => {
     await screen.findByRole('list', { name: '내 기록' })
 
     expect(apiMocks.fetchMyRecords).toHaveBeenCalledWith({}, expect.any(AbortSignal))
-    for (const status of ['완료', '문턱 적용', '실패', '취소']) {
+    for (const status of ['완료', '기준 충족 판정', '실패', '취소']) {
       expect((screen.getByRole('checkbox', { name: status }) as HTMLInputElement).checked).toBe(false)
     }
     const sort = screen.getByRole('combobox', { name: '정렬' })
     const options = within(sort)
       .getAllByRole('option')
       .map((option) => option.textContent)
-    expect(options).toEqual(['저장일 최신순', '저장일 오래된순', '이름순'])
+    expect(options).toEqual(['최신순', '오래된순', '이름순'])
     expect(options.join(' ')).not.toMatch(performanceWords)
   })
 
@@ -283,6 +283,8 @@ describe('MyRecordsPage', () => {
     renderPage()
     await screen.findByRole('list', { name: '내 기록' })
 
+    // 상태는 접힌 상세 필터 안에 있다. 사용자처럼 먼저 펼친다.
+    await user.click(screen.getByText('상세 필터'))
     await user.click(screen.getByRole('checkbox', { name: '실패' }))
 
     expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith(
@@ -499,6 +501,7 @@ describe('MyRecordsPage', () => {
 
     // 다음 조회는 응답하지 않게 두어 불러오는 중 상태를 붙잡는다.
     apiMocks.fetchMyRecords.mockReturnValue(new Promise(() => {}))
+    await user.click(screen.getByText('상세 필터'))
     await user.click(screen.getByRole('checkbox', { name: '경제환경' }))
 
     await waitFor(() =>

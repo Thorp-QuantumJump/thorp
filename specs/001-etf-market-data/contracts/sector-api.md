@@ -87,6 +87,36 @@ User Story 3의 펼쳐 보는 층이다.
 
 **추적 차이 필드를 두지 않는다.** 이번 범위에서 제외했다(Out of Scope). 나중에 정의가 확정되면 필드를 추가하는 방향으로 확장한다.
 
+## GET /sectors/{code}/price-series — 대표 ETF의 가격 흐름
+
+투자 대상을 고르는 화면이 카드에 그리는 선이다(`S15P21E205-423`).
+
+```json
+{
+  "instrumentId": "117700.XKRX",
+  "datasetId": "KRX_DAILY_20260922",
+  "dataDeadline": "2026-09-22T06:30:00Z",
+  "isSample": true,
+  "points": [
+    { "date": "2026-09-16", "adjustedClose": "10000.00000000", "tradingSuspended": false, "priceCarriedForward": false },
+    { "date": "2026-09-17", "adjustedClose": "10250.50000000", "tradingSuspended": true, "priceCarriedForward": true }
+  ]
+}
+```
+
+| 필드 | 근거 |
+|---|---|
+| `points[].adjustedClose` | 기업행위가 반영된 수정종가다. **정규화하거나 수익률로 바꾸지 않는다** — 무엇을 기준으로 볼지는 그리는 쪽이 정한다 |
+| `points[].tradingSuspended` | 그 날 거래가 정지되어 있었는가. 숨기면 "그 값에 거래할 수 있었다"로 읽힌다(원칙 V) |
+| `points[].priceCarriedForward` | 그 날 가격이 직전 거래일에서 이어 붙인 값인가. 같은 까닭으로 함께 싣는다 |
+| `datasetId`·`dataDeadline`·`isSample` | 대표 상품 정보와 같은 뜻이며 값을 고르는 규칙도 같다 |
+
+**점을 솎아 내지 않는다.** 화면이 작은 그림을 그린다고 서버가 미리 줄이면 어느 날을 버렸는지 보는 쪽이 알 수 없고, 다른 굵기로 보려는 화면이 원본을 되찾을 수 없다. 상장 이후 모든 거래일을 날짜 오름차순으로 준다.
+
+**행이 하나도 없으면 빈 배열이 아니라 409다.** 점 없는 그래프는 "값이 없다"가 아니라 "움직임이 없었다"로 그려진다(원칙 VI).
+
+**Backend가 시계열을 읽는 유일한 자리다.** plan.md는 "시계열을 읽는 것은 워커이고 Backend는 메타데이터만 본다"고 정했는데, 그 전제는 시계열을 쓰는 곳이 계산뿐이었다는 것이다. 고르기 전에 흐름을 보여 달라는 요구는 조회이고 워커는 메시지를 받아 도는 쪽이라 화면의 물음에 답할 수 없다. 계산은 여전히 워커가 한다.
+
 ## GET /sectors/evaluation-window — 공통 평가 가능 기간
 
 003의 "이 조합은 언제부터 비교 가능합니다" 안내가 쓴다. 산식과 경계 동작은 [evaluation-window.md](./evaluation-window.md)가 기준이며, 이 엔드포인트는 그 산식의 HTTP 표면이다.
@@ -166,6 +196,7 @@ User Story 3의 펼쳐 보는 층이다.
 | 없는 섹터 코드 | 404 | `SECTOR_NOT_FOUND` |
 | 대응표가 발행되지 않음 | 409 | `SECTOR_MAP_NOT_READY` |
 | 대표 상품 정보가 아직 만들어지지 않음 | 409 | `INSTRUMENT_PROFILE_NOT_READY` |
+| 가격 자료가 아직 적재되지 않음 | 409 | `PRICE_SERIES_NOT_READY` |
 | 후보 목록이 빈 요청 | 400 | 검증 실패 |
 | 평가 기간 산출 자료가 아직 없음 | 409 | `EVALUATION_WINDOW_NOT_READY` |
 | 등록되지 않은 전략 | 422 | `STRATEGY_NOT_REGISTERED` |

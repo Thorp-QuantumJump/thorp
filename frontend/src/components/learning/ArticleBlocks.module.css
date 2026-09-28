@@ -41,9 +41,9 @@
 
 /* 실제 결과가 아니라는 것이 눈에 먼저 들어와야 한다(013 FR-005). */
 .hypothetical {
-  padding: 16px 18px;
+  padding: var(--thorp-pad-inset, 16px 18px);
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-inset, 12px);
 }
 
 .hypotheticalLabel {
@@ -53,7 +53,22 @@
   border: 1px solid var(--thorp-warning);
   border-radius: 999px;
   color: var(--thorp-warning);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
+}
+
+/*
+  새 디자인: 가상 계산 표는 모서리를 거의 세운 주황 글자 표다. 테두리 대신 옅은 주황 바탕을 깔아 둥근 테두리
+  표보다 덜 튀게 한다. 실제 결과가 아니라는 것은 표 글자와 점선 테두리가 함께 알린다(013 FR-005).
+*/
+:global(:root:not([data-design='classic'])) .hypotheticalLabel {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--thorp-warning) 14%, transparent);
+  color: var(--thorp-warning);
+  font-size: var(--thorp-text-caption);
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 
 .hypothetical p {

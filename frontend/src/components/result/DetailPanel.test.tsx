@@ -1,9 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useId } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Button } from '@/components/ui/button'
-import { useDisclosure } from '@/hooks/useDisclosure'
 import {
   resultDetailCompleted,
   resultExceptions,
@@ -13,15 +10,17 @@ import {
   resultWeights,
 } from '@/test/resultFixtures'
 import type { PublicResultDetail, ResultWeights } from '@/types/result'
-import { CALCULATION_LIMITED, DetailPanel, type DetailCompareTarget, NOT_PROVIDED } from './DetailPanel'
+import { CALCULATION_LIMITED, type DetailCompareTarget } from './DetailPanel'
+import { ResultDetailTabs } from './ResultDetailTabs'
 
-/** 005 T070. FR-007~FR-009·FR-022, SC-001·SC-006. */
+/** 005 T070·T098. FR-007~FR-009, SC-001·SC-006. 결과 분석·설정·근거 두 탭을 `ResultDetailTabs`로 붙여 본다. */
 
 const apiMocks = vi.hoisted(() => ({
   fetchResultWeights: vi.fn(),
   fetchResultExceptions: vi.fn(),
   fetchResultTrades: vi.fn(),
   fetchResultPositions: vi.fn(),
+  fetchResultIndexComparison: vi.fn(),
 }))
 const sectorMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
@@ -39,29 +38,35 @@ vi.mock('@/api/sectors', async (importOriginal) => {
 
 const targetToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 
-function renderPanel(detail: PublicResultDetail = resultDetailCompleted, compare?: DetailCompareTarget) {
-  const onClose = vi.fn()
-  render(<DetailPanel id="detail" token={resultToken} detail={detail} compare={compare} onClose={onClose} />)
-  return { onClose, panel: screen.getByRole('region', { name: '자세히 보기' }) }
-}
-
-/** 페이지와 같은 여닫기 방식으로 패널을 붙인 시험대. 닫은 뒤 초점이 어디로 가는지 본다. */
-function Harness() {
-  const panelId = useId()
-  const view = useDisclosure(panelId)
-  return (
-    <>
-      <Button type="button" variant="outline" {...view.toggleProps}>
-        자세히 보기
-      </Button>
-      {view.open ? (
-        <DetailPanel id={panelId} token={resultToken} detail={resultDetailCompleted} onClose={view.close} />
-      ) : null}
-    </>
+/** 요약 탭이 기본이라 결과 분석 탭을 골라 둔 상태로 돌려준다. */
+async function renderPanel(detail: PublicResultDetail = resultDetailCompleted, compare?: DetailCompareTarget) {
+  render(
+    <ResultDetailTabs
+      token={resultToken}
+      detail={detail}
+      summary={<p>요약 자리</p>}
+      lossWindow={null}
+      compare={compare}
+    />,
   )
+  const tablist = screen.getByRole('tablist', { name: '결과 보기' })
+  await openTab('결과 분석')
+  return { panel: tablist.parentElement as HTMLElement }
 }
 
-describe('DetailPanel', () => {
+async function openTab(name: string) {
+  await userEvent.setup().click(screen.getByRole('tab', { name }))
+}
+
+/** '설정·근거' 탭을 고른다. 그때 `/weights`를 받는다. */
+const openSettings = () => openTab('설정·근거')
+
+/** 숨긴 탭 패널의 제목까지 포함해 찾는다. 두 탭에 나뉜 항목을 한 번에 셀 때 쓴다. */
+function sectionOf(panel: HTMLElement, title: string | RegExp) {
+  return within(panel).getByRole('heading', { name: title, hidden: true }).closest('section') as HTMLElement
+}
+
+describe('DetailPanel(결과 분석·설정·근거 탭)', () => {
   beforeEach(() => {
     for (const mock of [...Object.values(apiMocks), ...Object.values(sectorMocks)]) mock.mockReset()
     apiMocks.fetchResultWeights.mockResolvedValue(resultWeights)
@@ -70,24 +75,53 @@ describe('DetailPanel', () => {
     sectorMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })
   })
 
-  it('열 때 비중·예외 기록과 섹터 목록을 한 번씩만 받고 거래 내역은 받지 않는다', async () => {
-    renderPanel()
-    await screen.findByText('HALT_DEFERRED')
+  it('요약 탭이 기본이고 상세 자료는 어느 탭도 고르기 전에는 받지 않는다', async () => {
+    render(
+      <ResultDetailTabs token={resultToken} detail={resultDetailCompleted} summary={<p>요약 자리</p>} lossWindow={null} />,
+    )
 
-    expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)
-    expect(apiMocks.fetchResultWeights.mock.calls[0][0]).toBe(resultToken)
-    expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)
-    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tabpanel').textContent).toContain('요약 자리')
+    expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()
+    expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
     expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()
-    expect(sectorMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
+    // 섹터 목록은 세 상세 탭이 같이 쓰므로 묶음이 한 번 받아 둔다.
+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
   })
 
-  it('FR-007 항목 열 가지가 모두 제목으로 있다', async () => {
-    const { panel } = renderPanel()
+  it('결과 분석 탭은 예외 기록을 받고, 비중은 설정·근거를, 거래 내역은 전체 거래 내역을 고를 때 받는다', async () => {
+    await renderPanel()
     await screen.findByText('HALT_DEFERRED')
 
+    expect(screen.getByRole('tab', { name: '결과 분석' }).getAttribute('aria-selected')).toBe('true')
+    expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)
+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
+    expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
+    expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()
+    expect(sectorMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
+    expect(apiMocks.fetchResultIndexComparison).not.toHaveBeenCalled()
+
+    await openSettings()
+    await screen.findByText('44.73%')
+    expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)
+    expect(apiMocks.fetchResultWeights.mock.calls[0][0]).toBe(resultToken)
+    expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()
+
+    await openTab('전체 거래 내역')
+    await screen.findByRole('table', { name: '거래 내역' })
+    expect(apiMocks.fetchResultTrades).toHaveBeenCalledTimes(1)
+    // 섹터 목록은 부모가 한 번 받아 세 탭이 같이 쓴다.
+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)
+  })
+
+  it('FR-007 항목이 세 탭에 나뉘어 모두 제목으로 있다', async () => {
+    const { panel } = await renderPanel()
+    await screen.findByText('HALT_DEFERRED')
+    await openSettings()
+    await openTab('전체 거래 내역')
+
     const headings = within(panel)
-      .getAllByRole('heading')
+      .getAllByRole('heading', { hidden: true })
       .map((heading) => heading.textContent ?? '')
       .join('\n')
     for (const item of [
@@ -95,32 +129,68 @@ describe('DetailPanel', () => {
       '회전율',
       '상관관계',
       '위험 기여',
-      '구성종목 중복',
+      '손실 기여',
+      '계산 제한 항목',
       '전체 거래 내역',
-      '비용 가정',
       '비교 규칙',
+      '비용 가정',
+      '목표·실제 비중',
+      '구성종목 중복',
       '대표 ETF 구성',
       '출처',
     ]) {
       expect(headings, item).toContain(item)
     }
+    // 결과에서 나온 값은 결과 분석에, 넣은 조건은 설정·근거에, 거래는 제 탭에 있다.
+    const analysis = screen.getAllByRole('tabpanel', { hidden: true })[1]
+    expect(within(analysis).queryByRole('heading', { name: '비용 가정', hidden: true })).toBeNull()
+    expect(within(analysis).queryByRole('heading', { name: '전체 거래 내역', hidden: true })).toBeNull()
+    expect(within(analysis).getByRole('heading', { name: '상관관계', hidden: true })).not.toBeNull()
   })
 
-  it('004가 아직 내보내지 않는 세 항목은 제공되지 않음이며 추정 기간·산정법 자리가 있다', async () => {
-    const { panel } = renderPanel()
+  it('상관관계·위험 기여·손실 기여를 004가 준 값으로 보이고 추정 기간·산정법이 있다', async () => {
+    const { panel } = await renderPanel()
+    await screen.findByText('HALT_DEFERRED')
+
+    const correlation = sectionOf(panel, '상관관계')
+    expect(within(correlation).getAllByText('-0.19')).toHaveLength(2)
+    expect(within(correlation).getAllByText('1.00')).toHaveLength(3)
+
+    const risk = sectionOf(panel, '위험 기여')
+    expect(within(risk).getByText('7.95%')).not.toBeNull()
+    expect(within(risk).getByText('추정 기간')).not.toBeNull()
+    expect(within(risk).getByText('2023-07-03 ~ 2024-12-31')).not.toBeNull()
+    expect(within(risk).getByText('공분산 산정법')).not.toBeNull()
+    expect(within(risk).getByText('일별 수익률의 표본 공분산')).not.toBeNull()
+
+    const loss = sectionOf(panel, '손실 기여')
+    expect(within(loss).getByText('125.00%')).not.toBeNull()
+    expect(within(loss).getByText('-25.00%')).not.toBeNull()
+  })
+
+  it('세 항목 중 004가 계산하지 못한 것은 계산 제한으로 보이고 0으로 채우지 않는다', async () => {
+    const summary = resultDetailCompleted.summary as NonNullable<PublicResultDetail['summary']>
+    const analytics = summary.analytics as NonNullable<typeof summary.analytics>
+    const limited: PublicResultDetail = {
+      ...resultDetailCompleted,
+      summary: {
+        ...summary,
+        analytics: { ...analytics, correlationMatrix: null, riskContribution: null, lossContribution: null },
+      },
+    }
+    const { panel } = await renderPanel(limited)
     await screen.findByText('HALT_DEFERRED')
 
     for (const title of ['상관관계', '위험 기여', '손실 기여']) {
-      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement
-      expect(within(section).getAllByText(NOT_PROVIDED).length, title).toBeGreaterThan(0)
+      const section = sectionOf(panel, title)
+      expect(within(section).getByText(new RegExp(`^${CALCULATION_LIMITED}`)), title).not.toBeNull()
+      expect(within(section).queryByText('0.00%'), title).toBeNull()
+      expect(within(section).queryByRole('table'), title).toBeNull()
     }
-    const risk = within(panel).getByRole('heading', { name: '위험 기여' }).closest('section') as HTMLElement
-    expect(within(risk).getByText('추정 기간')).not.toBeNull()
-    expect(within(risk).getByText('공분산 산정법')).not.toBeNull()
   })
 
   it('회복 기간·회전율을 004가 준 값으로 보인다', async () => {
-    const { panel } = renderPanel()
+    const { panel } = await renderPanel()
     await screen.findByText('HALT_DEFERRED')
 
     expect(within(panel).getByText('9거래일')).not.toBeNull()
@@ -132,11 +202,11 @@ describe('DetailPanel', () => {
       ...resultDetailCompleted,
       summary: resultDetailCompleted.summary && { ...resultDetailCompleted.summary, analytics: null },
     }
-    const { panel } = renderPanel(withoutAnalytics)
+    const { panel } = await renderPanel(withoutAnalytics)
     await screen.findByText('HALT_DEFERRED')
 
-    const recovery = within(panel).getByRole('heading', { name: '회복 기간' }).closest('section') as HTMLElement
-    const turnover = within(panel).getByRole('heading', { name: '회전율' }).closest('section') as HTMLElement
+    const recovery = sectionOf(panel, '회복 기간')
+    const turnover = sectionOf(panel, '회전율')
     for (const section of [recovery, turnover]) {
       expect(within(section).getByText(new RegExp(CALCULATION_LIMITED))).not.toBeNull()
     }
@@ -153,11 +223,12 @@ describe('DetailPanel', () => {
       summary: null,
       summaryUnavailable: 'CANCELLED_WHILE_RUN_CONTINUED',
     }
-    const { panel } = renderPanel(withoutSummary)
+    const { panel } = await renderPanel(withoutSummary)
     await screen.findByText('HALT_DEFERRED')
+    await openSettings()
 
     for (const title of ['회복 기간', '회전율', '비용 가정']) {
-      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement
+      const section = sectionOf(panel, title)
       expect(within(section).getByText('취소 시점까지의 지표는 계산되지 않았습니다.'), title).not.toBeNull()
       expect(within(section).queryByText(new RegExp(CALCULATION_LIMITED)), title).toBeNull()
     }
@@ -168,11 +239,11 @@ describe('DetailPanel', () => {
       ...resultWeights,
       points: [...resultWeights.points, { date: '2024-12-30', target: {}, actual: {}, weightError: '0.000000' }],
     })
-    const { panel } = renderPanel()
+    const { panel } = await renderPanel()
+    await openSettings()
 
     expect(await within(panel).findByText(/마지막 리밸런싱\(2024-12-30\)에서는 담은 종목이 없습니다/)).not.toBeNull()
-    const weightsSection = within(panel).getByRole('heading', { name: '목표·실제 비중' }).closest('section') as HTMLElement
-    expect(within(weightsSection).queryByRole('table')).toBeNull()
+    expect(within(sectionOf(panel, '목표·실제 비중')).queryByRole('table')).toBeNull()
   })
 
   it.each([
@@ -181,9 +252,10 @@ describe('DetailPanel', () => {
   ])('섹터 목록이 아직 준비 중(%o)이면 섹터가 빠졌다고 하지 않고 다시 불러오기를 준다', async (result) => {
     sectorMocks.fetchSectorCatalog.mockResolvedValueOnce(result)
     const user = userEvent.setup()
-    const { panel } = renderPanel()
+    const { panel } = await renderPanel()
+    await openSettings()
 
-    const profile = within(panel).getByRole('heading', { name: /대표 ETF 구성/ }).closest('section') as HTMLElement
+    const profile = sectionOf(panel, /대표 ETF 구성/)
     expect(await within(profile).findByText(/섹터 목록이 아직 준비 중이라/)).not.toBeNull()
     expect(within(profile).queryByText(/지금 섹터 목록에 없는 섹터라/)).toBeNull()
 
@@ -197,32 +269,35 @@ describe('DetailPanel', () => {
       ...resultDetailCompleted,
       summary: resultDetailCompleted.summary && {
         ...resultDetailCompleted.summary,
-        analytics: { recoveryDays: null, turnover: '1.219991' },
+        analytics: { ...resultDetailCompleted.summary.analytics!, recoveryDays: null },
       },
     }
-    const { panel } = renderPanel(unrecovered)
+    const { panel } = await renderPanel(unrecovered)
     await screen.findByText('HALT_DEFERRED')
 
-    const recovery = within(panel).getByRole('heading', { name: '회복 기간' }).closest('section') as HTMLElement
+    const recovery = sectionOf(panel, '회복 기간')
     expect(within(recovery).getByText(/이전 고점을 되찾지 못했습니다/)).not.toBeNull()
     expect(within(recovery).queryByText(new RegExp(CALCULATION_LIMITED))).toBeNull()
   })
 
-  it('비중 출처와 마지막 리밸런싱의 목표·실제 비중, 예외 기록의 종류·규칙을 그대로 보인다', async () => {
-    const { panel } = renderPanel()
+  it('예외 기록의 종류·규칙은 결과 분석에, 비중 출처와 마지막 리밸런싱의 목표·실제 비중은 설정·근거에 그대로 보인다', async () => {
+    const { panel } = await renderPanel()
     await screen.findByText('HALT_DEFERRED')
 
-    expect(within(panel).getByText('비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.')).not.toBeNull()
-    expect(within(panel).getByText(/마지막 리밸런싱\(2024-12-02\) 기준/)).not.toBeNull()
-    expect(within(panel).getByText('45.00%')).not.toBeNull()
-    expect(within(panel).getByText('44.73%')).not.toBeNull()
     expect(within(panel).getByText('DEFER_TO_NEXT_TRADABLE')).not.toBeNull()
     // 섹터 목록의 이름을 붙인다.
     expect(within(panel).getAllByText('등대 · 합성 등대 ETF').length).toBeGreaterThan(0)
+
+    await openSettings()
+    expect(await within(panel).findByText('비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.')).not.toBeNull()
+    expect(within(panel).getByText(/마지막 리밸런싱\(2024-12-02\) 기준/)).not.toBeNull()
+    expect(within(panel).getByText('45.00%')).not.toBeNull()
+    expect(within(panel).getByText('44.73%')).not.toBeNull()
   })
 
-  it('대표 상품 정보가 패널 안에 섹터마다 접혀 있다', async () => {
-    const { panel } = renderPanel()
+  it('대표 상품 정보가 설정·근거 탭 안에 섹터마다 접혀 있다', async () => {
+    const { panel } = await renderPanel()
+    await openSettings()
 
     const toggle = await within(panel).findByRole('button', { name: '항구 · 합성 항구 ETF' })
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
@@ -232,7 +307,8 @@ describe('DetailPanel', () => {
     const { ResultError } = await import('@/api/result')
     apiMocks.fetchResultWeights.mockRejectedValueOnce(new ResultError('비중 기록 실패'))
     const user = userEvent.setup()
-    const { panel } = renderPanel()
+    const { panel } = await renderPanel()
+    await openSettings()
 
     expect(await within(panel).findByText('비중 기록 실패')).not.toBeNull()
     await user.click(within(panel).getAllByRole('button', { name: '다시 불러오기' })[0])
@@ -241,46 +317,20 @@ describe('DetailPanel', () => {
     expect(await within(panel).findByText('44.73%')).not.toBeNull()
   })
 
-  it('닫기 버튼이 닫기를 부른다', async () => {
+  it('전체 거래 내역 탭은 고르면 바로 목록을 보이고, 조건 칸에서 누른 Esc는 채우던 값을 지우지 않는다', async () => {
     const user = userEvent.setup()
-    const { onClose } = renderPanel()
-    await user.click(screen.getByRole('button', { name: '닫기' }))
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('입력 칸에서 누른 Esc는 패널을 닫지 않는다 — 채우던 조건이 사라지지 않는다', async () => {
-    const user = userEvent.setup()
-    const { onClose, panel } = renderPanel()
-    await user.click(await within(panel).findByRole('button', { name: '거래 내역 보기' }))
+    const { panel } = await renderPanel()
+    await openTab('전체 거래 내역')
+    await within(panel).findByRole('table', { name: '거래 내역' })
+    expect(within(panel).queryByRole('button', { name: /거래 내역 (보기|접기)/ })).toBeNull()
 
     const from = within(panel).getByLabelText('시작일')
     await user.type(from, '2024-01-01')
     from.focus()
     await user.keyboard('{Escape}')
 
-    expect(onClose).not.toHaveBeenCalled()
     expect((from as HTMLInputElement).value).toBe('2024-01-01')
-
-    // 입력 칸 밖에서 누른 Esc는 그대로 닫는다.
-    within(panel).getByRole('heading', { name: '자세히 보기' }).focus()
-    await user.keyboard('{Escape}')
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('키보드만으로 열고 Esc로 닫으면 초점이 버튼으로 돌아온다', async () => {
-    const user = userEvent.setup()
-    render(<Harness />)
-    const toggle = screen.getByRole('button', { name: '자세히 보기' })
-
-    toggle.focus()
-    await user.keyboard('{Enter}')
-    const panel = await screen.findByRole('region', { name: '자세히 보기' })
-    // 열면 패널 제목으로 초점이 간다.
-    expect(document.activeElement).toBe(within(panel).getByRole('heading', { name: '자세히 보기' }))
-
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('region', { name: '자세히 보기' })).toBeNull()
-    expect(document.activeElement).toBe(toggle)
+    expect(screen.getByRole('tab', { name: '전체 거래 내역' }).getAttribute('aria-selected')).toBe('true')
   })
 
   describe('보유 섹터 차이 (FR-008, T067)', () => {
@@ -305,11 +355,12 @@ describe('DetailPanel', () => {
       apiMocks.fetchResultWeights.mockImplementation(async (token: string) =>
         token === targetToken ? targetWeights : resultWeights,
       )
-      const { panel } = renderPanel(resultDetailCompleted, {
+      const { panel } = await renderPanel(resultDetailCompleted, {
         token: targetToken,
         name: '썰물 맞추기',
         items: targetItems,
       })
+      await openSettings()
 
       const section = (await within(panel).findByRole('heading', { name: '보유 섹터 차이' })).closest(
         'section',
@@ -327,20 +378,21 @@ describe('DetailPanel', () => {
 
     it('보유 섹터가 같으면 그리지 않는다', async () => {
       apiMocks.fetchResultWeights.mockResolvedValue(resultWeights)
-      const { panel } = renderPanel(resultDetailCompleted, {
+      const { panel } = await renderPanel(resultDetailCompleted, {
         token: targetToken,
         name: '썰물 맞추기',
         items: resultDetailCompleted.config.items,
       })
-      await screen.findByText('HALT_DEFERRED')
+      await openSettings()
       await vi.waitFor(() => expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(2))
 
       expect(within(panel).queryByRole('heading', { name: '보유 섹터 차이' })).toBeNull()
     })
 
     it('비교 대상이 없으면 비교 대상의 비중을 부르지 않는다', async () => {
-      renderPanel()
-      await screen.findByText('HALT_DEFERRED')
+      await renderPanel()
+      await openSettings()
+      await screen.findByText('44.73%')
 
       expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)
     })

@@ -16,7 +16,7 @@ type Notice = Extract<PrefillOutcome, { status: 'failed' | 'reselectSectors' }>
 const DETAIL_FAILED = '기록의 저장 조건을 불러오지 못해 설정 화면으로 넘길 수 없습니다. 잠시 후 다시 시도해 주세요.'
 
 /**
- * '설정 바꿔 비교'(spec 006 FR-007, T030). 005 `OtherConditionsButton`과 같은 모양·같은 결과 처리다 — 보조 모양이고,
+ * '설정 바꿔 비교'(spec 006 FR-007, T030). 보조 모양이고,
  * 누르면 기록 상세를 받아(이미 있으면 그대로) `reopenSettings`로 003 설정 화면에 옮긴다.
  *
  * <p>결과 처리(contracts/record-handoff.md): `moved`는 할 일 없음, `reselectSectors`는 문장 + 섹터·비중 단계 연결,
@@ -75,7 +75,7 @@ export function ReopenSettingsButton({
   return (
     <>
       {unavailable ? null : (
-        <Button type="button" variant="outline" disabled={sending} onClick={() => void move()}>
+        <Button type="button" variant="outline" className={styles.action} disabled={sending} onClick={() => void move()}>
           설정 바꿔 비교
         </Button>
       )}

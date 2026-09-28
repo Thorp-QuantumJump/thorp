@@ -9,12 +9,13 @@
 아래 항목은 실행 전에 전부 모아 ``INVALID_REQUEST`` 로 거절한다.
 """
 
+import re
 from datetime import date
 
 from worker.allocation import ALLOCATION_RULES
 from worker.allocation.base import AllocationError
 from worker.contracts.engine_input import EngineInput, PriceSource, Scenario
-from worker.portfolio_execution import REBALANCE_MONTH_END
+from worker.contracts.strategy_params.rebalance import REBALANCE_PATTERN
 from worker.rules_registry import rules_not_registered_message
 from worker.target_risk import target_risk_rules
 
@@ -48,9 +49,9 @@ def unsupported_reasons(request: EngineInput) -> list[str]:
             "(spec 004 R-08)"
         )
     rebalance = allocation.parameters.get("rebalance")
-    if rebalance != REBALANCE_MONTH_END:
+    if not isinstance(rebalance, str) or not re.fullmatch(REBALANCE_PATTERN, rebalance):
         reasons.append(
-            f"allocation.parameters.rebalance must be {REBALANCE_MONTH_END}; got {rebalance!r}"
+            f"allocation.parameters.rebalance must match {REBALANCE_PATTERN}; got {rebalance!r}"
         )
 
     run = request.run

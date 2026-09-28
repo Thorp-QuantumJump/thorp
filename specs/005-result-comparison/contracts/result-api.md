@@ -64,7 +64,7 @@
 
 `config.executionType`에는 원 요청의 실행 종류(`SINGLE`·`SEARCH_BUNDLE` 등)를 담는다. 실행을 공유하더라도 요청 종류는 유지되며, `search` 질의가 없는 공개 주소에서도 자동 탐색 후보임을 구분한다. 탐색 식별자가 없으면 묶음 주소를 만들어 내지 않는다.
 
-`/results/{baseToken}?compare={candidateToken}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.
+`/results/{baseToken}?compare={token1},{token2},{token3}&search={searchId}&index=KOSPI`. `compare`는 비교 대상 결과의 공개 토큰을 쉼표로 이은 목록(최대 셋, `S15P21E205-419`)이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `index=KOSPI`는 KOSPI 참고선을 켠다(FR-017, `S15P21E205-429`). 비교 대상 상한에 세지 않고, 비교 대상을 바꿔 주소를 다시 쓸 때도 유지된다. 다른 값은 없는 것으로 본다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.
 
 ## POST /results/{publicToken}/retry
 
@@ -85,13 +85,15 @@
 
 ## GET /results/{publicToken}/index-comparison
 
-`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 기간 KOSPI 조회 포트가 있으면 결과의
-`effectiveStart`~`effectiveEnd` 범위에서 첫 지수 종가를 `config.initialCash`와 맞춘 환산 계열을 서버가
-만들어 `{available: true, reason: null, series: [{date, value}]}`로 돌려준다. `value`는 다른 금액처럼 decimal
-문자열이고, 화면은 다시 계산하지 않는다.
+`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 결과가 계산에 쓴 자료 버전(`versions.data`)의
+KOSPI 종가를 `effectiveStart`~`effectiveEnd`(양끝 포함) 범위에서 읽어, 시작 금액으로 첫 거래일에 KOSPI를
+사서 끝까지 들고 있었을 때의 자산가치로 환산한다 — `value = initialCash × 종가 / 첫 종가`. 첫 종가는 그
+범위에서 처음 관측된 값이고, 관측치가 없는 날은 채우지 않는다. 응답은 `{available: true, reason: null,
+series: [{date, value}]}`이며 `value`는 다른 금액처럼 소수 둘째 자리 decimal 문자열이다. 화면은 다시
+계산하지 않는다. 가격지수라 배당과 거래 비용은 들어 있지 않다.
 
-현재 001에는 기간 KOSPI 계열 조회 포트가 없으므로 `{available: false,
-reason: "INDEX_SERIES_UNAVAILABLE", series: []}`를 돌려준다. 최신 관측치 한 점이나 다른 계열로 값을
+기간·시작 금액·자료 버전 중 하나라도 없거나 그 범위에 KOSPI 관측치가 없으면 `{available: false,
+reason: "INDEX_SERIES_UNAVAILABLE", series: []}`다. 다른 자료 버전이나 최신 관측치 한 점으로 값을
 만들지 않는다. 어느 응답에도 `backtestId`는 없다.
 
 ## 오류

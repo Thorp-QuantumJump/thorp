@@ -28,14 +28,17 @@
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
+/* 도움말은 가장 위 층이다. 팝오버·대화상자(61)·날짜 판(70) 안의 물음표도 가려지지 않아야 한다. */
 .content {
-  z-index: 50;
+  z-index: 80;
   display: grid;
   gap: 8px;
   width: min(320px, calc(100vw - 32px));
-  padding: 14px 16px;
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface-raised);
   box-shadow: var(--thorp-shadow);
   color: var(--thorp-foreground);

@@ -10,9 +10,9 @@ import { AxisChoiceField } from "./AxisChoiceField";
 import { AxisNumberField } from "./AxisNumberField";
 import styles from "./DetailSettingsPanel.module.css";
 import {
-  ReadOnlyTargetWeights,
+  TargetWeightEditor,
   type TargetWeightRow,
-} from "./ReadOnlyTargetWeights";
+} from "./TargetWeightEditor";
 import { RuleViolationNotice } from "./RuleViolationNotice";
 
 interface DetailSettingsPanelProps {
@@ -22,8 +22,12 @@ interface DetailSettingsPanelProps {
   values: AxisValues;
   /** 후보 섹터 집합의 크기. 규칙의 `UNIVERSE_SIZE` 맥락이다 */
   universeSize: number;
-  /** 002가 확정한 비중. `targetWeightSource`가 `USER`일 때만 쓴다 */
+  /** 앞 단계에서 고른 대상과 지금 비중. `targetWeightSource`가 `USER`일 때만 쓴다 */
   targetWeights: readonly TargetWeightRow[] | null;
+  /** 한 대상의 비중을 고친다. 받아들인 값만 올라온다 */
+  onTargetWeightChange: (sectorId: string, weightTenths: number) => void;
+  /** 고른 대상 전체를 같은 비중으로 다시 채운다 */
+  onDistributeWeightsEven: () => void;
   /**
    * 지금 설정으로 평가할 수 있는 범위. 워밍업을 이루는 축 아래에 그대로 적는다.
    *
@@ -71,6 +75,8 @@ export function DetailSettingsPanel({
   values,
   universeSize,
   targetWeights,
+  onTargetWeightChange,
+  onDistributeWeightsEven,
   evaluationRange,
   onChange,
   onResetAxis,
@@ -106,12 +112,20 @@ export function DetailSettingsPanel({
         onClick={() => setOpen((current) => !current)}
       >
         <span>전략 설정</span>
-        <ChevronDown
-          className={styles.toggleIcon}
-          size={16}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
+        <span className={styles.toggleEnd}>
+          {/* 접혀 있을 때만 여는 자리임을 알린다(S15P21E205-451). 버튼 이름에는 넣지 않는다. */}
+          {open ? null : (
+            <span className={styles.toggleHint} aria-hidden="true">
+              직접 선택해보세요
+            </span>
+          )}
+          <ChevronDown
+            className={styles.toggleIcon}
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </span>
       </button>
 
       {open ? (
@@ -122,7 +136,11 @@ export function DetailSettingsPanel({
           </p>
 
           {strategy.targetWeightSource === "USER" ? (
-            <ReadOnlyTargetWeights rows={targetWeights} />
+            <TargetWeightEditor
+              rows={targetWeights}
+              onChange={onTargetWeightChange}
+              onDistributeEven={onDistributeWeightsEven}
+            />
           ) : null}
           {strategy.targetWeightSource === "COMPUTED" ? (
             <p className={styles.note}>

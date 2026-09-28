@@ -55,6 +55,8 @@ interface AnalysisConditionsPanelProps {
   /** 평가할 수 있는 범위 옆에 붙는 도움말. 워밍업이 앞을 깎았을 때만 온다 */
   rangeReason?: ReactNode;
   minEvaluationYears: number;
+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). 끈 상태면 `undefined`다 */
+  targetVolatility?: number;
   /**
    * 비용 조건. 조회하는 중이면 `'loading'`, 확인하지 못했으면 `null`이다. 일반 문구로 대신하지 않고, 조회 중을
    * 확인 불가로 접지 않는다
@@ -71,6 +73,30 @@ export const COST_UNAVAILABLE =
 const COST_BASIS = "2026년 한국 ETF 거래에 적용되는 기준과 같습니다.";
 
 export const COST_LOADING = "비용 조건을 확인하는 중입니다.";
+
+export const TARGET_RISK_HELP = (
+  <>
+    <p>
+      포트폴리오가 흔들리는 정도(변동성)가 정한 값보다 커지면, 투자 비중을 줄이고 줄인 만큼을
+      현금으로 두는 규칙입니다.
+    </p>
+    <p>
+      매달 말 최근 3개월(63거래일)의 흔들림을 보고 조절합니다. 예를 들어 목표가 연 10%인데 최근
+      흔들림이 20%면 절반만 투자하고 절반은 현금으로 둡니다. 흔들림이 목표보다 작으면 그대로 두며,
+      빚을 내서 더 사지는 않습니다.
+    </p>
+    <p>
+      급락할 때 손실을 줄일 수 있지만, 현금으로 빼 둔 사이 시장이 반등하면 그만큼 수익을 놓칠 수
+      있습니다.
+    </p>
+  </>
+);
+
+/** 등록표 범위(min~max, step 간격)의 후보. 목록으로만 두어 범위 밖 값이 생기지 않는다. */
+function rangeChoices({ min, max, step }: { min: number; max: number; step: number }): number[] {
+  const count = Math.round((max - min) / step);
+  return Array.from({ length: count + 1 }, (_, i) => Number((min + i * step).toFixed(4)));
+}
 const RANGE_UNAVAILABLE =
   "평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.";
 
@@ -330,10 +356,10 @@ function PeriodField({
  * 화면 세 곳(제목·요약·여는 버튼)에서 말해졌다 — 2026-09-22에 하나로 합쳤다(`S15P21E205-406`).
  * 전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).
  *
- * <p><b>바꿀 수 있는 것은 셋뿐이다.</b> 분석 기간(평가 가능 범위 안), 시작 금액(등록표 범위 안), 최소 평가
- * 기간(등록표 후보 가운데). 비용 가정은 004가 등록한 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고,
+ * <p><b>바꿀 수 있는 것은 넷뿐이다.</b> 분석 기간(평가 가능 범위 안), 시작 금액(등록표 범위 안), 최소 평가
+ * 기간(등록표 후보 가운데), 변동성 제한(끔 또는 등록표 범위 안의 목표 변동성). 비용 가정은 004가 등록한 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고,
  * 운용 방식은 연속 운용으로 고정해 보인다. 수수료·세금을 고치거나 수익이 높아지는 쪽으로 조건을 골라 주는
- * 선택지를 두지 않는다(FR-010, 원칙 IV). 목표 변동성은 '목표 위험 맞춤' 시나리오의 항목이라 여기 없다.
+ * 선택지를 두지 않는다(FR-010, 원칙 IV). 변동성 제한은 004의 '목표 위험 맞춤'(`TARGET_RISK`) 시나리오다.
  *
  * <p><b>값을 모른다.</b> 범위·후보·라벨·단위는 모두 props로 받은 등록표와 판정에서 읽는다(FR-005).
  */
@@ -346,6 +372,7 @@ export function AnalysisConditionsPanel({
   caseConstraint = null,
   initialAmount,
   minEvaluationYears,
+  targetVolatility,
   cost,
   summary,
   rangeReason,
@@ -355,7 +382,10 @@ export function AnalysisConditionsPanel({
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const yearsGroup = useId();
+  const volatilityGroup = useId();
+  const volatilityId = useId();
   const amount = conditions.initialAmount;
+  const volatility = conditions.targetVolatility;
   const years = conditions.minEvaluationYears;
 
   return (
@@ -368,12 +398,20 @@ export function AnalysisConditionsPanel({
         onClick={() => setOpen((current) => !current)}
       >
         <span>분석 조건</span>
-        <ChevronDown
-          className={styles.toggleIcon}
-          size={16}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
+        <span className={styles.toggleEnd}>
+          {/* 접혀 있을 때만 여는 자리임을 알린다(S15P21E205-451). 버튼 이름에는 넣지 않는다. */}
+          {open ? null : (
+            <span className={styles.toggleHint} aria-hidden="true">
+              직접 선택해보세요
+            </span>
+          )}
+          <ChevronDown
+            className={styles.toggleIcon}
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </span>
       </button>
       {summary}
 
@@ -436,6 +474,63 @@ export function AnalysisConditionsPanel({
                 );
               })}
             </div>
+          </fieldset>
+
+          <fieldset className={fieldStyles.field}>
+            <legend className={fieldStyles.header}>
+              <span className={fieldStyles.label}>
+                변동성 제한
+                <InlineHelp label="변동성 제한" on="hover">
+                  {TARGET_RISK_HELP}
+                </InlineHelp>
+              </span>
+            </legend>
+            <div className={fieldStyles.choices}>
+              <label className={fieldStyles.choice}>
+                <input
+                  type="radio"
+                  name={volatilityGroup}
+                  checked={targetVolatility === undefined}
+                  onChange={() => onChange({ targetVolatility: undefined })}
+                />
+                쓰지 않음
+              </label>
+              <label className={fieldStyles.choice}>
+                <input
+                  type="radio"
+                  name={volatilityGroup}
+                  checked={targetVolatility !== undefined}
+                  onChange={() => onChange({ targetVolatility: volatility.default })}
+                />
+                씀
+              </label>
+            </div>
+            {targetVolatility !== undefined ? (
+              <div className={fieldStyles.inputRow}>
+                <label htmlFor={volatilityId} className={styles.dateLabel}>
+                  목표 변동성(연)
+                </label>
+                <select
+                  id={volatilityId}
+                  className={fieldStyles.input}
+                  value={targetVolatility}
+                  onChange={(event) =>
+                    onChange({ targetVolatility: Number(event.target.value) })
+                  }
+                >
+                  {rangeChoices(volatility).map((value) => (
+                    <option key={value} value={value}>
+                      {value}%
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            <p className={fieldStyles.hint}>
+              {targetVolatility === undefined
+                ? "흔들림과 상관없이 전략의 비중대로 계속 투자합니다."
+                : "값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다."}
+            </p>
           </fieldset>
 
           <div className={fieldStyles.field}>

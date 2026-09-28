@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;
 import com.ssafy.thorp.regime.application.port.IndicatorRegistration;
 import com.ssafy.thorp.regime.application.result.RegimeSearchResult;
+import com.ssafy.thorp.regime.domain.model.CaseExplanation;
 import com.ssafy.thorp.regime.domain.model.ComparisonMonths;
 import com.ssafy.thorp.regime.domain.model.IndicatorAsOf;
 import com.ssafy.thorp.regime.domain.model.NewerRelease;
@@ -17,6 +18,7 @@ import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 검색 하나의 응답 (계약 §1).
@@ -44,7 +46,11 @@ public record RegimeSearchResponse(
         DataAsOfView dataAsOf,
         VersionsView versions,
         CountsView counts,
-        List<CaseSummaryView> cases) {
+        String phaseNote,
+        List<CaseSummaryView> cases,
+        String thresholdNote,
+        String referenceLabel,
+        List<CaseSummaryView> referenceCases) {
 
     public static RegimeSearchResponse from(RegimeSearchResult result) {
         RegimeSnapshot snapshot = result.snapshot();
@@ -68,9 +74,41 @@ public record RegimeSearchResponse(
                 DataAsOfView.of(result),
                 VersionsView.of(snapshot),
                 CountsView.of(result),
+                phaseNote(result),
                 result.displayedCases().stream()
                         .map(item -> CaseSummaryView.of(item, snapshot))
-                        .toList());
+                        .toList(),
+                thresholdNote(result),
+                snapshot.thresholdApplied() ? RegimeNotes.REFERENCE_LABEL : null,
+                // 교정된 결과에서만 목록을 나눈다(spec FR-021). 그 밖에는 키가 없다.
+                snapshot.thresholdApplied()
+                        ? result.referenceCases().stream()
+                                .map(item -> CaseSummaryView.of(item, snapshot))
+                                .toList()
+                        : null);
+    }
+
+    /**
+     * 지금 시점의 블록 안 엇갈림 안내 (spec 010 v3 개정안 §3.5). 배치가 사례마다 같은 문장을 담으므로 첫 사례의 것을 쓴다. v1 결과와 사례가 없는
+     * 결과는 {@code null}이다.
+     */
+    private static String phaseNote(RegimeSearchResult result) {
+        return result.displayedCases().stream()
+                .map(item -> item.explanation().queryNote())
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** 기준 충족 사례가 하나도 없을 때의 안내 (spec US1 시나리오 5, US3 시나리오 4). */
+    private static String thresholdNote(RegimeSearchResult result) {
+        RegimeSnapshot snapshot = result.snapshot();
+        if (!snapshot.thresholdApplied() || !snapshot.meetingCases().isEmpty()) {
+            return null;
+        }
+        return snapshot.mode() == SearchMode.COMPOSITE
+                ? RegimeNotes.NO_MEETING_COMPOSITE_NOTE
+                : RegimeNotes.NO_MEETING_FIELD_NOTE;
     }
 
     /** 질의가 실제로 본 달 — 지표별 비교 시점의 합집합이다(spec FR-001). */
@@ -227,10 +265,13 @@ public record RegimeSearchResponse(
     public record CountsView(int evaluated, int eligible, int stored, int displayed) {
         static CountsView of(RegimeSearchResult result) {
             RegimeSnapshot snapshot = result.snapshot();
+            // 교정된 결과의 stored 는 기준 충족 사례 수다 — '더 보기'는 기본 목록(충족 사례)에만 붙는다(FR-021).
             return new CountsView(
                     snapshot.candidateCounts().evaluated(),
                     snapshot.eligibleCount(),
-                    snapshot.storedCount(),
+                    snapshot.thresholdApplied()
+                            ? snapshot.meetingCases().size()
+                            : snapshot.storedCount(),
                     result.displayedCount());
         }
     }
@@ -240,6 +281,7 @@ public record RegimeSearchResponse(
      *
      * <p><b>관측 구간·비슷한 점·다른 점이 먼저다</b> — 거리·기여는 상세로 넘긴다(spec FR-015).
      */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record CaseSummaryView(
             String endMonth,
             int rank,
@@ -247,6 +289,8 @@ public record RegimeSearchResponse(
             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal distance,
             List<String> similar,
             List<String> different,
+            boolean unusual,
+            List<ContextLinkView> context,
             boolean detailAvailable) {
 
         static CaseSummaryView of(RegimeCase item, RegimeSnapshot snapshot) {
@@ -257,6 +301,13 @@ public record RegimeSearchResponse(
                     item.distance().value(),
                     item.explanation().similar(),
                     item.explanation().different(),
+                    item.explanation().unusual(),
+                    // 특이 사례에만 붙는다. 없으면 키가 없다 — 빈 목록이 "그 기간에 아무 일도 없었다"로 읽히지 않게.
+                    item.explanation().context().isEmpty()
+                            ? null
+                            : item.explanation().context().stream()
+                                    .map(ContextLinkView::of)
+                                    .toList(),
                     true);
         }
 
@@ -267,6 +318,20 @@ public record RegimeSearchResponse(
                     .sorted()
                     .map(RegimeFormat::month)
                     .toList();
+        }
+    }
+
+    /** 당시 맥락 한 건 (spec 010 v3 개정안 §4). 제목·날짜·출처·원문 링크만 나간다. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ContextLinkView(
+            String kind, String date, String title, String url, String source) {
+        static ContextLinkView of(CaseExplanation.ContextLink link) {
+            return new ContextLinkView(
+                    link.kind(),
+                    link.date() == null ? null : link.date().toString(),
+                    link.title(),
+                    link.url(),
+                    link.source());
         }
     }
 }

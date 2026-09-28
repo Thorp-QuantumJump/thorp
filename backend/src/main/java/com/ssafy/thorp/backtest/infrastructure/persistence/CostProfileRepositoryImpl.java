@@ -29,6 +29,7 @@ public class CostProfileRepositoryImpl implements CostProfileRepository {
                 entity.getTaxBps(),
                 entity.getEscalation(),
                 entity.isProvisional(),
-                entity.getNote());
+                entity.getNote(),
+                entity.getTaxNote());
     }
 }

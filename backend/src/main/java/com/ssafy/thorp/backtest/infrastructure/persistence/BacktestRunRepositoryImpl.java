@@ -162,6 +162,13 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {
     }
 
     @Override
+    public List<BacktestRun> findRecentRequestedBy(
+            long requesterId, ExecutionType executionType, int limit) {
+        return toDomain(
+                jpaRepository.findRecentRequestedBy(requesterId, executionType, Limit.of(limit)));
+    }
+
+    @Override
     public List<BacktestRun> findStaleRunning(Instant since, int limit) {
         return toDomain(jpaRepository.findStale(RunStatus.RUNNING, since, Limit.of(limit)));
     }

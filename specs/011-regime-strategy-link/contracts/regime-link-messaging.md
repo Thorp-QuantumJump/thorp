@@ -15,7 +15,8 @@
 | `regime-link.jobs.dlq` | queue | **백엔드가 소비**해 링크를 `FAILED(SYSTEM_FAILURE)`로 |
 | `regime-link.events` | queue | 워커 → 백엔드 |
 
-routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`. 메시지 속성
+routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`, DLX → DLQ `regime-link.job.dead`
+(작업 routing key를 그대로 쓰지 않는다 — 백테스트의 `backtest.job.dead`와 같은 방식이다. T107). 메시지 속성
 `content_type=application/json`, `delivery_mode=2`, header `schemaVersion: 1`,
 작업 `message_id = "RLJ-" + linkId + "-" + attempt`, `correlation_id = linkId`. 상수는 백엔드
 `RegimeLinkRabbitConfig`의 `public static final String`과 워커 `regime_link/messaging.py`가 같은 값을

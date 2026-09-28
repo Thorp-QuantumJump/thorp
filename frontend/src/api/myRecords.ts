@@ -6,6 +6,7 @@ import type {
   MyRecordListPage,
   MyRecordListQuery,
   MyRecordRegime,
+  UsedStrategy,
 } from '@/types/myRecords'
 
 /**
@@ -172,4 +173,33 @@ function filenameFrom(disposition: unknown, fallback: string): string {
   }
   const plain = /filename="?([^";]+)"?/i.exec(disposition)
   return plain ? plain[1] : fallback
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readUsedStrategy(value: unknown): UsedStrategy | null {
+  if (!isRecord(value)) return null
+  const { strategyId, recordName, rulesVersion, parameters } = value
+  if (typeof strategyId !== 'string' || typeof rulesVersion !== 'string' || !isRecord(parameters))
+    return null
+  return {
+    strategyId,
+    recordName: typeof recordName === 'string' && recordName.trim() !== '' ? recordName : null,
+    rulesVersion,
+    parameters,
+  }
+}
+
+/**
+ * 내가 써 본 전략·설정값 조합(006 contracts `GET /my-records/used-strategies`). 005 비교 후보의 '내 전략' 묶음이다.
+ *
+ * <p>로그인이 필요한 경로라 비로그인 화면은 부르지 않는다 — 401 을 받아 넘기는 대신 처음부터 기본 전략만 후보로 둔다.
+ * 계약에 맞지 않는 항목은 버린다. 조합 하나를 잃는 쪽이 잘못된 요청을 보내는 쪽보다 낫다.
+ */
+export async function fetchUsedStrategies(signal?: AbortSignal): Promise<UsedStrategy[]> {
+  const data = await getResource<{ items?: unknown }>(basePath + '/used-strategies', signal)
+  const items = Array.isArray(data.items) ? data.items : []
+  return items.map(readUsedStrategy).filter((item): item is UsedStrategy => item !== null)
 }

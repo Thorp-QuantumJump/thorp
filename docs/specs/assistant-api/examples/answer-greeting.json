@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "data": {
+    "status": "GREETING",
+    "answer": "안녕하세요. 지금 보고 있는 결과에 대해 물어보세요. 예: 수익률은 어떻게 계산된거야?",
+    "evidence": [],
+    "page": { "kind": "RESULT" }
+  },
+  "error": null
+}

@@ -3,33 +3,88 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
 }
 
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
   margin: 0 auto;
-  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
+  padding: min(var(--thorp-page-top), 16px) 0 var(--thorp-page-bottom);
 }
 
-/* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */
-.result {
+/* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */
+.summaryStack {
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-width: 0;
 }
 
+/*
+  요약 탭의 작은 제목(S15P21E205-451). 조건 줄과 해석 문장이 같은 흰 글자로 이어져 어디서 무엇이 시작하는지
+  읽히지 않았다. 강조색 작은 제목으로 두 묶음을 가르고, 제목 바로 아래 내용은 붙여 둔다.
+*/
+.summaryLabel {
+  margin: 0 0 -12px;
+  color: var(--thorp-accent-soft, var(--thorp-copy));
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.summaryLabel:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+/* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 16px;
+}
+
+.backLink {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 660;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--thorp-accent-soft);
+}
+
+/* 작은 제목은 되돌아가기 줄처럼 두 칸을 다 쓴다. */
+.introRow {
+  grid-column: 1 / -1;
+}
+
 .title {
   margin: 0;
-  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  font-size: var(--thorp-text-title, clamp(1.7rem, 4.5vw, 2.6rem));
+  line-height: var(--thorp-title-leading, 1.1);
+  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  font-weight: 700;
 }
 
 .status {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
   line-height: 1.7;
 }
 
@@ -41,13 +96,14 @@
 }
 
 .retry {
-  padding: 8px 14px;
+  padding: var(--thorp-control-pad-block, 8px) 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-control, 10px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
   cursor: pointer;
+  min-height: var(--thorp-control, auto);
 }
 
 .retry:focus-visible {
@@ -57,7 +113,7 @@
 
 .sentence {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
@@ -69,16 +125,56 @@
   gap: 8px 10px;
 }
 
-.hint {
-  margin: -12px 0 0;
-  color: var(--thorp-muted);
-  font-size: 0.8rem;
-  line-height: 1.6;
+@media (max-width: 600px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .source {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.8rem;
+  font-size: var(--thorp-text-small, 0.8rem);
 }
 
+/*
+  머리의 '비교 대상 고르기'. 공용 Button의 기본 높이(32px)는 작은 행동 단이라, 이 화면의 행동답게 카드 안
+  행동 단(40px)으로 올린다.
+*/
+.compareButton {
+  height: var(--thorp-control, 2rem);
+  padding-inline: 16px;
+  font-size: var(--thorp-control-font, 0.875rem);
+  font-weight: var(--thorp-control-weight, 500);
+}
+
+/* '경제환경이 비슷했던 과거 보기'. 그래프 오른쪽 아래에 두는 이동 링크다(행동 버튼과 무게를 가른다). */
+.regimeEntry {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.regimeEntry a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--thorp-control, 40px);
+  padding: 0 16px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control, 6px);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-control-font, 0.82rem);
+  font-weight: var(--thorp-control-weight, 600);
+  text-decoration: none;
+}
+
+.regimeEntry a:hover {
+  border-color: var(--thorp-accent-soft);
+  color: var(--thorp-accent-soft);
+}
+
+.regimeEntry a:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}

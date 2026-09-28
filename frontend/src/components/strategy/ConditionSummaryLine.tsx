@@ -34,6 +34,8 @@ interface ConditionSummaryLineProps {
    * 두 상태를 한 값으로 접지 않는다 — 곧 끝날 조회를 "확인할 수 없음"으로 보이면 실패한 것처럼 읽힌다.
    */
   costProfile: SummaryCostProfile | 'loading' | null
+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). 끈 상태면 항목을 두지 않는다 */
+  targetVolatility?: number
 }
 
 const UNAVAILABLE = '확인할 수 없음'
@@ -61,6 +63,7 @@ export function ConditionSummaryLine({
   sectorCount,
   initialAmount,
   costProfile,
+  targetVolatility,
 }: ConditionSummaryLineProps) {
   return (
     <p className={styles.line} aria-label="분석 조건 요약">
@@ -93,6 +96,12 @@ export function ConditionSummaryLine({
           ) : null}
         </span>
       </span>
+      {targetVolatility !== undefined ? (
+        <span className={styles.item}>
+          <span className={styles.label}>변동성 제한</span>
+          <span className={styles.value}>연 {targetVolatility}%</span>
+        </span>
+      ) : null}
     </p>
   )
 }

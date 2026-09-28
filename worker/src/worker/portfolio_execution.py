@@ -32,6 +32,7 @@ Nautilus 잔고와 장부 현금은 대조 대상이 아니다. 공매도 금지
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -71,6 +72,7 @@ from worker.contracts.engine_output import (
 )
 from worker.contracts.engine_output import Warning as ContractWarning
 from worker.contracts.events import ProgressPoint
+from worker.contracts.strategy_params.rebalance import REBALANCE_PATTERN, trading_day_period
 from worker.corporate_actions import DistributionLedger, apply_split, splits_on
 from worker.costs import CostModel, FillCost, Side
 from worker.market_data import MarketData
@@ -80,7 +82,7 @@ ZERO = Decimal("0")
 PRICE_QUANTUM = Decimal("0.000001")
 #: ``run.randomSeed`` 미지정(None) 시 쓰는 값. 재현성을 위해 시드 없이 실행하지 않는다.
 DEFAULT_RANDOM_SEED = 42
-#: 계약이 허용하는 유일한 리밸런싱 주기(FR-011).
+#: 리밸런싱 주기의 기본값. 허용 범위는 ``REBALANCE_PATTERN``(FR-011).
 REBALANCE_MONTH_END = "MONTH_END"
 #: 결과 계약 ``exceptions[].kind``.
 HALT_DEFERRED = "HALT_DEFERRED"
@@ -179,21 +181,28 @@ def plan_days(calendar: list[date], evaluation_start: date, end: date, rebalance
     """평가일과 판단일을 정한다.
 
     첫 판단은 **평가 시작일 종가**다 — 첫 월말까지 현금으로 앉아 있으면 전략이 아니라 대기 기간을
-    평가하게 된다. 그 뒤로는 매월 마지막 거래일. 마지막 평가일에는 판단하지 않는다 — 체결할 다음
-    거래일이 없다.
+    평가하게 된다. 그 뒤로는 주기대로: ``MONTH_END`` 는 매월 마지막 거래일, ``QUARTER_END`` 는
+    3·6·9·12월의 마지막 거래일, ``TRADING_DAYS_n`` 은 평가 시작일부터 n거래일마다. 마지막 평가일에는
+    판단하지 않는다 — 체결할 다음 거래일이 없다.
     """
-    if rebalance != REBALANCE_MONTH_END:
+    if not re.fullmatch(REBALANCE_PATTERN, rebalance):
         raise ValueError(
             f"allocation.parameters.rebalance={rebalance!r} is not supported;"
-            f" only {REBALANCE_MONTH_END} is an approved cadence (FR-011)"
+            f" approved cadences match {REBALANCE_PATTERN} (FR-011)"
         )
     evaluation_days = [day for day in calendar if evaluation_start <= day <= end]
     if not evaluation_days:
         return DayPlan(calendar, [], frozenset())
+    every = trading_day_period(rebalance)
     decisions = {evaluation_days[0]}
     for index, day in enumerate(evaluation_days[:-1]):
-        if evaluation_days[index + 1].month != day.month:
-            decisions.add(day)
+        if every is not None:
+            if index % every == 0:
+                decisions.add(day)
+        elif evaluation_days[index + 1].month != day.month:
+            # 월말. 분기말은 그중 3·6·9·12월만.
+            if rebalance == REBALANCE_MONTH_END or day.month % 3 == 0:
+                decisions.add(day)
     decisions.discard(evaluation_days[-1])
     return DayPlan(calendar, evaluation_days, frozenset(decisions))
 

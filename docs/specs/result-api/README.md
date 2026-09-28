@@ -59,12 +59,13 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec
 
 ## 5. 지수 보조 비교 — `GET /results/{token}/index-comparison`
 
-토큰 판정을 먼저 거친 뒤, 기간 KOSPI 조회 포트가 있으면 결과의 `effectiveStart`~`effectiveEnd` 범위와
-`initialCash`로 서버가 환산한 `{available: true, reason: null, series: [{date, value}]}`를 돌려준다.
-금액은 문자열이고 화면은 다시 계산하지 않는다.
+토큰 판정을 먼저 거친 뒤, 결과가 쓴 자료 버전(`versions.data`)의 KOSPI 종가를 `effectiveStart`~`effectiveEnd`
+범위에서 읽어 `initialCash × 종가 / 첫 종가`로 환산한 `{available: true, reason: null, series: [{date, value}]}`를
+돌려준다. 시작 금액으로 첫 거래일에 KOSPI를 사서 들고 있었을 때의 자산가치다(배당·비용 없음). 금액은 소수
+둘째 자리 문자열이고, 관측치가 없는 날은 채우지 않으며, 화면은 다시 계산하지 않는다.
 
-현재 001에는 기간 계열 포트가 없으므로 `{available: false, reason: "INDEX_SERIES_UNAVAILABLE",
-series: []}`다. 최신 관측치 한 점으로 기간 계열을 꾸미지 않는다.
+기간·금액·자료 버전이 없거나 그 범위에 관측치가 없으면 `{available: false, reason: "INDEX_SERIES_UNAVAILABLE",
+series: []}`다. 다른 판이나 최신 관측치 한 점으로 계열을 꾸미지 않는다.
 
 ## 5.1. 진행 시계열 구독 — `GET /results/{token}/progress`
 

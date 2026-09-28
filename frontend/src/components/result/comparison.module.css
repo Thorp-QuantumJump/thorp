@@ -1,13 +1,13 @@
 .panel {
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--thorp-radius-card, 12px);
+  padding: var(--thorp-pad-card, 16px);
   background: var(--thorp-surface);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .panel h2 {
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
   margin: 0 0 12px;
 }
 .panel p {
@@ -19,15 +19,9 @@
   display: grid;
   gap: 12px;
 }
-.candidates button {
-  white-space: normal;
-  height: auto;
-  min-height: 36px;
-  text-align: left;
-}
 .candidates p {
   margin: 6px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
   color: var(--thorp-copy);
 }
 .actions {
@@ -50,11 +44,189 @@
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100svh - 32px);
   overflow-y: auto;
-  padding: 24px;
+  padding: var(--thorp-pad-card, 24px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 16px;
+  border-radius: var(--thorp-radius-card, 16px);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   line-height: 1.7;
   overflow-wrap: anywhere;
+}
+
+/* 제목·안내·버튼은 제자리에 두고 후보 목록만 스크롤한다. 높이는 적당한 상한과 화면에 남은 높이 중 작은 쪽이다. */
+.popover {
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  width: min(460px, calc(100vw - 32px));
+  max-height: min(560px, var(--radix-popover-content-available-height, calc(100svh - 32px)));
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-card, 12px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 24%);
+}
+
+.popover .panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.popover .candidates {
+  gap: 8px;
+  min-height: 0;
+  margin: 8px 0 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.popover .candidates p {
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* 비교 대상 칩. '비교 대상 고르기' 왼쪽에 늘어선다. 이름은 폭 상한에서 말줄임이다. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  height: 36px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: var(--thorp-surface);
+  color: var(--thorp-foreground);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.chip[data-state='FAILED'],
+.chip[data-state='EXECUTION_LIMIT'],
+.chip[data-state='EXPIRED'] {
+  border-color: var(--thorp-negative);
+}
+.chipBody {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 4px 0 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+button.chipBody {
+  cursor: pointer;
+}
+button.chipBody:hover .chipName {
+  text-decoration: underline;
+}
+.chipName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chipState {
+  flex: none;
+  color: var(--thorp-muted);
+  font-size: 0.75rem;
+}
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 0 3px 0 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-copy);
+  cursor: pointer;
+}
+.chipRemove:hover {
+  background: var(--thorp-surface-muted);
+  color: var(--thorp-foreground);
+}
+.chipRemove:focus-visible,
+button.chipBody:focus-visible {
+  outline: 2px solid var(--thorp-neutral);
+  outline-offset: 1px;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.pickerNote {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+.group {
+  border-top: 1px solid var(--thorp-line);
+  padding-top: 10px;
+}
+.groupTitle {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.combinations {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.combination {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  line-height: 1.6;
+}
+.combination input {
+  margin-top: 5px;
+}
+.combination input:disabled + span {
+  color: var(--thorp-muted);
+}
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.rowTitle {
+  font-weight: 600;
+}
+.rowBase {
+  font-size: 0.78rem;
+  color: var(--thorp-muted);
+}
+.volatilityField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0 24px;
+  font-size: 0.85rem;
+  color: var(--thorp-copy);
+}
+.volatilityField select {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 8px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  font: inherit;
 }

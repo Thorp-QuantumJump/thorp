@@ -135,3 +135,15 @@ export type MyRecordApiErrorCode =
   | 'RESULT_NOT_READY'
   | 'RESOURCE_NOT_FOUND'
   | 'INVALID_INPUT'
+
+/**
+ * `GET /my-records/used-strategies` 항목(006 contracts). 내가 단일 분석에서 써 본 전략·설정값 조합이다. 결과가 아니라
+ * 조합이라 실행·결과 식별자가 없다. `parameters`는 접수가 저장한 JSON 그대로이므로 화면이 현재 등록표로 다시 판정한다.
+ * `recordName`은 그 조합을 가리키는 살아 있는 내 기록 항목의 이름이고, 지웠으면 `null`이다(FR-017).
+ */
+export type UsedStrategy = {
+  strategyId: string
+  recordName: string | null
+  rulesVersion: string
+  parameters: Record<string, unknown>
+}

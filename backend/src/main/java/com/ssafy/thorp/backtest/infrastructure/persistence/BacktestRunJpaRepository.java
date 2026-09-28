@@ -69,6 +69,20 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L
     @Query("update BacktestRunJpaEntity r set r.publishCount = r.publishCount + 1 where r.id = :id")
     int incrementPublishCount(@Param("id") Long id);
 
+    /**
+     * 요청 표와 조인해 이 사용자의 요청 최신순으로 실행을 읽는다. {@code distinct}를 쓰지 않는 이유: 정렬 기준({@code req.id})이 선택 목록에
+     * 없어 Postgres 가 거부한다. 중복은 부른 쪽이 접는다.
+     */
+    @Query(
+            "select run from BacktestRunJpaEntity run, BacktestRequestJpaEntity req"
+                    + " where req.runId = run.id and req.requesterId = :requesterId"
+                    + " and req.executionType = :executionType"
+                    + " order by req.id desc")
+    List<BacktestRunJpaEntity> findRecentRequestedBy(
+            @Param("requesterId") long requesterId,
+            @Param("executionType") ExecutionType executionType,
+            Limit limit);
+
     /** 취소 경로: 실행 행을 잠근 채 활성 요청 수를 세고 갱신한다(R-04). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from BacktestRunJpaEntity r where r.id = :id")

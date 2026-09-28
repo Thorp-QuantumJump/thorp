@@ -63,6 +63,21 @@ public record RegimeSnapshot(
         return cases.size();
     }
 
+    /** 교정된 기준으로 사례를 나눈 결과인가 (spec FR-021). */
+    public boolean thresholdApplied() {
+        return status == SearchStatus.THRESHOLD_APPLIED;
+    }
+
+    /** 기준 충족 사례 — 교정된 결과의 기본 목록이다. */
+    public List<RegimeCase> meetingCases() {
+        return cases.stream().filter(item -> item.distance().meets()).toList();
+    }
+
+    /** 기준 미충족 참고 사례 — 교정된 결과에서 따로 여는 목록이다. */
+    public List<RegimeCase> referenceCases() {
+        return cases.stream().filter(item -> !item.distance().meets()).toList();
+    }
+
     private static boolean startsWithFixture(String version) {
         // 임시 대역 판정은 이 접두사 하나다. 008에 묻지 않는다 — 008이 없어서 쓰는 대역인데
         // 그 판정을 008에 맡기면 순환이다(계약 §4.2).

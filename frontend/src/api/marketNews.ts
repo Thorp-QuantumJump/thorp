@@ -4,6 +4,7 @@ import type {
   NewsDigest,
   NewsDigestResult,
   NewsDigestState,
+  NewsSector,
   PublicationTimeStatus,
 } from '@/types/marketNews'
 
@@ -102,8 +103,8 @@ export type NewsDigestRange = { from?: string; to?: string }
 /**
  * `sectorId`는 **선택**이다. 고르지 않았으면 붙이지 않는다.
  *
- * 012가 형식을 검증하지 않고 001의 대응표에 있는지만 보므로 009도 모양을 따지지 않는다.
- * 여기서 규칙을 만들면 001이 규칙을 바꾼 날 009만 거부하는 값이 생긴다.
+ * 012가 형식을 검증하지 않고 섹터 목록(`fetchNewsSectors`)에 있는지만 보므로 화면도 모양을 따지지 않는다.
+ * 여기서 규칙을 만들면 012가 규칙을 바꾼 날 화면만 거부하는 값이 생긴다.
  */
 export async function fetchMarketNewsDigests(
   sectorId?: string | null,
@@ -120,6 +121,38 @@ export async function fetchMarketNewsDigests(
       signal,
     })
     return parseDigestEnvelope(response.data)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+function isNewsSector(value: unknown): value is NewsSector {
+  return (
+    isRecord(value) &&
+    typeof value.sectorId === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.investable === 'boolean'
+  )
+}
+
+/**
+ * 뉴스를 좁혀 볼 섹터 목록(012 FR-005, Session 2026-09-25). 투자 대상 섹터와 뉴스 전용 섹터가 화면 순서로 온다.
+ * 화면은 이 목록으로 칩을 그리고 섹터 이름을 상수로 두지 않는다.
+ */
+export async function fetchNewsSectors(signal?: AbortSignal): Promise<NewsSector[]> {
+  try {
+    const response = await apiClient.get<unknown>('/market-news/sectors', { signal })
+    const value = response.data
+    if (
+      !isRecord(value) ||
+      value.isSuccess !== true ||
+      !isRecord(value.result) ||
+      !Array.isArray(value.result.sectors) ||
+      !value.result.sectors.every(isNewsSector)
+    ) {
+      throw new Error('뉴스 섹터 목록을 읽을 수 없습니다.')
+    }
+    return value.result.sectors as NewsSector[]
   } catch (error) {
     throw normalizeApiError(error)
   }

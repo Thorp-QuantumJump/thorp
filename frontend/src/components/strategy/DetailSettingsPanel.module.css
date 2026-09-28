@@ -10,18 +10,19 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 10px 2px;
+  padding: var(--thorp-control-pad-block, 10px) 2px;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   font-weight: 700;
   cursor: pointer;
   text-align: left;
   -webkit-user-select: none;
   user-select: none;
+  min-height: var(--thorp-control, auto);
 }
 
 .toggle:hover,
@@ -65,50 +66,190 @@
 .note {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
 }
 
 .subTitle {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--thorp-text-body, 0.92rem);
 }
 
 .weights {
   display: grid;
   gap: 8px;
-  padding: 14px 16px;
+  padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
 }
 
-.weightTable {
+/* 대상 하나의 비중을 다루는 줄이다. 슬라이더와 숫자 칸이 같은 값을 보인다. */
+.weightList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weightRow {
+  min-width: 0;
+}
+
+.weightRow [data-slot='weight'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
+  background: var(--thorp-surface-raised);
+}
+
+.weightRow [data-slot='weight-label'] {
+  flex: 0 0 8rem;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  overflow-wrap: anywhere;
+}
+
+/* 슬라이더와 숫자 칸이 좁은 화면에서 서로를 밀어내지 않게 한 묶음으로 두고 함께 줄인다. */
+.weightRow [data-slot='weight-controls'] {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.weightRow [data-slot='weight-slider'] {
+  flex: 1 1 6rem;
+  min-width: 0;
+  accent-color: var(--thorp-accent);
+  cursor: pointer;
+}
+
+.weightRow [data-slot='weight-number'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.weightRow [data-slot='weight-field'] {
+  width: 5.5rem;
+  padding: var(--thorp-control-pad-block, 6px) 10px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-control, var(--thorp-radius-inset, 8px));
+  background: var(--thorp-surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--thorp-text-body, 0.86rem);
+  min-height: var(--thorp-control-sm, auto);
+}
+
+.weightRow [data-slot='weight-unit'] {
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.82rem);
+}
+
+/* 받지 않은 입력을 알리는 한 문장이다. 그 자리에 둔다. */
+.weightRow [data-slot='weight-error'] {
+  flex-basis: 100%;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.5;
+}
+
+/* 합계와 남은 비중, 되돌리기 하나가 놓이는 자리다. 별도 알림 영역으로 빼지 않는다. */
+.weightTotal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 4px;
+  padding: var(--thorp-pad-inset, 10px 12px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 10px);
+}
+
+.weightTotal p {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  font-size: var(--thorp-text-body, 0.86rem);
+  line-height: 1.6;
+}
+
+/* 100% 가운데 얼마가 찼고 얼마가 넘쳤는지를 눈으로 보인다. 문장이 읽어 주는 값과 같은 값이다. */
+.weightTotal [data-slot='weight-total-bar'] {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.84rem;
-}
-
-.weightTable th,
-.weightTable td {
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--thorp-line);
-  text-align: left;
-}
-
-.weightTable td {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.resetAll {
-  padding: 7px 14px;
-  border: 1px solid var(--thorp-line);
+  height: 8px;
+  overflow: hidden;
   border-radius: 999px;
+  background: var(--thorp-surface-muted);
+}
+
+.weightTotal [data-slot='weight-total-fill'],
+.weightTotal [data-slot='weight-total-over'] {
+  flex: none;
+}
+
+.weightTotal [data-slot='weight-total-fill'] {
+  background: var(--thorp-accent);
+  transition: width 0.15s ease;
+}
+
+.weightTotal [data-slot='weight-total-bar'][data-state='short'] [data-slot='weight-total-fill'] {
+  background: var(--thorp-warning);
+}
+
+.weightTotal [data-slot='weight-total-bar'][data-state='over'] [data-slot='weight-total-fill'] {
+  background: var(--thorp-negative);
+}
+
+/* 100%를 넘은 몫이다. 채워진 몫과 다른 색으로 두어 얼마나 넘쳤는지 바로 보이게 한다. */
+.weightTotal [data-slot='weight-total-over'] {
+  background: var(--thorp-negative);
+  opacity: 0.55;
+}
+
+.weightTotal button {
+  grid-column: 2;
+  grid-row: 1;
+  padding: var(--thorp-control-pad-block, 6px) 12px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control-sm, auto);
+}
+
+.weightTotal button:hover {
+  border-color: var(--thorp-line-control-hover);
+}
+
+.resetAll {
+  padding: var(--thorp-control-pad-block, 7px) 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-control, 999px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--thorp-text-body, 0.84rem);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control, auto);
 }
 
 .resetAll:hover {
@@ -117,11 +258,11 @@
 
 .violations {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-inset, 10px 14px);
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-inset, 10px);
   color: var(--thorp-foreground);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
 }
 
@@ -130,4 +271,53 @@
   gap: 4px;
   margin: 0;
   padding-left: 18px;
+}
+
+/*
+  디자인 개편(S15P21E205-451): 펼침 줄을 버튼 모양으로 둔다. 글자와 화살표만 있으면 눌러서 여는 자리로
+  읽히지 않았다. 접혀 있을 때는 '직접 선택해보세요'를 붙인다.
+*/
+.toggleEnd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.toggleHint {
+  display: none;
+}
+
+:global(:root:not([data-design='classic'])) .panel {
+  padding-top: 0;
+  border-top: 0;
+}
+
+:global(:root:not([data-design='classic'])) .toggle {
+  padding: var(--thorp-control-pad-block, 10px) 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+  color: var(--thorp-foreground);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+:global(:root:not([data-design='classic'])) .toggle:hover {
+  border-color: var(--thorp-accent);
+}
+
+:global(:root:not([data-design='classic'])) .toggle[aria-expanded='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted, var(--thorp-surface-raised));
+}
+
+:global(:root:not([data-design='classic'])) .toggleHint {
+  display: inline;
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 600;
+}
+
+:global(:root:not([data-design='classic'])) .toggleHint::before {
+  content: '← ';
 }

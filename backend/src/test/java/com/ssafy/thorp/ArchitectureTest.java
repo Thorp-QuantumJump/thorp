@@ -167,6 +167,27 @@ class ArchitectureTest {
                     .dependOnClassesThat()
                     .resideInAPackage(ROOT + ".myrecord..");
 
+    /**
+     * 규칙 12: {@code result}(005)·{@code backtest}(004)·{@code sector}(001)는 {@code assistant}(015)를
+     * 참조하지 않는다.
+     *
+     * <p>도우미는 공개 조회·결과 타입·섹터 이름을 <b>읽기만</b> 하는 보조 기능이다. 방향은 {@code assistant →
+     * result/backtest/sector} 셋뿐이고, 거꾸로 된 참조가 생기면 결과 계약(004·005)이 도우미의 사정에 묶인다. 근거:
+     * specs/015-context-assistant/plan.md "Structure Decision".
+     */
+    @ArchTest
+    static final ArchRule result_backtest_sector_strategy는_assistant를_참조하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAnyPackage(
+                            ROOT + ".result..",
+                            ROOT + ".backtest..",
+                            ROOT + ".sector..",
+                            ROOT + ".strategy..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage(ROOT + ".assistant..");
+
     /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */
     @ArchTest
     static final ArchRule 컨트롤러는_presentation_controller에만_있다 =

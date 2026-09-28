@@ -1,0 +1,36 @@
+/*
+  화면 제목 머리(PageHeading 계열). 첫 화면 구역 제목과 같은 짜임이다 — 초록 영문 작은 제목(eyebrow)과
+  제목 한 낱말에 얹는 초록 그라데이션(emphasis). 화면마다 베껴 두지 않고 여기 하나만 둔다.
+  classic에는 없던 요소라 작은 제목은 숨기고 강조는 글자 그대로 둔다.
+*/
+.eyebrow {
+  display: none;
+}
+
+:global(:root:not([data-design='classic'])) .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  color: var(--thorp-eyebrow);
+  font-size: var(--thorp-text-label);
+  font-weight: 670;
+  letter-spacing: 0.19em;
+}
+
+:global(:root:not([data-design='classic'])) .eyebrow::before {
+  width: 28px;
+  height: 1px;
+  background: var(--thorp-accent);
+  content: '';
+}
+
+.emphasis {
+  font-style: normal;
+}
+
+:global(:root:not([data-design='classic'])) .emphasis {
+  background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);
+  background-clip: text;
+  color: transparent;
+}

@@ -3,34 +3,36 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
 }
 
 .main {
   display: grid;
   gap: 16px;
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .title {
   margin: 0;
-  font-size: clamp(1.7rem, 4.4vw, 2.6rem);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  font-size: var(--thorp-text-title, clamp(1.7rem, 4.4vw, 2.6rem));
+  line-height: var(--thorp-title-leading, 1.1);
+  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  font-weight: 700;
 }
 
 .lead {
   margin: -6px 0 2px;
   color: var(--thorp-copy);
-  font-size: clamp(0.92rem, 1.7vw, 1rem);
+  font-size: var(--thorp-text-lead, clamp(0.92rem, 1.7vw, 1rem));
   line-height: 1.7;
 }
 
 .loading {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
 }
 
 /* 아직 줄 것이 없는 상태의 한 문장과 행동 하나가 놓이는 자리다(002 화면과 같은 모양). */
@@ -39,28 +41,38 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: 22px;
+  padding: var(--thorp-pad-card, 22px);
   border: 1px solid var(--thorp-line);
-  border-radius: 14px;
+  border-radius: var(--thorp-radius-card, 14px);
+}
+
+/* 새 디자인에서는 섹터 고르기 화면의 안내 상자와 같은 면·테두리로 선다. classic은 예전의 테두리만 있는 상자다. */
+:global(:root:not([data-design='classic'])) .notice {
+  border-color: var(--thorp-line-strong);
+  background: var(--thorp-surface);
 }
 
 .notice p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
   line-height: 1.7;
 }
 
 .notice button,
 .restoreButton {
-  padding: 7px 14px;
+  padding: var(--thorp-control-pad-block, 7px) 16px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-control-font, inherit);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control, auto);
 }
 
 .notice button:hover,
@@ -70,11 +82,11 @@
 
 .restoreNotice {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-line);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.6;
 }
 
@@ -85,11 +97,11 @@
   align-items: center;
   gap: 8px 10px;
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px dashed var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
 }
 
@@ -104,9 +116,9 @@
 */
 .layout {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, var(--thorp-flow-side, 320px)) minmax(0, 1fr);
   align-items: start;
-  gap: 16px;
+  gap: var(--thorp-flow-gap, 16px);
 }
 
 /*
@@ -127,22 +139,22 @@
   display: grid;
   gap: 14px;
   align-content: start;
-  padding: 18px;
+  padding: var(--thorp-pad-card, 18px);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--thorp-radius-card, 12px);
   background: var(--thorp-surface);
 }
 
 .columnTitle {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--thorp-text-heading, 1.05rem);
   letter-spacing: -0.02em;
 }
 
 .detailDescription {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.88rem;
+  font-size: var(--thorp-text-body, 0.88rem);
   line-height: 1.65;
 }
 
@@ -150,7 +162,7 @@
 .empty {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.65;
 }
 
@@ -165,7 +177,7 @@
 .groupTitle {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -174,12 +186,12 @@
   display: grid;
   gap: 8px;
   margin: 0;
-  padding: 12px 14px;
+  padding: var(--thorp-pad-notice, 12px 14px);
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   list-style: none;
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
 }
 
@@ -194,7 +206,7 @@
 .judgement {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
 }
 
@@ -205,11 +217,11 @@
 
 .result {
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-accent-soft);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-foreground);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.6;
 }
 
@@ -220,11 +232,11 @@
   justify-content: space-between;
   gap: 6px 12px;
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--thorp-pad-notice, 10px 14px);
   border: 1px solid var(--thorp-negative);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-negative);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.6;
 }
 
@@ -240,11 +252,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-  padding: 12px 14px;
+  padding: var(--thorp-pad-notice, 12px 14px);
   border: 1px solid var(--thorp-warning);
-  border-radius: 10px;
+  border-radius: var(--thorp-radius-card, 10px);
   color: var(--thorp-copy);
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
 }
 
@@ -253,14 +265,18 @@
 }
 
 .weightNotice button {
-  padding: 7px 14px;
+  padding: var(--thorp-control-pad-block, 7px) 16px;
   border: 1px solid var(--thorp-line);
-  border-radius: 999px;
+  border-radius: var(--thorp-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control, auto);
 }
 
 .weightNotice button:hover {
@@ -274,7 +290,7 @@
   }
 
   .detailBody {
-    padding: 16px;
+    padding: var(--thorp-pad-card, 16px);
   }
 }
 
@@ -285,7 +301,7 @@
   justify-self: start;
   gap: 7px;
   color: var(--thorp-copy);
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 660;
   text-decoration: none;
 }

@@ -49,3 +49,14 @@ export type NewsDigestResult = {
   /** 최대 3개다. */
   digests: NewsDigest[]
 }
+
+/**
+ * `GET /api/market-news/sectors`의 섹터 하나(012 FR-005, Session 2026-09-25).
+ *
+ * `investable`이 참이면 001 대응표의 투자 대상 섹터, 거짓이면 투자 대상과 대응하지 않는 뉴스 전용 섹터다.
+ */
+export type NewsSector = {
+  sectorId: string
+  name: string
+  investable: boolean
+}

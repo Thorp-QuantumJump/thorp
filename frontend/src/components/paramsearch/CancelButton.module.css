@@ -5,17 +5,17 @@
 
 .trigger {
   display: inline-flex;
-  min-height: 36px;
+  min-height: var(--thorp-control, 36px);
   width: fit-content;
   align-items: center;
   gap: 7px;
   padding: 0 13px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: transparent;
   color: var(--thorp-copy);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
   font-weight: 700;
 }
 
@@ -29,10 +29,10 @@
   gap: 9px;
   padding: 12px 14px;
   border: 1px solid var(--thorp-negative);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-control, 6px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.55;
 }
 
@@ -44,11 +44,11 @@
 
 .danger,
 .secondary {
-  min-height: 36px;
+  min-height: var(--thorp-control, 36px);
   padding: 0 14px;
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: var(--thorp-text-caption, 0.75rem);
   font-weight: 700;
 }
 
@@ -80,15 +80,15 @@
 .done {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
   line-height: 1.55;
 }
 
 .error {
   margin: 0;
-  padding: 9px 11px;
+  padding: var(--thorp-pad-inset, 9px 11px);
   border: 1px solid var(--thorp-negative);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   color: var(--thorp-negative);
-  font-size: 0.74rem;
+  font-size: var(--thorp-text-caption, 0.74rem);
 }

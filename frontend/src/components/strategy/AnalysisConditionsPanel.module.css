@@ -12,18 +12,19 @@
   justify-content: space-between;
   width: 100%;
   gap: 8px;
-  padding: 10px 2px;
+  padding: var(--thorp-control-pad-block, 10px) 2px;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--thorp-text-body, 0.84rem);
   font-weight: 700;
   cursor: pointer;
   text-align: left;
   -webkit-user-select: none;
   user-select: none;
+  min-height: var(--thorp-control, auto);
 }
 
 .toggle:hover,
@@ -53,7 +54,7 @@
 
 .dateLabel {
   color: var(--thorp-copy);
-  font-size: 0.82rem;
+  font-size: var(--thorp-text-small, 0.82rem);
 }
 
 /* 읽기 전용 값은 입력칸처럼 보이지 않게 글로만 늘어놓는다. */
@@ -64,7 +65,7 @@
   gap: 4px 14px;
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 0.86rem;
+  font-size: var(--thorp-text-body, 0.86rem);
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
 }
@@ -74,4 +75,53 @@
   .toggleIcon {
     transition: none;
   }
+}
+
+/*
+  디자인 개편(S15P21E205-451): 펼침 줄을 버튼 모양으로 둔다. 글자와 화살표만 있으면 눌러서 여는 자리로
+  읽히지 않았다. 접혀 있을 때는 '직접 선택해보세요'를 붙인다.
+*/
+.toggleEnd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.toggleHint {
+  display: none;
+}
+
+:global(:root:not([data-design='classic'])) .panel {
+  padding-top: 0;
+  border-top: 0;
+}
+
+:global(:root:not([data-design='classic'])) .toggle {
+  padding: var(--thorp-control-pad-block, 10px) 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+  color: var(--thorp-foreground);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+:global(:root:not([data-design='classic'])) .toggle:hover {
+  border-color: var(--thorp-accent);
+}
+
+:global(:root:not([data-design='classic'])) .toggle[aria-expanded='true'] {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted, var(--thorp-surface-raised));
+}
+
+:global(:root:not([data-design='classic'])) .toggleHint {
+  display: inline;
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 600;
+}
+
+:global(:root:not([data-design='classic'])) .toggleHint::before {
+  content: '← ';
 }

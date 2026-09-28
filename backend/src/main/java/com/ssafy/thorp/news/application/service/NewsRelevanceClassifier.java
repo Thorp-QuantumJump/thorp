@@ -63,6 +63,13 @@ public class NewsRelevanceClassifier {
     public static final String CHANNEL_EVIDENCE = "channel";
 
     /**
+     * 제목 키워드가 걸렸다는 근거의 머리말. 뒤에 걸린 키워드가 붙는다(예: {@code title:hbm}).
+     *
+     * <p>기사가 준 분류 값이나 채널 판단과 구별해 남긴다. 제목의 한 단어로 연결했다는 사실은 그 둘과 신뢰도가 다르다(원칙 VIII).
+     */
+    public static final String TITLE_EVIDENCE_PREFIX = "title:";
+
+    /**
      * 뉴스원 분류 값을 등록된 주제·섹터로 옮긴다.
      *
      * @param sourceCategories 뉴스원이 준 원문 분류 값.
@@ -85,6 +92,22 @@ public class NewsRelevanceClassifier {
      */
     public Relevance classify(
             List<String> sourceCategories, boolean overseas, List<String> channelTopicKeys) {
+        return classify(sourceCategories, overseas, channelTopicKeys, null);
+    }
+
+    /**
+     * 기사 제목의 섹터 키워드까지 보는 분류(spec FR-010, 등록표 v2).
+     *
+     * <p><b>제목 키워드는 분류 값·채널 주제에 더해진다.</b> 대신하지 않는다. 국내 매체 대부분이 기사별 분류를 주지 않아, 섹터를 말해 주는 것은 제목뿐인 경우가
+     * 많다. 제목 주제는 국내 연결 주제가 아니므로 해외 기사를 받아들이는 근거가 되지 않는다.
+     *
+     * @param title 기사 제목. 없으면 제목 규칙을 보지 않는다.
+     */
+    public Relevance classify(
+            List<String> sourceCategories,
+            boolean overseas,
+            List<String> channelTopicKeys,
+            String title) {
         Set<String> topicKeys = new LinkedHashSet<>();
         Set<String> unmapped = new LinkedHashSet<>();
         java.util.Map<String, String> evidence = new java.util.LinkedHashMap<>();
@@ -112,6 +135,12 @@ public class NewsRelevanceClassifier {
                     topicKeys.add(channelTopic);
                     evidence.putIfAbsent(channelTopic, CHANNEL_EVIDENCE);
                 }
+            }
+        }
+
+        for (java.util.Map.Entry<String, String> match : topics.matchTitle(title).entrySet()) {
+            if (topicKeys.add(match.getKey())) {
+                evidence.putIfAbsent(match.getKey(), TITLE_EVIDENCE_PREFIX + match.getValue());
             }
         }
 

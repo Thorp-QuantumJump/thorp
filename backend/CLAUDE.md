@@ -140,7 +140,7 @@ common: 모든 계층에서 참조 가능
   이 셈이 틀리는 방향은 "안 잡는 쪽"이라 워커가 묶인 것을 영영 못 잡는다. `cancel_reason`도 함께 남긴다: 강제 종결 시점에 조건을 다시 계산해
   사유를 추론하면 그 사이 설정이 바뀌었을 때 사유가 뒤바뀐다. **스위퍼는 건마다 트랜잭션을 연다** — CANCEL 발행이 `AFTER_COMMIT`이라
   트랜잭션이 없으면 이벤트가 조용히 버려진다
-- 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)
+- 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 "키 없음 == null"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리). **사례 연결(011, `regimelink`)은 별도 계약이다** — 기준은 `docs/specs/regime-link-messaging/`이고 직렬화는 `RegimeLinkMessageJson.objectMapper()`를 쓴다. 백테스트 메시지 매퍼를 빌려 쓰지 않는다
 - 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다
 - **개별 체결(`backtest_fill`)은 `fills`가 온 결과만 저장하고 `backtest_result.fills_recorded`로 표시한다**(spec 011 DEP-004-011). `fills`가 없는 결과(이 기능 전의 실행, 옛 워커)를 `[]`로 보정하지 않는다 — `findFills`는 그런 실행에 빈 Optional을, 기록했지만 그 구간에 체결이 없으면 빈 리스트를 돌려준다. 둘을 섞으면 구간 비용이 0으로 계산된다. 조회 API에는 노출하지 않는다
 - 결과 Consumer(`BacktestEventListener`): 역직렬화 직후 `BacktestEventValidator`로 계약을 명시 검증한다. 계약 오류는 `AmqpRejectAndDontRequeueException`(재시도 후 DLQ), 일시 오류는 그대로 전파(재시도), 모르는 `runId`(요청/실행 분리 전까지 `backtestId` 값과 같다)·늦은 이벤트는 로그 후 정상 반환(ACK). 멱등성은 상태 전이(`BacktestJob.markRunning/markCompleted/markFailed`)로 보장하며 별도 처리 이력 테이블을 두지 않는다

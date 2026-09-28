@@ -14,7 +14,9 @@
 스냅샷으로 덮어써야 하며, ``--ignore-split-snapshot`` 은 그 스냅샷을 빼면 얼마나 어긋나는지를
 대조군으로 보여준다.
 
-저장소 전체가 보이는 곳에서 ``worker/`` 를 작업 디렉터리로 두고 실행한다::
+이 절차는 ``tests/regime_link/test_input_check.py`` 가 회귀 시험으로 매번 돌린다(T102). 근거
+파일을 다시 만들 때만 직접 실행한다. 저장소 전체가 보이는 곳에서 ``worker/`` 를 작업 디렉터리로
+두고 실행한다::
 
     uv run --no-sync python scripts/regime_link_input_check.py --out check.json
 """

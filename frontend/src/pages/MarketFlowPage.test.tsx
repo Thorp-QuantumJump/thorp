@@ -4,7 +4,6 @@ import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { fetchMarketIndicatorsFor } from '@/api/market'
 import { fetchMarketNewsDigests } from '@/api/marketNews'
 import { fetchSectorCatalog } from '@/api/sectors'
-import { MARKET_FLOW_SECTOR_KEY } from '@/marketflow/sectorLink'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import type { FieldSummary } from '@/types/marketFlow'
 import { MarketFlowPage } from './MarketFlowPage'
@@ -132,135 +131,21 @@ describe('MarketFlowPage', () => {
       expect(document.activeElement).toBe(buttons[2])
     })
   })
-  describe('섹터 선택과 경제환경 표시의 분리 (SC-004, FR-016)', () => {
-    async function renderWithSectors() {
-      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
-      vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
-      const view = renderWithRouter(<MarketFlowPage />)
-      await screen.findAllByRole('button', { name: /분야 열기/ })
-      await screen.findByRole('button', { name: '반도체' })
-      return view
-    }
-
-    /** 분야 목록과 상세가 그려낸 글자 전부다. 한 글자라도 달라지면 SC-004가 깨진 것이다. */
-    function economicText(container: HTMLElement): string {
-      const rail = container.querySelector('section[aria-labelledby="field-list-title"]')
-      const detail = container.querySelector('#market-flow-detail')
-      return `${rail?.textContent ?? ''}||${detail?.textContent ?? ''}`
-    }
-
-    it('섹터를 골라도 분야 요약과 상세가 그대로다', async () => {
-      const { container } = await renderWithSectors()
-      const before = economicText(container)
-
-      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
-      await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))
-
-      expect(economicText(container)).toBe(before)
-    })
-
-    /**
-     * 표시가 같은 것만으로는 부족하다. 섹터를 요청에 실으면 **같은 값을 다시 받아**
-     * 표시가 같아 보일 수 있다. 그래서 조회가 아예 다시 일어나지 않는 것까지 본다.
-     */
-    it('섹터를 골라도 분야 요약·상세를 다시 조회하지 않는다', async () => {
-      await renderWithSectors()
-      const summaryCalls = vi.mocked(fetchMarketFlowFields).mock.calls.length
-      const detailCalls = vi.mocked(fetchMarketFlowField).mock.calls.length
-
-      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
-      await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))
-
-      expect(vi.mocked(fetchMarketFlowFields).mock.calls.length).toBe(summaryCalls)
-      expect(vi.mocked(fetchMarketFlowField).mock.calls.length).toBe(detailCalls)
-    })
-
-    it('분야 조회 인자에 섹터가 실리지 않는다', async () => {
-      await renderWithSectors()
-      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
-      await waitFor(() => expect(window.sessionStorage.getItem(MARKET_FLOW_SECTOR_KEY)).toBe('SEMICONDUCTOR'))
-
-      expect(fetchMarketFlowFields).toHaveBeenCalledWith(expect.any(AbortSignal))
-      for (const call of vi.mocked(fetchMarketFlowField).mock.calls) {
-        expect(call).toEqual([expect.any(String), expect.any(AbortSignal)])
-      }
-    })
-
-    /** FR-016: 섹터를 골랐어도 010으로 넘기는 분야·기준월은 달라지지 않는다. */
-    it('섹터를 골라도 비슷했던 때 보기로 넘기는 값이 그대로다', async () => {
-      await renderWithSectors()
-      const handoffBefore = screen
-        .getByRole('link', { name: /비슷했던 때 보기/ })
-        .getAttribute('data-handoff')
-
-      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
-      await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))
-
-      const entry = screen.getByRole('link', { name: /비슷했던 때 보기/ })
-      const handoffAfter = entry.getAttribute('data-handoff')
-      expect(handoffAfter).toBe(handoffBefore)
-      expect(JSON.parse(handoffAfter ?? 'null')).not.toHaveProperty('sectorCode')
-      // 주소에도 섹터가 실리지 않는다 — 인자에 자리가 없어 실수로도 실을 수 없다(FR-016).
-      expect(entry.getAttribute('href')).not.toContain('sector')
-    })
-
-    // 사례 없이 011을 열지 않는다(FR-018). 이 화면은 사례를 고르는 010으로만 안내한다.
-    it('사례가 없으면 전략 비교로 넘길 값을 만들지 않고 사례 고르기로 안내한다', async () => {
-      await renderWithSectors()
-      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
-      await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))
-
-      const link = screen.getByRole('link', { name: /과거 사례 고르러 가기/ })
-      expect(link.getAttribute('data-handoff')).toBeNull()
-      expect(link.getAttribute('href')).toBe('/regime-search')
-      expect(screen.getByText(/사례를 먼저 고릅니다/)).toBeTruthy()
-      // 011 주소를 이 화면에서 직접 열지 않는다.
-      expect(document.body.innerHTML).not.toContain('/regime-link')
-    })
-
-    // FR-017: 참고 정보와 뉴스는 분야 요약보다 늦게 채워질 수 있고 요약 표시를 막지 않는다.
-    it('국내 시장 참고 정보를 못 얻어도 분야 요약은 그대로 보인다', async () => {
-      vi.mocked(fetchMarketIndicatorsFor).mockRejectedValue(new Error('원천 인증 거부'))
+  describe('전략 진단으로 옮긴 영역 (009 FR-016~FR-019, Session 2026-09-24)', () => {
+    it('섹터 좁혀 보기·국내 시장 참고 정보·뉴스·전략 비교 카드를 두지 않는다', async () => {
       vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
       vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
       renderWithRouter(<MarketFlowPage />)
 
       for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
-    })
-
-    // SC-007: 뉴스가 없거나 늦어도 분야 요약 표시를 막지 않는다(FR-019).
-    it('뉴스를 못 얻어도 분야 요약은 그대로 보인다', async () => {
-      vi.mocked(fetchMarketNewsDigests).mockRejectedValue(new Error('뉴스원 장애'))
-      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
-      vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
-      renderWithRouter(<MarketFlowPage />)
-
-      for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
-    })
-
-    it('섹터를 고르면 뉴스만 그 섹터로 다시 조회한다', async () => {
-      await renderWithSectors()
-      const summaryCalls = vi.mocked(fetchMarketFlowFields).mock.calls.length
-
-      fireEvent.click(screen.getByRole('button', { name: '반도체' }))
-      await waitFor(() =>
-        expect(fetchMarketNewsDigests).toHaveBeenLastCalledWith('SEMICONDUCTOR', expect.any(AbortSignal)),
-      )
-
-      // 뉴스만 좁혀지고 경제환경 자료는 건드리지 않는다(FR-016).
-      expect(vi.mocked(fetchMarketFlowFields).mock.calls.length).toBe(summaryCalls)
-    })
-
-    it('섹터 목록을 못 얻어도 분야 요약은 그대로 보인다', async () => {
-      vi.mocked(fetchSectorCatalog).mockResolvedValue({
-        status: 'failed', kind: 'network', code: null,
-        message: '서버에 연결할 수 없습니다.', retryable: true,
-      })
-      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
-      vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
-      renderWithRouter(<MarketFlowPage />)
-
-      for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
+      expect(screen.queryByRole('heading', { name: '섹터 좁혀 보기' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: '국내 시장 참고 정보' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: '시장 흐름 뉴스' })).toBeNull()
+      expect(screen.queryByRole('link', { name: /과거 사례 고르러 가기/ })).toBeNull()
+      // 시장 흐름은 섹터·시장 지수·뉴스 자료를 부르지 않는다.
+      expect(fetchSectorCatalog).not.toHaveBeenCalled()
+      expect(fetchMarketIndicatorsFor).not.toHaveBeenCalled()
+      expect(fetchMarketNewsDigests).not.toHaveBeenCalled()
     })
   })
 })

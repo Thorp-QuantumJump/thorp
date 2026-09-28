@@ -24,7 +24,7 @@ import org.springframework.core.io.Resource;
 public class NewsConfig {
 
     static final String PUBLISHER_REGISTRY_PATH = "news/news-publishers-v1.json";
-    static final String LINK_REGISTRY_PATH = "news/news-link-v1.json";
+    static final String LINK_REGISTRY_PATH = "news/news-link-v2.json";
 
     @Bean
     public NewsPublisherRegistry newsPublisherRegistry(NewsProperties properties) {

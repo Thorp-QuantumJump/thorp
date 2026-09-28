@@ -53,6 +53,7 @@ function Harness({
         periodChosen={chosen !== null}
         initialAmount={condition.initialAmount ?? amount.default}
         minEvaluationYears={condition.minEvaluationYears}
+        targetVolatility={condition.targetVolatility}
         cost={costView}
         onChange={(patch) => {
           onChange(patch);
@@ -258,7 +259,7 @@ describe("AnalysisConditionsPanel", () => {
   it("최소 평가 기간을 등록표의 라벨로 보이고 바꾸면 그 값으로 반영한다", async () => {
     const { onChange, user } = await renderOpen();
 
-    const labels = screen
+    const labels = within(screen.getByRole("group", { name: "최소 평가 기간" }))
       .getAllByRole("radio")
       .map((radio) => radio.closest("label")?.textContent);
     expect(labels).toEqual(
@@ -328,10 +329,10 @@ describe("AnalysisConditionsPanel", () => {
     expect(group.textContent).not.toContain(COST_UNAVAILABLE);
   });
 
-  it("수수료·세금 편집, 최적화 선택지, 목표 변동성이 어디에도 없다", async () => {
+  it("수수료·세금 편집, 최적화 선택지가 없고 변동성 제한은 꺼진 채로 시작한다", async () => {
     const { panel } = await renderOpen();
 
-    // 바꿀 수 있는 입력은 기간 둘, 금액 하나, 최소 평가 기간 후보뿐이다.
+    // 바꿀 수 있는 입력은 기간 둘, 금액 하나, 최소 평가 기간 후보, 변동성 제한 켜고 끄기뿐이다.
     const editable = [
       ...within(panel).queryAllByRole("textbox"),
       ...within(panel).queryAllByRole("spinbutton"),
@@ -339,7 +340,7 @@ describe("AnalysisConditionsPanel", () => {
     ];
     expect(editable).toHaveLength(3);
     expect(within(panel).getAllByRole("radio")).toHaveLength(
-      registryFixture.analysisConditions.minEvaluationYears.choices.length,
+      registryFixture.analysisConditions.minEvaluationYears.choices.length + 2,
     );
     expect(
       within(panel).queryByLabelText(/수수료|세금|슬리피지|호가/),
@@ -349,8 +350,41 @@ describe("AnalysisConditionsPanel", () => {
       within(panel).queryByRole("button", { name: /최적|극대화|추천/ }),
     ).toBeNull();
 
+    expect(
+      (within(panel).getByRole("radio", { name: "쓰지 않음" }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(within(panel).queryByRole("combobox", { name: "목표 변동성(연)" })).toBeNull();
+    expect(stateCondition()).toMatchObject({ scenario: "FULL_PERIOD" });
+    expect(stateCondition().targetVolatility).toBeUndefined();
+  });
+
+  it("변동성 제한을 켜면 등록표 기본값으로 시작하고 범위 안의 값만 고르게 하며 끄면 값을 지운다", async () => {
+    const { onChange, user, panel } = await renderOpen();
     const volatility = registryFixture.analysisConditions.targetVolatility;
-    expect(panel.textContent).not.toMatch(/목표 변동성/);
-    expect(panel.textContent).not.toContain(volatility.unit ?? "퍼센트(연)");
+
+    await user.click(within(panel).getByRole("radio", { name: "씀" }));
+    expect(onChange).toHaveBeenLastCalledWith({ targetVolatility: volatility.default });
+    expect(stateCondition()).toMatchObject({
+      scenario: "TARGET_RISK",
+      targetVolatility: volatility.default,
+    });
+
+    const select = within(panel).getByRole("combobox", { name: "목표 변동성(연)" });
+    const values = within(select)
+      .getAllByRole("option")
+      .map((option) => Number((option as HTMLOptionElement).value));
+    expect(values[0]).toBe(volatility.min);
+    expect(values[values.length - 1]).toBe(volatility.max);
+    expect(values.every((value, i) => i === 0 || value - values[i - 1] === volatility.step)).toBe(true);
+
+    await user.selectOptions(select, String(volatility.max));
+    expect(storedCondition()).toMatchObject({
+      scenario: "TARGET_RISK",
+      targetVolatility: volatility.max,
+    });
+
+    await user.click(within(panel).getByRole("radio", { name: "쓰지 않음" }));
+    expect(stateCondition()).toMatchObject({ scenario: "FULL_PERIOD" });
+    expect(storedCondition().targetVolatility).toBeUndefined();
   });
 });

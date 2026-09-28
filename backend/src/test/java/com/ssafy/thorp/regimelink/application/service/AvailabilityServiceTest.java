@@ -239,6 +239,41 @@ class AvailabilityServiceTest {
     }
 
     @Test
+    @DisplayName("사례 시점에 유효한 대응표가 없으면 대응표 판정을 건너뛴다 — 지금 버전으로 과거를 판정하지 않는다 (T109)")
+    void 대응표_이력이_닿지_않으면_건너뛴다() {
+        metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4))
+                .listed(BIO, LocalDate.of(2010, 1, 4));
+        searches.holding(
+                FakeRegimeSearches.view(
+                        SNAPSHOT_KEY,
+                        YearMonth.of(2026, 7),
+                        "NEAREST_ONLY",
+                        YearMonth.of(2018, 8)));
+        // 지금 버전에는 BIO 가 없다. 그 버전으로 2018 사례를 판정하면 SECTOR_UNMAPPED 로 사라진다.
+        FakeTradingCalendar calendar =
+                calendar()
+                        .mapping("MAP-2026", "SEMICONDUCTOR")
+                        .mappingSince(LocalDate.of(2026, 9, 1));
+
+        AvailabilityResult result =
+                service(
+                                calendar,
+                                run(
+                                        "base",
+                                        LinkRole.BASE,
+                                        1L,
+                                        List.of(
+                                                entry("SEMICONDUCTOR", SEMICONDUCTOR),
+                                                entry("BIO", BIO)),
+                                        LocalDate.of(2010, 1, 4),
+                                        LocalDate.of(2025, 12, 30)))
+                        .evaluate(query(EntryPath.STRATEGY_RESULT));
+
+        assertThat(result.cases().get(0).perRun().get(0).availability().reason())
+                .isNotEqualTo(AvailabilityReason.SECTOR_UNMAPPED);
+    }
+
+    @Test
     @DisplayName("취소돼 일찍 끊긴 실행은 그 뒤 구간을 덮지 않는다")
     void 취소된_실행은_구간을_덮지_않는다() {
         metadata.listed(SEMICONDUCTOR, LocalDate.of(2010, 1, 4));
