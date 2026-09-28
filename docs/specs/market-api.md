@@ -70,6 +70,44 @@ ECOS 과거 101Y003은 현재 M2 평잔·원계열 정의와 다르므로 사용
 - 관세청은 완료된 최근 12개월을 조회하며 총계 행은 제외한다. expDlr은 달러 단위이다.
 - 결측·숫자 파싱 실패를 0으로 바꾸지 않는다. 목업 값으로 대체하지 않는다.
 
+## 최근 흐름 API (series)
+
+첫 화면의 지표 차트가 실제 일별 흐름을 그리도록, 일별 지표 네 개는 최근 거래일 종가 목록을 따로 준다.
+최신값 API와 같은 `HttpApiResponse` 형식이고 인증이 필요 없다.
+
+| 경로 | code | 원천 |
+|---|---|---|
+| `/markets/kospi/series` | KOSPI | KRX kospi_dd_trd (날짜별 호출) |
+| `/markets/kosdaq/series` | KOSDAQ | KRX kosdaq_dd_trd (날짜별 호출) |
+| `/markets/usd-krw/series` | USD_KRW | ECOS 731Y001 / 0000001 / D (기간 한 번 호출) |
+| `/markets/vkospi200/series` | VKOSPI200 | KRX drvprod_dd_trd (날짜별 호출) |
+
+```json
+{
+  "code": "KOSPI",
+  "name": "KOSPI 지수",
+  "unit": "pt",
+  "frequency": "daily",
+  "points": [{"date": "2026-06-24", "value": 2688.1}, {"date": "2026-06-25", "value": 2701.4}],
+  "retrievedAt": "2026-09-23T03:00:00Z",
+  "source": {"provider": "KRX", "datasetName": "KOSPI 시리즈 일별시세정보"},
+  "status": "ok",
+  "statusMessage": null
+}
+```
+
+- `points`는 날짜 오름차순이고 최대 60개다(거래일 기준). 결측·파싱 실패 날짜는 빼며 0으로 채우지 않는다.
+- **요청은 외부 기관을 부르지 않는다.** KRX는 날짜 하나당 한 번 호출이라 60일을 요청마다 모으면 8초 예산을
+  넘는다. 백엔드가 기동 직후와 `market.series.refresh-interval`(기본 6시간)마다 백그라운드로 모아 두고, 요청은
+  모아 둔 값만 돌려준다. 수집은 공용 `@Scheduled` 스레드가 아닌 전용 스레드에서 돈다(첫 수집이 몇 분 걸려도
+  다른 스케줄을 막지 않는다). `market.series.enabled=false`로 끌 수 있다.
+- 모아 둔 값은 인스턴스 메모리에만 있다. 재기동하면 처음부터 다시 모은다.
+- KRX는 이미 모은 날짜를 다시 부르지 않고 빠진 평일만 부른다. 호출 사이에 `market.series.krx-pace`(기본 150ms)를
+  두고, 한 번의 갱신은 `market.series.refresh-budget`(기본 90초) 안에서 멈춘다. 모자란 날짜는 다음 갱신이 잇는다.
+- ECOS는 최근 90일 범위를 한 번에 읽는다(100행 이하).
+- 아직 모은 값이 없으면 503 + `result=null`이다. 마지막 성공이 `cacheMaxAge`(24시간)보다 오래되면 200 +
+  `status=stale`로 모아 둔 값을 준다. 프론트는 503이면 예시 흐름을 쓰고 그렇다고 밝힌다.
+
 ## 실행
 
 저장소 루트 `.env`에 ECOS_API_KEY, KRX_API_KEY, KOSIS_API_KEY, DATA_GO_KR_SERVICE_KEY를 설정한다.

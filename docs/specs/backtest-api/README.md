@@ -251,6 +251,11 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
   옛 행은 이미 접수된 실행의 발행·재시도만 쓰고 새 요청은 고를 수 없다. 그래서 전략당 한 행이라는 계약은 버전이 늘어도 그대로다
   (DB 부분 유니크 인덱스 `uk_strategy_rules_current`가 보장한다).
 
+## 1.12 내가 써 본 전략·설정 조합
+
+`GET /my-records/used-strategies`로 006이 제공한다(`S15P21E205-418`). 004 는 요청 이력에서 실행을 읽는 저장소 질의만 두고, 내 기록 항목 이름을 붙이는 일은 006 몫이다. 계약은
+[`specs/006-my-records/contracts/my-records-api.md`](../../../specs/006-my-records/contracts/my-records-api.md).
+
 ## 2. 결과 조회
 
 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec "API 응답 분리"). 필드 의미·타입·nullable 규칙은
@@ -327,7 +332,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 �
 | `totalTradingCost` | 거래비용 합계 = `costs.total` |
 | `costs{commission, spread, slippage, tax, total}` | 비용 네 갈래(FR-027) |
 | `liquidation{markToMarket{finalEquity,totalReturn}, liquidated{finalEquity,totalReturn,liquidationCost}}` | 종료일 종가 전량 매도 가정치(FR-017). 요청이 청산을 끄면 `null` |
-| `analytics{recoveryDays, turnover}` | 회복 거래일(미회복이면 `null`)·연환산 회전율. 나머지 파생 지표(상관·위험 기여·손실 기여)는 결과 저장소에 있고 이 API 로는 내려주지 않는다 |
+| `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` | 회복 거래일(미회복이면 `null`)·연환산 회전율·종목 쌍 표본 상관(변동성 0 인 쌍은 키 생략)·위험 기여(포트폴리오 분산 중 종목 몫, 합 1)·손실 기여(전체 손익 중 종목 몫, 합 1)·산정법(`sample-covariance-daily`). 맵의 키는 종목 id, 값은 문자열이다. 워커가 계산하지 못한 항목은 `null` 이고 0 으로 채우지 않는다. `weightError` 는 `/weights` 에만 있다 |
 | `exceptionCount` | 예외 처리 기록 건수. 본문은 `/exceptions` |
 
 값의 정의는 워커 `performance.calculate_analytics` docstring 이 원본이다(spec 004 T008 결정 ①).

@@ -179,7 +179,7 @@ def started_event() -> RegimeLinkEvent[RegimeLinkStartedPayload]:
         type=RegimeLinkEventType.STARTED,
         occurred_at="2026-09-18T02:00:00Z",
         payload=RegimeLinkStartedPayload(
-            started_at="2026-09-18T02:00:00Z", resource=ProcessInfo(pid=1)
+            started_at="2026-09-18T02:00:00Z", resource=ProcessInfo(pid=1, hostname="worker-test")
         ),
     )
 

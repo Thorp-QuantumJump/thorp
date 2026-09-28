@@ -1,0 +1,74 @@
+/* '지금 국내 시장' 지수 카드. 한 줄에 이름(왼쪽)·값과 변화(오른쪽), 출처는 아래 오른쪽이다. */
+.market {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: var(--thorp-pad-inset, 12px 14px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface-muted);
+}
+
+.name {
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--thorp-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.reading strong {
+  font-family: var(--thorp-font-number, inherit);
+  font-size: var(--thorp-text-heading, 1.08rem);
+  font-weight: var(--thorp-number-weight, 650);
+}
+
+.reading em {
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* 오르내림 색: 값과 변화 모두 상승 빨강·하락 파랑. */
+.reading[data-direction='up'] {
+  color: var(--thorp-up);
+}
+
+.reading[data-direction='down'] {
+  color: var(--thorp-down);
+}
+
+.source,
+.note {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+}
+
+.source {
+  text-align: right;
+}

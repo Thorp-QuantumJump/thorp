@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'
@@ -24,6 +24,7 @@ vi.mock('@visx/responsive', () => ({
 
 afterEach(() => {
   Object.assign(chartSize, WIDE)
+  window.innerWidth = 1024
 })
 
 const BASE_POINTS = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })
@@ -48,8 +49,15 @@ const altNumbers = {
 }
 
 /** 곡선의 경로. 기준과 비교 대상은 선 색으로 갈린다 */
-function seriesPath(container: HTMLElement, which: 'base' | 'target'): SVGPathElement {
-  const stroke = which === 'base' ? '--chart-line-primary' : '--chart-line-secondary'
+const STROKES: Record<string, string> = {
+  base: '--chart-line-primary',
+  target0: '--result-line-secondary',
+  target1: '--result-line-tertiary',
+  target2: '--result-line-quaternary',
+}
+
+function seriesPath(container: HTMLElement, which: string): SVGPathElement {
+  const stroke = STROKES[which]
   const path = container.querySelector<SVGPathElement>(`path[stroke="var(${stroke})"]`)
   if (!path) throw new Error(`${which} 곡선을 찾지 못했다`)
   return path
@@ -63,7 +71,7 @@ const LONG_BASE_NAME = '가나다 라마바사 아자차카 타파하'
 const LONG_TARGET_NAME = '거너더 러머버서 어저처커 터퍼허'
 
 /** 이름표 하나의 줄들과 세로 범위. 줄마다 `y`가 그 줄의 가운데다 */
-function labelBlock(container: HTMLElement, dataKey: 'base' | 'target') {
+function labelBlock(container: HTMLElement, dataKey: string) {
   const lines = [
     ...container.querySelectorAll(`[data-testid="series-end-label-${dataKey}"] tspan`),
   ]
@@ -88,33 +96,196 @@ function pointCount(path: SVGPathElement): number {
 }
 
 describe('EquityChart', () => {
+  it('구분표 항목을 누르면 그 선을 숨기고 다시 누르면 보이며, 마지막 남은 선은 숨길 수 없다', () => {
+    const { container } = render(
+      <EquityChart base={base} initialCash="10000000.00" targets={[target]} />,
+    )
+    const key = within(screen.getByRole('group', { name: '그래프 선 구분' }))
+    const targetButton = key.getByRole('button', { name: /모래 고르기/ })
+    const baseButton = key.getByRole('button', { name: /물결 고르기/ })
+    const targetPath = () => container.querySelector('path[stroke="var(--result-line-secondary)"]')
+
+    expect(targetPath()).not.toBeNull()
+    fireEvent.click(targetButton)
+    expect(targetButton.getAttribute('aria-pressed')).toBe('false')
+    expect(targetPath()).toBeNull()
+    expect(container.querySelector('[data-testid="series-end-label-target0"]')).toBeNull()
+    // 기준만 남으면 기준은 숨길 수 없다.
+    expect((baseButton as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.click(targetButton)
+    expect(targetPath()).not.toBeNull()
+    expect((baseButton as HTMLButtonElement).disabled).toBe(false)
+
+    fireEvent.click(baseButton)
+    expect(container.querySelector('path[stroke="var(--chart-line-primary)"]')).toBeNull()
+    expect(container.querySelector('[data-testid="drawdown-shade-base"]')).toBeNull()
+  })
+
+  it('그래프 위 휠로 확대·축소하고, 확대한 뒤에는 끌어서 옮기며, 전체 기간·두 번 누르기로 돌아온다', async () => {
+    const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
+    const chart = screen.getByRole('img')
+    // jsdom 은 크기를 0으로 잰다. 끌어 옮긴 거리를 거래일로 바꾸려면 그림 폭이 있어야 한다.
+    chart.getBoundingClientRect = () => ({ left: 0, top: 0, width: 840, height: 380 }) as DOMRect
+    const full = pointCount(seriesPath(container, 'base'))
+    const firstX = () => seriesPath(container, 'base').getAttribute('d')
+
+    // 그래프 밖(페이지)의 휠은 막지 않는다 — 그래프 안의 휠만 기본 동작(스크롤)을 막는다.
+    const outside = new WheelEvent('wheel', { deltaY: -100, cancelable: true })
+    document.body.dispatchEvent(outside)
+    expect(outside.defaultPrevented).toBe(false)
+
+    const inside = new WheelEvent('wheel', { deltaY: -300, cancelable: true, clientX: 0 })
+    act(() => {
+      chart.dispatchEvent(inside)
+    })
+    expect(inside.defaultPrevented).toBe(true)
+    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
+    const zoomed = pointCount(seriesPath(container, 'base'))
+    expect(zoomed).toBeLessThan(full)
+    expect(zoomed).toBeGreaterThanOrEqual(10)
+
+    // 끌어서 옮기면 보이는 거래일 수는 그대로이고 구간만 바뀐다.
+    const before = firstX()
+    const beforePoints = pointCount(seriesPath(container, 'base'))
+    fireEvent.pointerDown(chart, { button: 0, clientX: 300 })
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100 }))
+      window.dispatchEvent(new MouseEvent('pointerup'))
+    })
+    expect(pointCount(seriesPath(container, 'base'))).toBe(beforePoints)
+    expect(firstX()).not.toBe(before)
+
+    fireEvent.click(screen.getByRole('button', { name: '전체 기간' }))
+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)
+
+    act(() => {
+      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, cancelable: true }))
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())
+    fireEvent.doubleClick(chart)
+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)
+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
+  })
+
+  it('전체 기간에서 휠로 더 줄이거나 끌어도 바뀌지 않는다', () => {
+    const { container } = render(<EquityChart base={base} initialCash="10000000.00" />)
+    const chart = screen.getByRole('img')
+    const full = pointCount(seriesPath(container, 'base'))
+    act(() => {
+      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, cancelable: true }))
+    })
+    fireEvent.pointerDown(chart, { button: 0, clientX: 300 })
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100 }))
+      window.dispatchEvent(new MouseEvent('pointerup'))
+    })
+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)
+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()
+  })
+
+  it('마우스를 올린 날의 모든 선 자산가치와 시작 금액 대비 변화를 한국어 날짜와 함께 보인다', async () => {
+    const { container } = render(
+      <EquityChart
+        base={base}
+        initialCash="10000000.00"
+        targets={[target]}
+        reference={{
+          name: 'KOSPI(참고)',
+          points: BASE_POINTS.map((point) => ({ date: point.date, value: '11000000.00' })),
+        }}
+      />,
+    )
+
+    // 상호작용은 곡선 영역을 덮는 <g> 가 받는다. jsdom 은 크기를 0으로 재므로 clientX 가 곧 그림 안 좌표다.
+    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))
+    fireEvent.mouseMove(area!, { clientX: 58, clientY: 100 })
+
+    const first = BASE_POINTS[0]
+    await waitFor(() => expect(screen.getByText(/년 .*월 .*일/)).toBeTruthy())
+    expect(screen.getByText(/2\d{3}년/).textContent).toContain(first.date.slice(0, 4) + '년')
+    expect(screen.getByText('11,000,000원 (+10.00%)')).toBeTruthy()
+  })
+
+  it('선택한 전략과 KOSPI를 선 모양 안내에 모두 표시하고 기준선을 더 강조한다', () => {
+    const { container } = render(
+      <EquityChart
+        base={base}
+        initialCash="10000000.00"
+        targets={[target, { ...target, name: '조약돌 고르기' }]}
+        reference={{ name: 'KOSPI(참고)', points: [{ date: BASE_POINTS[0].date, value: '10000000' }] }}
+      />,
+    )
+
+    const key = container.querySelector('[aria-label="그래프 선 구분"]')
+    expect(key?.textContent).toContain('물결 고르기')
+    expect(key?.textContent).toContain('모래 고르기')
+    expect(key?.textContent).toContain('조약돌 고르기')
+    expect(key?.textContent).toContain('KOSPI(참고)')
+    expect(Number(seriesPath(container, 'base').getAttribute('stroke-width'))).toBeGreaterThan(
+      Number(seriesPath(container, 'target0').getAttribute('stroke-width')),
+    )
+    const paths = [...container.querySelectorAll('path')]
+    expect(paths.indexOf(seriesPath(container, 'base'))).toBeGreaterThan(
+      paths.indexOf(seriesPath(container, 'target0')),
+    )
+  })
+
   it('비교 대상이 있으면 파선 곡선과 이름표 둘을 그린다', () => {
     const { container } = render(
-      <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" target={target} />,
+      <EquityChart
+        altNumbers={altNumbers}
+        base={base}
+        initialCash="10000000.00"
+        targets={[target]}
+      />,
     )
 
     expect(seriesPath(container, 'base').getAttribute('stroke-dasharray')).toBeNull()
-    expect(seriesPath(container, 'target').getAttribute('stroke-dasharray')).toBe('7,5')
-    expect(screen.getByText('물결 고르기')).toBeTruthy()
-    expect(screen.getByText('모래 고르기')).toBeTruthy()
+    expect(seriesPath(container, 'target0').getAttribute('stroke-dasharray')).toBe('7,5')
+    expect(screen.getAllByText('물결 고르기').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('모래 고르기').length).toBeGreaterThan(0)
   })
 
-  it.each([
-    ['넓은 화면', WIDE],
-    ['폭 360px 화면', { width: 326, height: 245 }],
-  ])('%s에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', (_case, size) => {
-    Object.assign(chartSize, size)
+  it('비교 대상이 셋이면 파선 모양과 색이 서로 다르고 이름표가 넷이며 비교 대상 음영은 없다', () => {
+    const others = ['조약돌 고르기', '해초 고르기'].map((name) => ({ ...target, name }))
+    const { container } = render(
+      <EquityChart
+        altNumbers={altNumbers}
+        base={base}
+        initialCash="10000000.00"
+        targets={[target, ...others]}
+      />,
+    )
+    const dashes = [0, 1, 2].map((index) =>
+      seriesPath(container, 'target' + index).getAttribute('stroke-dasharray'),
+    )
+    const strokes = [0, 1, 2].map((index) =>
+      seriesPath(container, 'target' + index).getAttribute('stroke'),
+    )
+    expect(new Set(dashes).size).toBe(3)
+    expect(new Set(strokes).size).toBe(3)
+    for (const name of ['물결 고르기', '모래 고르기', '조약돌 고르기', '해초 고르기'])
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0)
+    expect(container.querySelector('[data-testid="drawdown-shade-target"]')).toBeNull()
+    expect(container.querySelector('[data-testid="drawdown-shade-base"]')).not.toBeNull()
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain(
+      '모래 고르기, 조약돌 고르기, 해초 고르기',
+    )
+  })
+
+  it('넓은 화면에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', () => {
     const { container } = render(
       <EquityChart
         altNumbers={altNumbers}
         base={{ ...base, name: LONG_BASE_NAME }}
         initialCash="10000000.00"
-        target={{ ...target, name: LONG_TARGET_NAME }}
+        targets={[{ ...target, name: LONG_TARGET_NAME }]}
       />,
     )
 
     const baseLabel = labelBlock(container, 'base')
-    const targetLabel = labelBlock(container, 'target')
+    const targetLabel = labelBlock(container, 'target0')
     const { height } = plotArea(container)
 
     for (const [label, name] of [
@@ -132,6 +303,23 @@ describe('EquityChart', () => {
     const [upper, lower] = [baseLabel, targetLabel].sort((left, right) => left.top - right.top)
     expect(upper.bottom).toBeLessThanOrEqual(lower.top)
     expect(container.textContent).not.toContain('…')
+  })
+
+  it('모바일에서는 끝 이름표 대신 위쪽 선 목록을 쓰고 그래프 폭을 확보한다', () => {
+    window.innerWidth = 390
+    Object.assign(chartSize, { width: 350, height: 430 })
+    const { container } = render(
+      <EquityChart
+        base={{ ...base, name: LONG_BASE_NAME }}
+        initialCash="10000000.00"
+        targets={[{ ...target, name: LONG_TARGET_NAME }]}
+      />,
+    )
+
+    expect(container.querySelector('[aria-label="그래프 선 구분"]')?.textContent).toContain(LONG_BASE_NAME)
+    expect(container.querySelector('[aria-label="그래프 선 구분"]')?.textContent).toContain(LONG_TARGET_NAME)
+    expect(container.querySelector('[data-testid="series-end-labels"]')).toBeNull()
+    expect(plotArea(container).width).toBeGreaterThan(240)
   })
 
   it('기준만 있으면 파선 곡선이 없다', () => {
@@ -243,7 +431,12 @@ describe('EquityChart', () => {
     expect(alone).toContain('비교 대상은 없습니다')
 
     rerender(
-      <EquityChart altNumbers={altNumbers} base={base} initialCash="10000000.00" target={target} />,
+      <EquityChart
+        altNumbers={altNumbers}
+        base={base}
+        initialCash="10000000.00"
+        targets={[target]}
+      />,
     )
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('모래 고르기')
   })
@@ -363,6 +556,15 @@ const growth: EquityChartSeries = {
 }
 
 describe('EquityChart 세로축 눈금', () => {
+  it('차트 제목과 시작 금액 범례를 가까이 두고 읽는 법 펼침은 두지 않는다', () => {
+    render(<EquityChart altNumbers={altNumbers} base={growth} initialCash="10000000.00" />)
+
+    expect(screen.getByText('자산가치 추이')).not.toBeNull()
+    expect(screen.getByText('점선 · 시작 금액 10,000,000원')).not.toBeNull()
+    // '차트 읽는 법' 펼침은 뺐다. 음영 구간 설명은 그림 안 도움말(title)과 대안 텍스트가 든다.
+    expect(screen.queryByText('차트 읽는 법')).toBeNull()
+  })
+
   it('처음에는 로그 눈금으로 그려 금액의 상용로그에 높이를 비례시킨다', () => {
     const { container } = render(
       <EquityChart altNumbers={altNumbers} base={growth} initialCash="10000000.00" />,

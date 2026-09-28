@@ -71,11 +71,17 @@ def test_max_weight_is_an_integer_percent_and_optional() -> None:
 
 
 @pytest.mark.parametrize("strategy_id", sorted(STRATEGY_PARAMETERS))
-def test_month_end_rebalance_is_the_only_approved_cadence(strategy_id: str) -> None:
-    typed = AllocationSpec.model_validate(spec(strategy_id, {"rebalance": "MONTH_END"}))
-    assert isinstance(typed.typed_parameters, RebalanceParameters)
-    with pytest.raises(ValidationError):
-        AllocationSpec.model_validate(spec(strategy_id, {"rebalance": "WEEKLY"}))
+def test_rebalance_cadence_is_month_end_quarter_end_or_every_n_trading_days(
+    strategy_id: str,
+) -> None:
+    """003 등록표의 네 선택지(월말·분기말·21·63거래일)가 모두 계약을 통과한다."""
+    for accepted in ("MONTH_END", "QUARTER_END", "TRADING_DAYS_21", "TRADING_DAYS_63"):
+        typed = AllocationSpec.model_validate(spec(strategy_id, {"rebalance": accepted}))
+        assert isinstance(typed.typed_parameters, RebalanceParameters)
+        assert typed.typed_parameters.rebalance == accepted
+    for rejected in ("WEEKLY", "TRADING_DAYS", "TRADING_DAYS_0", "TRADING_DAYS_21X", 21):
+        with pytest.raises(ValidationError, match="rebalance"):
+            AllocationSpec.model_validate(spec(strategy_id, {"rebalance": rejected}))
 
 
 def test_minimum_variance_takes_the_003_axes_it_offers() -> None:

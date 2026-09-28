@@ -51,6 +51,9 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest
 - `contracts/` Backend↔Worker RabbitMQ 메시지 계약(pydantic). 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이며
   `tests/test_contracts.py`가 그 픽스처를 직접 읽어 round-trip을 검증한다. 스키마 변경은 픽스처 → 백엔드 `port/message` → `contracts/` 순서로 같은 MR에서 함께 고친다.
   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`
+- `regime_link/` 사례 연결(spec 011) 계약은 **별도 계약이다.** 기준은 `docs/specs/regime-link-messaging/`(README + `*.json`)이고
+  `regime_link/contracts.py`·`messaging.py`가 그것을 따른다. 백테스트 `contracts/`·`messaging.py`와 상수·모델을 공유하거나 섞지 않는다.
+  작업 크기 상한도 이 모델이 검증한다(T105)
 - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.
   진행 콜백은 거래일 1개 단위, `progress.batchTradingDays` 묶음 발행은 실행 Consumer(`consumer.py`) 책임.
   `FINISHED` payload의 `status`·`partial`·`lastTradingDate`는 `run` 블록의 값을 그대로 옮긴다(백엔드가 일치를 검증).

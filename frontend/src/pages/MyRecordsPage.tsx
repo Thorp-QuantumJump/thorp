@@ -13,6 +13,7 @@ import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'
 import type { MyRecordListQuery } from '@/types/myRecords'
 import type { RegimeField } from '@/types/regime'
 import type { StrategyView } from '@/types/strategyRegistry'
+import heading from '@/components/common/PageHeading.module.css'
 import styles from './MyRecordsPage.module.css'
 
 export const EMPTY_MESSAGE = '아직 저장된 기록이 없습니다.'
@@ -33,7 +34,7 @@ function isDefault(query: MyRecordListQuery): boolean {
  * <p>목록은 서버의 기본 보기(완료 항목, 저장일 최신순)를 그대로 보이고 필터·정렬은 서버에 맡긴다. 화면이 정렬하거나
  * 성과로 줄 세우지 않는다(원칙 III). 빈 목록은 경고가 아니라 한 문장과 진단 시작 연결이다(FR-001).
  *
- * <p>`?resultToken=`으로 들어오면(005 결과 화면의 '기록으로 내보내기', T045a) 그 항목으로 초점을 옮기고 펼쳐 둔다.
+ * <p>`?resultToken=`으로 들어오면 그 항목으로 초점을 옮기고 펼쳐 둔다.
  */
 export function MyRecordsPage() {
   const { user } = useAuth()
@@ -93,12 +94,14 @@ export function MyRecordsPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="records-title">
-        <p className={styles.eyebrow}>
+        {/* classic은 예전의 아이콘 작은 제목, 새 디자인은 첫 화면과 같은 선 작은 제목이다. */}
+        <p className={`${styles.eyebrow} ${styles.classicOnly}`}>
           <FolderClock size={15} aria-hidden="true" />
           MY RECORDS
         </p>
+        <p className={heading.eyebrow} aria-hidden="true">MY RECORDS</p>
         <h1 id="records-title" className={styles.title}>
-          {user?.nickname}님의 내 기록
+          {user?.nickname}님의 <em className={heading.emphasis}>내 기록</em>
         </h1>
 
         <RecordFilters
@@ -123,7 +126,7 @@ export function MyRecordsPage() {
         {records.status === 'failed' ? (
           <div className={styles.error} role="alert">
             <p>{records.message}</p>
-            <Button type="button" variant="outline" onClick={records.retry}>
+            <Button type="button" variant="outline" className={styles.action} onClick={records.retry}>
               다시 시도
             </Button>
           </div>
@@ -133,7 +136,7 @@ export function MyRecordsPage() {
           isDefault(query) ? (
             <div className={styles.empty}>
               <p>{EMPTY_MESSAGE}</p>
-              <Button asChild>
+              <Button asChild className={styles.primaryAction}>
                 <Link to="/diagnosis/sectors">전략 검증하기</Link>
               </Button>
             </div>
@@ -167,6 +170,7 @@ export function MyRecordsPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  className={styles.action}
                   disabled={records.loadingMore}
                   onClick={records.loadMore}
                 >

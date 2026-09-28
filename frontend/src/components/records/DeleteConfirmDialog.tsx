@@ -62,10 +62,10 @@ export function DeleteConfirmDialog({
           </p>
         ) : null}
         <div className={styles.dialogActions}>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" className={styles.action} onClick={onClose}>
             취소
           </Button>
-          <Button type="button" onClick={confirm} disabled={deleting}>
+          <Button type="button" className={styles.action} onClick={confirm} disabled={deleting}>
             {deleting ? '지우는 중' : '지우기'}
           </Button>
         </div>

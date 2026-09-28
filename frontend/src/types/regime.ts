@@ -51,7 +51,19 @@ export interface RegimeCaseSummary {
   distance: string
   similar: string[]
   different: string[]
+  /** v3 종합에서 블록 안 엇갈림이 컸던 사례. v1 결과는 늘 false다. */
+  unusual?: boolean
+  /** 특이 사례의 관측 구간 안 공식 발간물·사건. 검색 입력이 아니다. 없으면 키가 없다. */
+  context?: RegimeContextLink[]
   detailAvailable: boolean
+}
+
+export interface RegimeContextLink {
+  kind: 'KDI_TRENDS' | 'BASE_RATE' | 'CYCLE_TURN'
+  date: string
+  title: string
+  url?: string
+  source: string
 }
 
 export interface RegimeSearchResult {
@@ -78,7 +90,14 @@ export interface RegimeSearchResult {
     sampleRegistry: boolean
   }
   counts: { evaluated: number; eligible: number; stored: number; displayed: number }
+  /** 지금 시점의 블록 안 엇갈림 안내(v3 종합). 없으면 null이다. */
+  phaseNote?: string | null
   cases: RegimeCaseSummary[]
+  /** 교정된 결과(THRESHOLD_APPLIED)에서 기준 충족 사례가 없을 때의 안내. */
+  thresholdNote?: string | null
+  /** 교정된 결과의 미충족 참고 사례 목록 이름과 사례(spec FR-021). 그 밖에는 키가 없다. */
+  referenceLabel?: string | null
+  referenceCases?: RegimeCaseSummary[] | null
 }
 
 export interface RegimeCaseDetail {
@@ -88,6 +107,8 @@ export interface RegimeCaseDetail {
   distance: string
   byField: Record<string, string>
   contribution?: Record<string, string>
+  /** v3 종합의 경제 블록 거리. 있으면 byField가 비어 있다. */
+  blocks?: { id: string; name: string; gap: string; contribution?: string; spread: string }[]
   indicators: {
     id: string
     name: string

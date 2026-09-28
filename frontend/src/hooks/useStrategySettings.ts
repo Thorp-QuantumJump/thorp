@@ -52,8 +52,13 @@ export type AxisValues = Record<string, AxisValue>;
 export type AnalysisCondition = {
   /** 등록표 `analysisConditions.minEvaluationYears` 후보 중 하나. `0`은 제한 없음이다(FR-011a) */
   minEvaluationYears: number;
-  /** 주 분석은 연속 운용으로 고정한다. 목표 변동성은 이 화면 상태에 만들지 않는다(spec Edge Cases) */
-  scenario: "FULL_PERIOD";
+  /**
+   * 연속 운용이 기본이다. `targetVolatility`가 있을 때만 변동성 제한(004 `TARGET_RISK`)이고, 이 값은 늘
+   * 그것에서 정해진다 — 따로 바꾸지 않는다.
+   */
+  scenario: "FULL_PERIOD" | "TARGET_RISK";
+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). 등록표 `analysisConditions.targetVolatility` 범위 안이다 */
+  targetVolatility?: number;
   periodStart?: string;
   periodEnd?: string;
   initialAmount?: number;
@@ -336,6 +341,9 @@ export function readStoredStrategySettings(): StoredStrategySettings | null {
   if (typeof condition.initialAmount === "number") {
     analysisCondition.initialAmount = condition.initialAmount;
   }
+  if (typeof condition.targetVolatility === "number") {
+    analysisCondition.targetVolatility = condition.targetVolatility;
+  }
 
   const invalidValues = Array.isArray(payload.invalidValues)
     ? payload.invalidValues.filter(isInvalidStoredValue)
@@ -354,7 +362,7 @@ export function readStoredStrategySettings(): StoredStrategySettings | null {
 /**
  * 보관한다. 보관에 성공했는지를 돌려준다.
  *
- * spec 005의 '다른 조건으로 비교'(T068)가 결과의 조건을 이 화면에 넘길 때도 쓴다. 넘기는 수단이 이 저장소
+ * 내 기록의 '설정 바꿔 비교'가 결과의 조건을 이 화면에 넘길 때도 쓴다. 넘기는 수단이 이 저장소
  * 항목뿐이라, 보관이 실패하면 넘기는 쪽이 그 사실을 알아야 사용자를 빈 설정 화면으로 보내지 않는다. 이
  * 화면 안에서는 결과를 쓰지 않는다 — 실패해도 화면 상태로 계속 동작한다.
  */
@@ -665,8 +673,29 @@ export function reconcileStoredSettings(
     initialAmount: storedAmount,
     periodStart: storedStart,
     periodEnd: storedEnd,
+    targetVolatility: storedVolatility,
     ...otherConditions
   } = stored.analysisCondition;
+  // 변동성 제한은 켜 둔 값이 지금 등록표 범위에 맞을 때만 이어 간다. 맞지 않으면 끈 채로 시작하고 알린다.
+  let targetVolatility: number | undefined = storedVolatility;
+  const volatilityReason =
+    storedVolatility === undefined
+      ? null
+      : checkNumberInRange(
+          storedVolatility,
+          registry.analysisConditions.targetVolatility,
+        );
+  if (volatilityReason !== null) {
+    invalidValues.push({
+      strategyId: null,
+      axisName: "targetVolatility",
+      storedValue: storedVolatility,
+      reason: volatilityReason,
+      message: `변동성 제한의 저장값 연 ${displayValue(storedVolatility)}%는 현재 허용 범위 밖이라 끈 채로 시작합니다.`,
+      restorable: false,
+    });
+    targetVolatility = undefined;
+  }
   let period: { periodStart: string; periodEnd: string } | null = null;
   if (storedStart !== undefined || storedEnd !== undefined) {
     if (
@@ -728,8 +757,10 @@ export function reconcileStoredSettings(
   const analysisCondition: AnalysisCondition = {
     ...otherConditions,
     minEvaluationYears,
-    scenario: "FULL_PERIOD",
+    scenario: targetVolatility === undefined ? "FULL_PERIOD" : "TARGET_RISK",
   };
+  if (targetVolatility !== undefined)
+    analysisCondition.targetVolatility = targetVolatility;
   if (initialAmount !== undefined)
     analysisCondition.initialAmount = initialAmount;
   if (period !== null) Object.assign(analysisCondition, period);
@@ -1027,8 +1058,24 @@ export function useStrategySettings(
         const next: AnalysisCondition = {
           ...current.analysisCondition,
           ...patch,
-          scenario: "FULL_PERIOD",
         };
+        // 끄기는 `targetVolatility: undefined`로 온다. 범위 밖 값은 받지 않고 이전 값을 둔다.
+        if ("targetVolatility" in patch) {
+          if (patch.targetVolatility === undefined) delete next.targetVolatility;
+          else if (
+            checkNumberInRange(
+              patch.targetVolatility,
+              registry.analysisConditions.targetVolatility,
+            ) !== null
+          ) {
+            if (current.analysisCondition.targetVolatility === undefined)
+              delete next.targetVolatility;
+            else
+              next.targetVolatility = current.analysisCondition.targetVolatility;
+          }
+        }
+        next.scenario =
+          next.targetVolatility === undefined ? "FULL_PERIOD" : "TARGET_RISK";
         let invalidValues = current.invalidValues;
         // 등록표 후보에 없는 최소 평가 기간은 반영하지 않는다(FR-006과 같은 규약).
         if (

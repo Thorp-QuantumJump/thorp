@@ -81,14 +81,17 @@
 | 필드 | 설명 |
 |---|---|
 | base | 기준 결과. 사용자 고정 비중 또는 동일 비중 |
-| target | 비교 대상 결과 또는 없음 |
-| targetState | `NONE` `REQUESTED` `RUNNING` `READY` `FAILED` `EXPIRED` |
+| targets | 비교 대상 결과 0~3개(`S15P21E205-419`). 주소 `?compare=`의 토큰 순서 |
+| indexReference | KOSPI 참고선 켜짐 여부. 주소 `?index=KOSPI`. 비교 대상이 아니며 `targets` 상한에 세지 않는다(FR-017, `S15P21E205-429`) |
+| targets[].targetState | `REQUESTED` `RUNNING` `READY` `FAILED` `EXPIRED` `EXECUTION_LIMIT`. 대상마다 따로 |
+| targets[].mismatch | READY인데 기준과 겹쳐 그리지 않는 이유 `conditions` `versions` `period` 또는 없음 |
+| candidate | 비교 후보 하나. 전략 + 설정값 조합. `source`는 `default`(등록표 기본값) 또는 `used`(004 `GET /backtests/used-strategies`) |
 | comparisonKind | `BASIC`(기본 설정) 또는 `AUTO_SEARCH`(자동 탐색 후보) — 화면에서 구분 표시 (FR-011) |
 | commonConditions | 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준 |
-| periodMismatch | 두 결과의 평가 기간이 다를 때 공통 구간과 재계산 대상 두 건 |
+| periodMismatch | 기준과 대상들의 평가 기간이 다를 때 공통 구간(가장 늦은 시작·가장 이른 끝·가장 긴 준비 기간)과 재계산 대상(기준 + 어긋난 대상들). 확인은 한 번이다 |
 | candidateWarmupHint | 비교 대상 목록의 전략마다, 003 등록표에서 읽은 준비 기간이 기준 결과보다 길면 "비교 기간이 N일 짧아진다"는 표시. 화면은 값을 읽기만 하고 계산하지 않는다 (R-13) |
 
-`targetState`가 `READY`가 아니면 그래프에 기준만 그린다. `FAILED`는 사유 한 문장과 다시 시도 선택을 함께 둔다(Edge Cases).
+`targetState`가 `READY`가 아니거나 `mismatch`가 있는 대상은 그래프에 그리지 않는다. `FAILED`는 그 대상 자리에 사유 한 문장과 다시 시도 선택을 함께 둔다(Edge Cases). 해석 요약은 그려진 대상마다 한 문장이다(FR-006).
 
 ### 3-3. 그래프 계열 (FR-001, R-05·R-08·R-09)
 
@@ -98,7 +101,7 @@
 | points[].equity | `/timeseries[].equity` | 세로축. 사용자가 입력한 금액에서 출발하는 비용 차감 후 원화 자산가치 |
 | points[].drawdown | `/timeseries[].drawdown` | 음영 구간을 찾는 데만 쓴다 |
 | drawdownWindow | `drawdown` 최솟값 지점과 직전 고점 | `summary.maxDrawdown`과 어긋나면 음영을 그리지 않는다 (R-05) |
-| lineStyle | `SOLID`(기준) / `DASHED`(비교 대상) | 색에 기대지 않는 구분 (SC-010) |
+| lineStyle | `SOLID`(기준) / 대상마다 다른 파선 셋 `7,5` `2,4` `10,4,2,4` | 색에 기대지 않는 구분 (SC-010). 비교 대상 하락 음영은 대상이 하나일 때만 |
 | endLabel | 곡선 오른쪽 끝에 붙는 이름 | 범례만으로 구분하지 않는다 |
 
 ### 3-4. 결과 상태 표시 (FR-012, FR-013)

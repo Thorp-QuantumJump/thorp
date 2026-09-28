@@ -28,6 +28,8 @@ export type AnalysisRequestInput = {
   /** 원 단위 금액 */
   initialAmount: number
   scenario: BacktestScenario
+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). `scenario`가 `TARGET_RISK`일 때만 온다 */
+  targetVolatility?: number
 }
 
 /**
@@ -86,8 +88,13 @@ export function buildBacktestRequest(input: AnalysisRequestInput): BacktestCreat
       end: input.period.end,
       initialCash: formatInitialCash(input.initialAmount),
       costProfileVersion: input.versions.costProfileVersion,
-      warmupTradingDays: input.warmupTradingDays,
+      // 변동성 제한은 추정 기간(오버레이 규칙)만큼 워밍업이 더 필요한데 그 길이는 004 규칙표가 가진다. 비워 보내
+      // 서버가 전략·오버레이 중 큰 쪽으로 정하게 한다 — 화면이 63 같은 수를 따로 적지 않는다.
+      warmupTradingDays: input.targetVolatility === undefined ? input.warmupTradingDays : null,
       scenario: input.scenario,
+      ...(input.targetVolatility === undefined
+        ? {}
+        : { scenarioParams: { targetVolatility: (input.targetVolatility / 100).toFixed(4) } }),
     },
   }
 }

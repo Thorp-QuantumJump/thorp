@@ -260,6 +260,11 @@ class InputsSpec(RegimeLinkModel):
     cash_flows: list[CashFlow]
 
 
+#: 계약 §작업 메시지 크기 상한 — ``portfolioSeries``의 날짜 행 수.
+#: 백엔드 ``thorp.regimelink.job-max-rows``와 같다.
+MAX_PORTFOLIO_ROWS = 65
+
+
 class RegimeLinkJob(RegimeLinkModel):
     """``regime-link.jobs``로 오는 작업 메시지 본문.
 
@@ -276,20 +281,48 @@ class RegimeLinkJob(RegimeLinkModel):
     inputs: InputsSpec
     input_digest: str
 
+    @model_validator(mode="after")
+    def _within_size_limits(self) -> "RegimeLinkJob":
+        """계약 §작업 메시지 크기 상한의 둘째 줄(T105).
+
+        백엔드가 발행 전에 막지만(``INPUT_TOO_LARGE``) 그 관문을 지나친 작업이 워커를 그대로
+        통과하면 안 된다. 넘으면 ``ValidationError`` — 계약 오류 경로(reject → DLQ)로 끝난다.
+        종목 수는 ``universe.items``와 견주는 교차 필드라 모델 단위에서 본다.
+        """
+        rows = len(self.inputs.portfolio_series)
+        if rows > MAX_PORTFOLIO_ROWS:
+            raise ValueError(
+                f"portfolioSeries 날짜 행 {rows}개가 상한 {MAX_PORTFOLIO_ROWS}을 넘는다"
+            )
+        instruments = len(self.universe.items)
+        snapshots = [self.inputs.opening_positions] + [
+            day.positions for day in self.inputs.daily_positions
+        ]
+        widest = max((len(snapshot) for snapshot in snapshots), default=0)
+        if widest > instruments:
+            raise ValueError(
+                f"보유 스냅샷 종목 수 {widest}개가 대응표 종목 수 {instruments}개를 넘는다"
+            )
+        return self
+
 
 # --- 이벤트 -------------------------------------------------------------------------
 
 
 class ProcessInfo(RegimeLinkModel):
-    """어느 프로세스가 집었는지. 진단용이라 못 채우면 키를 생략한다."""
+    """어느 프로세스가 집었는지 — 재전달 진단용이다.
 
-    pid: int | None = None
-    hostname: str | None = None
+    계약 §이벤트 봉투는 ``resource``에 ``?``를 붙이지 않는다(T106). 워커는 ``os.getpid()``와
+    ``socket.gethostname()``으로 언제나 채울 수 있으므로 기본값을 두지 않는다(T006 "기본값 금지").
+    """
+
+    pid: int
+    hostname: str
 
 
 class RegimeLinkStartedPayload(RegimeLinkModel):
     started_at: UtcDatetime
-    resource: ProcessInfo | None = None
+    resource: ProcessInfo
 
 
 class WindowCosts(RegimeLinkModel):
@@ -435,7 +468,8 @@ class RegimeLinkFinishedPayload(RegimeLinkModel):
     delisted_on: date | None = None
     result: RegimeLinkResultPayload | None = None
     error: ErrorDetail | None = None
-    resource: ResourceUsage | None = None
+    #: 계약상 필수다(T106). 성공·실패 모두 벽시계 시간을 잰다.
+    resource: ResourceUsage
 
     @model_validator(mode="after")
     def _outcome_matches_status(self) -> "RegimeLinkFinishedPayload":

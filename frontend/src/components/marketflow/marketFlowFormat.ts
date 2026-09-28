@@ -1,6 +1,16 @@
-/** 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다. */
+import type { IndicatorDisplay } from '@/types/marketFlow'
+
+/**
+ * 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다.
+ *
+ * 소수 첫째 자리까지 보인다(S15P21E205-447). 원천 값은 자릿수가 제각각이라(증가율 4.346167 등) 그대로 두면
+ * 읽을 수 없다. 정밀 값은 응답에 그대로 남는다.
+ */
 export function formatObservation(value: number | null): string {
-  return value === null ? '자료 없음' : value.toLocaleString('ko-KR', { maximumFractionDigits: 10 })
+  if (value === null) return '자료 없음'
+  const text = value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })
+  // -0.04 처럼 0으로 반올림된 음수는 "-0"이 아니라 "0"이다.
+  return text === '-0' ? '0' : text
 }
 
 export function formatUpdatedAt(value: string | null): string {
@@ -64,4 +74,40 @@ export function buildAxisDomain(values: readonly number[]): {
   // 0을 빼고 자료에 맞춘다. 점이 가장자리에 붙지 않게 조금 띄운다.
   const pad = spread * 0.15
   return { domain: [min - pad, max + pad], includesZero: false }
+}
+
+/**
+ * 최근 오르내림. 값이 있는 마지막 두 달을 견준다. 선 색(상승 빨강·하락 파랑)에만 쓰고 좋고 나쁨을 뜻하지 않는다 —
+ * 실업률이 오르는 것도 빨강이다. 비교할 두 달이 없거나 같으면 방향을 달지 않는다.
+ */
+export function recentDirection(path: IndicatorDisplay['path']): 'up' | 'down' | undefined {
+  const values = path.flatMap(({ value }) => (value === null ? [] : [value]))
+  if (values.length < 2) return undefined
+  const difference = values[values.length - 1] - values[values.length - 2]
+  return difference > 0 ? 'up' : difference < 0 ? 'down' : undefined
+}
+
+/**
+ * 지표 카드의 출처 줄. `출처 {출처}`와 `작성기관 {기관}`을 따로 적는다(FR-015). 출처 이름이 작성기관을 되풀이하면
+ * (`OECD Composite Leading Indicators` · `OECD`) 두 번 적지 않고 `출처·작성기관 OECD` 하나로 합친다.
+ */
+export function sourceParts(agency: string, source: string): string[] {
+  const a = agency.trim()
+  const b = source.trim()
+  if (!a && !b) return ['출처 확인할 수 없음']
+  if (!a) return [`출처 ${b}`]
+  if (!b) return [`작성기관 ${a}`]
+  const la = a.toLowerCase()
+  const lb = b.toLowerCase()
+  if (la === lb || lb.includes(la) || la.includes(lb)) return [`출처·작성기관 ${a}`]
+  return [`출처 ${b}`, `작성기관 ${a}`]
+}
+
+/** 세로축 범위 설명. 0을 뺀 축이면 범위를 밝힌다 — 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. */
+export function describeAxis(indicator: IndicatorDisplay): string {
+  const values = indicator.path.flatMap(({ value }) => (value === null ? [] : [value]))
+  const axis = buildAxisDomain(values)
+  return axis.includesZero
+    ? '세로축이 0을 포함합니다.'
+    : `세로축은 ${formatObservation(axis.domain[0])}~${formatObservation(axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
 }

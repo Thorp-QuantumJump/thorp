@@ -321,11 +321,129 @@ class NewsConfigTest {
                             new ClassPathResource(NewsConfig.LINK_REGISTRY_PATH),
                             NewsLinkRegistry.class);
 
-            assertThat(registry.version()).isEqualTo("news-link-v1");
+            assertThat(registry.version()).isEqualTo("news-link-v2");
             assertThat(registry.topics()).isNotEmpty();
+            // 투자 대상 섹터는 001 대응표(data/config/sector-map-2026-09.json)의 8개를 그대로 가리키고,
+            // 나머지는 012가 소유하는 뉴스 전용 섹터다(Session 2026-09-25).
+            assertThat(registry.newsSectors())
+                    .filteredOn(s -> s.owner() == NewsLinkRegistry.SectorOwner.SECTOR_MAP)
+                    .extracting(NewsLinkRegistry.NewsSector::sectorId)
+                    .containsExactly(
+                            "SEMICONDUCTOR",
+                            "SECONDARY_BATTERY",
+                            "BANK",
+                            "SECURITIES",
+                            "COSMETICS",
+                            "CONSTRUCTION",
+                            "AUTO",
+                            "HEAVY_INDUSTRY");
+            assertThat(registry.newsOwnedSectorIds())
+                    .as("뉴스 전용 섹터는 NEWS_로 시작해 001 식별자와 겹치지 않는다")
+                    .isNotEmpty()
+                    .allSatisfy(
+                            id -> assertThat(id).startsWith(NewsLinkRegistry.NEWS_SECTOR_PREFIX));
             assertThat(registry.knownSectorIds())
-                    .as("001의 대응표가 확정되기 전에는 어떤 섹터 식별자도 선언하지 않는다")
-                    .isEmpty();
+                    .as("모든 연결은 칩 목록에 있는 섹터로 간다")
+                    .isSubsetOf(
+                            registry.newsSectors().stream()
+                                    .map(NewsLinkRegistry.NewsSector::sectorId)
+                                    .toList());
+            assertThat(registry.topics())
+                    .filteredOn(topic -> !topic.titleKeywords().isEmpty())
+                    .as("제목 키워드 주제는 해외 기사를 받는 근거가 되지 않는다")
+                    .allSatisfy(topic -> assertThat(topic.domesticLink()).isFalse());
+        }
+
+        @Test
+        @DisplayName("제목 키워드는 제외어를 먼저 지우고 대소문자를 가리지 않고 찾는다")
+        void 제목_키워드() {
+            NewsLinkRegistry registry =
+                    new NewsLinkRegistry(
+                            "news-link-test",
+                            List.of(
+                                    new NewsLinkRegistry.Topic(
+                                            "sector-bank",
+                                            "은행 업종",
+                                            false,
+                                            List.of("BANK"),
+                                            List.of("은행권", "은행"),
+                                            List.of("한국은행")),
+                                    new NewsLinkRegistry.Topic(
+                                            "sector-semiconductor",
+                                            "반도체 업종",
+                                            false,
+                                            List.of("SEMICONDUCTOR"),
+                                            List.of("HBM"),
+                                            List.of())),
+                            List.of());
+
+            assertThat(registry.matchTitle("한국은행, 기준금리 동결")).isEmpty();
+            assertThat(registry.matchTitle("은행권 대출 금리 인하"))
+                    .containsExactly(java.util.Map.entry("sector-bank", "은행권"));
+            assertThat(registry.matchTitle("삼성, hbm 공급 확대"))
+                    .containsExactly(java.util.Map.entry("sector-semiconductor", "hbm"));
+            assertThat(registry.matchTitle(null)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("영문 키워드는 영문 낱말 경계에서만 걸린다")
+        void 영문_키워드_경계() {
+            NewsLinkRegistry.Topic topic =
+                    new NewsLinkRegistry.Topic(
+                            "sector-news-it",
+                            "IT·AI",
+                            false,
+                            List.of("NEWS_IT"),
+                            List.of("AI"),
+                            List.of());
+
+            assertThat(topic.matchTitle("삼성, AI 칩 투자")).contains("ai");
+            assertThat(topic.matchTitle("AI로 보고서 뚝딱")).contains("ai");
+            assertThat(topic.matchTitle("Taiwan 반도체 수출")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("뉴스 전용 섹터는 NEWS_로 시작해야 하고, 칩 목록에 없는 섹터로 연결할 수 없다")
+        void 뉴스_섹터_규칙() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () ->
+                                    new NewsLinkRegistry.NewsSector(
+                                            "IT", "IT", NewsLinkRegistry.SectorOwner.NEWS))
+                    .isInstanceOf(IllegalArgumentException.class);
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () ->
+                                    new NewsLinkRegistry(
+                                            "news-link-test",
+                                            List.of(
+                                                    new NewsLinkRegistry.NewsSector(
+                                                            "NEWS_IT",
+                                                            "IT·AI",
+                                                            NewsLinkRegistry.SectorOwner.NEWS)),
+                                            List.of(
+                                                    new NewsLinkRegistry.Topic(
+                                                            "sector-bank",
+                                                            "은행 업종",
+                                                            false,
+                                                            List.of("BANK"),
+                                                            List.of("은행권"),
+                                                            List.of())),
+                                            List.of()))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("제목 키워드가 있는데 섹터가 없으면 등록표를 받지 않는다")
+        void 제목_키워드_섹터_필수() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () ->
+                                    new NewsLinkRegistry.Topic(
+                                            "sector-x",
+                                            "업종",
+                                            false,
+                                            List.of(),
+                                            List.of("키워드"),
+                                            List.of()))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test

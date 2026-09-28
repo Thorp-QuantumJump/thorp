@@ -34,6 +34,7 @@ public record RegimeCaseDetailResponse(
         @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal distance,
         Map<String, String> byField,
         Map<String, String> contribution,
+        List<BlockView> blocks,
         List<IndicatorDetailView> indicators,
         Map<String, EraPositionView> eraPosition,
         PostPeriodView postPeriod) {
@@ -52,6 +53,7 @@ public record RegimeCaseDetailResponse(
                 item.distance().contribution() == null
                         ? null
                         : plain(item.distance().contribution()),
+                blocks(item),
                 indicators(result),
                 eraPositions(item),
                 new PostPeriodView(RegimeFormat.month(item.endMonth()), false, POST_PERIOD_NOTE));
@@ -74,6 +76,33 @@ public record RegimeCaseDetailResponse(
         source.forEach((key, value) -> values.put(key, value.toPlainString()));
         return Map.copyOf(values);
     }
+
+    /** v3 종합의 블록 거리. v1 결과는 {@code null}이라 키가 없다(spec 010 v3 개정안 §5.3). */
+    private static List<BlockView> blocks(RegimeCase item) {
+        if (item.distance().blocks().isEmpty()) {
+            return null;
+        }
+        Map<String, BigDecimal> shares = item.distance().blockContribution();
+        return item.distance().blocks().stream()
+                .map(
+                        block ->
+                                new BlockView(
+                                        block.id(),
+                                        block.name(),
+                                        block.gap(),
+                                        shares == null ? null : shares.get(block.id()),
+                                        block.spread()))
+                .toList();
+    }
+
+    /** 경제 블록 하나의 거리와 기여. 기여는 블록 거리 합에 대한 비율이며, 합이 0이면 키가 없다. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record BlockView(
+            String id,
+            String name,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal gap,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal contribution,
+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal spread) {}
 
     private static List<IndicatorDetailView> indicators(RegimeCaseResult result) {
         RegimeSnapshot snapshot = result.snapshot();

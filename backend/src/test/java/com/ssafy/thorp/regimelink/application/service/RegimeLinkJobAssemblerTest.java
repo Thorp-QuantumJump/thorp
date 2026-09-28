@@ -131,6 +131,31 @@ class RegimeLinkJobAssemblerTest {
     }
 
     @Test
+    @DisplayName("상한은 portfolioSeries 날짜 행 수와 스냅샷 한 건의 종목 수로 잰다 (T104)")
+    void 상한_기준() {
+        // 날짜 행이 65 를 넘지 않으면 종목 3개(상한 8 안)는 통과한다 — dailyPositions 행 수로 재지 않는다.
+        RegimeLink within = links.create(queued(63));
+        assembler(runs(true), slice(65, 3)).publish(within.id());
+        assertThat(publisher.published()).hasSize(1);
+
+        // 종목 수가 대응표 섹터 수(8)를 넘으면 날짜 행이 적어도 막는다.
+        RecordingJobPublisher second = new RecordingJobPublisher();
+        RegimeLink wide = links.create(queued(63));
+        new RegimeLinkJobAssembler(
+                        runs(true).slice(RUN_ID, slice(64, 9)),
+                        calendar,
+                        links,
+                        second,
+                        new InputDigestCalculator(),
+                        new JobSizeLimits(65, 8),
+                        clock())
+                .publish(wide.id());
+        assertThat(second.published()).isEmpty();
+        assertThat(links.findById(wide.id()).orElseThrow().failure().code())
+                .isEqualTo("INPUT_TOO_LARGE");
+    }
+
+    @Test
     @DisplayName("입력 실행이 끝나지 않았으면 발행하지 않고 상태도 바꾸지 않는다")
     void 미완료_실행() {
         RegimeLink link = links.create(queued(63));

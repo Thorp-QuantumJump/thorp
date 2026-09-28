@@ -111,6 +111,8 @@
   사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.
 - 사유 값: `DATA_INSUFFICIENT` → `UNLISTED`\|`WARMUP_SHORT`\|`SECTOR_UNMAPPED`, `POST_INCOMPLETE` →
   `RECENT`\|`DELISTED`. 이 둘은 계산 작업을 만들지 않는 판정이며 '다시 시도'가 없다(research R13).
+- `SECTOR_UNMAPPED`는 사례 관측 종료월에 **유효한 대응표 버전이 있을 때만** 판정한다. 대응표 이력이 그 앞까지 닿지 않으면 대응표 판정을 건너뛰고
+  나머지 판정은 그대로 한다(research R4, T109).
 - `entryPath=MARKET_FLOW`면 필터를 계산하지 않으므로 `filter.applied=false`이고 `filterKey`·
   `availableRange`·`excludedCount`가 **없다**(`minPostTradingDays`만 남는다). 모든 사례가
   `shownInFiltered=true`이며, 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.

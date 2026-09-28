@@ -7,8 +7,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
-from conftest import make_registry, make_series
+from conftest import make_registry, make_series, write_phase_config
 
 import precompute_regime
 from data_pipeline.regime.macro.types import BaselineMonths
@@ -20,7 +22,8 @@ from precompute_regime import (
 
 class TestEntryPoint:
     def test_아무것도_계산하지_않은_실행이_성공으로_끝나지_않는다(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """대상이 0개인 실행이 0으로 끝나면 배치가 돈 줄 알고 넘어간다 (spec FR-033).
 
@@ -28,6 +31,11 @@ class TestEntryPoint:
         종료 코드이지 자료가 아니다.
         """
         monkeypatch.setattr(precompute_regime, "create_source", lambda name: _StubSource())
+        monkeypatch.setattr(
+            precompute_regime,
+            "PHASE_CONFIG",
+            write_phase_config(tmp_path, _StubSource._registry),
+        )
         assert main(["--source", "macro", "--baseline-month", "1900-01", "--dry-run"]) != 0
 
     def test_잘못된_월_표기는_거부한다(self) -> None:

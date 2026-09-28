@@ -15,6 +15,9 @@ import java.util.Optional;
  * <p>저장된 {@link RegimeSnapshot}에 <b>요청의 성질</b>({@code baselineOrigin})과 <b>표시용 이름</b>(분야·지표)을 얹은
  * 것이다. 둘 다 snapshot에 저장하지 않는다 — 근거는 요청마다 다르고, 이름은 008 등록표의 최신 값을 그대로 보이는 편이 맞다.
  *
+ * <p>교정된 기준으로 나눈 결과({@code THRESHOLD_APPLIED})면 {@code displayedCases}는 <b>기준 충족 사례만</b>, {@code
+ * referenceCases}는 나머지 표시 후보를 담는다(spec FR-021). 두 목록에 같은 사례가 겹치지 않는다.
+ *
  * <p>{@code displayedCases}는 {@code limit}만큼만 담는다. <b>잘라 낸 수를 세지 않는다</b> — 화면은 {@code stored}와
  * {@code displayed}로 '더 보기' 노출을 정하고 10을 가정하지 않는다(spec FR-013).
  */
@@ -23,7 +26,18 @@ public record RegimeSearchResult(
         BaselineOrigin baselineOrigin,
         FieldRegistration field,
         Map<String, IndicatorRegistration> indicators,
-        List<RegimeCase> displayedCases) {
+        List<RegimeCase> displayedCases,
+        List<RegimeCase> referenceCases) {
+
+    /** 목록을 나누지 않는 결과(문턱 미교정·계산 불가). 참고 사례 목록이 없다. */
+    public RegimeSearchResult(
+            RegimeSnapshot snapshot,
+            BaselineOrigin baselineOrigin,
+            FieldRegistration field,
+            Map<String, IndicatorRegistration> indicators,
+            List<RegimeCase> displayedCases) {
+        this(snapshot, baselineOrigin, field, indicators, displayedCases, List.of());
+    }
 
     /** 분야 검색이면 그 분야, 종합이면 비어 있다. */
     public Optional<FieldRegistration> fieldRegistration() {

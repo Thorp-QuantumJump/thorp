@@ -560,7 +560,7 @@ describe("StrategySettingsPage", () => {
     expect(total).toBeCloseTo(1, 4);
   });
 
-  it("사용자 비중을 쓰는 전략은 비중 합계가 100%가 아니면 분석하기가 막히고 되돌아갈 길을 보인다", async () => {
+  it("사용자 비중을 쓰는 전략은 비중 합계가 100%가 아니면 분석하기가 막히고 그 자리에서 맞출 수 있다", async () => {
     // T091. 002는 합계가 어긋난 상태도 정상으로 보관하고, 004는 목표 비중 합을 1로 요구한다.
     // 그 사이를 잇는 이 화면이 막지 않으면 서버가 400으로 거절하고 사용자는 무엇을 고칠지 모른다.
     storeUnbalancedSelection();
@@ -588,11 +588,13 @@ describe("StrategySettingsPage", () => {
     await user.click(analyze);
     expect(requests).toHaveLength(0);
 
-    // 고칠 자리가 다른 화면이라 이동 수단을 함께 둔다.
-    await user.click(
-      screen.getByRole("button", { name: "섹터·비중 단계로 이동" }),
+    // 고칠 자리가 같은 화면 안에 있다. 누르면 고른 대상 전체가 같은 비중으로 되돌아간다.
+    await user.click(screen.getByRole("button", { name: "동일하게 나누기" }));
+    await waitFor(() =>
+      expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
+        "false",
+      ),
     );
-    expect(await screen.findByText("섹터·비중 단계 화면")).toBeTruthy();
   });
 
   it("비중 합계가 어긋나도 자동 배분 전략은 막지 않는다", async () => {
@@ -643,6 +645,37 @@ describe("StrategySettingsPage", () => {
     await user.click(actionButton("분석하기"));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2));
+  });
+
+  it("변동성 제한을 켜면 요약 줄에 보이고 요청에 목표 변동성을 싣고 워밍업은 서버에 맡긴다", async () => {
+    const user = userEvent.setup();
+    const { support, requests } = makeSupport();
+    renderPage(support);
+
+    await user.click(await findCardNamed(selectableStrategy.name));
+    await user.click(screen.getByRole("button", { name: "분석 조건" }));
+    await user.click(screen.getByRole("radio", { name: "씀" }));
+    const volatility = registryFixture.analysisConditions.targetVolatility;
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "목표 변동성(연)" }),
+      String(volatility.max),
+    );
+    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+      `변동성 제한연 ${volatility.max}%`,
+    );
+
+    await waitFor(() =>
+      expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
+        "false",
+      ),
+    );
+    await user.click(actionButton("분석하기"));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].conditions).toMatchObject({
+      scenario: "TARGET_RISK",
+      scenarioParams: { targetVolatility: (volatility.max / 100).toFixed(4) },
+      warmupTradingDays: null,
+    });
   });
 
   it("기본 화면의 입력은 전략 선택 하나다", async () => {

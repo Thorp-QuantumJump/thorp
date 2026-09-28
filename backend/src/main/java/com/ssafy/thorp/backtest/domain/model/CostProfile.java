@@ -21,7 +21,30 @@ public record CostProfile(
         BigDecimal taxBps,
         Map<String, Object> escalation,
         boolean provisional,
-        String note) {
+        String note,
+        /** 세금이 왜 그 값인지의 한 줄 설명(spec 015 도우미 근거). 없을 수 있다. */
+        String taxNote) {
+
+    public CostProfile(
+            String version,
+            BigDecimal commissionBps,
+            BigDecimal spreadBps,
+            BigDecimal slippageBps,
+            BigDecimal taxBps,
+            Map<String, Object> escalation,
+            boolean provisional,
+            String note) {
+        this(
+                version,
+                commissionBps,
+                spreadBps,
+                slippageBps,
+                taxBps,
+                escalation,
+                provisional,
+                note,
+                null);
+    }
 
     public CostProfile {
         if (version == null || version.isBlank()) {

@@ -3,14 +3,15 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
 }
 
 .main {
-  width: min(100% - 40px, 960px);
+  width: min(100% - var(--thorp-page-gutter, 40px), var(--thorp-page-width-flow, 960px));
   margin: 0 auto;
   /* 아래 여백이 메뉴 높이만큼 있다. 마지막 줄의 '더 보기'를 눌렀을 때 메뉴가 화면 밖으로
      나가 스크롤해야 하는 일이 없게 미리 자리를 둔다. */
-  padding: clamp(90px, 15vh, 160px) 0 clamp(80px, 14rem, 16rem);
+  padding: var(--thorp-records-top, clamp(90px, 15vh, 160px)) 0 clamp(80px, 14rem, 16rem);
 }
 
 .eyebrow {
@@ -18,23 +19,24 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: var(--thorp-accent-soft);
-  font-size: 0.72rem;
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 750;
   letter-spacing: 0.16em;
 }
 
 .title {
-  margin: 14px 0 6px;
-  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  margin: var(--thorp-records-title-margin, 14px 0 6px);
+  font-size: var(--thorp-text-title, clamp(1.8rem, 4.5vw, 2.6rem));
+  line-height: var(--thorp-title-leading, 1.1);
+  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  font-weight: 700;
 }
 
 .status {
   margin: 24px 0 0;
   color: var(--thorp-copy);
-  font-size: 0.95rem;
+  font-size: var(--thorp-text-body, 0.95rem);
   line-height: 1.7;
 }
 
@@ -62,7 +64,7 @@
 .empty p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
 }
 
 .list {
@@ -82,12 +84,41 @@
 .more p {
   margin: 0;
   color: var(--thorp-negative);
-  font-size: 0.85rem;
+  font-size: var(--thorp-text-body, 0.85rem);
 }
 
 @media (max-width: 600px) {
   .main {
     width: min(100% - 28px, 960px);
-    padding-top: 72px;
+    padding-top: var(--thorp-records-top, 72px);
   }
+}
+
+/* 새 디자인: 다른 화면과 같은 머리 짜임(선 작은 제목)이라 예전 작은 제목을 숨긴다. */
+:global(:root:not([data-design='classic'])) .classicOnly {
+  display: none;
+}
+
+/*
+  버튼 높이 규칙(index.css). 공용 Button의 기본 높이(32px)는 작은 행동 단이다. 이 화면에서 빈 목록의
+  '전략 검증하기'는 화면의 주 행동(52px), '다시 시도'·'더 보기'는 카드 밖 행동(40px)으로 올린다.
+*/
+.primaryAction {
+  height: var(--thorp-control-cta, 2rem);
+  padding-inline: 21px;
+  font-size: var(--thorp-control-font, 0.875rem);
+  font-weight: var(--thorp-control-weight, 500);
+}
+
+.action {
+  height: var(--thorp-control, 2rem);
+  padding-inline: 16px;
+  font-size: var(--thorp-control-font, 0.875rem);
+}
+
+/* 새 디자인: 기록 카드 사이를 띄운다. */
+:global(:root:not([data-design='classic'])) .list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }

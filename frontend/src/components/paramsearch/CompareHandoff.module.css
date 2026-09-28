@@ -1,10 +1,10 @@
 .tray {
   display: grid;
   gap: 11px;
-  padding: 16px;
+  padding: var(--thorp-pad-card, 16px);
   border: 1px solid var(--thorp-accent-muted);
   border-left: 2px solid var(--thorp-accent);
-  border-radius: 6px;
+  border-radius: var(--thorp-radius-card, 6px);
   background: var(--thorp-surface-raised);
 }
 
@@ -21,7 +21,7 @@
   padding: 2px 7px;
   border: 1px solid var(--thorp-accent);
   border-radius: 3px;
-  color: var(--thorp-accent-soft);
+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -30,7 +30,7 @@
 .header h2 {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: 1rem;
+  font-size: var(--thorp-text-heading, 1rem);
   font-weight: 750;
 }
 
@@ -41,7 +41,7 @@
   background: transparent;
   color: var(--thorp-muted);
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 650;
 }
 
@@ -70,14 +70,14 @@
   gap: 10px;
   padding: 7px 9px;
   border: 1px solid var(--thorp-line);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-inset, 5px);
   background: var(--thorp-surface);
 }
 
 .pickText {
   min-width: 0;
   color: var(--thorp-copy);
-  font-size: 0.73rem;
+  font-size: var(--thorp-text-caption, 0.73rem);
   line-height: 1.45;
 }
 
@@ -93,7 +93,7 @@
   height: 24px;
   place-items: center;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: 4px;
+  border-radius: var(--thorp-radius-control, 4px);
   background: transparent;
   color: var(--thorp-muted);
   cursor: pointer;
@@ -112,7 +112,7 @@
 .note {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: 0.72rem;
+  font-size: var(--thorp-text-caption, 0.72rem);
   line-height: 1.55;
 }
 
@@ -124,11 +124,11 @@
   gap: 7px;
   padding: 0 15px;
   border: 1px solid var(--thorp-accent);
-  border-radius: 5px;
+  border-radius: var(--thorp-radius-control, 5px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: var(--thorp-text-small, 0.78rem);
   font-weight: 700;
 }
 

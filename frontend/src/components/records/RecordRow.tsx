@@ -116,7 +116,7 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
 
       <div className={styles.actions}>
         {href ? (
-          <Button asChild>
+          <Button asChild className={styles.action}>
             <Link to={href}>다시 보기</Link>
           </Button>
         ) : (
@@ -124,7 +124,7 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
             type="button"
             aria-disabled="true"
             aria-describedby={reasonId}
-            className={DISABLED_LOOK}
+            className={`${DISABLED_LOOK} ${styles.action}`}
           >
             다시 보기
           </Button>
@@ -133,7 +133,7 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(
         {item.kind === 'REGIME_SEARCH' ? null : (
           <ReopenSettingsButton recordId={item.recordId} detail={loadedDetail} />
         )}
-        <Button type="button" variant="outline" {...detail.toggleProps}>
+        <Button type="button" variant="outline" className={styles.action} {...detail.toggleProps}>
           {detail.open ? '접기' : '자세히'}
         </Button>
         <RecordActionsMenu

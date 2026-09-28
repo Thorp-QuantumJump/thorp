@@ -305,6 +305,15 @@ class NewsIngestionServiceTest {
                         String ruleVersion) {
                     // 연결 저장은 이 시험의 관심사가 아니다.
                 }
+
+                @Override
+                public void addLinks(
+                        Long articleId,
+                        java.util.Set<String> sectorIds,
+                        java.util.Map<Long, String> topicEvidenceByTopicId,
+                        String ruleVersion) {
+                    // 다시 연결은 이 시험의 관심사가 아니다.
+                }
             };
 
     /** 트랜잭션 없이 그대로 실행하는 대역. */

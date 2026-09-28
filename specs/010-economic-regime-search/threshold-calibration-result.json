@@ -1,0 +1,663 @@
+{
+  "dataVersion": "macro-20260925T015543",
+  "registryVersion": "macro-calc-v1",
+  "phaseConfigVersion": "REGIME-V3-EQ",
+  "composite": {
+    "periods": {
+      "dev": {
+        "pairs": 752,
+        "queries": 82
+      },
+      "external": {
+        "pairs": 480,
+        "queries": 48
+      },
+      "final": {
+        "pairs": 410,
+        "queries": 41
+      }
+    },
+    "tuning": {
+      "grid": [
+        {
+          "tauPercentile": 10,
+          "tau": 1.252421639445,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.5066666666666667,
+          "aRest": 0.4549483013293944,
+          "lift": 0.05171836533727231,
+          "coverage": 0.47560975609756095,
+          "nMet": 75,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 10,
+          "tau": 1.252421639445,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.5131578947368421,
+          "aRest": 0.4541420118343195,
+          "lift": 0.05901588290252263,
+          "coverage": 0.4878048780487805,
+          "nMet": 76,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 10,
+          "tau": 1.252421639445,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.5131578947368421,
+          "aRest": 0.4541420118343195,
+          "lift": 0.05901588290252263,
+          "coverage": 0.4878048780487805,
+          "nMet": 76,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 10,
+          "tau": 1.252421639445,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.5131578947368421,
+          "aRest": 0.4541420118343195,
+          "lift": 0.05901588290252263,
+          "coverage": 0.4878048780487805,
+          "nMet": 76,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 1.5109237468134005,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.5798319327731093,
+          "aRest": 0.43759873617693523,
+          "lift": 0.14223319659617406,
+          "coverage": 0.6219512195121951,
+          "nMet": 119,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 1.5109237468134005,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.543046357615894,
+          "aRest": 0.43926788685524126,
+          "lift": 0.10377847076065277,
+          "coverage": 0.6829268292682927,
+          "nMet": 151,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 1.5109237468134005,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.543046357615894,
+          "aRest": 0.43926788685524126,
+          "lift": 0.10377847076065277,
+          "coverage": 0.6829268292682927,
+          "nMet": 151,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 1.5109237468134005,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.543046357615894,
+          "aRest": 0.43926788685524126,
+          "lift": 0.10377847076065277,
+          "coverage": 0.6829268292682927,
+          "nMet": 151,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 1.7340252273885999,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.5703703703703704,
+          "aRest": 0.4359805510534846,
+          "lift": 0.13438981931688582,
+          "coverage": 0.6829268292682927,
+          "nMet": 135,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 1.7340252273885999,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.5,
+          "aRest": 0.4431818181818182,
+          "lift": 0.05681818181818182,
+          "coverage": 0.7804878048780488,
+          "nMet": 224,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 1.7340252273885999,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.49557522123893805,
+          "aRest": 0.4448669201520912,
+          "lift": 0.05070830108684682,
+          "coverage": 0.7804878048780488,
+          "nMet": 226,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 1.7340252273885999,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.49557522123893805,
+          "aRest": 0.4448669201520912,
+          "lift": 0.05070830108684682,
+          "coverage": 0.7804878048780488,
+          "nMet": 226,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 1.917959443336,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.5755395683453237,
+          "aRest": 0.433931484502447,
+          "lift": 0.1416080838428767,
+          "coverage": 0.6829268292682927,
+          "nMet": 139,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 1.917959443336,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.4894366197183099,
+          "aRest": 0.4423076923076923,
+          "lift": 0.04712892741061758,
+          "coverage": 0.7926829268292683,
+          "nMet": 284,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 1.917959443336,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.4750830564784053,
+          "aRest": 0.4501108647450111,
+          "lift": 0.02497219173339421,
+          "coverage": 0.7926829268292683,
+          "nMet": 301,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 1.917959443336,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.4750830564784053,
+          "aRest": 0.4501108647450111,
+          "lift": 0.02497219173339421,
+          "coverage": 0.7926829268292683,
+          "nMet": 301,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 2.1458957028835,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.5755395683453237,
+          "aRest": 0.433931484502447,
+          "lift": 0.1416080838428767,
+          "coverage": 0.6829268292682927,
+          "nMet": 139,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 2.1458957028835,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.47692307692307695,
+          "aRest": 0.44730679156908665,
+          "lift": 0.0296162853539903,
+          "coverage": 0.8048780487804879,
+          "nMet": 325,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 2.1458957028835,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.4601063829787234,
+          "aRest": 0.4601063829787234,
+          "lift": 0.0,
+          "coverage": 0.8292682926829268,
+          "nMet": 376,
+          "nPairs": 752,
+          "nQueries": 82
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 2.1458957028835,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.4601063829787234,
+          "aRest": 0.4601063829787234,
+          "lift": 0.0,
+          "coverage": 0.8292682926829268,
+          "nMet": 376,
+          "nPairs": 752,
+          "nQueries": 82
+        }
+      ],
+      "chosen": {
+        "tauPercentile": 20,
+        "tau": 1.5109237468134005,
+        "delta": 1.0,
+        "eligible": true,
+        "aMet": 0.5798319327731093,
+        "aRest": 0.43759873617693523,
+        "lift": 0.14223319659617406,
+        "coverage": 0.6219512195121951,
+        "nMet": 119,
+        "nPairs": 752,
+        "nQueries": 82
+      }
+    },
+    "external": {
+      "aMet": 0.6742424242424242,
+      "aRest": 0.603448275862069,
+      "lift": 0.07079414838035525,
+      "coverage": 0.9166666666666666,
+      "nMet": 132,
+      "nPairs": 480,
+      "nQueries": 48,
+      "checks": {
+        "설명력 차이 ≥ 0.05": true,
+        "포괄률 ≥ 0.20": true,
+        "n_충족 ≥ 20": true
+      },
+      "pass": true
+    },
+    "final": {
+      "aMet": 0.4228571428571429,
+      "aRest": 0.31063829787234043,
+      "lift": 0.11221884498480245,
+      "coverage": 0.9024390243902439,
+      "nMet": 175,
+      "nPairs": 410,
+      "nQueries": 41,
+      "checks": {
+        "설명력 차이 ≥ 0.05": true,
+        "포괄률 ≥ 0.20": true,
+        "n_충족 ≥ 20": true
+      },
+      "pass": true
+    },
+    "decision": {
+      "calibrated": true,
+      "tau": 1.5109237468134005,
+      "delta": 1.0,
+      "tauPercentile": 20
+    }
+  },
+  "field": {
+    "periods": {
+      "dev": {
+        "pairs": 5496,
+        "queries": 811
+      },
+      "external": {
+        "pairs": 2937,
+        "queries": 336
+      },
+      "final": {
+        "pairs": 2558,
+        "queries": 287
+      }
+    },
+    "tuning": {
+      "grid": [
+        {
+          "tauPercentile": 10,
+          "tau": 0.3654477124565,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.5,
+          "aRest": 0.4757379700768298,
+          "lift": 0.024262029923170225,
+          "coverage": 0.4352651048088779,
+          "nMet": 550,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 10,
+          "tau": 0.3654477124565,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.5,
+          "aRest": 0.4757379700768298,
+          "lift": 0.024262029923170225,
+          "coverage": 0.4352651048088779,
+          "nMet": 550,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 10,
+          "tau": 0.3654477124565,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.5,
+          "aRest": 0.4757379700768298,
+          "lift": 0.024262029923170225,
+          "coverage": 0.4352651048088779,
+          "nMet": 550,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 10,
+          "tau": 0.3654477124565,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.5,
+          "aRest": 0.4757379700768298,
+          "lift": 0.024262029923170225,
+          "coverage": 0.4352651048088779,
+          "nMet": 550,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 0.504812981554,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.4926605504587156,
+          "aRest": 0.4745801180208806,
+          "lift": 0.01808043243783497,
+          "coverage": 0.6448828606658447,
+          "nMet": 1090,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 0.504812981554,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.4909090909090909,
+          "aRest": 0.4749772520473157,
+          "lift": 0.015931838861775183,
+          "coverage": 0.6485819975339088,
+          "nMet": 1100,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 0.504812981554,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.4909090909090909,
+          "aRest": 0.4749772520473157,
+          "lift": 0.015931838861775183,
+          "coverage": 0.6485819975339088,
+          "nMet": 1100,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 20,
+          "tau": 0.504812981554,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.4909090909090909,
+          "aRest": 0.4749772520473157,
+          "lift": 0.015931838861775183,
+          "coverage": 0.6485819975339088,
+          "nMet": 1100,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 0.618993468446,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.49222797927461137,
+          "aRest": 0.4726720647773279,
+          "lift": 0.019555914497283444,
+          "coverage": 0.7311960542540074,
+          "nMet": 1544,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 0.618993468446,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.4899939357186173,
+          "aRest": 0.47309591889784247,
+          "lift": 0.016898016820774853,
+          "coverage": 0.7484586929716399,
+          "nMet": 1649,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 0.618993468446,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.4899939357186173,
+          "aRest": 0.47309591889784247,
+          "lift": 0.016898016820774853,
+          "coverage": 0.7484586929716399,
+          "nMet": 1649,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 30,
+          "tau": 0.618993468446,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.4899939357186173,
+          "aRest": 0.47309591889784247,
+          "lift": 0.016898016820774853,
+          "coverage": 0.7484586929716399,
+          "nMet": 1649,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 0.724370506261,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.4856670341786108,
+          "aRest": 0.4744703965236285,
+          "lift": 0.0111966376549823,
+          "coverage": 0.7694204685573366,
+          "nMet": 1814,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 0.724370506261,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.4823313446535108,
+          "aRest": 0.47542960506481763,
+          "lift": 0.006901739588693168,
+          "coverage": 0.8039457459926017,
+          "nMet": 2179,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 0.724370506261,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.4806730331969077,
+          "aRest": 0.4764937822262663,
+          "lift": 0.004179250970641368,
+          "coverage": 0.8051787916152897,
+          "nMet": 2199,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 40,
+          "tau": 0.724370506261,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.4806730331969077,
+          "aRest": 0.4764937822262663,
+          "lift": 0.004179250970641368,
+          "coverage": 0.8051787916152897,
+          "nMet": 2199,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 0.8302701217424999,
+          "delta": 1.0,
+          "eligible": true,
+          "aMet": 0.48523421588594706,
+          "aRest": 0.4742355605889015,
+          "lift": 0.010998655297045579,
+          "coverage": 0.7891491985203453,
+          "nMet": 1964,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 0.8302701217424999,
+          "delta": 1.5,
+          "eligible": true,
+          "aMet": 0.4805389221556886,
+          "aRest": 0.47592067988668557,
+          "lift": 0.004618242269003037,
+          "coverage": 0.842170160295931,
+          "nMet": 2672,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 0.8302701217424999,
+          "delta": 2.0,
+          "eligible": true,
+          "aMet": 0.47561863173216884,
+          "aRest": 0.4807132459970888,
+          "lift": -0.005094614264919972,
+          "coverage": 0.8508014796547472,
+          "nMet": 2748,
+          "nPairs": 5496,
+          "nQueries": 811
+        },
+        {
+          "tauPercentile": 50,
+          "tau": 0.8302701217424999,
+          "delta": "inf",
+          "eligible": true,
+          "aMet": 0.47561863173216884,
+          "aRest": 0.4807132459970888,
+          "lift": -0.005094614264919972,
+          "coverage": 0.8508014796547472,
+          "nMet": 2748,
+          "nPairs": 5496,
+          "nQueries": 811
+        }
+      ],
+      "chosen": {
+        "tauPercentile": 10,
+        "tau": 0.3654477124565,
+        "delta": "inf",
+        "eligible": true,
+        "aMet": 0.5,
+        "aRest": 0.4757379700768298,
+        "lift": 0.024262029923170225,
+        "coverage": 0.4352651048088779,
+        "nMet": 550,
+        "nPairs": 5496,
+        "nQueries": 811
+      }
+    },
+    "external": {
+      "aMet": 0.5603015075376885,
+      "aRest": 0.6144151240645923,
+      "lift": -0.05411361652690383,
+      "coverage": 0.5595238095238095,
+      "nMet": 398,
+      "nPairs": 2937,
+      "nQueries": 336,
+      "checks": {
+        "설명력 차이 ≥ 0.05": false,
+        "포괄률 ≥ 0.20": true,
+        "n_충족 ≥ 20": true
+      },
+      "pass": false
+    },
+    "final": {
+      "aMet": 0.43227091633466136,
+      "aRest": 0.3973735408560311,
+      "lift": 0.034897375478630255,
+      "coverage": 0.6445993031358885,
+      "nMet": 502,
+      "nPairs": 2558,
+      "nQueries": 287,
+      "checks": {
+        "설명력 차이 ≥ 0.05": false,
+        "포괄률 ≥ 0.20": true,
+        "n_충족 ≥ 20": true
+      },
+      "pass": false
+    },
+    "decision": {
+      "calibrated": false,
+      "tau": 0.3654477124565,
+      "delta": null,
+      "tauPercentile": 10
+    }
+  }
+}
