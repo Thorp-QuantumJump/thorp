@@ -154,12 +154,15 @@
 .desktopNav a::before {
   position: absolute;
   z-index: -1;
-  inset: 0;
-  border-radius: inherit;
+  /*
+    면을 버튼 위아래로 조금 넘겨 그리고, 타원이 그 면의 가장자리에서 딱 투명해지게(closest-side) 한다.
+    버튼 높이 안에서 끝내면 위아래 끝에 옅은 색이 남아 잘린 것처럼 보였다.
+  */
+  inset: -5px -4px;
   background: radial-gradient(
-    ellipse 60% 85% at 50% 50%,
+    closest-side,
     color-mix(in srgb, var(--thorp-foreground) 14%, transparent) 0%,
-    color-mix(in srgb, var(--thorp-foreground) 6%, transparent) 55%,
+    color-mix(in srgb, var(--thorp-foreground) 6%, transparent) 60%,
     transparent 100%
   );
   content: '';
