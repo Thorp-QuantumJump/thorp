@@ -5,7 +5,6 @@ import {
   Gauge,
   LogIn,
   LogOut,
-  Menu,
   RefreshCw,
   UserRound,
   X,
@@ -67,6 +66,19 @@ const navigationItems = [
     icon: FolderClock,
   },
 ]
+
+/**
+ * 전체 메뉴 아이콘. 선 두 개에 아래 선을 짧게 두어, 기본 세 줄 아이콘보다 가볍고 덜 도식적으로 읽힌다.
+ * 색은 버튼 글자색(currentColor)을 따른다.
+ */
+function MenuIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M4 9h16" />
+      <path d="M4 15h10" />
+    </svg>
+  )
+}
 
 /** 하위 경로(`/records/…`)에 있어도 그 메뉴를 현재 위치로 표시한다. */
 function isCurrentPath(pathname: string, covers: readonly string[]): boolean {
@@ -265,7 +277,7 @@ export function AppHeader({ preview = false }: { preview?: boolean }) {
               aria-expanded={isMenuOpen}
               onClick={() => setIsMenuOpen(true)}
             >
-              <Menu size={20} aria-hidden="true" />
+              <MenuIcon />
             </button>
             <Link className={styles.brand} to="/" aria-label="Thorp 처음 화면">
               Thorp<span>.</span>
