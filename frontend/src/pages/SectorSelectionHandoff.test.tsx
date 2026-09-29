@@ -172,7 +172,7 @@ describe('다음 단계 버튼과 003 인계', () => {
     await add(user, 'SEMICONDUCTOR')
 
     expect(proceedButton().disabled).toBe(true)
-    expect(screen.getByText(/2개 이상 골라야 넘어갈 수 있습니다/)).toBeTruthy()
+    expect(screen.getByText(/2개 이상 필요합니다/)).toBeTruthy()
   })
 
   it('두 개 이상 고르면 다음 단계로 넘어간다', async () => {
