@@ -69,6 +69,7 @@ export function NewsDigestSection({ sectorCode }: NewsDigestSectionProps) {
             <li key={digest.digestId}>
               <a href={digest.articles[0].originalUrl} target="_blank" rel="noreferrer noopener">
                 {digest.representativeTitle}
+                <span className="sr-only"> (새 창에서 열림)</span>
               </a>
               {/* 매체 수와 날짜는 요약 오른쪽에 붙인다. 요약 아래 줄로 내리면 요약의 한 줄처럼 읽힌다. */}
               <div className={styles.newsBody}>

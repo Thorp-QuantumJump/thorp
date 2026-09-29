@@ -111,6 +111,11 @@
 .newsBody { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 4px 0 0; }
 .newsBody p { flex: 1; min-width: 0; margin: 0; }
 .newsMeta { flex-shrink: 0; font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); white-space: nowrap; }
+/* 카드가 좁으면 매체·날짜가 요약 폭을 빼앗는다. 화면 폭이 아니라 목록 폭으로 가른다 — 카드는 넓은 화면에서도 좁은 칸에 놓인다. */
+.newsList { container-type: inline-size; }
+@container (max-width: 360px) {
+  .newsBody { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
 
 /*
   디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 분야 목록을

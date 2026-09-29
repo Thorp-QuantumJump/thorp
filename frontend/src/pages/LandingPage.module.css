@@ -1,6 +1,6 @@
 .page {
   /* 상단 바(AppHeader .header의 min-height + 아래 선 1px) 높이. 한 칸씩 넘기는 섹션이 상단 바에 가리지 않게 뺀다. */
-  --landing-header-height: calc(var(--thorp-header-height, 64px) + 1px);
+  --landing-header-height: calc(var(--thorp-header-height, 82px) + 1px);
   /*
     초록 기운이 섞였던 무채색을 B안(그래파이트)으로 옮긴 값이다. 각 자리는 var(--lp-N, 예전 값)으로
     쓰고, classic 디자인에서는 아래에서 이 토큰을 비워(initial) 예전 값으로 돌아간다. classic을
