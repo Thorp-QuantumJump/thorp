@@ -1,5 +1,6 @@
 import { ArrowRight, X } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import type { SectorSummary } from '@/types/sector'
 
 type SelectedInstrumentsRailProps = {
@@ -55,14 +56,26 @@ export function SelectedInstrumentsRail({
       data-compact={compact}
       aria-labelledby="selected-instruments-title"
     >
-      <h2
-        id="selected-instruments-title"
-        data-slot="rail-title"
-        aria-label="선택한 투자 대상"
-      >
-        <span data-slot="rail-title-full">선택한 투자 대상</span>
-        <span data-slot="rail-title-compact">선택</span>
-      </h2>
+      {/*
+        고른 대상이 무엇을 뜻하는지(FR-009)는 제목 옆 물음표 뒤에 둔다. '함께 비교할 수 있는 기간'과 같은 짜임이다.
+        카드 본문에 늘 펼쳐 두면 목록과 다음 단계 버튼 사이가 길어진다(2026-09-29).
+      */}
+      <div data-slot="rail-head">
+        <h2
+          id="selected-instruments-title"
+          data-slot="rail-title"
+          aria-label="선택한 투자 대상"
+        >
+          <span data-slot="rail-title-full">선택한 투자 대상</span>
+          <span data-slot="rail-title-compact">선택</span>
+        </h2>
+        <InlineHelp label="선택한 투자 대상" side="bottom">
+          <p>
+            고른 투자 대상은 자동 배분 전략이 고를 수 있는 후보 집합입니다. 매번 모두 보유한다는 뜻이 아니며,
+            '고정 비중' 전략에 쓰이는 비중은 다음 단계에서 정합니다.
+          </p>
+        </InlineHelp>
+      </div>
 
       <div data-slot="rail-compact-summary" aria-live="polite">
         <strong data-slot="rail-compact-count">{count}</strong>

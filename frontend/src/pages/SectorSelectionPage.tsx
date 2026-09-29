@@ -8,7 +8,6 @@ import { InstrumentBrowser } from '@/components/diagnosis/InstrumentBrowser'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
 import { OverwriteConfirmDialog } from '@/components/diagnosis/OverwriteConfirmDialog'
 import { SelectedInstrumentsRail } from '@/components/diagnosis/SelectedInstrumentsRail'
-import { SelectionMeaningNotice } from '@/components/diagnosis/SelectionMeaningNotice'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { KRX_SOURCE_ATTRIBUTION } from '@/diagnosis/attribution'
 import { buildAvailabilityTimeline } from '@/diagnosis/availabilityTimeline'
@@ -272,14 +271,6 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
             </section>
           }
         >
-          {/*
-            고른 대상이 무엇을 뜻하는지 알린다(FR-009). 상장일 차이로 줄어든 공통 구간(FR-008)은
-            위 타임라인에서 이미 보이므로 여기서 같은 문장을 되풀이하지 않는다.
-          */}
-          <SelectionMeaningNotice
-            className={styles.meaningNotice}
-            selectedCount={selectedCount}
-          />
 
           {/*
             보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 선택이 사라진 빈
@@ -292,7 +283,6 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
             </p>
           ) : null}
         </SelectedInstrumentsRail>
-
 
         {/*
           배우기 예시가 기존 선택을 덮어써도 되는지 묻는다(FR-012). 묻는 중인 예시가 있을 때만
