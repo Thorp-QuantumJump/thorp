@@ -292,7 +292,7 @@ describe('투자 대상 고르기', () => {
       '0개 선택2개 더',
     )
     expect(document.querySelector('[data-compact]')?.getAttribute('data-compact')).toBe('true')
-    expect(expandButton().getAttribute('aria-label')).toBe('간단히 보기')
+    expect(expandButton().getAttribute('aria-label')).toBe('포함 종목 접기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')
   })

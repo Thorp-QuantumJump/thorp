@@ -451,7 +451,7 @@ describe('대표 상품 정보 패널', () => {
     expect(controlled).toBeTruthy()
     expect(cardBody().id).toBe(controlled)
     // 아이콘 하나뿐이라 이름을 직접 준다. 지금 상태에 따라 이름이 달라진다.
-    expect(toggle.getAttribute('aria-label')).toBe('간단히 보기')
+    expect(toggle.getAttribute('aria-label')).toBe('포함 종목 접기')
   })
 
   it('자료 시점을 한국 날짜로 보인다', async () => {

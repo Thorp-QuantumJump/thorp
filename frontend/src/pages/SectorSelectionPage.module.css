@@ -219,19 +219,29 @@
 }
 
 /* 카드 크기를 바꾸는 단추다. 아이콘 하나뿐이라 손이 닿을 넓이를 따로 준다. */
+/* 상품 이름 바로 오른쪽의 '포함 종목' 단추. 글자 오른쪽에 넓히기·접기 아이콘이 붙는다. */
+.browserCard [data-slot='detail-name-row'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
 .browserCard [data-slot='zoom'] {
-  display: inline-grid;
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 1;
-  place-items: center;
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--thorp-line-control);
   border-radius: var(--thorp-radius-control, 10px);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
+  font: inherit;
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: border-color 0.14s ease, color 0.14s ease;
 }
@@ -343,8 +353,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  /* 오른쪽 위 확대 단추와 겹치지 않도록 자리를 비워 둔다. */
-  padding-right: 40px;
 }
 
 .browserCard [data-slot='main-title'] {
