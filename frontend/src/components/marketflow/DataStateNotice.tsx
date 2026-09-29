@@ -1,13 +1,7 @@
 import type { FieldStatus } from '@/types/marketFlow'
-import { formatUpdatedAt } from './marketFlowFormat'
+import { fieldStateLabels as stateLabels, formatUpdatedAt, stateLineLabels } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
-const stateLabels: Record<FieldStatus, string> = {
-  READY: '자료 확인',
-  EXAMPLE: '예시 자료',
-  EMPTY: '표시할 자료 없음',
-  COLLECTION_FAILED: '최근 수집 실패',
-}
 
 interface DataStateNoticeProps {
   status: FieldStatus
@@ -23,7 +17,7 @@ interface DataStateNoticeProps {
  * 없고, FR-011은 수집 실패·자료 없음만 상태로 보이라고 한다. 예시 자료는 늘 밝힌다(FR-014).
  */
 export function DataStateLine({
-  status, referenceMonth, lastUpdatedAt, listUpdatedAt, isExampleData = false,
+  status, referenceMonth, lastUpdatedAt, listUpdatedAt, isExampleData = false, showLabels = true,
 }: {
   status: FieldStatus
   referenceMonth: string | null
@@ -31,11 +25,10 @@ export function DataStateLine({
   /** 목록 머리에 적은 마지막 갱신 시각 */
   listUpdatedAt: string | null
   isExampleData?: boolean
+  /** 상태 표를 이 줄에 달지. 표를 다른 자리(분야 메뉴 버튼)에 이미 달았으면 끈다 */
+  showLabels?: boolean
 }) {
-  const labels = [
-    status === 'READY' ? null : stateLabels[status],
-    isExampleData && status !== 'EXAMPLE' ? stateLabels.EXAMPLE : null,
-  ].filter((label): label is string => label !== null)
+  const labels = showLabels ? stateLineLabels(status, isExampleData) : []
   return (
     <p className={styles.stateLine} data-status={status}>
       {labels.map((label) => <span key={label} className={styles.stateLabel}>{label}</span>)}
@@ -46,31 +39,23 @@ export function DataStateLine({
 }
 
 /**
- * 열린 분야 제목 줄 오른쪽. 소속 지표 수와 그 밑의 공급 상태 표만 둔다 — 표 글자가 곧 상태라 '자료 상태' 같은
- * 이름을 따로 달지 않는다. 대상월·마지막 갱신은 분야 설명 밑 한 줄에 적는다(009 FR-011·013·014).
- * 예시 자료는 늘 '예시 자료' 표를 함께 단다(FR-014).
+ * 열린 분야 제목 줄 오른쪽의 공급 상태 표. 정상 공급이면 아무것도 달지 않는다 — 지표 칸이 그대로 보이는 것이
+ * 곧 정상이라 '자료 확인'·'소속 지표 수'를 따로 적지 않는다(2026-09-29). 수집 실패·자료 없음은 빨간 '확인 중입니다',
+ * 예시 자료는 늘 '예시 자료' 표를 단다(009 FR-011·FR-014).
  */
-export function DataStateFacts({
-  indicatorCount, status, isExampleData = false,
-}: {
-  indicatorCount: number
-  status: FieldStatus
-  isExampleData?: boolean
-}) {
+export function DataStateFacts({ status, isExampleData = false }: { status: FieldStatus; isExampleData?: boolean }) {
+  const pending = status !== 'READY' && status !== 'EXAMPLE'
+  const example = status === 'EXAMPLE' || isExampleData
+  if (!pending && !example) return null
   return (
     <div className={styles.detailFacts} data-status={status}>
-      <span className={styles.detailCount}>소속 지표 <b>{indicatorCount}</b></span>
       <span className={styles.detailStates}>
-        {/* 정상 공급이면 '자료 확인'(파랑), 수집 실패·자료 없음이면 '확인 중입니다'(빨강). 까닭은 읽을 수 있게 남긴다. */}
-        {status === 'READY' || status === 'EXAMPLE' ? (
-          <span className={styles.stateLabel} data-tone="confirmed">{stateLabels.READY}</span>
-        ) : (
+        {pending ? (
           <span className={styles.stateLabel} data-tone="pending" title={stateLabels[status]}>
             확인 중입니다<span className={styles.srOnly}> ({stateLabels[status]})</span>
           </span>
-        )}
-        {status === 'EXAMPLE' ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}
-        {isExampleData && status !== 'EXAMPLE' ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}
+        ) : null}
+        {example ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}
       </span>
     </div>
   )
