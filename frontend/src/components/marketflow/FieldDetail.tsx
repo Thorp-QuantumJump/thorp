@@ -10,7 +10,11 @@ import { describeAxis, formatObservation, formatUpdatedAt, sourceParts } from '.
 import styles from './MarketFlow.module.css'
 
 /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */
-export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
+export function FieldDetail({ detail, historyNotice }: {
+  detail: FieldDetailResult
+  /** 서버(목록 응답)가 정한 역사 비교 안내 문장(FR-012). 있을 때만 시점 줄에 짧은 표시를 단다 */
+  historyNotice?: string | null
+}) {
   const reducedMotion = useReducedMotion()
   const titleId = `field-${detail.fieldId}-title`
   const similarNoteId = `similar-note-${detail.fieldId}`
@@ -33,12 +37,17 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
         <div className={styles.detailMeta}>
           {/*
             '최신 개정자료 기준'은 역사 탐색의 자료 기준을 화면에 밝히라는 constitution 원칙 V(FR-012)의 표시다. 긴 안내 문장
-            대신 시점 줄에 짧게 둔다. 상태 표(수집 실패·예시 자료일 때만)는 그 밑에 선다.
+            대신 시점 줄에 짧게 두고, 문장의 원본은 서버가 준 안내다 — 짧은 표시는 그 안내가 있을 때만 보이고, 원문은
+            마우스를 올리면(title) 보이며 보조기기에도 읽힌다. 상태 표(수집 실패·예시 자료일 때만)는 그 밑에 선다.
           */}
           <p className={styles.detailTiming}>
             <span>대상월 {detail.referenceMonth ?? '확인할 수 없음'}</span>
             <span>마지막 갱신 {formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</span>
-            <span>최신 개정자료 기준</span>
+            {historyNotice ? (
+              <span title={historyNotice}>
+                최신 개정자료 기준<span className={styles.srOnly}>: {historyNotice}</span>
+              </span>
+            ) : null}
           </p>
           <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />
         </div>
