@@ -14,8 +14,6 @@
   --lp-9: rgb(224 228 226 / 22%);
   --lp-10: rgb(14 16 15 / 64%);
   --lp-11: rgb(27 30 28 / 88%);
-  --lp-12: #6c6f6d;
-  --lp-13: rgb(178 183 180 / 15%);
   --lp-14: #5b5e5c;
   --lp-22: #949695;
   --lp-23: rgb(178 183 180 / 12%);
@@ -338,28 +336,6 @@
 .secondaryCta:hover {
   border-color: rgb(134 242 168 / 48%);
   background: var(--lp-11, rgb(14 34 23 / 88%));
-}
-
-.heroFootnote {
-  position: absolute;
-  right: clamp(24px, 4vw, 68px);
-  bottom: 28px;
-  left: clamp(24px, 4vw, 68px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--lp-12, #647269);
-  font-size: 0.59rem;
-  letter-spacing: 0.16em;
-}
-
-.heroFootnote::before {
-  position: absolute;
-  right: 160px;
-  left: 40px;
-  height: 1px;
-  background: linear-gradient(90deg, var(--lp-13, rgb(160 190 173 / 15%)), transparent);
-  content: '';
 }
 
 .storyFlow {
@@ -718,7 +694,6 @@
     width: 100%;
   }
 
-  .heroFootnote::before,
   .storySection::before {
     display: none;
   }
@@ -789,11 +764,6 @@
 
   .eyebrow {
     font-size: 0.58rem;
-  }
-
-  .heroFootnote {
-    right: 18px;
-    left: 18px;
   }
 
   .algorithmHeader h2 {
@@ -1107,11 +1077,18 @@
   width: 12px;
   height: 12px;
   padding: 0;
-  border: 1px solid var(--thorp-line-strong);
+  /* 지금 칸이 아닌 점도 배경 위에서 자리가 보여야 한다. 테두리만 두면 어두운 배경에 묻힌다. */
+  border: 1px solid var(--thorp-muted);
   border-radius: 50%;
-  background: transparent;
+  background: color-mix(in srgb, var(--thorp-muted) 45%, transparent);
   cursor: pointer;
   transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+
+.sectionProgress button:hover:not([aria-current='true']) {
+  border-color: var(--thorp-copy);
+  background: var(--thorp-copy);
+  transform: scale(1.1);
 }
 
 .sectionProgress button[aria-current='true'] {
@@ -1362,8 +1339,6 @@
   --lp-9: initial;
   --lp-10: initial;
   --lp-11: initial;
-  --lp-12: initial;
-  --lp-13: initial;
   --lp-14: initial;
   --lp-22: initial;
   --lp-23: initial;
