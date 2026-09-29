@@ -123,10 +123,10 @@ async function select(user: User, ...codes: string[]) {
   for (const code of codes) await user.click(row(code))
 }
 
-/** 오른쪽 선택 요약에 담긴 섹터 이름을 표시 순서대로 모은다. */
+/** 왼쪽 목록에서 담긴 줄(`aria-pressed`)의 섹터 이름을 표시 순서대로 모은다. 줄에는 'KODEX {섹터}'가 보인다. */
 function selectedNames(): string[] {
-  return [...document.querySelectorAll('[data-slot="rail-item-sector"]')].map(
-    (node) => node.textContent ?? '',
+  return [...document.querySelectorAll('[data-slot="list"] [aria-pressed="true"]')].map(
+    (node) => (node.querySelector('[data-slot="pill-name"]')?.textContent ?? '').replace(/^KODEX /, ''),
   )
 }
 

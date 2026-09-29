@@ -137,19 +137,11 @@ function cardExpanded(): boolean {
   )
 }
 
-/** 상세 상태가 바깥 보드와 선택 요약까지 전달되는가. */
-function boardExpanded(): boolean {
-  return (
-    document.querySelector('[data-detail-expanded]')?.getAttribute('data-detail-expanded') ===
-    'true'
-  )
-}
-
-/** 오른쪽 선택 요약에 담긴 코드를 순서대로 모은다. */
+/** 왼쪽 목록에서 담긴 줄(`aria-pressed`)의 코드를 표시 순서대로 모은다. */
 function railCodes(): string[] {
-  return [...document.querySelectorAll('[data-slot="rail-item"]')].map(
-    (node) => node.getAttribute('data-sector-code') ?? '',
-  )
+  return [...document.querySelectorAll('[data-slot="list"] [data-sector-code]')]
+    .filter((node) => node.querySelector('[aria-pressed="true"]') !== null)
+    .map((node) => node.getAttribute('data-sector-code') ?? '')
 }
 
 async function add(user: User, ...codes: string[]) {
@@ -191,7 +183,7 @@ describe('투자 대상 고르기', () => {
     expect(row('SEMICONDUCTOR').getAttribute('aria-current')).toBeNull()
     expect(row('AUTO').getAttribute('aria-pressed')).toBe('true')
     expect(railCodes()).toEqual(['AUTO'])
-    expect(screen.getByText('1개 선택됨')).toBeTruthy()
+    expect(screen.getByText(/1개 선택됨/)).toBeTruthy()
   })
 
   it('담긴 줄을 다시 누르면 빠지고 보던 대상은 그대로다', async () => {
@@ -212,17 +204,15 @@ describe('투자 대상 고르기', () => {
     expect(screen.queryByRole('button', { name: /투자 대상에 추가/ })).toBeNull()
   })
 
-  it('선택 요약에서도 뺄 수 있다', async () => {
-    const user = userEvent.setup()
+  it('선택 요약 상자를 따로 두지 않는다', async () => {
     await openPage()
-    await add(user, 'SEMICONDUCTOR', 'AUTO')
 
-    await user.click(screen.getByRole('button', { name: '자동차 빼기' }))
-
-    expect(railCodes()).toEqual(['SEMICONDUCTOR'])
+    // 담긴 것은 목록의 체크 표시가, 개수는 다음 단계 단추 아래 한 줄이 말한다.
+    expect(screen.queryByRole('complementary', { name: '선택한 투자 대상' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '선택한 투자 대상 도움말' })).toBeNull()
   })
 
-  it('선택 요약은 표시 순서를 지킨다', async () => {
+  it('담긴 것은 고른 차례가 아니라 표시 순서로 읽힌다', async () => {
     const user = userEvent.setup()
     await openPage()
 
@@ -246,10 +236,10 @@ describe('투자 대상 고르기', () => {
     expect(row('AUTO').getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('아무것도 담지 않았으면 빈 자리 대신 무엇을 해야 하는지 알린다', async () => {
+  it('아무것도 담지 않았으면 다음 단계 단추 아래에서 무엇을 해야 하는지 알린다', async () => {
     await openPage()
 
-    expect(screen.getByText(/아직 선택한 투자 대상이 없습니다/)).toBeTruthy()
+    expect(screen.getByText('투자 대상을 2개 이상 골라 주세요.')).toBeTruthy()
     expect(railCodes()).toEqual([])
   })
 
@@ -282,11 +272,8 @@ describe('투자 대상 고르기', () => {
     expect(screen.getByText('삼성자산운용')).toBeTruthy()
     expect(screen.getByText(/3개월 일평균 거래대금/)).toBeTruthy()
     expect(cardExpanded()).toBe(true)
-    expect(boardExpanded()).toBe(true)
-    expect(document.querySelector('[data-slot="rail-compact-summary"]')?.textContent).toContain(
-      '0개 선택2개 더',
-    )
-    expect(document.querySelector('[data-compact]')?.getAttribute('data-compact')).toBe('true')
+    // 넓혀도 다음 단계 단추는 카드 안에 그대로 있다.
+    expect(screen.getByRole('button', { name: 'STEP 02 - 전략 고르기' })).toBeTruthy()
     expect(expandButton().getAttribute('aria-label')).toBe('포함 종목 접기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')

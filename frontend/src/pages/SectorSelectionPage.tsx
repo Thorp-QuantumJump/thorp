@@ -7,7 +7,6 @@ import { AvailabilityTimeline } from '@/components/diagnosis/AvailabilityTimelin
 import { InstrumentBrowser } from '@/components/diagnosis/InstrumentBrowser'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
 import { OverwriteConfirmDialog } from '@/components/diagnosis/OverwriteConfirmDialog'
-import { SelectedInstrumentsRail } from '@/components/diagnosis/SelectedInstrumentsRail'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { KRX_SOURCE_ATTRIBUTION } from '@/diagnosis/attribution'
 import { buildAvailabilityTimeline } from '@/diagnosis/availabilityTimeline'
@@ -42,13 +41,11 @@ type InstrumentBoardProps = {
 }
 
 /**
- * 목록·상세·선택 요약 세 영역을 잇는 자리다.
+ * 목록과 상세를 한 카드에 두고, 다음 단계로 가는 단추를 그 카드 오른쪽 위에 두는 자리다.
  *
- * 화면이 답해야 하는 질문이 셋이고 영역도 셋이다. 지금 무엇을 보고 있는가(가운데), 그것은 어떤
- * 상품인가(가운데), 지금까지 무엇을 골랐는가(오른쪽). 왼쪽 목록은 그 사이를 옮겨 다니는 길이다.
- *
- * **보는 일과 고르는 일을 가른다.** 목록을 누르면 보는 대상만 바뀌고, 백테스트 대상에 담는 것은
- * 상세 영역의 단추 하나다. 비중은 이 화면이 다루지 않는다 — 다음 단계가 소유한다.
+ * 지금까지 무엇을 골랐는가는 따로 요약하지 않는다. 왼쪽 목록의 체크 표시가 그것을 말하고, 단추 아래
+ * 한 줄이 개수와 넘어갈 수 있는지를 말한다. 목록을 누르면 그 대상을 보면서 담고, 다시 누르면 뺀다.
+ * 비중은 이 화면이 다루지 않는다. 다음 단계가 소유한다.
  */
 function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   const navigate = useNavigate()
@@ -128,7 +125,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
     () => pickSelectedSectors(sectors, selection.selectedCodes),
     [sectors, selection.selectedCodes],
   )
-  // 공통 구간의 판정과 표시 재료를 한 번에 만든다. 같은 안내를 선택 요약에서 되풀이하지 않는다.
+  // 공통 구간의 판정과 표시 재료를 한 번에 만든다.
   const timeline = useMemo(() => buildAvailabilityTimeline(selectedSectors), [selectedSectors])
   // 아직 상장하지 않은 대상 때문에 구간이 전혀 없으면 폭 0인 그림 대신 기존 경고 문장을 쓴다.
   const listingWindow = useMemo(() => describeListingWindow(selectedSectors), [selectedSectors])
@@ -170,9 +167,36 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   */
   const attribution = <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
 
+  /*
+    다음 단계로 넘어가는 단추다. 탐색 카드 오른쪽 위에 늘 둔다. 조건을 채우지 못하면 눌리지 않되
+    사라지지 않고, 아래 한 줄이 몇 개를 골랐고 무엇을 더 해야 넘어갈 수 있는지를 말한다. 하나만 담으면
+    어떤 배분 전략도 같은 결과를 내므로 비교하려면 둘은 있어야 한다(FR-004).
+  */
+  const proceedStatus =
+    selectedCount === 0
+      ? `투자 대상을 ${MINIMUM_SECTOR_COUNT}개 이상 골라 주세요.`
+      : selectedCount < MINIMUM_SECTOR_COUNT
+        ? `${selectedCount}개 선택됨 · ${MINIMUM_SECTOR_COUNT}개 이상 골라야 넘어갈 수 있습니다.`
+        : `${selectedCount}개 선택됨`
+  const proceedAction = (
+    <div className={styles.proceed}>
+      <button
+        type="button"
+        className={styles.proceedButton}
+        onClick={proceed}
+        disabled={selectedCount < MINIMUM_SECTOR_COUNT}
+      >
+        STEP 02 - 전략 고르기
+      </button>
+      <p className={styles.proceedStatus} aria-live="polite">
+        {proceedStatus}
+      </p>
+    </div>
+  )
+
   return (
     <>
-      <div className={styles.board} data-detail-expanded={detailExpanded}>
+      <div className={styles.board}>
         {/*
           머리글을 따로 두지 않는다. 화면 제목이 이미 무엇을 하는 자리인지 말하고 있어, 그 아래
           "투자 대상 목록"을 한 번 더 적으면 같은 말이 두 번 읽힌다. 보조 기술에는 영역 이름만 준다.
@@ -246,33 +270,11 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
               onToggleSelected={selection.toggleSector}
               onExpandedChange={setDetailExpanded}
               source={`출처: ${KRX_SOURCE_ATTRIBUTION}`}
+              action={proceedAction}
             />
           ) : (
             attribution
           )}
-
-          {/*
-            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-            탐색 카드 바로 아래에 지수를 가로로 펼친다. 선택 요약 끝에 두면 'STEP 02 - 전략 고르기' 뒤로 밀려 잘 읽히지 않았다.
-          */}
-          <section className={styles.marketStrip} aria-labelledby="market-now-title">
-            <h2 id="market-now-title">
-              <ChartNoAxesCombined size={14} aria-hidden="true" />
-              지금 국내 시장
-            </h2>
-            <MarketNow />
-          </section>
-        </section>
-
-        <SelectedInstrumentsRail
-          className={styles.rail}
-          selected={selectedSectors}
-          minimumCount={MINIMUM_SECTOR_COUNT}
-          compact={detailExpanded}
-          onRemove={(code) => selection.toggleSector(code, false)}
-          onProceed={proceed}
-          proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
-        >
 
           {/*
             보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 선택이 사라진 빈
@@ -284,7 +286,19 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
               일반 창에서 다시 시도해 주세요.
             </p>
           ) : null}
-        </SelectedInstrumentsRail>
+
+          {/*
+            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+            탐색 카드 바로 아래에 지수를 가로로 펼친다. 카드 곁에 따로 두면 다음 단계 단추 뒤로 밀려 잘 읽히지 않았다.
+          */}
+          <section className={styles.marketStrip} aria-labelledby="market-now-title">
+            <h2 id="market-now-title">
+              <ChartNoAxesCombined size={14} aria-hidden="true" />
+              지금 국내 시장
+            </h2>
+            <MarketNow />
+          </section>
+        </section>
 
         {/*
           배우기 예시가 기존 선택을 덮어써도 되는지 묻는다(FR-012). 묻는 중인 예시가 있을 때만

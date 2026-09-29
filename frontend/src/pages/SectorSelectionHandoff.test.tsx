@@ -114,11 +114,11 @@ function proceedButton(): HTMLButtonElement {
   return screen.getByRole('button', { name: 'STEP 02 - 전략 고르기' }) as HTMLButtonElement
 }
 
-/** 오른쪽 선택 요약에 담긴 코드를 순서대로 모은다. */
+/** 왼쪽 목록에서 담긴 줄(`aria-pressed`)의 코드를 표시 순서대로 모은다. */
 function railCodes(): string[] {
-  return [...document.querySelectorAll('[data-slot="rail-item"]')].map(
-    (node) => node.getAttribute('data-sector-code') ?? '',
-  )
+  return [...document.querySelectorAll('[data-slot="list"] [data-sector-code]')]
+    .filter((node) => node.querySelector('[aria-pressed="true"]') !== null)
+    .map((node) => node.getAttribute('data-sector-code') ?? '')
 }
 
 type HandoffPayload = {
@@ -162,7 +162,7 @@ describe('다음 단계 버튼과 003 인계', () => {
 
     // 버튼을 감추지 않는다. 무엇을 더 해야 넘어갈 수 있는지가 안내와 함께 읽혀야 한다.
     expect(proceedButton().disabled).toBe(true)
-    expect(screen.getByText(/아직 선택한 투자 대상이 없습니다/)).toBeTruthy()
+    expect(screen.getByText('투자 대상을 2개 이상 골라 주세요.')).toBeTruthy()
   })
 
   it('하나뿐이면 넘어가지 못하고 몇 개가 필요한지 알린다 (FR-004)', async () => {
@@ -172,7 +172,7 @@ describe('다음 단계 버튼과 003 인계', () => {
     await add(user, 'SEMICONDUCTOR')
 
     expect(proceedButton().disabled).toBe(true)
-    expect(screen.getByText(/2개 이상 골라야 합니다/)).toBeTruthy()
+    expect(screen.getByText(/2개 이상 골라야 넘어갈 수 있습니다/)).toBeTruthy()
   })
 
   it('두 개 이상 고르면 다음 단계로 넘어간다', async () => {
@@ -211,12 +211,12 @@ describe('다음 단계 버튼과 003 인계', () => {
     expect(storedPayload()?.mapVersion).toBe('SEM-2026-09-10-001')
   })
 
-  it('선택 요약에서 뺀 대상은 넘기는 값에서도 빠진다', async () => {
+  it('목록에서 다시 눌러 뺀 대상은 넘기는 값에서도 빠진다', async () => {
     const user = userEvent.setup()
     await openPage()
     await add(user, 'SEMICONDUCTOR', 'AUTO', 'SHIPBUILDING')
 
-    await user.click(screen.getByRole('button', { name: '자동차 빼기' }))
+    await user.click(row('AUTO'))
     expect(railCodes()).toEqual(['SEMICONDUCTOR', 'SHIPBUILDING'])
 
     await user.click(proceedButton())
@@ -284,7 +284,7 @@ describe('다음 단계 버튼과 003 인계', () => {
 
     expect(currentPath()).toBe('/diagnosis/sectors')
     expect(screen.getByRole('alert').textContent).toMatch(/넘기지 못했습니다/)
-    // 고른 것을 잃은 것은 아니다. 선택 요약은 그대로 있다.
+    // 고른 것을 잃은 것은 아니다. 목록의 담긴 표시는 그대로 있다.
     expect(railCodes()).toEqual(['SEMICONDUCTOR', 'AUTO'])
   })
 

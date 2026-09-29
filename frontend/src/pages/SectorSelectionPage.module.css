@@ -128,27 +128,13 @@
   border-color: var(--thorp-line-control-hover);
 }
 
-/*
-  화면의 큰 두 덩이다. 왼쪽은 탐색과 확인, 오른쪽은 지금까지 고른 것이다. 오른쪽이 좁은 까닭은
-  거기 놓이는 것이 이름 목록과 단추뿐이기 때문이다.
-*/
+/* 탐색 카드가 화면 폭을 다 쓴다. 고른 것은 카드 안 목록의 체크 표시와 다음 단계 단추 아래 한 줄이 말한다. */
 .board {
-  display: grid;
-  grid-template-areas: 'browser rail';
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, var(--thorp-flow-side, 19rem));
-  align-items: start;
-  gap: var(--thorp-flow-gap, 22px);
-}
-
-.board[data-detail-expanded='true'] {
-  grid-template-areas: 'browser rail';
-  grid-template-columns: minmax(0, 1fr) 6.75rem;
-  gap: 14px;
+  display: block;
 }
 
 .browser {
   display: flex;
-  grid-area: browser;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
@@ -691,160 +677,37 @@
   }
 }
 
-/*
-  고른 것을 계속 보이는 자리다. 화면을 내려도 따라온다 — 목록을 훑는 동안 무엇을 담았는지가
-  눈앞에 남아 있어야 한다.
-*/
-.rail {
-  display: flex;
-  position: sticky;
-  grid-area: rail;
-  top: 18px;
-  flex-direction: column;
-  gap: 12px;
-  padding: var(--thorp-pad-card, 18px);
-  border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 14px);
-  background: var(--thorp-surface);
-}
-
-/* 제목과 그 옆 물음표. '함께 비교할 수 있는 기간' 머리와 같은 짜임이다. */
-.rail [data-slot='rail-head'] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rail [data-slot='rail-title'] {
-  margin: 0;
-  font-size: var(--thorp-text-body, 0.98rem);
-  letter-spacing: -0.02em;
-}
-
-.rail [data-slot='rail-compact-summary'] {
-  display: none;
-}
-
-.rail [data-slot='rail-title-compact'],
-.rail [data-slot='rail-proceed-compact'] {
-  display: none;
-}
-
-.rail [data-slot='rail-empty'] {
-  margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.84rem);
-  line-height: 1.7;
-}
-
-.rail [data-slot='rail-list'] {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 18rem;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  /* 항목을 지워 스크롤바가 사라져도 목록 안쪽 폭은 바뀌지 않는다. */
-  scrollbar-gutter: stable;
-  list-style: none;
-}
-
-.rail [data-slot='rail-item'] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 10px);
-  background: var(--thorp-surface-raised);
-}
-
-.rail [data-slot='rail-item-body'] {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.rail [data-slot='rail-item-name'] {
-  font-size: var(--thorp-text-body, 0.86rem);
-  overflow-wrap: anywhere;
-}
-
-.rail [data-slot='rail-item-sector'] {
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-caption, 0.72rem);
-}
-
-/* 누를 수 있는 자리는 손가락이 닿을 만큼 둔다. 아이콘만 두고 좁히지 않는다. */
-.rail [data-slot='rail-remove'] {
-  display: inline-grid;
+/* 카드 오른쪽 위의 다음 단계 단추와 그 아래 한 줄. 조건을 채우지 못하면 눌리지 않되 사라지지도 않는다. */
+.browserCard [data-slot='card-action'] {
   flex: none;
-  place-items: center;
-  width: var(--thorp-control-sm, 26px);
-  height: var(--thorp-control-sm, 26px);
-  border: 1px solid var(--thorp-line-control);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--thorp-copy);
-  cursor: pointer;
-  transition: border-color 0.14s ease, color 0.14s ease;
 }
 
-.rail [data-slot='rail-remove']:hover {
-  border-color: var(--thorp-negative);
-  color: var(--thorp-negative);
-}
-
-.rail [data-slot='rail-remove']:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset-compact);
-}
-
-.rail [data-slot='rail-count'] {
-  min-height: 1.2em;
-  margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
-  font-variant-numeric: tabular-nums;
-}
-
-.rail [data-slot='rail-supporting'] {
+.proceed {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: flex-end;
+  gap: 7px;
 }
 
-.rail [data-slot='rail-constraint'] {
-  margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
-  line-height: 1.6;
-}
-
-/* 다음 단계로 넘어가는 자리다. 조건을 채우지 못하면 눌리지 않되 사라지지도 않는다. */
-.rail [data-slot='rail-proceed'] {
-  margin-top: 2px;
-  padding: var(--thorp-control-pad-block, 11px) 21px;
+.proceedButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--thorp-control-cta, 50px);
+  padding: 13px 28px;
   border: 1px solid var(--thorp-accent);
   border-radius: var(--thorp-radius-control, 999px);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
   font: inherit;
-  font-size: var(--thorp-control-font, var(--thorp-text-body, 0.9rem));
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--thorp-control-cta, auto);
-  font-weight: var(--thorp-control-weight, 400);
-  gap: 11px;
   transition: transform 180ms ease, background-color 180ms ease, filter 0.14s ease;
 }
 
-.rail [data-slot='rail-proceed']:hover:not(:disabled) {
+.proceedButton:hover:not(:disabled) {
   filter: brightness(1.08);
   border-color: var(--thorp-accent-hover, var(--thorp-accent));
   background: var(--thorp-accent-hover, var(--thorp-accent));
@@ -852,11 +715,16 @@
 }
 
 /* 새 디자인의 올림 색은 이미 한 단 밝다. classic의 밝기 필터까지 겹치면 첫 화면 주 버튼보다 밝아진다. */
-:global(:root:not([data-design='classic'])) .rail [data-slot='rail-proceed']:hover:not(:disabled) {
+:global(:root:not([data-design='classic'])) .proceedButton:hover:not(:disabled) {
   filter: none;
 }
 
-.rail [data-slot='rail-proceed']:disabled {
+.proceedButton:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.proceedButton:disabled {
   border-color: var(--thorp-line);
   background: transparent;
   color: var(--thorp-copy);
@@ -864,104 +732,11 @@
   opacity: 0.7;
 }
 
-/*
-  상세를 보는 동안에도 선택 요약의 위치는 바꾸지 않는다. 대신 넓은 화면에서만 폭을 줄이고,
-  선택 개수와 다음 단계로 갈 수 있는지만 남긴다. 색은 장식이 아니라 준비 여부를 뜻한다.
-*/
-@media (min-width: 1181px) {
-  .rail[data-compact='true'] {
-    align-items: stretch;
-    gap: 14px;
-    padding: 16px 10px;
-    text-align: center;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-title'] {
-    color: var(--thorp-copy);
-    font-size: var(--thorp-text-small, 0.78rem);
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-title-full'],
-  .rail[data-compact='true'] [data-slot='rail-proceed-full'] {
-    display: none;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-title-compact'] {
-    display: inline;
-  }
-
-  /* 좁힌 선택 요약에는 설명을 펼칠 자리가 없다. 넓히면 다시 보인다. */
-  .rail[data-compact='true'] [data-slot='rail-head'] > button {
-    display: none;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-head'] {
-    justify-content: center;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-empty'],
-  .rail[data-compact='true'] [data-slot='rail-list'],
-  .rail[data-compact='true'] [data-slot='rail-count'],
-  .rail[data-compact='true'] [data-slot='rail-constraint'],
-  .rail[data-compact='true'] [data-slot='rail-supporting'] {
-    display: none;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-compact-summary'] {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-compact-count'] {
-    color: var(--thorp-foreground);
-    font-size: 2rem;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-compact-unit'] {
-    color: var(--thorp-copy);
-    font-size: var(--thorp-text-caption, 0.72rem);
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-compact-status'] {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 9px;
-    color: var(--thorp-warning);
-    font-size: var(--thorp-text-caption, 0.7rem);
-    line-height: 1.35;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-compact-status'][data-ready='true'] {
-    color: var(--thorp-accent);
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-compact-dot'] {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: currentcolor;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-proceed'] {
-    min-height: 64px;
-    padding: 9px 6px;
-    border-radius: 12px;
-    font-size: var(--thorp-text-caption, 0.72rem);
-    line-height: 1.25;
-    white-space: normal;
-  }
-
-  .rail[data-compact='true'] [data-slot='rail-proceed-compact'] {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
+.proceedStatus {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.74rem);
+  text-align: right;
 }
 
 /* 아직 상장하지 않은 대상 때문에 공통 구간이 없을 때만 타임라인 대신 보인다. */
@@ -1002,21 +777,8 @@
   text-align: right;
 }
 
-/* 폭이 줄면 선택 요약을 아래로 내린다. 셋을 한 줄에 억지로 욱여넣지 않는다. */
+/* 폭이 줄면 과거 시장과 뉴스를 위아래로 둔다. */
 @media (max-width: 1180px) {
-  /* 선택 요약을 아래로 내려 카드가 폭을 다 쓰게 한다. 셋을 한 줄에 억지로 넣지 않는다. */
-  .board,
-  .board[data-detail-expanded='true'] {
-    grid-template-areas:
-      'browser'
-      'rail';
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .rail {
-    position: static;
-  }
-
   .context {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1054,6 +816,14 @@
   .browserCard [data-slot='main-header'] {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .proceed {
+    align-items: stretch;
+  }
+
+  .proceedStatus {
+    text-align: left;
   }
 }
 
@@ -1223,11 +993,11 @@
 
 /* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
 @media (prefers-reduced-motion: reduce) {
-  .rail [data-slot='rail-proceed'] {
+  .proceedButton {
     transition: none;
   }
 
-  .rail [data-slot='rail-proceed']:hover:not(:disabled) {
+  .proceedButton:hover:not(:disabled) {
     transform: none;
   }
 }
