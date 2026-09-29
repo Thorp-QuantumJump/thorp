@@ -266,12 +266,20 @@ describe('투자 대상 고르기', () => {
     expect(railCodes()).toEqual([])
   })
 
-  it('접은 카드는 목록이 이미 준 사실만 보인다', async () => {
+  it('접은 카드는 이름과 가격 흐름만 두고, 펼치면 목록이 준 섹터·기준 지수·상장일을 보인다', async () => {
+    const user = userEvent.setup()
     await openPage()
 
-    // 기준 지수와 상장일은 목록 응답에 있다. 이것만으로 견주는 동안에는 상품 정보를 부르지 않는다.
-    expect(screen.getByText(/KRX 반도체/)).toBeTruthy()
-    expect(screen.getByText(/2018-09-12 상장/)).toBeTruthy()
+    // 접은 카드는 빠르게 견주는 자리라 설명 줄을 두지 않는다.
+    expect(screen.queryByText(/2018-09-12 상장/)).toBeNull()
+    await user.click(expandButton())
+    expect(await screen.findByText(/2018-09-12 상장/)).toBeTruthy()
+    expect(screen.getAllByText(/KRX 반도체/).length).toBeGreaterThan(0)
+  })
+
+  it('접은 카드는 상품 정보를 부르지 않는다', async () => {
+    await openPage()
+
     expect(screen.queryByText('삼성자산운용')).toBeNull()
     expect(screen.queryByText('삼성전자')).toBeNull()
     expect(apiMocks.fetchInstrumentProfile).not.toHaveBeenCalled()

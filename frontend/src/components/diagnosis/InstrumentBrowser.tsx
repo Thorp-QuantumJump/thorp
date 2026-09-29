@@ -165,18 +165,20 @@ export function InstrumentBrowser({
                 </button>
               </div>
               {/*
-                접은 카드에서도 이 둘은 보인다. 목록 응답이 이미 주는 값이라 따로 부르지 않으며,
-                무엇을 따라가는 상품인지가 이름 다음으로 먼저 필요한 사실이다.
+                섹터·기준 지수·상장일은 '포함 종목'을 펼쳤을 때만 보인다. 접은 카드는 여러 대상을 빠르게 견주는
+                자리라 이름과 가격 흐름만 둔다. 목록 응답이 이미 주는 값이라 펼쳐도 따로 부르지 않는다.
               */}
-              <p data-slot="main-subtitle">
-                <span data-slot="main-fact">{viewing.name}</span>
-                <span data-slot="main-fact">
-                  {viewing.representativeEtf.benchmarkIndex}
-                </span>
-                <span data-slot="main-fact">
-                  {viewing.representativeEtf.listedOn} 상장
-                </span>
-              </p>
+              {expanded ? (
+                <p data-slot="main-subtitle">
+                  <span data-slot="main-fact">{viewing.name}</span>
+                  <span data-slot="main-fact">
+                    {viewing.representativeEtf.benchmarkIndex}
+                  </span>
+                  <span data-slot="main-fact">
+                    {viewing.representativeEtf.listedOn} 상장
+                  </span>
+                </p>
+              ) : null}
             </div>
 
             {/*
