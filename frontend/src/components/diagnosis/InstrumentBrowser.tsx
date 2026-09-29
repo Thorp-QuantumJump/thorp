@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { PriceTrend } from '@/components/diagnosis/PriceTrend'
@@ -23,6 +23,8 @@ type InstrumentBrowserProps = {
   onView: (code: string) => void
   onToggleSelected: (code: string, selected: boolean) => void
   onExpandedChange: (expanded: boolean) => void
+  /** 카드 바닥 오른쪽에 붙는 한 줄. 목록 화면이 출처를 여기에 둔다. */
+  footer?: ReactNode
   className?: string
 }
 
@@ -49,6 +51,7 @@ export function InstrumentBrowser({
   onView,
   onToggleSelected,
   onExpandedChange,
+  footer,
   className,
 }: InstrumentBrowserProps) {
   const headingId = useId()
@@ -210,6 +213,7 @@ export function InstrumentBrowser({
 
         {expanded ? <HoldingsColumn result={result} /> : null}
       </div>
+      {footer ? <div data-slot="footer">{footer}</div> : null}
     </section>
   )
 }

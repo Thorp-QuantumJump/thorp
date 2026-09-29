@@ -28,7 +28,7 @@
 .workspace { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.65fr); align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
 .fieldRail { min-width: 0; }
 .fieldList { padding-right: 24px; }
-.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: calc(var(--thorp-header-height, 64px) + 24px); }
+.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }
 .detailPanel:focus-visible, .detailJump:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .detailJump { display: none; }
 .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }
@@ -64,6 +64,10 @@
   .workspaceHeading { gap: 6px; }
   .workspaceHeading > span { font-size: var(--thorp-text-label, .64rem); }
   .workspaceHeading i { margin: 0 4px; }
+}
+/* 아주 좁은 폭에서는 뒷부분 덩어리도 한 줄에 다 들어가지 않는다. 그때만 낱말 사이에서 끊는다. */
+@media (max-width: 360px) {
+  .hero h1 span { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
   .loadingTrack::after { animation: none; width: 100%; opacity: .5; }
