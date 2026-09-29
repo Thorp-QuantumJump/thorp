@@ -10,6 +10,7 @@ const apiMocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  changeNickname: vi.fn(),
 }))
 
 vi.mock('@/api/auth', async () => {
@@ -102,5 +103,30 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('auth-state').textContent).toBe(
       'authenticated:user@example.com',
     )
+  })
+
+  it('닉네임 변경이 성공하면 확인 중을 거치지 않고 사용자를 바뀐 값으로 갈아 끼운다', async () => {
+    apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)
+    apiMocks.changeNickname.mockResolvedValue({ ...authenticatedUser, nickname: '새닉네임' })
+    let auth: ReturnType<typeof useAuth> | null = null
+    function NicknameProbe() {
+      auth = useAuth()
+      return <output data-testid="nickname">{auth.status}:{auth.user?.nickname ?? 'none'}</output>
+    }
+
+    render(
+      <AuthProvider>
+        <NicknameProbe />
+      </AuthProvider>,
+    )
+    expect(await screen.findByText('authenticated:쏘프사용자')).toBeTruthy()
+
+    await act(async () => {
+      await auth!.updateNickname('새닉네임')
+    })
+
+    expect(apiMocks.changeNickname).toHaveBeenCalledWith('새닉네임', undefined)
+    expect(screen.getByTestId('nickname').textContent).toBe('authenticated:새닉네임')
+    expect(apiMocks.getCurrentUser).toHaveBeenCalledOnce()
   })
 })

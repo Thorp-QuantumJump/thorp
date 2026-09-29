@@ -16,7 +16,6 @@
 .hero h1 { word-break: keep-all; }
 .hero h1 span { display: inline-block; color: var(--thorp-copy); white-space: nowrap; }
 :global(:root:not([data-design='classic'])) .hero h1 span { color: inherit; }
-:global(:root:not([data-design='classic'])) .classicOnly { display: none; }
 .heroAside { position: relative; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
 .heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
 .heroAside > span { color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
