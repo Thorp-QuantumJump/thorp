@@ -18,8 +18,9 @@
 :global(:root:not([data-design='classic'])) .hero h1 span { color: inherit; }
 :global(:root:not([data-design='classic'])) .classicOnly { display: none; }
 /* 안내 칸을 오른쪽 끝에 붙여 글이 아래 카드의 오른쪽 끝에서 끝나게 한다. */
-.heroAside { position: relative; justify-self: end; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
+.heroAside { position: relative; justify-self: end; max-width: 560px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
 .heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
+.heroAside p span { display: block; }
 .heroAside > span { color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
 /* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }

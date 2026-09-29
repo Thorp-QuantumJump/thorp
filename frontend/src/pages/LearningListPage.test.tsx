@@ -60,7 +60,7 @@ describe('LearningListPage', () => {
 
     expect(await screen.findByRole('status')).not.toBeNull()
     expect(
-      screen.getByRole('link', { name: /비중 비교 시작하기/ }).getAttribute('href'),
+      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
     ).toBe('/diagnosis/sectors')
   })
 
@@ -73,7 +73,7 @@ describe('LearningListPage', () => {
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
     expect(
-      screen.getByRole('link', { name: /비중 비교 시작하기/ }).getAttribute('href'),
+      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
     ).toBe('/diagnosis/sectors')
   })
 
@@ -86,7 +86,7 @@ describe('LearningListPage', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).not.toBeNull()
     expect(screen.queryByText('아직 게시된 글이 없습니다.')).toBeNull()
     expect(
-      screen.getByRole('link', { name: /비중 비교 시작하기/ }).getAttribute('href'),
+      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
     ).toBe('/diagnosis/sectors')
   })
 

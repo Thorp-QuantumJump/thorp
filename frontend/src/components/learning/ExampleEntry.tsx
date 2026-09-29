@@ -48,7 +48,7 @@ export function ExampleEntry({ articleId, example }: ExampleEntryProps) {
 
   return (
     <button type="button" className={styles.start} onClick={start}>
-      이 예시로 비중 비교하기
+      이 예시로 전략 진단하기
     </button>
   )
 }

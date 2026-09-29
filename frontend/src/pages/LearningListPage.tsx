@@ -51,7 +51,8 @@ export function LearningListPage() {
             </h1>
           </div>
           <p className={heading.lead}>
-            투자 개념과 지표 읽는 법을 짧은 글로 익힙니다. 글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.
+            <span>투자 개념과 지표 읽는 법을 짧은 글로 익힙니다.</span>
+            <span>글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.</span>
           </p>
         </header>
 
@@ -94,7 +95,7 @@ export function LearningListPage() {
         {/* 목록의 상태와 무관하게 늘 둔다. 응답이 늦어도 진단 진입을 기다리게 하지 않는다(FR-015). */}
         <p className={styles.diagnosis}>
           <Link className={styles.diagnosisLink} to="/diagnosis/sectors">
-            글을 읽지 않고 바로 비중 비교 시작하기
+            글을 읽지 않고 바로 전략 진단하기
             <ArrowUpRight size={17} aria-hidden="true" />
           </Link>
         </p>

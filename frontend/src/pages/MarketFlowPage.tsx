@@ -96,7 +96,10 @@ export function MarketFlowPage() {
             <h1>시장 흐름을 <span><em className={heading.emphasis}>분야별로</em> 확인하세요.</span></h1>
           </motion.div>
           <motion.div className={styles.heroAside} initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.3, delay: reducedMotion ? 0 : 0.06 }}>
-            <p>경제를 한 점수로 단정하지 않고, 일곱 분야의 실제 지표와 최근 3개월 경로를 나눠 보여 드립니다.</p>
+            <p>
+              <span>경제를 한 점수로 단정하지 않고,</span>
+              <span>일곱 분야의 실제 지표와 최근 3개월 경로를 나눠 보여 드립니다.</span>
+            </p>
           </motion.div>
         </header>
 
