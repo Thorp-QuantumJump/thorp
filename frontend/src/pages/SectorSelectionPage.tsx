@@ -180,7 +180,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         ? `${selectedCount}개 선택됨 · ${MINIMUM_SECTOR_COUNT}개 이상 필요합니다.`
         : `${selectedCount}개 선택됨`
   const proceedAction = (
-    <div className={styles.proceed}>
+    <div className={styles.proceed} data-ready={selectedCount >= MINIMUM_SECTOR_COUNT}>
       <button
         type="button"
         className={styles.proceedButton}

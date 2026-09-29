@@ -688,6 +688,8 @@
 .cardRow {
   --proceed-size: 150px;
   --card-gap: 12px;
+  /* 버튼의 드러남·모양·색과 카드 폭 변화가 모두 이 시간과 곡선을 쓴다. */
+  --proceed-motion: 620ms cubic-bezier(0.22, 1, 0.36, 1);
 
   display: grid;
   grid-template-areas:
@@ -712,6 +714,11 @@
   min-width: 0;
 }
 
+/*
+  버튼 칸의 폭이 곧 카드 폭을 정한다. 숨은 동안은 초승달이 설 만큼만 두어 두 카드가 넓게 서고, 둘을 고르면
+  버튼과 같은 속도로 넓어져 두 카드가 함께 줄어든다. 숨을 때는 거꾸로 칸이 줄며 카드 끝이 오른쪽으로 늘어나,
+  그 끝에 걸친 버튼이 오른쪽으로 밀려가며 흐려진다.
+*/
 .proceed {
   position: relative;
   z-index: 1;
@@ -720,10 +727,14 @@
   flex-direction: column;
   align-self: start;
   align-items: flex-start;
-  gap: 10px;
-  width: calc(var(--proceed-size) - 18px);
+  width: 60px;
   margin-top: calc(var(--proceed-size) / -2 - var(--card-gap) / 2);
   margin-left: -18px;
+  transition: width var(--proceed-motion);
+}
+
+.proceed[data-ready='true'] {
+  width: calc(var(--proceed-size) - 18px);
 }
 
 /*
@@ -750,8 +761,9 @@
   당기느냐(`mask-position`)만 바꾸므로 흐린 구간의 모양이 유지된 채 부드럽게 움직인다.
 */
 .proceedButton {
-  --proceed-motion: 620ms cubic-bezier(0.22, 1, 0.36, 1);
   --thorp-proceed-fill: var(--thorp-accent);
+
+  flex: none;
 
   position: relative;
   display: flex;
@@ -780,7 +792,6 @@
   transition:
     -webkit-mask-position var(--proceed-motion),
     mask-position var(--proceed-motion),
-    border-radius var(--proceed-motion),
     border-color var(--proceed-motion),
     color var(--proceed-motion),
     --thorp-proceed-fill var(--proceed-motion),
@@ -846,12 +857,77 @@
   transition-delay: 0s;
 }
 
+/*
+  모양은 곧게 바뀌지 않고 한 번 일렁인다. 떠오를 때는 가로로 늘었다가 반대로 기운 뒤 물방울로 자리 잡는다.
+  숨을 때는 오른쪽으로 밀려 나가며 한 번 출렁이고 원으로 돌아가 초승달 속으로 들어간다. 상태가 바뀌면
+  애니메이션 이름이 바뀌어 처음부터 다시 돈다. 끝 모양은 각 상태의 정지 모양과 같아 멈출 때 튀지 않는다.
+*/
+.proceedButton:enabled {
+  animation: proceed-emerge var(--proceed-motion);
+}
+
+.proceedButton:disabled {
+  animation: proceed-recede var(--proceed-motion);
+}
+
+@keyframes proceed-emerge {
+  0% {
+    border-radius: 50%;
+    transform: scale(0.92);
+  }
+
+  38% {
+    border-radius: 60% 40% 46% 54% / 44% 58% 42% 56%;
+    transform: scale(1.07, 0.94);
+  }
+
+  68% {
+    border-radius: 38% 62% 60% 40% / 56% 44% 56% 44%;
+    transform: scale(0.98, 1.03);
+  }
+
+  100% {
+    border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
+    transform: none;
+  }
+}
+
+@keyframes proceed-recede {
+  0% {
+    border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
+    transform: none;
+  }
+
+  40% {
+    border-radius: 36% 64% 58% 42% / 58% 42% 58% 42%;
+    transform: translateX(18px) scale(1.05, 0.95);
+  }
+
+  75% {
+    border-radius: 54% 46% 48% 52% / 46% 54% 46% 54%;
+    transform: translateX(8px) scale(0.97, 1.02);
+  }
+
+  100% {
+    border-radius: 50%;
+    transform: none;
+  }
+}
+
+/*
+  몇 개를 골랐고 무엇을 더 해야 하는지는 탐색 카드 안 오른쪽 위에 적는다. 숨은 버튼 칸에는 글을 둘 폭이 없다.
+  위치는 버튼 칸을 기준으로 계산한다: 칸 위쪽이 카드 위쪽보다 원 반지름과 틈 절반만큼 높고, 칸 왼쪽이 카드
+  오른쪽 끝보다 18px 안쪽이다.
+*/
 .proceedStatus {
+  position: absolute;
+  top: calc(var(--proceed-size) / 2 + var(--card-gap) / 2 + 26px);
+  right: calc(100% + 4px);
   margin: 0;
-  padding-left: 24px;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.72rem);
   line-height: 1.5;
+  white-space: nowrap;
 }
 
 /* 폭이 좁으면 단추를 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. */
@@ -875,8 +951,13 @@
     margin: -22px 0 0;
   }
 
+  .proceed,
+  .proceed[data-ready='true'] {
+    width: auto;
+  }
+
   .proceedStatus {
-    padding-left: 0;
+    position: static;
     text-align: right;
   }
 }
@@ -1147,9 +1228,11 @@
 
 /* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
 @media (prefers-reduced-motion: reduce) {
+  .proceed,
   .proceedButton,
   .proceedButton > * {
     transition: none;
+    animation: none;
   }
 
   .proceedButton:hover:not(:disabled),
