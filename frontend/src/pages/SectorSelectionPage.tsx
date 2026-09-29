@@ -305,7 +305,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
 
       {/*
         투자 대상 아래 한 줄에 둘을 나란히 둔다. 왼쪽은 Thorp의 핵심 흐름(002 FR-018) — 고른 섹터를 지금과
-        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 시장 흐름 뉴스(FR-019)로 기본 '전체', 섹터별로
+        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 뉴스(FR-019)로 기본 '전체', 섹터별로
         좁혀 볼 수 있다. 둘 다 받지 못해도 투자 대상 고르기는 막히지 않는다.
       */}
       <div className={styles.context}>

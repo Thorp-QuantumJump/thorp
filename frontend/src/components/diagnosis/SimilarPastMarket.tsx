@@ -164,14 +164,14 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
             >
               <Info size={14} aria-hidden="true" />
               <span>
-                <span className={styles.srOnly}>검색 상태: </span>
+                <span className="sr-only">검색 상태: </span>
                 {result.statusNote}
               </span>
               {result.caseLabel ? (
                 <>
                   <span className={styles.notesDivider} aria-hidden="true">·</span>
                   <span>
-                    <span className={styles.srOnly}>사례 구분: </span>
+                    <span className="sr-only">사례 구분: </span>
                     {result.caseLabel}
                   </span>
                 </>

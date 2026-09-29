@@ -57,6 +57,24 @@ describe('SimilarPastMarket (002 FR-018)', () => {
     await waitFor(() => expect(vi.mocked(getRegimeSearch).mock.calls.at(-1)?.[0]).toEqual({ mode: 'composite', limit: 3 }))
   })
 
+  it('검색 상태와 사례 구분을 호버 없이 한 줄로 보이고 키보드와 보조기기로 닿는다 (010 FR-037)', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(
+      searchResult({ statusNote: '가까운 순서만 제공합니다.', caseLabel: '최근접 참고 사례' }),
+    )
+    renderWithRouter(<SimilarPastMarket caseId={null} />)
+
+    // 문구는 늘 보인다. 호버나 접기 뒤에 두지 않는다.
+    expect(await screen.findByText('가까운 순서만 제공합니다.')).toBeTruthy()
+    expect(screen.getByText('최근접 참고 사례')).toBeTruthy()
+
+    // 어느 결과에 대한 표시인지 이름으로 연결되고, 키보드로 닿는다.
+    const note = screen.getByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태와 사례 구분' })
+    expect(note.getAttribute('tabindex')).toBe('0')
+    // 화면에서 뺀 이름표는 보조기기에는 남는다.
+    expect(note.textContent).toContain('검색 상태:')
+    expect(note.textContent).toContain('사례 구분:')
+  })
+
   it('사례를 고르면 011 진입 계약으로 그 기간을 분석 기간으로 이어 간다', async () => {
     renderWithRouter(<SimilarPastMarket caseId={null} />)
 

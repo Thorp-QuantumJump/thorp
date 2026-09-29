@@ -142,7 +142,9 @@
   color: var(--thorp-warning);
 }
 
-.composite[aria-pressed='true'] {
+/* 호버 규칙(:hover:not(:disabled))이 더 구체적이라, 눌린 채 가리켜도 채움이 풀리지 않게 같은 무게로 적는다. */
+.composite[aria-pressed='true'],
+.composite[aria-pressed='true']:hover:not(:disabled) {
   border-color: var(--thorp-warning);
   background: var(--thorp-warning);
   color: var(--thorp-background);
@@ -205,15 +207,6 @@
   color: var(--thorp-muted);
 }
 
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 
 .cases {
   display: flex;
