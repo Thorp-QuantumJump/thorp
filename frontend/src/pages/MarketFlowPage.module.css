@@ -4,7 +4,7 @@
   color: var(--thorp-foreground);
   background: var(--thorp-background);
 }
-.main { width: min(var(--thorp-page-width-flow, 1320px), calc(100% - var(--thorp-page-gutter, 80px))); margin: 0 auto; padding: var(--thorp-page-top, 26px) 0 64px; }
+.main { width: min(var(--market-flow-width, var(--thorp-page-width-flow, 1320px)), calc(100% - var(--thorp-page-gutter, 80px))); margin: 0 auto; padding: var(--thorp-page-top, 26px) 0 64px; }
 .hero { position: relative; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: end; padding-bottom: 20px; }
 .hero::before {
   position: absolute; inset: -25px 0 0 30%; content: ''; pointer-events: none;
@@ -51,7 +51,7 @@
   .fieldList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .main { width: calc(100% - 28px); }
   .hero h1 { font-size: 1.95rem; }
-      }
+}
 /* 아주 좁은 폭에서는 뒷부분 덩어리도 한 줄에 다 들어가지 않는다. 그때만 낱말 사이에서 끊는다. */
 @media (max-width: 360px) {
   .hero h1 span { white-space: normal; }
@@ -65,7 +65,12 @@
   구역을 카드 면으로 묶는다. 배치(위 분야 메뉴·아래 상세)는 위 기본 규칙이 두 디자인에 함께 정한다.
   classic을 걷어낼 때 이 층을 위 규칙에 합치고 접두 선택자를 지운다.
 */
-:global(:root:not([data-design='classic'])) :global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }
+/*
+  시장 흐름은 분야 메뉴 일곱 칸과 지표 칸 세 개가 가로로 서므로 전략 진단 틀(1320px)보다 조금 넓게 쓴다.
+  전략 진단 화면들이 함께 쓰는 --thorp-page-width-flow는 건드리지 않는다.
+*/
+:global(:root:not([data-design='classic'])) .main { --market-flow-width: 1400px; }
+:global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }
 /* 분야 메뉴는 카드로 묶지 않는다. 버튼 하나하나가 따로 고르는 메뉴로 읽혀야 한다. */
 :global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {
   border: 1px solid var(--thorp-line);
@@ -76,7 +81,6 @@
 :global(:root:not([data-design='classic'])) .main > .loadFailure { padding: 24px; }
 :global(:root:not([data-design='classic'])) .loadFailure button { border-radius: var(--thorp-radius-control); }
 :global(:root:not([data-design='classic'])) .loading { padding: 8px 0; }
-:global(:root:not([data-design='classic'])) /* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */
 @media (max-width: 1100px) {
   :global(:root:not([data-design='classic'])) .detailPanel { padding: 20px; }
 }
