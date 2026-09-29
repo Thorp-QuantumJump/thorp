@@ -71,9 +71,12 @@ export function NewsDigestSection({ sectorCode }: NewsDigestSectionProps) {
                 {digest.representativeTitle}
                 <span className="sr-only"> (새 창에서 열림)</span>
               </a>
-              {/* 매체 수와 날짜는 요약 오른쪽에 붙인다. 요약 아래 줄로 내리면 요약의 한 줄처럼 읽힌다. */}
-              <div className={styles.newsBody}>
-                <p>{digest.factualSummary}</p>
+              {/*
+                매체 수와 날짜는 요약의 마지막 줄 끝에 오른쪽으로 띄워 붙인다. 옆 칸으로 세우면 요약의 폭이
+                줄고, 아래 줄로 내리면 요약의 한 줄처럼 읽힌다. 마지막 줄에 자리가 없을 때만 한 줄 내려간다.
+              */}
+              <p className={styles.newsBody}>
+                <span>{digest.factualSummary}</span>
                 <span className={styles.newsMeta}>
                   매체 {digest.publisherCount}곳
                   {/* 확인하지 못한 발행 시각을 확인한 것처럼 쓰지 않는다(012 계약). */}
@@ -81,7 +84,7 @@ export function NewsDigestSection({ sectorCode }: NewsDigestSectionProps) {
                     ? ` · ${digest.firstPublishedAt.slice(0, 10).replaceAll('-', '.')}`
                     : ' · 발행 시각 확인 안 됨'}
                 </span>
-              </div>
+              </p>
             </li>
           ))}
         </ul>
