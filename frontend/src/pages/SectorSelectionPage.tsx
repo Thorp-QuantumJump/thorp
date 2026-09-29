@@ -179,11 +179,17 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
       : selectedCount < MINIMUM_SECTOR_COUNT
         ? `${selectedCount}개 선택됨 · ${MINIMUM_SECTOR_COUNT}개 이상 필요합니다.`
         : `${selectedCount}개 선택됨`
+  /*
+    버튼이 드러난 정도다. 0은 숨음, 1은 하나를 골라 절반쯤 밀려 나온 상태, 2는 넘어갈 수 있어 다 나온 상태다.
+    하나를 고르면 반만 나와, 하나를 더 골라야 열린다는 것이 움직임으로 읽힌다.
+  */
+  const proceedStage = Math.min(selectedCount, MINIMUM_SECTOR_COUNT)
   const proceedAction = (
-    <div className={styles.proceed} data-ready={selectedCount >= MINIMUM_SECTOR_COUNT}>
+    <div className={styles.proceed} data-stage={proceedStage}>
       <button
         type="button"
         className={styles.proceedButton}
+        data-stage={proceedStage}
         onClick={proceed}
         disabled={selectedCount < MINIMUM_SECTOR_COUNT}
         aria-label="STEP 02 - 전략 고르기"
