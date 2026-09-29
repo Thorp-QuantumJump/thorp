@@ -96,10 +96,22 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
     <section className={styles.panel} aria-labelledby="similar-past-title">
       {/* 제목과 기준월을 한 줄에 둔다. 기준월은 제목에 딸린 값이라 같은 줄 오른쪽 끝에 붙인다. */}
       <div className={styles.head}>
-        <h2 id="similar-past-title">
-          <History size={16} aria-hidden="true" />
-          지금과 비슷했던 과거 시장
-        </h2>
+        {/*
+          검색 상태와 사례 구분은 제목 바로 오른쪽 i 표시 뒤로 내린다. 가리키거나 키보드 초점을 주면 펼쳐진다.
+          결과를 곁들여 보이는 요약 카드라서이고, 같은 결과의 '비슷했던 때 보기' 화면에서는 늘 펼쳐 둔다(010 FR-037).
+        */}
+        <div className={styles.titleGroup}>
+          <h2 id="similar-past-title">
+            <History size={16} aria-hidden="true" />
+            지금과 비슷했던 과거 시장
+          </h2>
+          {result ? (
+            <InlineHelp label={`검색 상태${result.caseLabel ? '와 사례 구분' : ''}`} mark="i" side="bottom">
+              <p><b>검색 상태</b> {result.statusNote}</p>
+              {result.caseLabel ? <p><b>사례 구분</b> {result.caseLabel}</p> : null}
+            </InlineHelp>
+          ) : null}
+        </div>
         {result ? <p className={styles.basis}>기준월 {result.baselineMonth}</p> : null}
       </div>
 
@@ -150,26 +162,16 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
           <QuietFailure message="과거 사례를 불러오지 못했습니다." onRetry={retry} />
         ) : result ? (
           <div className={styles.result}>
-            {/*
-              검색 상태와 사례 구분은 이 카드에서 i 표시 뒤로 내린다. 가리키거나 키보드 초점을 주면 그 자리에
-              펼쳐진다. 결과를 곁들여 보이는 요약 카드라서이고, 같은 결과의 '비슷했던 때 보기' 화면에서는 늘
-              펼쳐 둔다(010 FR-037). 보조기기에는 펼치지 않아도 읽히도록 같은 문장을 알림 영역에 남긴다.
-            */}
-            <div className={styles.notesLine}>
-              <InlineHelp label={`검색 상태${result.caseLabel ? '와 사례 구분' : ''}`} mark="i" side="bottom">
-                <p><b>검색 상태</b> {result.statusNote}</p>
-                {result.caseLabel ? <p><b>사례 구분</b> {result.caseLabel}</p> : null}
-              </InlineHelp>
-              <p
-                className="sr-only"
-                role="status"
-                aria-live="polite"
-                aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}
-              >
-                검색 상태: {result.statusNote}
-                {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}
-              </p>
-            </div>
+            {/* 제목 옆 i 표시를 펼치지 않아도 보조기기에 읽히도록 같은 문장을 알림 영역에 남긴다(010 FR-037). */}
+            <p
+              className="sr-only"
+              role="status"
+              aria-live="polite"
+              aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}
+            >
+              검색 상태: {result.statusNote}
+              {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}
+            </p>
             {result.status !== 'NOT_COMPUTABLE' && result.cases.length === 0 && result.thresholdNote ? (
               // 교정된 기준을 넘는 사례가 없다(spec US3 시나리오 4). 참고 사례는 검색 화면에서 따로 연다.
               <Disclosure label="유사성 기준" context={context} tone="warning">

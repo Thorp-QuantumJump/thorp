@@ -177,20 +177,11 @@
   gap: 12px;
 }
 
-.notesLine {
+/* 제목과 그 오른쪽 i 표시. */
+.titleGroup {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
-  margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-caption, 0.72rem);
-  line-height: 1.5;
-}
-
-/* i 표시는 앞말이 없는 자리에 홀로 선다. 도움말 기본 여백(앞말과 떼는 틈)을 걷는다. */
-.notesLine > button {
-  margin-inline-start: 0;
+  gap: 2px;
 }
 
 .cases {
