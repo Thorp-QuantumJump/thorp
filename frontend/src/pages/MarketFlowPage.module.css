@@ -28,8 +28,7 @@
 /* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
 .fieldRail { min-width: 0; }
-/* 메뉴가 접혀 팝오버가 옆으로 삐져나가도 화면에 가로 스크롤이 생기지 않게 가로만 자른다. */
-.fieldList { display: flex; flex-wrap: wrap; gap: 8px; overflow-x: clip; overflow-y: visible; }
+.fieldList { display: flex; flex-wrap: wrap; gap: 8px; }
 .detailPanel { min-width: 0; min-height: 490px; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; scroll-margin-top: calc(var(--thorp-header-height, 64px) + 24px); }
 .detailPanel:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }
@@ -65,8 +64,8 @@
 
 /*
   디자인 개편 카드 층(S15P21E205-425). 위의 선 나눔 규칙은 classic 디자인 그대로 두고, 새 디자인에서만
-  구역을 카드 면으로 묶는다. 배치(순서·열)는 바꾸지 않는다. classic을 걷어낼 때 이 층을 위 규칙에
-  합치고 접두 선택자를 지운다.
+  구역을 카드 면으로 묶는다. 배치(위 분야 메뉴·아래 상세)는 위 기본 규칙이 두 디자인에 함께 정한다.
+  classic을 걷어낼 때 이 층을 위 규칙에 합치고 접두 선택자를 지운다.
 */
 :global(:root:not([data-design='classic'])) .workspaceHeading { border: 0; padding: 4px 2px 14px; }
 :global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }
