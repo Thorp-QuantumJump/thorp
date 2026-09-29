@@ -1,4 +1,4 @@
-import { ChartNoAxesCombined } from 'lucide-react'
+import { ArrowRight, ChartNoAxesCombined } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
@@ -41,7 +41,7 @@ type InstrumentBoardProps = {
 }
 
 /**
- * 목록과 상세를 한 카드에 두고, 다음 단계로 가는 단추를 그 카드 오른쪽 위에 두는 자리다.
+ * 목록과 상세를 한 카드에 두고, 다음 단계로 가는 둥근 단추를 그 카드 오른쪽 테두리에 걸쳐 두는 자리다.
  *
  * 지금까지 무엇을 골랐는가는 따로 요약하지 않는다. 왼쪽 목록의 체크 표시가 그것을 말하고, 단추 아래
  * 한 줄이 개수와 넘어갈 수 있는지를 말한다. 목록을 누르면 그 대상을 보면서 담고, 다시 누르면 뺀다.
@@ -168,15 +168,16 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   const attribution = <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
 
   /*
-    다음 단계로 넘어가는 단추다. 탐색 카드 오른쪽 위에 늘 둔다. 조건을 채우지 못하면 눌리지 않되
-    사라지지 않고, 아래 한 줄이 몇 개를 골랐고 무엇을 더 해야 넘어갈 수 있는지를 말한다. 하나만 담으면
-    어떤 배분 전략도 같은 결과를 내므로 비교하려면 둘은 있어야 한다(FR-004).
+    다음 단계로 넘어가는 단추다. 탐색 카드 오른쪽 테두리에 걸친 원으로, 왼쪽은 채워져 있고 오른쪽으로 갈수록
+    배경에 녹아 카드 밖 다음 단계로 넘어가는 모양이다. 조건을 채우지 못하면 눌리지 않되 사라지지 않고, 아래
+    한 줄이 몇 개를 골랐고 무엇을 더 해야 넘어갈 수 있는지를 말한다. 하나만 담으면 어떤 배분 전략도 같은
+    결과를 내므로 비교하려면 둘은 있어야 한다(FR-004).
   */
   const proceedStatus =
     selectedCount === 0
       ? `투자 대상을 ${MINIMUM_SECTOR_COUNT}개 이상 골라 주세요.`
       : selectedCount < MINIMUM_SECTOR_COUNT
-        ? `${selectedCount}개 선택됨 · ${MINIMUM_SECTOR_COUNT}개 이상 골라야 넘어갈 수 있습니다.`
+        ? `${selectedCount}개 선택됨 · ${MINIMUM_SECTOR_COUNT}개 이상 필요합니다.`
         : `${selectedCount}개 선택됨`
   const proceedAction = (
     <div className={styles.proceed}>
@@ -185,8 +186,15 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         className={styles.proceedButton}
         onClick={proceed}
         disabled={selectedCount < MINIMUM_SECTOR_COUNT}
+        aria-label="STEP 02 - 전략 고르기"
       >
-        STEP 02 - 전략 고르기
+        <span className={styles.proceedStep} aria-hidden="true">
+          STEP 02
+        </span>
+        <span className={styles.proceedLabel} aria-hidden="true">
+          전략 고르기
+        </span>
+        <ArrowRight className={styles.proceedArrow} size={16} strokeWidth={2.2} aria-hidden="true" />
       </button>
       <p className={styles.proceedStatus} aria-live="polite">
         {proceedStatus}
@@ -260,18 +268,20 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           ) : null}
 
           {viewing ? (
-            <InstrumentBrowser
-              className={styles.browserCard}
-              sectors={sectors}
-              viewing={viewing}
-              expanded={detailExpanded}
-              isSelected={selection.isSelected}
-              onView={setViewingCode}
-              onToggleSelected={selection.toggleSector}
-              onExpandedChange={setDetailExpanded}
-              source={`출처: ${KRX_SOURCE_ATTRIBUTION}`}
-              action={proceedAction}
-            />
+            <div className={styles.cardRow}>
+              <InstrumentBrowser
+                className={styles.browserCard}
+                sectors={sectors}
+                viewing={viewing}
+                expanded={detailExpanded}
+                isSelected={selection.isSelected}
+                onView={setViewingCode}
+                onToggleSelected={selection.toggleSector}
+                onExpandedChange={setDetailExpanded}
+                source={`출처: ${KRX_SOURCE_ATTRIBUTION}`}
+              />
+              {proceedAction}
+            </div>
           ) : (
             attribution
           )}

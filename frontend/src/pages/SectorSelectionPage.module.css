@@ -677,67 +677,132 @@
   }
 }
 
-/* 카드 오른쪽 위의 다음 단계 단추와 그 아래 한 줄. 조건을 채우지 못하면 눌리지 않되 사라지지도 않는다. */
-.browserCard [data-slot='card-action'] {
-  flex: none;
+/*
+  탐색 카드와 다음 단계 단추가 한 줄에 선다. 단추는 카드 오른쪽 테두리에 조금 걸친 원이다. 왼쪽 반은 채워져
+  있고 오른쪽으로 갈수록 배경에 녹아, 카드 밖 다음 단계로 넘어가는 모양이 된다. 걸치는 폭은 카드 안쪽 여백
+  정도라 가격 흐름 그림을 가리지 않는다.
+*/
+.cardRow {
+  --proceed-size: 150px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .proceed {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 7px;
+  align-items: flex-start;
+  gap: 10px;
+  width: calc(var(--proceed-size) - 18px);
+  margin-left: -18px;
 }
 
 .proceedButton {
-  display: inline-flex;
-  align-items: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  min-height: var(--thorp-control-cta, 50px);
-  padding: 13px 28px;
-  border: 1px solid var(--thorp-accent);
-  border-radius: var(--thorp-radius-control, 999px);
-  background: var(--thorp-accent);
+  gap: 2px;
+  width: var(--proceed-size);
+  height: var(--proceed-size);
+  padding: 0 0 0 24px;
+  border: 1.5px solid var(--thorp-accent);
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    var(--thorp-accent) 0%,
+    var(--thorp-accent) 42%,
+    color-mix(in srgb, var(--thorp-accent) 38%, var(--thorp-surface, #1b1d1d)) 100%
+  );
   color: var(--thorp-action-foreground);
   font: inherit;
-  font-size: 1rem;
-  font-weight: 700;
-  white-space: nowrap;
+  text-align: left;
   cursor: pointer;
-  transition: transform 180ms ease, background-color 180ms ease, filter 0.14s ease;
+  /* 오른쪽 끝을 흐려 원이 경계를 넘어가는 것처럼 보이게 한다. 테두리도 함께 흐려진다. */
+  -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent 98%);
+  mask-image: linear-gradient(90deg, #000 58%, transparent 98%);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), filter 0.14s ease;
+}
+
+.proceedStep {
+  font-size: var(--thorp-text-caption, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+
+.proceedLabel {
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.proceedArrow {
+  margin-top: 6px;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .proceedButton:hover:not(:disabled) {
-  filter: brightness(1.08);
-  border-color: var(--thorp-accent-hover, var(--thorp-accent));
-  background: var(--thorp-accent-hover, var(--thorp-accent));
-  transform: translateY(var(--thorp-cta-lift, 0));
+  filter: brightness(1.06);
+  transform: translateX(6px);
 }
 
-/* 새 디자인의 올림 색은 이미 한 단 밝다. classic의 밝기 필터까지 겹치면 첫 화면 주 버튼보다 밝아진다. */
-:global(:root:not([data-design='classic'])) .proceedButton:hover:not(:disabled) {
-  filter: none;
+.proceedButton:hover:not(:disabled) .proceedArrow {
+  transform: translateX(6px);
 }
 
 .proceedButton:focus-visible {
   outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset-compact);
+  outline-offset: 3px;
+  /* 초점 테두리가 흐려지지 않도록 초점이 있는 동안에는 가리지 않는다. */
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
+/* 아직 넘어갈 수 없다. 원의 모양은 그대로 두고 채움만 비워, 무엇을 누르면 되는지는 남긴다. */
 .proceedButton:disabled {
-  border-color: var(--thorp-line);
-  background: transparent;
-  color: var(--thorp-copy);
+  border-color: var(--thorp-line-control);
+  background: linear-gradient(90deg, var(--thorp-surface-raised) 0%, var(--thorp-surface) 100%);
+  color: var(--thorp-muted);
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
 .proceedStatus {
   margin: 0;
+  padding-left: 24px;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.74rem);
-  text-align: right;
+  font-size: var(--thorp-text-caption, 0.72rem);
+  line-height: 1.5;
 }
+
+/* 폭이 좁으면 단추를 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. */
+@media (max-width: 760px) {
+  .cardRow {
+    --proceed-size: 118px;
+
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .proceed {
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-self: end;
+    width: auto;
+    margin: -22px 0 0;
+  }
+
+  .proceedStatus {
+    padding-left: 0;
+    text-align: right;
+  }
+}
+
 
 /* 아직 상장하지 않은 대상 때문에 공통 구간이 없을 때만 타임라인 대신 보인다. */
 .listingNotice {
@@ -818,13 +883,6 @@
     align-items: stretch;
   }
 
-  .proceed {
-    align-items: stretch;
-  }
-
-  .proceedStatus {
-    text-align: left;
-  }
 }
 
 /* 선택한 대상의 공통 구간 하나만 남긴다. 초록색은 이 구간 외의 의미로 쓰지 않는다. */
@@ -1011,11 +1069,13 @@
 
 /* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
 @media (prefers-reduced-motion: reduce) {
-  .proceedButton {
+  .proceedButton,
+  .proceedArrow {
     transition: none;
   }
 
-  .proceedButton:hover:not(:disabled) {
+  .proceedButton:hover:not(:disabled),
+  .proceedButton:hover:not(:disabled) .proceedArrow {
     transform: none;
   }
 }
