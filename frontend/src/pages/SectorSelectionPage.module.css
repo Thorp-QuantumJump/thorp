@@ -1002,9 +1002,10 @@
 }
 
 .attribution {
-  margin: 4px 0 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  margin: 6px 4px 0 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  text-align: right;
 }
 
 /* 폭이 줄면 선택 요약을 아래로 내린다. 셋을 한 줄에 억지로 욱여넣지 않는다. */
