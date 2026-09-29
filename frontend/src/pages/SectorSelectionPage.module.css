@@ -785,6 +785,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: none;
   -webkit-mask-image: linear-gradient(90deg, #000 50%, transparent 65%);
   mask-image: linear-gradient(90deg, #000 50%, transparent 65%);
   -webkit-mask-size: calc(var(--proceed-size) * 2) 100%;
@@ -797,6 +798,7 @@
     -webkit-mask-position var(--proceed-motion),
     mask-position var(--proceed-motion),
     border-color var(--proceed-motion),
+    box-shadow var(--proceed-motion),
     color var(--proceed-motion),
     --thorp-proceed-fill var(--proceed-motion),
     transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -804,9 +806,38 @@
 }
 
 .proceedButton > * {
+  /* 아래 빛 번짐(::before)보다 위에 그린다. */
+  position: relative;
   transition:
     opacity 300ms ease 260ms,
     transform var(--proceed-motion);
+}
+
+/*
+  숨은 단계의 빛 번짐이다. 왼쪽 위에 옅게 번진 빛이 평평한 조각을 둥근 면으로 보이게 한다. 다 드러나면
+  모양·색과 같은 속도로 사라져 단색 채움만 남는다.
+*/
+.proceedButton::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at 26% 30%,
+    color-mix(in oklab, color-mix(in oklab, var(--thorp-accent) 45%, #fff) 16%, transparent) 0%,
+    transparent 58%
+  );
+  opacity: 0;
+  pointer-events: none;
+  content: '';
+  transition: opacity var(--proceed-motion);
+}
+
+.proceedButton[data-stage='0']::before {
+  opacity: 0.55;
+}
+
+.proceedButton[data-stage='1']::before {
+  opacity: 1;
 }
 
 .proceedStep {
@@ -844,12 +875,16 @@
 /*
   아직 넘어갈 수 없다(0~1개). 글자는 보이지 않고 눌리지 않는다.
 
-  0개는 불투명한 회청색 초승달이다. 초록은 넘어갈 수 있을 때만 쓴다. 채움이 카드·배경과 뚜렷이 달라
-  윤곽선은 두지 않는다(색만 투명하게 두어 두께가 바뀌며 모양이 튀지 않게 한다). 흐림은 뒤쪽 짧은 구간에만
-  남겨 앞쪽은 또렷하다.
+  세 단계는 **한 색상 계열**에서 밝기와 채도만 오른다: 카드 면에 가까운 깊은 에메랄드(0개) → 중간 톤의
+  초록(1개) → 브랜드 초록(2개). 불이 점점 켜지는 흐름으로 읽히게 하려는 것이다. 회색이나 다른 색을 끼우면
+  초록 단추의 앞 단계가 아니라 다른 물건으로 보이고, sRGB에서 회색과 초록을 섞으면 탁한 올리브가 된다.
+  그래서 oklab에서 섞는다. 등록한 색의 전환도 같은 공간에서 보간된다.
 
-  1개는 모든 것이 절반쯤 나아간 상태다. 가림막이 반쯤 걷혀 몸체가 밀려 나오고, 색은 회청색과 초록의
-  중간이며, 모양도 원과 물방울 사이다.
+  윤곽선 대신 앞쪽(왼쪽) 가장자리에 가는 빛선을 둔다. 두꺼운 테두리는 숨어 있는 조각을 도리어 도드라지게
+  한다. 테두리는 색만 투명하게 두어 두께가 바뀌며 모양이 튀지 않게 한다. 흐림은 뒤쪽 짧은 구간에만 남겨
+  앞쪽은 또렷하다.
+
+  1개는 모든 것이 절반쯤 나아간 상태다. 가림막이 반쯤 걷혀 몸체가 밀려 나오고, 모양도 원과 물방울 사이다.
 */
 .proceedButton:disabled {
   border-color: transparent;
@@ -858,21 +893,19 @@
 }
 
 .proceedButton[data-stage='0'] {
-  --thorp-proceed-fill: color-mix(in srgb, var(--thorp-copy, #a4aaa8) 32%, var(--thorp-surface-raised, #2a2e2d));
+  --thorp-proceed-fill: color-mix(in oklab, var(--thorp-accent) 28%, var(--thorp-surface-raised, #1f2321));
 
   border-radius: 50%;
+  box-shadow: inset 1.5px 0 0 color-mix(in oklab, var(--thorp-accent) 42%, transparent);
   -webkit-mask-position: calc(var(--proceed-size) * -0.76) 0;
   mask-position: calc(var(--proceed-size) * -0.76) 0;
 }
 
 .proceedButton[data-stage='1'] {
-  --thorp-proceed-fill: color-mix(
-    in srgb,
-    var(--thorp-accent) 50%,
-    color-mix(in srgb, var(--thorp-copy, #a4aaa8) 32%, var(--thorp-surface-raised, #2a2e2d))
-  );
+  --thorp-proceed-fill: color-mix(in oklab, var(--thorp-accent) 58%, var(--thorp-surface-raised, #1f2321));
 
   border-radius: 47% 53% 53% 47% / 50% 50% 50% 50%;
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--thorp-accent) 70%, #fff 10%);
   -webkit-mask-position: calc(var(--proceed-size) * -0.42) 0;
   mask-position: calc(var(--proceed-size) * -0.42) 0;
 }
