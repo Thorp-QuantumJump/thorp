@@ -250,6 +250,18 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           ) : (
             attribution
           )}
+
+          {/*
+            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+            탐색 카드 바로 아래에 지수를 가로로 펼친다. 선택 요약 끝에 두면 '다음: 전략 고르기' 뒤로 밀려 잘 읽히지 않았다.
+          */}
+          <section className={styles.marketStrip} aria-labelledby="market-now-title">
+            <h2 id="market-now-title">
+              <ChartNoAxesCombined size={14} aria-hidden="true" />
+              지금 국내 시장
+            </h2>
+            <MarketNow />
+          </section>
         </section>
 
         <SelectedInstrumentsRail
@@ -260,16 +272,6 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           onRemove={(code) => selection.toggleSector(code, false)}
           onProceed={proceed}
           proceedDisabled={selectedCount < MINIMUM_SECTOR_COUNT}
-          footer={
-            // 지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-            <section className={styles.railMarket} aria-labelledby="rail-market-title">
-              <h2 id="rail-market-title">
-                <ChartNoAxesCombined size={14} aria-hidden="true" />
-                지금 국내 시장
-              </h2>
-              <MarketNow />
-            </section>
-          }
         >
 
           {/*

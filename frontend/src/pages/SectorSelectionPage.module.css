@@ -1257,16 +1257,20 @@
 }
 
 /* '다음: 전략 고르기' 아래의 지금 국내 시장. 지수마다 카드 하나씩 세로로 쌓는다. */
-.railMarket {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--thorp-line);
+/* 탐색 카드 아래 '지금 국내 시장' 띠. 이름은 왼쪽, 지수 카드는 가로로 나란히 선다. */
+.marketStrip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px 24px;
+  margin-top: 16px;
+  padding: var(--thorp-pad-card, 18px);
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-card, 18px);
+  background: var(--thorp-surface);
 }
 
-.railMarket h2 {
+.marketStrip h2 {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1275,11 +1279,18 @@
   font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 600;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
-.railMarket h2 svg {
+.marketStrip h2 svg {
   flex-shrink: 0;
   color: var(--thorp-accent-soft);
+}
+
+@media (max-width: 620px) {
+  .marketStrip {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 투자 대상 아래 한 줄: 지금과 비슷했던 과거 시장(넓게)과 시장 흐름 뉴스. 높이는 둘 중 긴 쪽에 맞춘다. */
