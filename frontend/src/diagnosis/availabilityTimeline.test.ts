@@ -42,18 +42,24 @@ describe('타임라인을 그릴지 가르는 조건', () => {
     })
   })
 
-  it('가장 늦은 상장일이 아직 오지 않았으면 그리지 않는다', () => {
+  it('가장 늦은 상장일이 아직 오지 않았으면 막대를 그리지 않는다', () => {
     const 상장전 = sector('FUTURE', '예정', '2027-01-04')
-    expect(buildAvailabilityTimeline([반도체, 상장전], 오늘)).toEqual({ status: 'silent' })
+    expect(buildAvailabilityTimeline([반도체, 상장전], 오늘)).toEqual({
+      status: 'empty',
+      reason: 'noWindow',
+    })
   })
 
-  it('읽을 수 없는 상장일이 섞이면 날짜를 지어내지 않고 그리지 않는다', () => {
+  it('읽을 수 없는 상장일이 섞이면 날짜를 지어내지 않고 막대를 그리지 않는다', () => {
     const 깨진값 = sector('BROKEN', '깨짐', 'N/A')
-    expect(buildAvailabilityTimeline([반도체, 깨진값], 오늘)).toEqual({ status: 'silent' })
+    expect(buildAvailabilityTimeline([반도체, 깨진값], 오늘)).toEqual({
+      status: 'empty',
+      reason: 'noWindow',
+    })
   })
 
-  it('아무것도 고르지 않으면 그리지 않는다', () => {
-    expect(buildAvailabilityTimeline([], 오늘)).toEqual({ status: 'silent' })
+  it('아무것도 고르지 않으면 고르지 않았다는 까닭으로 비운다', () => {
+    expect(buildAvailabilityTimeline([], 오늘)).toEqual({ status: 'empty', reason: 'noSelection' })
   })
 
   it('오늘 상장한 한 대상도 0일 구간으로 그린다', () => {

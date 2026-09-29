@@ -19,6 +19,9 @@ import type { AvailabilityTimeline as Timeline } from '@/diagnosis/availabilityT
  * **공통 구간 자체는 접어 두지 않는다.** 원칙 II가 결과 의미를 바꾸는 자료 범위 표시를 상세 안에
  * 숨기지 못하게 한다. 상세에는 그 구간이 나온 근거만 둔다.
  *
+ * **카드는 늘 있다.** 아직 아무것도 고르지 않았거나 그릴 구간이 없어도 자리를 비우지 않고, 빈 축과 한 줄로
+ * 그 까닭을 알린다. 고를 때마다 카드가 생겼다 사라지면 아래 탐색 카드가 위아래로 밀린다.
+ *
  * 축 오른쪽 끝은 오늘이다. `GET /sectors` 응답에 자료 마감일이 없어 실제 마감일은 이보다 이를
  * 수 있고, 그 사실을 아래 한 줄로 적는다 — 없는 날짜를 지어내지 않는다(원칙 VI).
  */
@@ -45,8 +48,31 @@ function startLabelAlignment(ratio: number): 'start' | 'center' | 'end' {
   return 'center'
 }
 
+const TITLE = '비교 가능 기간'
+
 export function AvailabilityTimeline({ timeline, className }: AvailabilityTimelineProps) {
-  if (timeline.status === 'silent') return null
+  if (timeline.status === 'empty') {
+    return (
+      <section
+        className={className}
+        aria-label="고른 투자 대상의 비교 가능 구간"
+        data-slot="timeline"
+        data-empty="true"
+      >
+        <div data-slot="timeline-head">
+          <h2 data-slot="timeline-title">{TITLE}</h2>
+        </div>
+        <div data-slot="timeline-row">
+          <span data-slot="timeline-lane" aria-hidden="true" />
+          <p data-slot="timeline-empty">
+            {timeline.reason === 'noSelection'
+              ? '투자 대상을 고르면 함께 비교할 수 있는 구간이 여기에 나타납니다.'
+              : '고른 투자 대상으로는 아직 그릴 수 있는 공통 구간이 없습니다.'}
+          </p>
+        </div>
+      </section>
+    )
+  }
 
   const { axisEnd, tracks, commonStart, commonStartRatio, bindingSectorName } = timeline
   const tooltipId = `availability-${tracks.map((track) => track.code).join('-')}`
@@ -65,8 +91,8 @@ export function AvailabilityTimeline({ timeline, className }: AvailabilityTimeli
         있다는 표시가 없어 커서가 갑자기 바뀌는 것으로만 알 수 있었다.
       */}
       <div data-slot="timeline-head">
-        <h2 data-slot="timeline-title">함께 비교할 수 있는 기간</h2>
-        <InlineHelp label="함께 비교할 수 있는 기간">
+        <h2 data-slot="timeline-title">{TITLE}</h2>
+        <InlineHelp label={TITLE}>
           <p>
             <strong>{bindingSectorName}</strong>이(가) {commonStart}에 상장해 시작일이 정해졌습니다.
           </p>

@@ -29,18 +29,18 @@ export type TimelineTrack = {
 }
 
 /**
- * 타임라인이 화면에 놓일 상태다.
+ * 타임라인이 화면에 놓일 상태다. 카드는 어느 상태에서도 자리를 지키고, `empty`이면 막대 대신 한 줄로 까닭을 알린다.
  *
- * `silent`는 그릴 것이 없다는 뜻이며, 고른 대상이 없거나 상장일을 읽을 수 없거나 가장 늦은
- * 상장일이 아직 오지 않은 경우다.
+ * `empty`의 까닭은 둘이다. `noSelection`은 아직 아무것도 고르지 않은 경우다. `noWindow`는 상장일을 읽을
+ * 수 없거나 가장 늦은 상장일이 아직 오지 않아 그릴 구간이 없는 경우다.
  *
- * **마지막 경우를 굳이 그리지 않는 까닭**은 축 오른쪽 끝이 오늘이기 때문이다. 오늘 이후에
+ * **마지막 경우에 막대를 그리지 않는 까닭**은 축 오른쪽 끝이 오늘이기 때문이다. 오늘 이후에
  * 시작하는 막대는 축 밖에 놓여 폭이 0인 선으로만 보이는데, 그 그림이 알려 주는 사실은 이미
  * `ListingWindowNotice`가 한 문장으로 말하고 있다. 없는 자리를 억지로 그리면 사용자는 폭 0인
  * 막대를 "자료가 거의 없다"로 읽는다.
  */
 export type AvailabilityTimeline =
-  | { status: 'silent' }
+  | { status: 'empty'; reason: 'noSelection' | 'noWindow' }
   | {
       status: 'shown'
       /** 축 왼쪽 끝. 고른 대상 가운데 가장 이른 상장일이다. */
@@ -109,24 +109,24 @@ export function buildAvailabilityTimeline(
   selectedSectors: readonly SectorSummary[],
   today: string = localToday(),
 ): AvailabilityTimeline {
-  if (selectedSectors.length === 0) return { status: 'silent' }
+  if (selectedSectors.length === 0) return { status: 'empty', reason: 'noSelection' }
 
   let earliest = selectedSectors[0]
   let latest = selectedSectors[0]
   for (const sector of selectedSectors) {
     const listedOn = sector.representativeEtf.listedOn
-    if (!ISO_DATE_SHAPE.test(listedOn)) return { status: 'silent' }
+    if (!ISO_DATE_SHAPE.test(listedOn)) return { status: 'empty', reason: 'noWindow' }
     if (listedOn < earliest.representativeEtf.listedOn) earliest = sector
     if (listedOn > latest.representativeEtf.listedOn) latest = sector
   }
 
   const commonStart = latest.representativeEtf.listedOn
-  if (commonStart > today) return { status: 'silent' }
+  if (commonStart > today) return { status: 'empty', reason: 'noWindow' }
 
   const axisStart = earliest.representativeEtf.listedOn
   const axisEnd = today
   const span = toEpoch(axisEnd) - toEpoch(axisStart)
-  if (span < 0) return { status: 'silent' }
+  if (span < 0) return { status: 'empty', reason: 'noWindow' }
 
   const tracks = selectedSectors.map((sector) => ({
     code: sector.code,

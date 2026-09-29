@@ -247,9 +247,9 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           ) : null}
 
           {/*
-            고른 대상의 상장 구간과 공통 구간이다. 탐색 카드 **바로 위**에 둔다 — 대상을 넣고 빼는
+            고른 대상의 공통 비교 가능 구간이다. 탐색 카드 **바로 위**에 늘 둔다. 대상을 넣고 빼는
             자리에서 그 결과가 바로 보여야 한다. 하나만 골라도 그 대상의 시작일부터 오늘까지를
-            보여 주며, 아무것도 고르지 않았을 때만 자리를 만들지 않는다.
+            보여 주고, 아무것도 고르지 않았으면 빈 축과 한 줄 안내로 자리를 지킨다.
           */}
           <AvailabilityTimeline className={styles.timeline} timeline={timeline} />
           {listingWindow.status === 'unavailable' ? (

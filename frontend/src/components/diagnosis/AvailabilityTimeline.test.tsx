@@ -31,9 +31,15 @@ function renderTimeline(sectors: SectorSummary[]) {
 }
 
 describe('비교 가능 구간 타임라인', () => {
-  it('그릴 것이 없으면 자리 자체를 만들지 않는다', () => {
+  it('아무것도 고르지 않아도 카드는 남고 막대 대신 한 줄로 알린다', () => {
     const { container } = renderTimeline([])
-    expect(container.querySelector('[data-slot="timeline"]')).toBeNull()
+    const card = container.querySelector('[data-slot="timeline"]')
+    expect(card).not.toBeNull()
+    expect(card?.querySelector('[data-slot="timeline-title"]')?.textContent).toBe('비교 가능 기간')
+    expect(container.querySelector('[data-slot="common-bar"]')).toBeNull()
+    expect(container.querySelector('[data-slot="timeline-empty"]')?.textContent).toContain(
+      '투자 대상을 고르면',
+    )
   })
 
   it('하나만 골라도 그 대상의 기간을 보인다', () => {
@@ -121,7 +127,7 @@ describe('비교 가능 구간 타임라인', () => {
     // 누를 것은 설명을 여는 물음표 하나뿐이다. 기간을 바꾸는 조작은 두지 않는다.
     const buttons = [...container.querySelectorAll('button')]
     expect(buttons).toHaveLength(1)
-    expect(buttons[0].getAttribute('aria-label') ?? buttons[0].textContent).toContain('함께 비교할 수 있는 기간')
+    expect(buttons[0].getAttribute('aria-label') ?? buttons[0].textContent).toContain('비교 가능 기간')
     expect(container.querySelector('[role="slider"]')).toBeNull()
   })
 })

@@ -968,6 +968,24 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 물음표가 없는 빈 카드도 같은 높이를 쓴다. 고를 때마다 아래 카드가 밀리지 않게 한다. */
+  min-height: 24px;
+}
+
+/* 아직 그릴 구간이 없을 때: 빈 축 아래에 날짜 대신 한 줄로 까닭을 적는다. 그린 카드와 같은 높이다. */
+.timeline[data-empty='true'] [data-slot='timeline-row'] {
+  position: relative;
+  padding-block: 6px 20px;
+}
+
+.timeline [data-slot='timeline-empty'] {
+  position: absolute;
+  top: 17px;
+  left: 0;
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-label, 0.68rem);
+  line-height: 1;
 }
 
 .timeline [data-slot='timeline-head'] [data-slot='timeline-title'] {
