@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMarketNewsDigests, fetchNewsSectors } from '@/api/marketNews'
 import { SectorNews } from './SectorNews'
@@ -63,12 +63,22 @@ describe('SectorNews (002 FR-019)', () => {
     expect(screen.queryByRole('button', { name: '반도체' })).toBeNull()
   })
 
+  it('제목 옆 i 표시를 열면 뉴스 갱신 주기를 알린다', async () => {
+    render(<SectorNews />)
+
+    fireEvent.focus(screen.getByRole('button', { name: '뉴스 갱신 도움말' }))
+    const tooltip = await screen.findByRole('tooltip')
+    expect(tooltip.textContent).toContain('약 15분마다')
+    expect(tooltip.textContent).not.toMatch(/실시간/)
+  })
+
   it('섹터 목록을 받지 못해도 전체 뉴스는 보인다', async () => {
     vi.mocked(fetchNewsSectors).mockRejectedValue(new Error('offline'))
     render(<SectorNews />)
 
     await waitFor(() => expect(vi.mocked(fetchMarketNewsDigests)).toHaveBeenCalled())
-    expect(screen.getAllByRole('button')).toHaveLength(1)
+    // 분류 탭 줄에는 '전체' 하나만 남는다. 제목 옆 i 표시는 탭이 아니다.
+    expect(within(screen.getByRole('group', { name: '분류별로 보기' })).getAllByRole('button')).toHaveLength(1)
     expect(screen.getByRole('button', { name: '전체' })).toBeTruthy()
   })
 })

@@ -10,6 +10,13 @@
   background: var(--thorp-surface);
 }
 
+/* 제목과 그 옆 i 표시. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .title {
   display: flex;
   align-items: center;
