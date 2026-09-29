@@ -126,10 +126,8 @@ describe('LearningArticlePage', () => {
     const retry = screen.getByRole('button', { name: '다시 시도' })
     expect(retry.tagName).toBe('BUTTON')
     expect(apiMocks.fetchLearningArticle).toHaveBeenCalledTimes(1)
-    // 글을 받지 못해도 진단을 시작하는 연결은 남는다(US1 시나리오 7, T081).
-    expect(
-      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
-    ).toBe('/diagnosis/sectors')
+    // 진단으로 가는 길은 상단 메뉴가 맡는다. 화면 안에 따로 진입 링크를 두지 않는다(US1 시나리오 7).
+    expect(screen.queryByRole('link', { name: /바로 전략 진단하기/ })).toBeNull()
 
     await user.tab()
     expect(document.activeElement).toBe(retry)

@@ -53,18 +53,16 @@ describe('LearningListPage', () => {
     expect(document.body.textContent).not.toMatch(progressWords)
   })
 
-  it('목록을 불러오는 동안에도 진단 시작 연결이 있다', async () => {
+  it('목록을 불러오는 동안에도 상태를 알리고, 진단 진입은 화면 안에 따로 두지 않는다', async () => {
     apiMocks.fetchLearningArticles.mockReturnValue(new Promise(() => {}))
 
     renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
 
     expect(await screen.findByRole('status')).not.toBeNull()
-    expect(
-      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
-    ).toBe('/diagnosis/sectors')
+    expect(screen.queryByRole('link', { name: /바로 전략 진단하기/ })).toBeNull()
   })
 
-  it('게시된 글이 없으면 경고가 아닌 한 문장과 진단 시작 연결을 보인다', async () => {
+  it('게시된 글이 없으면 경고가 아닌 한 문장을 보인다', async () => {
     apiMocks.fetchLearningArticles.mockResolvedValue({ status: 'empty' })
 
     renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
@@ -72,12 +70,10 @@ describe('LearningListPage', () => {
     expect(await screen.findByText('아직 게시된 글이 없습니다.')).not.toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
-    expect(
-      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
-    ).toBe('/diagnosis/sectors')
+    expect(screen.queryByRole('link', { name: /바로 전략 진단하기/ })).toBeNull()
   })
 
-  it('불러오지 못하면 빈 목록과 다르게 경고와 다시 시도를 보이고 진단 연결은 남긴다', async () => {
+  it('불러오지 못하면 빈 목록과 다르게 경고와 다시 시도를 보인다', async () => {
     apiMocks.fetchLearningArticles.mockResolvedValue(failed)
 
     renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
@@ -85,9 +81,7 @@ describe('LearningListPage', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('글 목록을 만들지 못했습니다.')
     expect(screen.getByRole('button', { name: '다시 시도' })).not.toBeNull()
     expect(screen.queryByText('아직 게시된 글이 없습니다.')).toBeNull()
-    expect(
-      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
-    ).toBe('/diagnosis/sectors')
+    expect(screen.queryByRole('link', { name: /바로 전략 진단하기/ })).toBeNull()
   })
 
   it('다시 시도는 누를 때만 한 번 더 부른다', async () => {
