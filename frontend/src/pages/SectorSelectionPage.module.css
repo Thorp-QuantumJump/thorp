@@ -735,6 +735,13 @@
   background: var(--thorp-surface);
 }
 
+/* 제목과 그 옆 물음표. '함께 비교할 수 있는 기간' 머리와 같은 짜임이다. */
+.rail [data-slot='rail-head'] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .rail [data-slot='rail-title'] {
   margin: 0;
   font-size: var(--thorp-text-body, 0.98rem);
@@ -910,6 +917,15 @@
     display: inline;
   }
 
+  /* 좁힌 선택 요약에는 설명을 펼칠 자리가 없다. 넓히면 다시 보인다. */
+  .rail[data-compact='true'] [data-slot='rail-head'] > button {
+    display: none;
+  }
+
+  .rail[data-compact='true'] [data-slot='rail-head'] {
+    justify-content: center;
+  }
+
   .rail[data-compact='true'] [data-slot='rail-empty'],
   .rail[data-compact='true'] [data-slot='rail-list'],
   .rail[data-compact='true'] [data-slot='rail-count'],
@@ -973,21 +989,6 @@
     align-items: center;
     gap: 6px;
   }
-}
-
-/* 고른 대상이 무엇을 뜻하는지 알리는 자리다. 선택 요약과 같은 묶음에서 읽힌다. */
-.meaningNotice {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.meaningNotice p {
-  margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
-  line-height: 1.6;
-  padding: var(--thorp-pad-notice, 9px 12px);
 }
 
 /* 아직 상장하지 않은 대상 때문에 공통 구간이 없을 때만 타임라인 대신 보인다. */
