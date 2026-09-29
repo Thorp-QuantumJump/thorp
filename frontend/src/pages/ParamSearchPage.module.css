@@ -24,10 +24,6 @@
   letter-spacing: 0.14em;
 }
 
-:global(:root:not([data-design='classic'])) .classicOnly {
-  display: none;
-}
-
 .main h1 {
   max-width: none;
   margin: 0;

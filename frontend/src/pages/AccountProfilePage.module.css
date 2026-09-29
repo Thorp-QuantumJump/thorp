@@ -11,7 +11,13 @@
   box-sizing: border-box;
   width: min(100% - var(--thorp-page-gutter, 40px), var(--thorp-reading-width, 960px));
   margin: 0 auto;
-  padding: var(--thorp-records-top, clamp(64px, 10vh, 112px)) 0 var(--thorp-page-bottom, 120px);
+  padding: clamp(64px, 10vh, 112px) 0 120px;
+}
+
+/* 위아래 여백은 다른 화면과 같은 쪽 토큰을 쓴다. 이 두 토큰은 classic에서도 값이 있어 폴백으로 둘 수 없으므로
+   새 디자인에서만 덮는다. */
+:global(:root:not([data-design='classic'])) .main {
+  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .previewNotice {
@@ -28,10 +34,6 @@
 :global(:root:not([data-design='classic'])) .previewNotice {
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card);
-}
-
-:global(:root:not([data-design='classic'])) .classicOnly {
-  display: none;
 }
 
 .heading {
@@ -206,6 +208,7 @@
 @media (max-width: 600px) {
   .main {
     width: min(100% - 28px, 960px);
+    padding-top: 64px;
   }
 
   .heading {
