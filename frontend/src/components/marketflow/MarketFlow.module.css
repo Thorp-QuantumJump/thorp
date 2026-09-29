@@ -7,12 +7,10 @@
 .openButton { display: flex; align-items: center; gap: 8px; min-height: var(--thorp-control, 40px); padding: 0 16px; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .openButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); border-radius: var(--thorp-radius-control, 6px); }
 /*
-  변화 요약 팝오버. 버튼을 가리키거나 초점을 줄 때만 그 아래에 뜬다. 버튼이 aria-describedby로 이 칸을 가리켜
-  보조기기는 뜨지 않아도 읽는다. 오른쪽 끝 버튼들은 화면을 넘지 않도록 오른쪽에 맞춰 편다.
+  변화 요약 말풍선. 문서 끝(Portal)에 그려지고 자리는 Radix Popover 가 버튼 아래로 잡으며, 화면 끝에서는 안쪽으로
+  비켜 선다. 여닫기는 FieldSummaryCard 가 도움말과 같은 규칙으로 정한다.
 */
-.fieldTip { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: max-content; max-width: min(300px, calc(100vw - 32px)); padding: var(--thorp-pad-notice, 12px 14px); border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-inset, 8px); background: var(--thorp-surface-raised); box-shadow: 0 12px 32px rgb(0 0 0 / 40%); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-4px); transition: opacity 140ms ease, transform 140ms ease, visibility 0s linear 140ms; }
-.summaryCard:nth-last-child(-n+3) .fieldTip { right: 0; left: auto; }
-.summaryCard:hover .fieldTip, .summaryCard:focus-within .fieldTip { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.fieldTip { z-index: 80; width: max-content; max-width: min(300px, calc(100vw - 32px)); padding: var(--thorp-pad-notice, 12px 14px); border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-inset, 8px); background: var(--thorp-surface-raised); box-shadow: 0 12px 32px rgb(0 0 0 / 40%); color: var(--thorp-foreground); font-family: var(--thorp-font-page, inherit); }
 .fieldTip .narrative { margin: 0 0 6px; color: var(--thorp-foreground); }
 .narrative { margin: 2px 0 7px; color: var(--thorp-copy); font-size: var(--thorp-text-caption, .76rem); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
 .stateLine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.45; font-variant-numeric: tabular-nums; }
@@ -79,13 +77,6 @@
 /* 찾을 기준월이 정해지지 않은 분야다. 못 누른다는 것이 커서에도 보여야 한다. */
 .similarButton:disabled { color: var(--thorp-muted); cursor: not-allowed; }
 .similarButton:disabled:hover svg { transform: none; color: var(--thorp-copy); }
-/*
-  좁은 화면에서는 팝오버를 띄우지 않는다. 메뉴가 여러 줄로 접혀 팝오버가 화면 밖으로 나가고, 누르면 곧바로 그
-  분야가 열려 요약이 상세 머리에 보인다. 버튼의 설명 연결은 그대로라 보조기기는 계속 읽는다.
-*/
-@media (max-width: 600px) {
-  .fieldTip { display: none; }
-}
 @media (max-width: 800px) {
   .openButton { padding: 0 12px; }
   .chartGrid text { font-size: 19px; }
@@ -97,7 +88,7 @@
   .similarButton { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .summaryCard, .fieldTip { transition: none; }
+  .summaryCard { transition: none; }
 }
 
 /* 섹터 선택. FR-005가 요구하는 하나뿐인 주요 행동(분야 열기)과 경쟁하지 않도록 낮은 무게로 둔다. */
@@ -117,9 +108,9 @@
 .newsMeta { flex-shrink: 0; font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); white-space: nowrap; }
 
 /*
-  디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 분야 목록을
-  카드 안 선택 목록으로, 상세를 머리·지표 칸·바닥으로 나뉜 카드로, 지표를 두 열 칸으로 묶는다.
-  상세의 바깥 카드와 안쪽 여백(24px)은 MarketFlowPage의 .detailPanel이 정한다.
+  디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 상세를 머리·지표
+  칸·바닥으로 나뉜 카드로, 지표를 가로로 나란히 선 칸으로 묶는다. 분야 메뉴 버튼 모양은 위 기본 규칙이 두
+  디자인에 함께 정한다(2026-09-29). 상세의 바깥 카드와 안쪽 여백(24px)은 MarketFlowPage의 .detailPanel이 정한다.
 */
 :global(:root:not([data-design='classic'])) .stateLabel { padding: 1px 7px; border-radius: 999px; }
 

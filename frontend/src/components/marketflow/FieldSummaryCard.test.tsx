@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { FieldSummaryCard } from './FieldSummaryCard'
 
@@ -22,5 +22,26 @@ describe('FieldSummaryCard', () => {
     render(<FieldSummaryCard onOpen={vi.fn()} field={{ ...ready, isExampleData: true }} listUpdatedAt="2026-09-16T00:00:00Z" />)
     expect(screen.getByText('예시 자료')).toBeTruthy()
     expect(screen.getByText(/갱신 2026-09-16 06:10 KST/)).toBeTruthy()
+  })
+
+  it('상태 표는 버튼 이름에 들어가고, 요약은 설명으로 늘 연결된다 (009 FR-002·FR-011·FR-014)', () => {
+    render(<FieldSummaryCard onOpen={vi.fn()} field={{ ...ready, status: 'COLLECTION_FAILED' }} />)
+    const button = screen.getByRole('button', { name: '노동 분야 열기 (최근 수집 실패)' })
+    const description = document.getElementById(button.getAttribute('aria-describedby') ?? '')
+    expect(description?.textContent).toContain('실업률이 올랐습니다.')
+    expect(description?.textContent).toContain('대상월 2026-08')
+  })
+
+  it('초점을 주면 요약 말풍선이 열리고 Esc로 닫힌다', async () => {
+    render(<FieldSummaryCard onOpen={vi.fn()} field={ready} />)
+    const button = screen.getByRole('button', { name: '노동 분야 열기' })
+    // 닫혀 있을 때 요약은 숨은 설명 한 곳에만 있다.
+    expect(screen.getAllByText('실업률이 올랐습니다.')).toHaveLength(1)
+
+    fireEvent.focus(button)
+    await waitFor(() => expect(screen.getAllByText('실업률이 올랐습니다.')).toHaveLength(2))
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    await waitFor(() => expect(screen.getAllByText('실업률이 올랐습니다.')).toHaveLength(1))
   })
 })
