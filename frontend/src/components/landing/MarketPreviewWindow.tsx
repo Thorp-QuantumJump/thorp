@@ -343,7 +343,13 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })
     <div ref={windowRef} className={styles.previewWindow} role="group" aria-label={activeReal ? '국내 시장 지표 최근 흐름' : '국내 시장 지표 움직임 예시'}>
       <div className={styles.previewBar}>
         <span className={styles.previewDots} aria-hidden="true"><i /><i /><i /></span>
-        <span className={styles.previewAddress} aria-hidden="true">thorp · <b>시장 흐름</b></span>
+        {/*
+          결과마다 계산 해시로 된 주소가 붙는다는 것을 주소창 예시로 보인다. 실제 결과 주소와 같은 모양이다
+          (`/results/:token`).
+        */}
+        <span className={styles.previewAddress} aria-hidden="true">
+          https://j15e205.p.ssafy.io/results/<b>0bb83b0a41fad4605d406389b66b98cf</b>
+        </span>
         {/* 실제 값이면 원천과 기준일을, 아니면 만든 흐름임을 밝힌다. */}
         <span className={styles.previewExample}>
           {activeReal ? `${activeReal.provider} · ${activeReal.lastDate} 기준${activeReal.stale ? ' · 갱신 지연' : ''}` : '움직임 예시'}

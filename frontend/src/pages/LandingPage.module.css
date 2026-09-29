@@ -50,6 +50,15 @@
   font-family: var(--thorp-font-display);
 }
 
+/*
+  첫 화면은 문서가 아니라 이 칸이 스크롤된다. 문서 쪽 스크롤바 자리 예약(index.css의 html
+  scrollbar-gutter)이 남으면 이 칸의 스크롤바 오른쪽에 빈 띠가 한 줄 더 생겨, 스크롤바가 화면 끝에
+  붙지 않는다. 이 칸이 있는 동안만 예약을 푼다.
+*/
+:global(html):has(.page) {
+  scrollbar-gutter: auto;
+}
+
 .page::before {
   position: fixed;
   z-index: 20;
