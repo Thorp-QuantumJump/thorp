@@ -6,7 +6,7 @@
   고른 버튼 밑줄. 버튼의 둥근 모서리 안쪽 끝까지 넓히고, 가운데는 3px로 두껍게 시작해 양 끝으로 갈수록 얇아진다.
   테두리(1px) 위에 겹쳐 그리므로 끝에서는 테두리 두께로 이어진다.
 */
-.selectionLine { position: absolute; right: 6px; bottom: -1px; left: 6px; height: 3px; background: var(--thorp-accent-soft); clip-path: ellipse(50% 100% at 50% 100%); }
+.selectionLine { position: absolute; right: 6px; bottom: -1px; left: 6px; height: 3px; background: linear-gradient(var(--thorp-accent-soft), var(--thorp-accent-soft)) bottom / 100% 1px no-repeat, radial-gradient(50% 100% at 50% 100%, var(--thorp-accent-soft) 98%, transparent 100%); }
 .summaryHeading { margin: 0; font-size: var(--thorp-text-small, .82rem); }
 .openButton { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; width: 100%; min-height: var(--thorp-control, 40px); padding: 6px 10px; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; text-align: center; word-break: keep-all; cursor: pointer; }
 .openButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); border-radius: var(--thorp-radius-control, 6px); }
