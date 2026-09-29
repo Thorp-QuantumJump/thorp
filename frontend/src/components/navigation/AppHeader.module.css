@@ -417,9 +417,10 @@
 }
 
 @media (max-width: 720px) {
+  /* 좁은 폭에서도 화면 내용 틀의 폭·여백을 따른다. classic 은 변수를 비워 예전 값(28px)으로 돌아간다. */
   .inner {
     grid-template-columns: 1fr auto;
-    width: min(100% - 28px, 1440px);
+    width: min(100% - var(--thorp-content-gutter, 28px), var(--thorp-content-width, 1440px));
   }
 
   .desktopNav {

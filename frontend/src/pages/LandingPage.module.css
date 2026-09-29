@@ -675,6 +675,9 @@
 
 @media (max-width: 760px) {
   .page {
+    /* 칸이 한 열로 접히며 폭·여백이 바뀐다(.heroLayout). 상단 바도 같은 값을 따라 양 끝을 맞춘다. */
+    --thorp-content-width: 640px;
+    --thorp-content-gutter: 28px;
     scroll-snap-type: none;
   }
 
