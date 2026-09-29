@@ -52,6 +52,11 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public void updateNickname(Long id, String nickname) {
+        userJpaRepository.updateNickname(id, nickname, Instant.now());
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         return userJpaRepository.existsByEmail(email);
     }

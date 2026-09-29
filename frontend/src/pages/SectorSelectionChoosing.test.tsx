@@ -95,6 +95,7 @@ function renderPage() {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   }
 
   return render(

@@ -3,6 +3,7 @@ package com.ssafy.thorp.account.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,6 +24,7 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -47,6 +49,16 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("회원정보 수정 경로만 로그인을 요구하고 가입 경로는 비로그인으로 둔다")
+    void accountProfileRouteRequiresAuthenticationButSignupDoesNot() throws Exception {
+        mockMvc.perform(patch("/accounts/me").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"));
+
+        mockMvc.perform(post("/accounts").with(csrf())).andExpect(status().isNoContent());
     }
 
     @Test
@@ -112,6 +124,15 @@ class AuthSecurityIntegrationTest {
         String currentUser() {
             return "authenticated";
         }
+
+        @PatchMapping("/accounts/me")
+        String changeProfile() {
+            return "authenticated";
+        }
+
+        @PostMapping("/accounts")
+        @ResponseStatus(HttpStatus.NO_CONTENT)
+        void signup() {}
 
         @PostMapping("/backtests/security-probe")
         @ResponseStatus(HttpStatus.NO_CONTENT)

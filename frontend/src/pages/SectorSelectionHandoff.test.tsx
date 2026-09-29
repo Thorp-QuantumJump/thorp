@@ -79,6 +79,7 @@ async function openPage() {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   }
 
   const result = render(

@@ -29,4 +29,12 @@ public interface UserRepository {
      * 상대의 갱신을 되돌린다.
      */
     void updateLastLoginAt(Long id, Instant lastLoginAt);
+
+    /**
+     * 닉네임만 갱신한다.
+     *
+     * <p>{@link #updateLastLoginAt}과 같은 이유로 도메인 객체를 통째로 저장하지 않는다. 다른 기기의 로그인이 같은 행의 마지막 로그인 시각을 쓰는
+     * 중이어도 서로의 갱신을 되돌리지 않는다.
+     */
+    void updateNickname(Long id, String nickname);
 }

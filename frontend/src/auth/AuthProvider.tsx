@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  changeNickname as requestChangeNickname,
   getCurrentUser,
   login as requestLogin,
   logout as requestLogout,
@@ -138,6 +139,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [commitSnapshot])
 
+  /**
+   * 닉네임 변경이 성공하면 로그인한 사용자만 바뀐 값으로 갈아 끼운다.
+   *
+   * 로그인 상태가 아닌 동안(재확인 중·만료)에는 덮지 않는다. 재확인 중이면 그 응답이 이미 바뀐 닉네임을
+   * 가져오고, 만료면 401 가로채기가 상태를 정한다.
+   */
+  const updateNickname = useCallback(async (nickname: string, signal?: AbortSignal) => {
+    const user = await requestChangeNickname(nickname, signal)
+    if (mountedRef.current && snapshotRef.current.status === 'authenticated') {
+      commitSnapshot({ status: 'authenticated', user })
+    }
+    return user
+  }, [commitSnapshot])
+
   useEffect(() => subscribeAuthenticationRequired(() => {
     if (snapshotRef.current.status !== 'authenticated') return
     requestIdRef.current += 1
@@ -162,8 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [recheck])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ...snapshot, login, logout, recheck }),
-    [login, logout, recheck, snapshot],
+    () => ({ ...snapshot, login, logout, recheck, updateNickname }),
+    [login, logout, recheck, snapshot, updateNickname],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

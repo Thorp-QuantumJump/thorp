@@ -14,6 +14,7 @@ vi.mock('@/auth/auth-context', () => ({
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   }),
 }))
 
