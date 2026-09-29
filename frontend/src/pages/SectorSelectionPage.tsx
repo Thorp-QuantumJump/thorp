@@ -245,7 +245,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
               onView={setViewingCode}
               onToggleSelected={selection.toggleSector}
               onExpandedChange={setDetailExpanded}
-              footer={attribution}
+              source={`출처: ${KRX_SOURCE_ATTRIBUTION}`}
             />
           ) : (
             attribution

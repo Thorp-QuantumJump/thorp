@@ -191,6 +191,15 @@ describe('대표 상품 정보 패널', () => {
     window.sessionStorage.clear()
   })
 
+  it('가격 흐름을 그리지 못하면 출처를 카드 바닥에 따로 남긴다 (원칙 X)', async () => {
+    await openPage()
+
+    // 기간 줄이 없으니 출처가 이어 붙을 자리가 없다. 그래도 화면에서 빠지지 않는다.
+    const card = document.querySelector('[data-viewing-code]') as HTMLElement
+    await waitFor(() => expect(card.querySelector('[data-slot="footer"] [data-slot="source"]')?.textContent).toContain('한국거래소 통계정보'))
+    expect(card.querySelector('[data-slot="chart-source"]')).toBeNull()
+  })
+
   it('접어 둔 카드는 상품 정보를 부르지 않는다', async () => {
     await openPage()
 

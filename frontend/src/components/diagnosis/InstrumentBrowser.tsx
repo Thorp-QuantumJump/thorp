@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { PriceTrend } from '@/components/diagnosis/PriceTrend'
@@ -23,8 +23,11 @@ type InstrumentBrowserProps = {
   onView: (code: string) => void
   onToggleSelected: (code: string, selected: boolean) => void
   onExpandedChange: (expanded: boolean) => void
-  /** 카드 바닥 오른쪽에 붙는 한 줄. 목록 화면이 출처를 여기에 둔다. */
-  footer?: ReactNode
+  /**
+   * 이 카드 자료의 출처 문장(원칙 X). 가격 흐름이 그려지면 기간 줄 오른쪽 끝에 잇고, 그리지 못했을 때만 카드
+   * 바닥 오른쪽에 따로 둔다 — 어느 경우든 화면에서 빠지지 않는다.
+   */
+  source?: string
   className?: string
 }
 
@@ -51,7 +54,7 @@ export function InstrumentBrowser({
   onView,
   onToggleSelected,
   onExpandedChange,
-  footer,
+  source,
   className,
 }: InstrumentBrowserProps) {
   const headingId = useId()
@@ -199,6 +202,7 @@ export function InstrumentBrowser({
 
           <PriceTrend
             name={viewing.representativeEtf.name}
+            source={source}
             result={priceSeries.result}
             onReload={priceSeries.reload}
             expanded={expanded}
@@ -213,7 +217,11 @@ export function InstrumentBrowser({
 
         {expanded ? <HoldingsColumn result={result} /> : null}
       </div>
-      {footer ? <div data-slot="footer">{footer}</div> : null}
+      {source && priceSeries.result?.status !== 'loaded' ? (
+        <div data-slot="footer">
+          <p data-slot="source">{source}</p>
+        </div>
+      ) : null}
     </section>
   )
 }
