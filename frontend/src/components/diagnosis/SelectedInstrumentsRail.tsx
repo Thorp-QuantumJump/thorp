@@ -136,9 +136,9 @@ export function SelectedInstrumentsRail({
         data-slot="rail-proceed"
         onClick={onProceed}
         disabled={proceedDisabled}
-        aria-label="다음: 전략 고르기"
+        aria-label="STEP 02 - 전략 고르기"
       >
-        <span data-slot="rail-proceed-full">다음: 전략 고르기</span>
+        <span data-slot="rail-proceed-full">STEP 02 - 전략 고르기</span>
         <span data-slot="rail-proceed-compact">
           <span>전략 고르기</span>
           <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />

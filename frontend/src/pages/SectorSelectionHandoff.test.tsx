@@ -119,7 +119,7 @@ async function add(user: User, ...codes: string[]) {
 }
 
 function proceedButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: '다음: 전략 고르기' }) as HTMLButtonElement
+  return screen.getByRole('button', { name: 'STEP 02 - 전략 고르기' }) as HTMLButtonElement
 }
 
 /** 오른쪽 선택 요약에 담긴 코드를 순서대로 모은다. */

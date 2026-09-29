@@ -253,7 +253,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
 
           {/*
             지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-            탐색 카드 바로 아래에 지수를 가로로 펼친다. 선택 요약 끝에 두면 '다음: 전략 고르기' 뒤로 밀려 잘 읽히지 않았다.
+            탐색 카드 바로 아래에 지수를 가로로 펼친다. 선택 요약 끝에 두면 'STEP 02 - 전략 고르기' 뒤로 밀려 잘 읽히지 않았다.
           */}
           <section className={styles.marketStrip} aria-labelledby="market-now-title">
             <h2 id="market-now-title">
