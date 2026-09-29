@@ -1,10 +1,14 @@
 /* 분야 메뉴 버튼 하나. 일곱 개가 한 줄에 따로 선다. 고른 버튼만 초록 테두리와 바탕을 얻는다. */
-.summaryCard { position: relative; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 6px); transition: border-color 160ms ease, background 160ms ease; }
+.summaryCard { position: relative; min-width: 0; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 6px); transition: border-color 160ms ease, background 160ms ease; }
 .summaryCard:hover, .summaryCard:focus-within { border-color: var(--thorp-line-control-hover, var(--thorp-copy)); }
 .summaryCard[data-selected='true'] { border-color: var(--thorp-accent-soft); background: var(--thorp-accent-muted); }
-.selectionLine { position: absolute; right: 10px; bottom: -1px; left: 10px; height: 2px; border-radius: 2px; background: var(--thorp-accent); }
+/*
+  고른 버튼 밑줄. 버튼의 둥근 모서리 안쪽 끝까지 넓히고, 가운데는 3px로 두껍게 시작해 양 끝으로 갈수록 얇아진다.
+  테두리(1px) 위에 겹쳐 그리므로 끝에서는 테두리 두께로 이어진다.
+*/
+.selectionLine { position: absolute; right: 6px; bottom: -1px; left: 6px; height: 3px; background: linear-gradient(var(--thorp-accent-soft), var(--thorp-accent-soft)) bottom / 100% 1px no-repeat, radial-gradient(50% 100% at 50% 100%, var(--thorp-accent-soft) 98%, transparent 100%); }
 .summaryHeading { margin: 0; font-size: var(--thorp-text-small, .82rem); }
-.openButton { display: flex; align-items: center; gap: 8px; min-height: var(--thorp-control, 40px); padding: 0 16px; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.openButton { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; width: 100%; min-height: var(--thorp-control, 40px); padding: 6px 10px; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; text-align: center; word-break: keep-all; cursor: pointer; }
 .openButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); border-radius: var(--thorp-radius-control, 6px); }
 /*
   변화 요약 말풍선. 문서 끝(Portal)에 그려지고 자리는 Radix Popover 가 버튼 아래로 잡으며, 화면 끝에서는 안쪽으로
@@ -23,18 +27,23 @@
 .stateMeta dd { margin: 0; color: var(--thorp-foreground); }
 .historyNotice { width: 100%; margin: 0; font-size: var(--thorp-text-caption, .75rem); line-height: 1.5; }
 .detail { min-width: 0; }
-.detailHeader { padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }
-.detailTitle { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 5px; }
-.detailEyebrow { color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 500 var(--thorp-text-label, .6rem)/1.4 var(--thorp-font-display); letter-spacing: .14em; }
-.detailTitle h2 { margin: 0; font: 600 1.8rem/1.2 var(--thorp-font-page, var(--thorp-font-body)); letter-spacing: -.045em; }
-.detailNarrative { margin: 12px 0; color: var(--thorp-foreground); font-size: var(--thorp-text-body, .91rem); line-height: 1.55; word-break: keep-all; }
+.detailHeader { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name meta' 'narrative action'; align-items: center; gap: 14px 24px; padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }
+.detailName { grid-area: name; }
+.detailMeta { grid-area: meta; }
+.detailNarrative { grid-area: narrative; }
+.detailAction { grid-area: action; display: grid; justify-items: end; gap: 6px; }
+/* 머리 오른쪽 위. 기준 시점 한 줄과, 있으면 그 밑에 상태 표. */
+.detailMeta { display: grid; justify-items: end; gap: 6px; }
+.similarNote { max-width: 260px; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-caption, .72rem); line-height: 1.5; text-align: right; }
+.detailName { margin: 0; font: 600 1.8rem/1.2 var(--thorp-font-page, var(--thorp-font-body)); letter-spacing: -.045em; }
+.detailNarrative { margin: 0; color: var(--thorp-foreground); font-size: var(--thorp-text-body, .91rem); line-height: 1.55; word-break: keep-all; }
 /* 머리 오른쪽. 소속 지표 수 아래에 상태 표 하나. */
 .detailFacts { display: grid; flex: none; justify-items: end; gap: 6px; font-size: var(--thorp-text-caption, .72rem); }
 .detailCount { color: var(--thorp-muted); }
 .detailCount b { margin-left: 6px; color: var(--thorp-foreground); font-family: var(--thorp-font-display); font-weight: 600; }
 .detailStates { display: flex; gap: 4px; }
 /* 분야 설명 밑의 기준 시점 한 줄. */
-.detailTiming { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-caption, .72rem); font-variant-numeric: tabular-nums; }
+.detailTiming { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px 0; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-caption, .72rem); font-variant-numeric: tabular-nums; }
 .detailTiming span + span::before { margin: 0 8px; opacity: .5; content: '·'; }
 /* 카드 바닥: 왼쪽 출처 줄, 오른쪽 아래 물음표. */
 .indicatorFooter { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; }
@@ -66,9 +75,6 @@
 .emptyDetail { display: grid; justify-items: start; align-content: center; min-height: 240px; color: var(--thorp-copy); }
 .emptyDetail p { margin: 16px 0 8px; color: var(--thorp-foreground); }
 .emptyDetail span { font-size: var(--thorp-text-small, .78rem); }
-.similarEntry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding: 22px 0; }
-.similarEntry > div { flex: 1 1 200px; }
-.similarEntry p { margin: 7px 0 0; font-size: var(--thorp-text-caption, .74rem); line-height: 1.6; color: var(--thorp-copy); }
 /* 열린 진입점은 링크(<a>)이고, 기준월이 없는 분야에서는 눌리지 않는 버튼이다. 한 모양으로 둔다. */
 .similarButton { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px; padding: var(--thorp-control-pad-block, 10px) 16px; min-height: var(--thorp-control, 44px); border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-copy); font: 500 var(--thorp-text-body, .84rem)/1.4 var(--thorp-font-page, var(--thorp-font-body)); text-align: left; text-decoration: none; cursor: pointer; }
 .similarButton svg { color: var(--thorp-copy); transition: transform 180ms ease, color 180ms ease; }
@@ -77,15 +83,18 @@
 /* 찾을 기준월이 정해지지 않은 분야다. 못 누른다는 것이 커서에도 보여야 한다. */
 .similarButton:disabled { color: var(--thorp-muted); cursor: not-allowed; }
 .similarButton:disabled:hover svg { transform: none; color: var(--thorp-copy); }
+/* 시점 줄이 오른쪽 칸을 넓혀 요약 문장이 눌리는 폭에서는 머리를 한 열로 쌓는다. */
+@media (max-width: 900px) {
+  .detailHeader { grid-template-columns: 1fr; grid-template-areas: 'name' 'meta' 'narrative' 'action'; gap: 10px; }
+  .detailMeta, .detailAction { justify-items: start; }
+  .detailTiming { justify-content: flex-start; }
+}
 @media (max-width: 800px) {
-  .openButton { padding: 0 12px; }
   .chartGrid text { font-size: 19px; }
 }
 @media (max-width: 480px) {
   .indicatorHeading { align-items: start; flex-direction: column; gap: 10px; }
   .observation { font-size: 1.8rem; justify-content: start; }
-  .similarEntry { align-items: stretch; }
-  .similarButton { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .summaryCard { transition: none; }
@@ -116,7 +125,7 @@
 
 /* 상세 머리는 카드 안쪽 여백을 넘어 가로 끝까지 선을 긋는다. */
 :global(:root:not([data-design='classic'])) .detailHeader { margin: -24px -24px 20px; padding: 24px 24px 20px; border-bottom: 1px solid var(--thorp-line); }
-:global(:root:not([data-design='classic'])) .detailTitle h2 { font-size: 1.6rem; }
+:global(:root:not([data-design='classic'])) .detailName { font-size: 1.6rem; }
 /*
   지표 칸은 가로로 나란히 선다. 보통 세 개라 넓은 화면에서 왼쪽·가운데·오른쪽 세 칸이고, 칸이 240px보다 좁아지면
   두 칸, 한 칸으로 접힌다. 개수가 적으면 남는 폭을 나눠 갖는다.
@@ -143,8 +152,6 @@
 :global(:root:not([data-design='classic'])) .chartBlock[data-direction='up'] .chartPoint { stroke: var(--thorp-up); }
 :global(:root:not([data-design='classic'])) .chartBlock[data-direction='down'] .chartLine,
 :global(:root:not([data-design='classic'])) .chartBlock[data-direction='down'] .chartPoint { stroke: var(--thorp-down); }
-/* 비슷했던 때 보기는 카드 바닥 줄이다. */
-:global(:root:not([data-design='classic'])) .similarEntry { margin: 20px -24px -24px; padding: 16px 24px; border-top: 1px solid var(--thorp-line); }
 :global(:root:not([data-design='classic'])) .similarButton { border-radius: var(--thorp-radius-control); background: transparent; color: var(--thorp-foreground); font-weight: 600; }
 :global(:root:not([data-design='classic'])) .similarButton:hover { border-color: var(--thorp-line-control-hover); }
 
@@ -158,7 +165,6 @@
 
 @media (max-width: 1100px) {
   :global(:root:not([data-design='classic'])) .detailHeader { margin: -20px -20px 18px; padding: 20px 20px 18px; }
-  :global(:root:not([data-design='classic'])) .similarEntry { margin: 18px -20px -20px; padding: 14px 20px; }
 }
 
 /* 자료 공급 표. 확인됨은 파랑, 확인 중은 빨강(index.css --thorp-status-*). */

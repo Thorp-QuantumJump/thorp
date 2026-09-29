@@ -24,6 +24,22 @@ function detailOf(referenceMonth: string | null): FieldDetailResult {
 }
 
 describe('FieldDetail', () => {
+  it('역사 비교 표시는 서버가 준 안내가 있을 때만 달고, 원문을 함께 읽힌다 (009 FR-012)', () => {
+    const notice = '최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.'
+    const { unmount } = render(
+      <MemoryRouter>
+        <FieldDetail detail={detailOf('2026-08')} historyNotice={notice} />
+      </MemoryRouter>,
+    )
+    const label = screen.getByTitle(notice)
+    expect(label.textContent).toContain('최신 개정자료 기준')
+    expect(label.textContent).toContain(notice)
+    unmount()
+
+    renderDetail(detailOf('2026-08'))
+    expect(screen.queryByText(/최신 개정자료 기준/)).toBeNull()
+  })
+
   it('기준월 뒤 발표 값은 3개월 경로 밖의 별도 안내로 보여 준다', () => {
     renderDetail({ fieldId: 'labor', displayName: '노동', displayOrder: 4, status: 'READY', narrative: '변화', narrativeSubjects: [], referenceMonth: '2026-08', referenceMonthHeldBackBy: [], lastUpdatedAt: '2026-09-15T21:10:00Z', isExampleData: false, multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [{ indicatorId: 'unemployment', name: '실업률', unit: '%', value: 2.9, path: [{ month: '2026-06', value: 2.8 }, { month: '2026-07', value: 2.8 }, { month: '2026-08', value: 2.9 }], referenceMonth: '2026-08', releaseDate: '2026-09-10', source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: { referenceMonth: '2026-09', value: 3.1, unit: '%' } }] })
     const path = screen.getByRole('list', { name: '실업률 3개월 경로' })

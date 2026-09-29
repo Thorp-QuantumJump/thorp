@@ -1,4 +1,4 @@
-/* '지금 국내 시장' 지수 카드. 한 줄에 이름(왼쪽)·값과 변화(오른쪽), 출처는 아래 오른쪽이다. */
+/* '지금 국내 시장' 지수 카드. 카드는 가로로 나란히 서고, 카드 안은 이름(왼쪽)·값과 변화(오른쪽), 출처는 아래 오른쪽이다. */
 .market {
   display: flex;
   flex-direction: column;
@@ -7,7 +7,7 @@
 
 .cards {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -15,6 +15,7 @@
 }
 
 .card {
+  flex: 1 1 200px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;

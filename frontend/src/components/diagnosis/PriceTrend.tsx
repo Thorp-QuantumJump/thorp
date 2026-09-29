@@ -10,6 +10,8 @@ import type { PriceSeries } from '@/types/sector'
 type PriceTrendProps = {
   /** 무엇의 흐름인지. 그림을 소리로만 듣는 사용자에게 읽어 줄 이름이다. */
   name: string
+  /** 기간 줄 끝에 이어 붙일 출처 문장. 그림이 그려질 때만 쓰인다(원칙 X). */
+  source?: string
   result: PriceSeriesResult | null
   onReload: () => void
   /**
@@ -34,7 +36,7 @@ type PriceTrendProps = {
  * <b>세로축 눈금을 적지 않는다.</b> 이 자리에서 사용자가 묻는 것은 "얼마였나"가 아니라 "어떻게
  * 움직여 왔나"다. 정확한 금액이 필요한 자리는 결과 화면이고 거기에는 금액 축이 있다.
  */
-export function PriceTrend({ name, result, onReload, expanded = false }: PriceTrendProps) {
+export function PriceTrend({ name, source, result, onReload, expanded = false }: PriceTrendProps) {
   if (result === null) {
     return (
       <div data-slot="chart" data-state="loading">
@@ -69,7 +71,7 @@ export function PriceTrend({ name, result, onReload, expanded = false }: PriceTr
     )
   }
 
-  return <TrendChart name={name} series={result.series} expanded={expanded} />
+  return <TrendChart name={name} source={source} series={result.series} expanded={expanded} />
 }
 
 type ChartRow = {
@@ -79,10 +81,12 @@ type ChartRow = {
 
 function TrendChart({
   name,
+  source,
   series,
   expanded,
 }: {
   name: string
+  source?: string
   series: PriceSeries
   expanded: boolean
 }) {
@@ -152,6 +156,7 @@ function TrendChart({
           ? ` · 거래가 없어 직전 가격을 이어 붙인 날 ${carriedForwardCount}일이 섞여 있습니다.`
           : null}
         {series.isSample ? ' · 아직 확정되지 않은 예시 자료입니다.' : null}
+        {source ? <span data-slot="chart-source"> · {source}</span> : null}
       </p>
     </div>
   )

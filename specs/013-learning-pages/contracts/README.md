@@ -27,7 +27,7 @@
 | 계약 | 소유 | 013의 쓰임 |
 |---|---|---|
 | `GET /sectors`의 열린 대응표 | [001](../../001-etf-market-data/contracts/sector-api.md) | 예시 섹터 판정(게시 시·조회 시). 서버 안에서 `SectorService`를 포트로 부른다 |
-| 배우기 예시 진입(navigation state `sectorSelectionExample`) | [002](../../002-sector-weight-selection/contracts/selection-handoff.md) §2 | '이 예시로 비중 비교하기'가 싣는 값. `topicId`에 `articleId`를 넣는다 |
+| 배우기 예시 진입(navigation state `sectorSelectionExample`) | [002](../../002-sector-weight-selection/contracts/selection-handoff.md) §2 | '이 예시로 전략 진단하기'가 싣는 값. `topicId`에 `articleId`를 넣는다 |
 | 로그인 세션·CSRF·`401 AUTHENTICATION_REQUIRED` | [014](../../014-user-auth/plan.md) | 관리 경로의 인증. 상태 변경 요청은 `X-XSRF-TOKEN`을 싣는다 |
 | `normalizeReturnTarget` | 014 FE (`frontend/src/auth/returnTarget.ts`) | 돌아가기 경로 검사([term-help-ui](./term-help-ui.md) §3) |
 

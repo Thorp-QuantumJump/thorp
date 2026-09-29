@@ -115,7 +115,7 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 카드 왼쪽 목록의 한 줄이다. 누르면 보는 대상만 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 그 대상을 보면서 담고, 다시 누르면 뺀다. */
 function row(sectorCode: string): HTMLButtonElement {
   return document.querySelector(
     `[data-slot="list"] [data-sector-code="${sectorCode}"] [data-slot="pill"]`,
@@ -190,6 +190,15 @@ describe('대표 상품 정보 패널', () => {
 
   afterEach(() => {
     window.sessionStorage.clear()
+  })
+
+  it('가격 흐름을 그리지 못하면 출처를 카드 바닥에 따로 남긴다 (원칙 X)', async () => {
+    await openPage()
+
+    // 기간 줄이 없으니 출처가 이어 붙을 자리가 없다. 그래도 화면에서 빠지지 않는다.
+    const card = document.querySelector('[data-viewing-code]') as HTMLElement
+    await waitFor(() => expect(card.querySelector('[data-slot="footer"] [data-slot="source"]')?.textContent).toContain('한국거래소 통계정보'))
+    expect(card.querySelector('[data-slot="chart-source"]')).toBeNull()
   })
 
   it('접어 둔 카드는 상품 정보를 부르지 않는다', async () => {
@@ -443,7 +452,7 @@ describe('대표 상품 정보 패널', () => {
     expect(controlled).toBeTruthy()
     expect(cardBody().id).toBe(controlled)
     // 아이콘 하나뿐이라 이름을 직접 준다. 지금 상태에 따라 이름이 달라진다.
-    expect(toggle.getAttribute('aria-label')).toBe('간단히 보기')
+    expect(toggle.getAttribute('aria-label')).toBe('포함 종목 접기')
   })
 
   it('자료 시점을 한국 날짜로 보인다', async () => {
@@ -464,16 +473,14 @@ describe('대표 상품 정보 패널', () => {
     expect(facts?.textContent).not.toContain('2026-09-06')
   })
 
-  it('살펴보는 것과 투자 대상에 담는 것이 서로 섞이지 않는다', async () => {
+  it('포함 종목을 펼치기만 해서는 투자 대상에 담기지 않는다', async () => {
     const user = userEvent.setup()
     await openPage()
 
-    await openProfile(user, '반도체', 'SEMICONDUCTOR')
+    // 처음 보고 있는 대상을 목록을 누르지 않고 넓힌다. 무엇을 사는지 보는 일이 담는 일이 되면 안 된다.
+    await user.click(expandToggle())
 
-    // 무엇을 사는지 보려던 사용자가 그 행동만으로 백테스트 대상을 정하게 되면 안 된다.
-    expect(document.querySelectorAll('[data-slot="rail-item"]')).toHaveLength(0)
-    expect(
-      document.querySelector('[data-slot="pick"]')?.getAttribute('aria-pressed'),
-    ).toBe('false')
+    expect(expanded()).toBe(true)
+    expect(row('SEMICONDUCTOR').getAttribute('aria-pressed')).toBe('false')
   })
 })

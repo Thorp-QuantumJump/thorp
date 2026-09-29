@@ -81,13 +81,8 @@ export function LearningArticlePage() {
 
         {state.status === 'unavailable' || state.status === 'failed' ? (
           <p className={styles.footer}>
+            {/* 글을 받지 못해도 진단으로 가는 길은 상단 메뉴의 '전략 진단'이 남긴다(US1 시나리오 7, FR-015). */}
             {listLink}
-            {/* 글을 받지 못해도 진단을 시작하는 길은 막지 않는다(US1 시나리오 7, FR-015). */}
-            {state.status === 'failed' ? (
-              <Link className={styles.listLink} to="/diagnosis/sectors">
-                글을 읽지 않고 바로 비중 비교 시작하기
-              </Link>
-            ) : null}
           </p>
         ) : null}
       </main>

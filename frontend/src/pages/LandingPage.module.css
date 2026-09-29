@@ -1,4 +1,7 @@
 .page {
+  /* 상단 바의 폭과 여백을 첫 화면 칸(.heroLayout)과 맞춘다. 로그인 오른쪽 끝이 아래 창의 오른쪽 끝에 선다. */
+  --thorp-content-width: 1320px;
+  --thorp-content-gutter: calc(2 * clamp(24px, 4vw, 68px));
   /* 상단 바(AppHeader .header의 min-height + 아래 선 1px) 높이. 한 칸씩 넘기는 섹션이 상단 바에 가리지 않게 뺀다. */
   --landing-header-height: calc(var(--thorp-header-height, 82px) + 1px);
   /*
@@ -301,7 +304,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 32px;
+  /* 설명 문장과 붙어 보이지 않게 한 단 더 띄운다. 첫 화면의 행동이 설명과 따로 읽혀야 한다. */
+  margin-top: 48px;
 }
 
 .primaryCta,
@@ -671,6 +675,9 @@
 
 @media (max-width: 760px) {
   .page {
+    /* 칸이 한 열로 접히며 폭·여백이 바뀐다(.heroLayout). 상단 바도 같은 값을 따라 양 끝을 맞춘다. */
+    --thorp-content-width: 640px;
+    --thorp-content-gutter: 28px;
     scroll-snap-type: none;
   }
 

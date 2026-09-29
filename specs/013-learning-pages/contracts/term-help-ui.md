@@ -77,13 +77,13 @@ navigate(`/learn/${articleId}`, {
 
 하나라도 어긋나면 연결을 보이지 않는다. 배우기 메뉴·외부 링크·새로고침으로 state가 없는 경우가 여기에 든다(spec Edge Cases).
 
-- 연결은 보조 연결(`a`)이며 '이 예시로 비중 비교하기'와 같은 크기의 버튼으로 두지 않는다(spec FR-009, 원칙 II).
+- 연결은 보조 연결(`a`)이며 '이 예시로 전략 진단하기'와 같은 크기의 버튼으로 두지 않는다(spec FR-009, 원칙 II).
 - 누르면 `navigate(path)`로 돌아간다. `history.back()`에 맡기지 않는다([research](../research.md) R11).
 - 글 화면에서 다른 글로 이동할 때는 받은 `learningReturn`을 그대로 넘겨 돌아갈 자리를 잃지 않는다.
 
 ## 4. 예시로 002 진입
 
-글 화면의 '이 예시로 비중 비교하기'는 [002 selection-handoff](../../002-sector-weight-selection/contracts/selection-handoff.md) §2를 그대로 따른다. 013은 값을 싣기만 하고 덮어쓰기 확인은 002가 한다(spec FR-003).
+글 화면의 '이 예시로 전략 진단하기'는 [002 selection-handoff](../../002-sector-weight-selection/contracts/selection-handoff.md) §2를 그대로 따른다. 013은 값을 싣기만 하고 덮어쓰기 확인은 002가 한다(spec FR-003).
 
 ```ts
 navigate('/diagnosis/sectors', {
