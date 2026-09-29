@@ -1,6 +1,6 @@
-import { Activity, ArrowDown, RefreshCw } from 'lucide-react'
+import { Activity, RefreshCw } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { FieldDetail } from '@/components/marketflow/FieldDetail'
 import { FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'
@@ -22,7 +22,6 @@ function LoadingNotice({ children }: { children: string }) {
 export function MarketFlowPage() {
   const reducedMotion = useReducedMotion()
   const selectionGroup = useId()
-  const detailPanel = useRef<HTMLDivElement>(null)
   const [summary, setSummary] = useState<FieldSummaryResult | null>(null)
   const [summaryError, setSummaryError] = useState(false)
   const [summaryRequest, setSummaryRequest] = useState(0)
@@ -76,8 +75,9 @@ export function MarketFlowPage() {
     if (!target.closest('button[aria-controls="market-flow-detail"]')) return
     const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[aria-controls="market-flow-detail"]'))
     const index = buttons.indexOf(target.closest('button') as HTMLButtonElement)
-    const nextIndex = event.key === 'ArrowDown' ? (index + 1) % buttons.length
-      : event.key === 'ArrowUp' ? (index - 1 + buttons.length) % buttons.length
+    // 분야 메뉴는 가로 한 줄이지만 좁은 화면에서는 여러 줄로 접히므로 두 방향 화살표를 모두 받는다.
+    const nextIndex = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? (index + 1) % buttons.length
+      : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? (index - 1 + buttons.length) % buttons.length
       : event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : null
     if (nextIndex === null) return
     event.preventDefault()
@@ -129,12 +129,8 @@ export function MarketFlowPage() {
                     {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} listUpdatedAt={listUpdatedAt} />)}
                   </LayoutGroup>
                 </div>
-                <button type="button" className={styles.detailJump} onClick={() => {
-                  detailPanel.current?.focus({ preventScroll: true })
-                  detailPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })
-                }}>선택한 분야 상세 보기 <ArrowDown size={16} aria-hidden="true" /></button>
               </section>
-              <div id="market-flow-detail" className={styles.detailPanel} ref={detailPanel} tabIndex={-1} aria-label="선택한 분야 상세">
+              <div id="market-flow-detail" className={styles.detailPanel} tabIndex={-1} aria-label="선택한 분야 상세">
                 <p className={styles.srOnly} role="status">{displayedDetail?.status === 'success' ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>
                 {displayedDetail?.status === 'success' ? (
                   // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.

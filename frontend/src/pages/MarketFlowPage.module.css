@@ -25,12 +25,12 @@
 .workspaceHeading h2 span { font: 500 var(--thorp-text-caption, .74rem)/1.5 var(--thorp-font-display); color: var(--thorp-ornament, var(--thorp-accent-soft)); }
 .workspaceHeading > span { color: var(--thorp-copy); font: 400 var(--thorp-text-caption, .72rem)/1.4 var(--thorp-font-page, var(--thorp-font-body)); }
 .workspaceHeading i { margin: 0 8px; color: var(--thorp-muted); font-style: normal; }
-.workspace { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.65fr); align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
+/* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
 .fieldRail { min-width: 0; }
-.fieldList { padding-right: 24px; }
-.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }
-.detailPanel:focus-visible, .detailJump:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
-.detailJump { display: none; }
+.fieldList { display: flex; flex-wrap: wrap; gap: 8px; }
+.detailPanel { min-width: 0; min-height: 490px; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }
+.detailPanel:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }
 .loadingTrack { display: block; width: 100%; height: 2px; overflow: hidden; background: var(--thorp-line); }
 .loadingTrack::after { display: block; content: ''; width: 28%; height: 100%; background: var(--thorp-accent); animation: data-flow 1.4s ease-in-out infinite alternate; }
@@ -43,9 +43,6 @@
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 1100px) {
   .main { width: calc(100% - 48px); }
-  .workspace { grid-template-columns: minmax(310px, .95fr) minmax(0, 1.5fr); }
-  .fieldList { padding-right: 18px; }
-  .detailPanel { padding-left: 20px; }
 }
 @media (max-width: 800px) {
   .main { width: calc(100% - 32px); padding-top: 16px; }
@@ -53,10 +50,6 @@
   .heroAside { border: 0; padding: 0; max-width: 540px; }
   .heroAside > span { display: none; }
   .heroAside p { margin: 0; }
-  .workspace { grid-template-columns: 1fr; }
-  .fieldList { padding: 0; }
-  .detailPanel { border-left: 0; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; }
-  .detailJump { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--thorp-control, 48px); padding: var(--thorp-control-pad-block, 10px) 14px; margin: 14px 0 24px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-accent-soft); font: 500 var(--thorp-text-small, .8rem)/1.5 var(--thorp-font-page, var(--thorp-font-body)); cursor: pointer; }
 }
 @media (max-width: 420px) {
   .main { width: calc(100% - 28px); }
@@ -75,33 +68,28 @@
 
 /*
   디자인 개편 카드 층(S15P21E205-425). 위의 선 나눔 규칙은 classic 디자인 그대로 두고, 새 디자인에서만
-  구역을 카드 면으로 묶는다. 배치(순서·열)는 바꾸지 않는다. classic을 걷어낼 때 이 층을 위 규칙에
-  합치고 접두 선택자를 지운다.
+  구역을 카드 면으로 묶는다. 배치(위 분야 메뉴·아래 상세)는 위 기본 규칙이 두 디자인에 함께 정한다.
+  classic을 걷어낼 때 이 층을 위 규칙에 합치고 접두 선택자를 지운다.
 */
 :global(:root:not([data-design='classic'])) .workspaceHeading { border: 0; padding: 4px 2px 14px; }
-:global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; grid-template-columns: minmax(320px, .85fr) minmax(0, 1.65fr); }
-:global(:root:not([data-design='classic'])) .fieldRail, :global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {
+:global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }
+/* 분야 메뉴는 카드로 묶지 않는다. 버튼 하나하나가 따로 고르는 메뉴로 읽혀야 한다. */
+:global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
-:global(:root:not([data-design='classic'])) .fieldRail { padding: 8px; }
-:global(:root:not([data-design='classic'])) .fieldList { display: grid; gap: 4px; padding: 0; }
 :global(:root:not([data-design='classic'])) .detailPanel { padding: 24px; }
 :global(:root:not([data-design='classic'])) .main > .loadFailure { padding: 24px; }
-:global(:root:not([data-design='classic'])) .loadFailure button,
-:global(:root:not([data-design='classic'])) .detailJump { border-radius: var(--thorp-radius-control); }
+:global(:root:not([data-design='classic'])) .loadFailure button { border-radius: var(--thorp-radius-control); }
 :global(:root:not([data-design='classic'])) .loading { padding: 8px 0; }
 :global(:root:not([data-design='classic'])) .historyNotice { padding: 14px 2px; }
 /* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */
 @media (max-width: 1100px) {
-  :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: minmax(290px, .95fr) minmax(0, 1.5fr); }
   :global(:root:not([data-design='classic'])) .detailPanel { padding: 20px; }
 }
 @media (max-width: 800px) {
-  :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: 1fr; }
   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
-  :global(:root:not([data-design='classic'])) .detailJump { margin: 8px 0 0; }
 }
 
 /* 글자 밝기 세 단(MarketFlow.module.css와 같은 규칙). 목록 머리의 시점, 역사 비교 안내는 회색이다. */

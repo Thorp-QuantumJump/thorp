@@ -92,6 +92,9 @@ describe('MarketFlowPage', () => {
     it.each([
       ['ArrowDown', 0, 1, 'consumption_investment'],
       ['ArrowUp', 2, 1, 'consumption_investment'],
+      // 메뉴가 가로 한 줄이라 좌우 화살표도 같은 일을 한다.
+      ['ArrowRight', 0, 1, 'consumption_investment'],
+      ['ArrowLeft', 2, 1, 'consumption_investment'],
       ['Home', 4, 0, 'production'],
       ['End', 0, 6, 'overseas'],
     ])('%s는 %i번에서 %i번 분야로 포커스와 선택을 함께 옮긴다', async (key, from, to, expectedId) => {
@@ -123,7 +126,7 @@ describe('MarketFlowPage', () => {
 
       // Tab·Enter는 브라우저와 button 기본 동작에 맡긴다. 여기서 preventDefault하면
       // 키보드 사용자가 목록 밖으로 나가지 못한다.
-      for (const key of ['Tab', 'Enter', 'ArrowLeft']) {
+      for (const key of ['Tab', 'Enter', 'a']) {
         const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
         buttons[2].dispatchEvent(event)
         expect(event.defaultPrevented).toBe(false)
