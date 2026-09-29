@@ -140,7 +140,7 @@ describe('MarketFlowPage', () => {
       for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
       expect(screen.queryByRole('heading', { name: '섹터 좁혀 보기' })).toBeNull()
       expect(screen.queryByRole('heading', { name: '국내 시장 참고 정보' })).toBeNull()
-      expect(screen.queryByRole('heading', { name: '뉴스' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: '시장 흐름 뉴스' })).toBeNull()
       expect(screen.queryByRole('link', { name: /과거 사례 고르러 가기/ })).toBeNull()
       // 시장 흐름은 섹터·시장 지수·뉴스 자료를 부르지 않는다.
       expect(fetchSectorCatalog).not.toHaveBeenCalled()

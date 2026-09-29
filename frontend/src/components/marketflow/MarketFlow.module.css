@@ -107,10 +107,7 @@
 .newsList { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .newsList a { display: inline-flex; align-items: center; gap: 4px; font-size: var(--thorp-text-body, .88rem); color: inherit; }
 .newsList p { margin: 4px 0 2px; font-size: var(--thorp-text-small, .78rem); line-height: 1.5; color: var(--thorp-copy); }
-.newsList a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.newsBody { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 4px 0 0; }
-.newsBody p { flex: 1; min-width: 0; margin: 0; }
-.newsMeta { flex-shrink: 0; font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); white-space: nowrap; }
+.newsMeta { font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); }
 
 /*
   디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 분야 목록을
