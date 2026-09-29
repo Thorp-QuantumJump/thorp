@@ -93,6 +93,7 @@ export function AppHeader({ preview = false }: { preview?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [pendingAuthAction, setPendingAuthAction] = useState<'logout' | 'recheck' | null>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const brandRef = useRef<HTMLAnchorElement>(null)
   const firstMenuLinkRef = useRef<HTMLAnchorElement>(null)
   const drawerRef = useRef<HTMLElement>(null)
   const recoveryButtonRef = useRef<HTMLButtonElement>(null)
@@ -110,10 +111,15 @@ export function AppHeader({ preview = false }: { preview?: boolean }) {
     }
   }, [authStatus])
 
-  // 닫기 동작 뒤 햄버거 버튼으로 초점을 되돌려 키보드 흐름을 유지한다.
+  /*
+    닫기 동작 뒤 햄버거 버튼으로 초점을 되돌려 키보드 흐름을 유지한다. 서랍을 연 채 창을 넓히면 버튼이 숨어
+    (헤더 메뉴가 보이는 폭) 초점을 받을 수 없으므로, 그때는 바로 옆 로고 링크로 돌린다.
+  */
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false)
-    menuButtonRef.current?.focus()
+    const menuButton = menuButtonRef.current
+    if (menuButton && menuButton.getClientRects().length > 0) menuButton.focus()
+    else brandRef.current?.focus()
   }, [])
 
   // 메뉴가 열리면 배경 스크롤을 막고 첫 번째 탐색 항목으로 초점을 이동한다.
@@ -279,7 +285,7 @@ export function AppHeader({ preview = false }: { preview?: boolean }) {
             >
               <MenuIcon />
             </button>
-            <Link className={styles.brand} to="/" aria-label="Thorp 처음 화면">
+            <Link ref={brandRef} className={styles.brand} to="/" aria-label="Thorp 처음 화면">
               Thorp<span>.</span>
             </Link>
           </div>
