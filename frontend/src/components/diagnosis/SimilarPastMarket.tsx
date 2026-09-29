@@ -1,10 +1,9 @@
-import { ArrowUpRight, Check } from 'lucide-react'
+import { ArrowUpRight, Check, History, Info } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getRegimeBaselineMonths, getRegimeSearch } from '@/api/regime'
 import { Disclosure } from '@/components/regime/Disclosure'
 import { EmptyResult } from '@/components/regime/EmptyResult'
-import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'
 import { buildCaseId, buildRegimeLinkStartPath, parseCaseId } from '@/marketflow/handoff'
 import type { RegimeBaselineMonths, RegimeSearchQuery, RegimeSearchResult } from '@/types/regime'
 import styles from './SimilarPastMarket.module.css'
@@ -94,12 +93,13 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
 
   return (
     <section className={styles.panel} aria-labelledby="similar-past-title">
+      {/* 제목과 기준월을 한 줄에 둔다. 기준월은 제목에 딸린 값이라 같은 줄 오른쪽 끝에 붙인다. */}
       <div className={styles.head}>
-        <div>
-          <p className={styles.kicker}>SIMILAR PAST MARKET</p>
-          <h2 id="similar-past-title">지금과 비슷했던 과거 시장</h2>
-          {result ? <p className={styles.basis}>기준월 {result.baselineMonth}</p> : null}
-        </div>
+        <h2 id="similar-past-title">
+          <History size={16} aria-hidden="true" />
+          지금과 비슷했던 과거 시장
+        </h2>
+        {result ? <p className={styles.basis}>기준월 {result.baselineMonth}</p> : null}
       </div>
 
       {chosen ? (
@@ -149,14 +149,34 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
           <QuietFailure message="과거 사례를 불러오지 못했습니다." onRetry={retry} />
         ) : result ? (
           <div className={styles.result}>
-            <div className={styles.notes}>
-              <SearchStatusBadge result={result} context={context} />
+            {/*
+              검색 상태와 사례 구분을 사례 목록 위 한 줄로 줄여 둔다. 호버로 숨기지 않는다 — 결과를 어디까지
+              믿어도 되는지 말하는 문구라 늘 보이고, 키보드로 닿고, 보조기기가 어느 결과의 것인지 읽어야 한다
+              (010 FR-037·SC-014). 이름표('검색 상태'·'사례 구분')는 화면에서 빼고 보조기기에만 남긴다.
+            */}
+            <p
+              className={styles.notesLine}
+              data-tone={result.status === 'NOT_COMPUTABLE' ? 'error' : 'warning'}
+              tabIndex={0}
+              role="status"
+              aria-live="polite"
+              aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}
+            >
+              <Info size={14} aria-hidden="true" />
+              <span>
+                <span className={styles.srOnly}>검색 상태: </span>
+                {result.statusNote}
+              </span>
               {result.caseLabel ? (
-                <Disclosure label="사례 구분" context={context} tone="warning">
-                  <p>{result.caseLabel}</p>
-                </Disclosure>
+                <>
+                  <span className={styles.notesDivider} aria-hidden="true">·</span>
+                  <span>
+                    <span className={styles.srOnly}>사례 구분: </span>
+                    {result.caseLabel}
+                  </span>
+                </>
               ) : null}
-            </div>
+            </p>
             {result.status !== 'NOT_COMPUTABLE' && result.cases.length === 0 && result.thresholdNote ? (
               // 교정된 기준을 넘는 사례가 없다(spec US3 시나리오 4). 참고 사례는 검색 화면에서 따로 연다.
               <Disclosure label="유사성 기준" context={context} tone="warning">
@@ -183,11 +203,11 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
                     <li key={item.endMonth} className={styles.case} data-chosen={isChosen || undefined}>
                       <div className={styles.caseBody}>
                         <p className={styles.caseRange}>
-                          <strong>{observationRange(item.observationMonths) ?? item.endMonth}</strong>
                           <span>관측 구간</span>
+                          <strong>{observationRange(item.observationMonths) ?? item.endMonth}</strong>
                         </p>
-                        {item.similar[0] ? <p className={styles.reason}><b>비슷한 점</b> {item.similar[0]}</p> : null}
-                        {item.different[0] ? <p className={styles.reason}><b>다른 점</b> {item.different[0]}</p> : null}
+                        {item.similar[0] ? <p className={styles.reason}><b className={styles.similarLabel}>비슷한 점</b> {item.similar[0]}</p> : null}
+                        {item.different[0] ? <p className={styles.reason}><b className={styles.differentLabel}>다른 점</b> {item.different[0]}</p> : null}
                       </div>
                       <div className={styles.caseActions}>
                         {itemCaseId === null ? null : isChosen ? (
@@ -199,8 +219,8 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
                             이 기간으로 백테스트
                           </Link>
                         )}
-                        <Link className={styles.detail} to={regimeSearchPath(result)}>
-                          자세히 <ArrowUpRight size={14} aria-hidden="true" />
+                        <Link className={styles.detailButton} to={regimeSearchPath(result)}>
+                          자세히
                         </Link>
                       </div>
                     </li>

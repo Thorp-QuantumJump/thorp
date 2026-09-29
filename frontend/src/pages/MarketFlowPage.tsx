@@ -97,7 +97,9 @@ export function MarketFlowPage() {
             {/* classic은 예전의 아이콘 작은 제목, 새 디자인은 첫 화면과 같은 선 작은 제목이다. */}
             <span className={`${styles.eyebrow} ${styles.classicOnly}`}><Activity size={14} aria-hidden="true" /> MARKET FLOW</span>
             <p className={heading.eyebrow} aria-hidden="true">MARKET FLOW</p>
-            <h1>시장 흐름을<br /><span><em className={heading.emphasis}>분야별로</em> 확인하세요.</span></h1>
+            {/* 넓은 화면에서는 한 줄로 읽힌다. 뒷부분은 통째로 움직이는 덩어리라 폭이 모자라면 '분야별로'부터
+                아랫줄로 내려가고, 단어 중간에서 끊기지 않는다. */}
+            <h1>시장 흐름을 <span><em className={heading.emphasis}>분야별로</em> 확인하세요.</span></h1>
           </motion.div>
           <motion.div className={styles.heroAside} initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.3, delay: reducedMotion ? 0 : 0.06 }}>
             <p>경제를 한 점수로 단정하지 않고, 일곱 분야의 실제 지표와 최근 3개월 경로를 나눠 보여 드립니다.</p>
