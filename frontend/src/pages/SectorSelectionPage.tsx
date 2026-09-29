@@ -244,7 +244,8 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
 
           {/*
             KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만
-            보는 사용자에게 미표시와 같으므로 목록 화면에 둔다.
+            보는 사용자에게 미표시와 같으므로 목록 화면에 둔다. 탐색 카드의 오른쪽 아래 모서리에 붙여
+            그 카드의 자료라는 것이 읽히게 한다.
           */}
           <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
         </section>
@@ -364,7 +365,7 @@ export function SectorSelectionPage() {
         {/* 시장 흐름 화면과 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다(S15P21E205-451). */}
         <header className={styles.hero}>
           <div>
-            <p className={heading.eyebrow} aria-hidden="true">STEP 01 · SELECT</p>
+            <p className={heading.eyebrow} aria-hidden="true">STEP 01</p>
             <h1 id="sector-selection-title" className={styles.title}>
               투자 대상 <em className={heading.emphasis}>고르기</em>
             </h1>
