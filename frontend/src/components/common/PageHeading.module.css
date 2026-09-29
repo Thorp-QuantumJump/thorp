@@ -87,3 +87,8 @@
     border: 0;
   }
 }
+
+/* 새 디자인 머리 짜임으로 바뀌며 자리를 내준 예전 요소(영문 작은 제목, 구역 번호). classic에서만 보인다. */
+:global(:root:not([data-design='classic'])) .classicOnly {
+  display: none;
+}

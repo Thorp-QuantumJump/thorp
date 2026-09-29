@@ -152,6 +152,44 @@ export async function logout(signal?: AbortSignal): Promise<void> {
   resetCsrfToken()
 }
 
+/**
+ * 로그인한 사용자의 닉네임을 바꾼다(`PATCH /accounts/me`).
+ *
+ * 성공 응답은 현재 사용자 조회와 같은 모양이라, 호출한 쪽이 그대로 로그인 상태에 반영한다.
+ * 앞뒤 공백은 여기서 떼어 보낸다 — 서버도 같은 규칙으로 떼지만 화면의 길이 검증과 어긋나지 않게 한다.
+ */
+export async function changeNickname(
+  nickname: string,
+  signal?: AbortSignal,
+): Promise<AuthenticatedUser> {
+  const response = await runCsrfProtectedMutation(() =>
+    apiClient.patch<ApiEnvelope<AuthenticatedUser>>(
+      '/accounts/me',
+      { nickname: nickname.trim() },
+      { signal },
+    ),
+  )
+
+  const body = response.data
+  if (!body.success) {
+    throw new ApiClientError('api', body.error.message, {
+      code: body.error.code,
+      fieldErrors: body.error.fieldErrors,
+    })
+  }
+
+  const user = readAuthenticatedUser(body.data)
+  if (!user) {
+    throw new ApiClientError(
+      'unexpected',
+      '회원정보 수정 응답을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      { cause: new Error(`unexpected profile response shape: ${describeShape(body.data)}`) },
+    )
+  }
+
+  return user
+}
+
 export async function getCurrentUser(signal?: AbortSignal): Promise<AuthenticatedUser> {
   try {
     const response = await apiClient.get<ApiEnvelope<AuthenticatedUser>>('/auth/me', { signal })

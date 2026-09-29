@@ -7,7 +7,7 @@ import { AppHeader } from './AppHeader'
 function renderHeader() {
   return render(
     <MemoryRouter>
-      <AuthContext.Provider value={{ status: 'anonymous', user: null, login: vi.fn(), logout: vi.fn(), recheck: vi.fn() }}>
+      <AuthContext.Provider value={{ status: 'anonymous', user: null, login: vi.fn(), logout: vi.fn(), recheck: vi.fn(), updateNickname: vi.fn() }}>
         <AppHeader />
       </AuthContext.Provider>
     </MemoryRouter>,
