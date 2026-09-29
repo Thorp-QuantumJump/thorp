@@ -164,6 +164,13 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
     void navigate(appendCaseToPath(NEXT_STEP_PATH, caseId))
   }, [caseId, navigate, selection])
 
+  /*
+    KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만 보는
+    사용자에게 미표시와 같으므로 목록 화면에 둔다. 탐색 카드 안 오른쪽 아래에 두어 그 카드의 자료라는
+    것이 읽히게 하고, 카드를 그리지 못할 때만 카드 자리에 홀로 둔다.
+  */
+  const attribution = <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
+
   return (
     <>
       <div className={styles.board} data-detail-expanded={detailExpanded}>
@@ -239,15 +246,11 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
               onView={setViewingCode}
               onToggleSelected={selection.toggleSector}
               onExpandedChange={setDetailExpanded}
+              footer={attribution}
             />
-          ) : null}
-
-          {/*
-            KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만
-            보는 사용자에게 미표시와 같으므로 목록 화면에 둔다. 탐색 카드의 오른쪽 아래 모서리에 붙여
-            그 카드의 자료라는 것이 읽히게 한다.
-          */}
-          <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
+          ) : (
+            attribution
+          )}
         </section>
 
         <SelectedInstrumentsRail
@@ -305,7 +308,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
 
       {/*
         투자 대상 아래 한 줄에 둘을 나란히 둔다. 왼쪽은 Thorp의 핵심 흐름(002 FR-018) — 고른 섹터를 지금과
-        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 시장 흐름 뉴스(FR-019)로 기본 '전체', 섹터별로
+        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 뉴스(FR-019)로 기본 '전체', 섹터별로
         좁혀 볼 수 있다. 둘 다 받지 못해도 투자 대상 고르기는 막히지 않는다.
       */}
       <div className={styles.context}>

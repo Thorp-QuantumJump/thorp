@@ -57,6 +57,27 @@ describe('SimilarPastMarket (002 FR-018)', () => {
     await waitFor(() => expect(vi.mocked(getRegimeSearch).mock.calls.at(-1)?.[0]).toEqual({ mode: 'composite', limit: 3 }))
   })
 
+  it('검색 상태와 사례 구분을 i 표시 뒤로 내리고, 초점으로도 펼치며 보조기기에는 늘 읽힌다 (010 FR-037)', async () => {
+    vi.mocked(getRegimeSearch).mockResolvedValue(
+      searchResult({ statusNote: '가까운 순서만 제공합니다.', caseLabel: '최근접 참고 사례' }),
+    )
+    renderWithRouter(<SimilarPastMarket caseId={null} />)
+
+    // 펼치지 않아도 보조기기는 어느 결과의 안내인지와 문장을 읽는다.
+    const live = await screen.findByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태와 사례 구분' })
+    expect(live.textContent).toContain('검색 상태: 가까운 순서만 제공합니다.')
+    expect(live.textContent).toContain('사례 구분: 최근접 참고 사례')
+
+    // 화면에는 i 표시만 있고, 키보드 초점을 주면 그 자리에 펼쳐진다.
+    const trigger = screen.getByRole('button', { name: '검색 상태와 사례 구분 도움말' })
+    expect(trigger.textContent).toBe('i')
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    fireEvent.focus(trigger)
+    const tooltip = await screen.findByRole('tooltip')
+    expect(tooltip.textContent).toContain('가까운 순서만 제공합니다.')
+    expect(tooltip.textContent).toContain('최근접 참고 사례')
+  })
+
   it('사례를 고르면 011 진입 계약으로 그 기간을 분석 기간으로 이어 간다', async () => {
     renderWithRouter(<SimilarPastMarket caseId={null} />)
 

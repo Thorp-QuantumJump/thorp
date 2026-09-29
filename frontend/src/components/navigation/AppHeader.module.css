@@ -8,7 +8,7 @@
   z-index: 30;
   top: 0;
   box-sizing: border-box;
-  min-height: var(--thorp-header-height, 64px);
+  min-height: var(--thorp-header-height, 82px);
   border-bottom: 1px solid var(--thorp-line);
   background: var(--thorp-background);
 }
@@ -78,7 +78,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   width: min(100% - 40px, 1440px);
-  min-height: var(--thorp-header-height, 64px);
+  min-height: var(--thorp-header-height, 82px);
   margin: 0 auto;
   padding: 0;
   background: transparent;

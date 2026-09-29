@@ -1,5 +1,6 @@
 import { useReducedMotion, useScroll, useSpring, useTransform, type MotionStyle } from 'motion/react'
 import { createContext, useContext, type RefObject } from 'react'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 /**
  * 첫 화면은 `main`이 스스로 스크롤한다(한 칸씩 넘기기). 칸들이 자기 움직임을 그 스크롤에 묶을 수
@@ -8,6 +9,13 @@ import { createContext, useContext, type RefObject } from 'react'
 export const LandingScrollContext = createContext<RefObject<HTMLElement | null> | null>(null)
 
 type Scene = { copy: MotionStyle; window: MotionStyle }
+
+/**
+ * 첫 화면이 한 열로 접히는 폭(LandingPage.module.css의 760px 분기)이다. 이 폭에서는 칸이 화면을 꽉 채우지
+ * 않아 칸이 가운데 서는 순간이 거의 없고, 글이 옆으로 밀린 채 멈춰 화면 밖으로 잘린다. 그래서 옆으로
+ * 미는 움직임만 뺀다.
+ */
+const SINGLE_COLUMN_QUERY = '(max-width: 760px)'
 
 const still: Scene = { copy: {}, window: {} }
 
@@ -21,6 +29,7 @@ const still: Scene = { copy: {}, window: {} }
 export function useScrollScene(target: RefObject<HTMLElement | null>, mode: 'leave' | 'pass', from: 'left' | 'right' = 'left'): Scene {
   const container = useContext(LandingScrollContext)
   const reducedMotion = useReducedMotion()
+  const singleColumn = useMediaQuery(SINGLE_COLUMN_QUERY)
   const { scrollYProgress } = useScroll({
     container: container ?? undefined,
     target,
@@ -41,7 +50,7 @@ export function useScrollScene(target: RefObject<HTMLElement | null>, mode: 'lea
 
   if (reducedMotion) return still
   return {
-    copy: { x: copyX, y: copyY, opacity: copyOpacity },
+    copy: singleColumn ? { y: copyY, opacity: copyOpacity } : { x: copyX, y: copyY, opacity: copyOpacity },
     window: { y: windowY, scale: windowScale, rotateX: windowRotate, opacity: windowOpacity, transformPerspective: 1400 },
   }
 }

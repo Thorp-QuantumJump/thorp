@@ -1002,10 +1002,15 @@
 }
 
 .attribution {
-  margin: 6px 4px 0 0;
+  margin: 0;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.72rem);
   text-align: right;
+}
+
+/* 탐색 카드 바닥의 출처 줄. 카드 안 오른쪽 아래에 붙는다. */
+.browserCard [data-slot='footer'] {
+  margin-top: 12px;
 }
 
 /* 폭이 줄면 선택 요약을 아래로 내린다. 셋을 한 줄에 억지로 욱여넣지 않는다. */
