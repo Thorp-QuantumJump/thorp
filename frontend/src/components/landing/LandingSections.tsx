@@ -126,9 +126,13 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {
             variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}
             transition={revealTransition}
           >
-            <span>내 전략이 얼마나 유효한지,</span>
-            <span><em>과거로 돌아가</em></span>
-            <span>확인해 볼까요?</span>
+            {/*
+              좋고 나쁨을 판정하는 말(유효한지)을 쓰지 않는다. 같은 산업에서 나누는 방식만 바꾸면 결과가
+              달라진다는 사실을 말한다(constitution 원칙 III).
+            */}
+            <span>같은 산업이라도</span>
+            <span><em>나누는 방식에 따라</em></span>
+            <span>결과는 달라집니다.</span>
           </motion.h1>
           <motion.p
             className={styles.heroDescription}

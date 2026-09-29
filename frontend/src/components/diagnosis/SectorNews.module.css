@@ -24,6 +24,55 @@
   color: var(--thorp-accent-soft);
 }
 
+/*
+  분류 줄. 칩보다 한 단 위의 고르기라 테두리 칩이 아니라 밑줄 탭으로 둔다. 같은 모양이면 두 줄이 한 목록처럼
+  읽힌다.
+*/
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.group {
+  position: relative;
+  min-height: var(--thorp-control-sm, 32px);
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.group:hover {
+  color: var(--thorp-foreground);
+}
+
+.group[aria-pressed='true'] {
+  color: var(--thorp-accent-soft);
+}
+
+.group[aria-pressed='true']::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--thorp-accent);
+  content: '';
+}
+
+.group:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
 /* 섹터별로 보기. 옆 과거 시장 카드의 분야 칩과 같은 모양이다. */
 .filter {
   display: flex;
@@ -64,6 +113,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .group,
   .chip {
     transition: none;
   }
