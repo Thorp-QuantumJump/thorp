@@ -1,10 +1,9 @@
 import { Activity, RefreshCw } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { FieldDetail } from '@/components/marketflow/FieldDetail'
 import { FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'
-import { formatUpdatedAt } from '@/components/marketflow/marketFlowFormat'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { FieldDetailResult, FieldSummary, FieldSummaryResult, MarketFlowFieldId } from '@/types/marketFlow'
 import heading from '@/components/common/PageHeading.module.css'
@@ -30,11 +29,6 @@ export function MarketFlowPage() {
   const [detailRequest, setDetailRequest] = useState(0)
   const selected = summary?.fields.find((field) => field.fieldId === selectedId) ?? summary?.fields[0]
   const selectedFieldId = selected?.fieldId
-  /** 분야 중 가장 늦은 갱신 시각. ISO 문자열이라 사전순이 시간순이다. */
-  const listUpdatedAt = summary?.fields.reduce<string | null>(
-    (latest, field) => (field.lastUpdatedAt !== null && (latest === null || field.lastUpdatedAt > latest) ? field.lastUpdatedAt : latest),
-    null,
-  ) ?? null
 
   useEffect(() => {
     const controller = new AbortController()
@@ -102,19 +96,13 @@ export function MarketFlowPage() {
             <h1>시장 흐름을 <span><em className={heading.emphasis}>분야별로</em> 확인하세요.</span></h1>
           </motion.div>
           <motion.div className={styles.heroAside} initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.3, delay: reducedMotion ? 0 : 0.06 }}>
-            <p>경제를 한 점수로 단정하지 않고, 일곱 분야의 실제 지표와 최근 3개월 경로를 나눠 보여 드립니다.</p>
+            <p>
+              <span>경제를 한 점수로 단정하지 않고,</span>
+              <span>일곱 분야의 실제 지표와 최근 3개월 경로를 나눠 보여 드립니다.</span>
+            </p>
           </motion.div>
         </header>
 
-        <div className={styles.workspaceHeading}>
-          {/* 번호를 매길 다음 구역이 없어 눈에 보이는 제목은 두지 않는다. 목록의 이름으로 보조기기에만 읽힌다. */}
-          <h2 id="field-list-title" className={styles.srOnly}>분야별 경제 흐름</h2>
-          {/* 목록 전체의 마지막 갱신은 여기 한 번만 적는다. 분야 줄은 이와 다를 때만 제 시각을 적는다(FR-011). */}
-          <span>
-            {summary ? `${summary.fields.length}개 분야` : '7개 분야'} <i aria-hidden="true">·</i> 최근 3개월
-            {listUpdatedAt ? <><i aria-hidden="true">·</i> 마지막 갱신 {formatUpdatedAt(listUpdatedAt)} KST</> : null}
-          </span>
-        </div>
         {summaryError ? (
           <section className={styles.loadFailure} role="alert">
             <p>분야 자료를 불러오지 못했습니다.</p>
@@ -124,9 +112,16 @@ export function MarketFlowPage() {
           <>
             <div className={styles.workspace}>
               <section className={styles.fieldRail} aria-labelledby="field-list-title" onKeyDown={navigateFields}>
-                <div className={styles.fieldList}>
+                {/* 눈에 보이는 제목은 두지 않는다. 메뉴 묶음의 이름으로 보조기기에만 읽힌다. */}
+                <h2 id="field-list-title" className={styles.srOnly}>분야별 경제 흐름</h2>
+                {/*
+                  목록 머리의 '7개 분야 · 최근 3개월 · 마지막 갱신' 줄은 두지 않는다(2026-09-29). 그래서 각 분야의
+                  마지막 갱신 시각은 말풍선마다 적고(FR-011), 고른 분야의 시각은 상세 머리 오른쪽에 있다.
+                  메뉴는 분야 수만큼 같은 폭으로 나눠 아래 상세 카드와 폭을 맞춘다.
+                */}
+                <div className={styles.fieldList} style={{ '--field-count': summary.fields.length } as CSSProperties}>
                   <LayoutGroup id={selectionGroup}>
-                    {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} listUpdatedAt={listUpdatedAt} />)}
+                    {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} />)}
                   </LayoutGroup>
                 </div>
               </section>
@@ -134,7 +129,7 @@ export function MarketFlowPage() {
                 <p className={styles.srOnly} role="status">{displayedDetail?.status === 'success' ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>
                 {displayedDetail?.status === 'success' ? (
                   // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.
-                  <FieldDetail key={displayedDetail.fieldId} detail={displayedDetail.data} />
+                  <FieldDetail key={displayedDetail.fieldId} detail={displayedDetail.data} historyNotice={summary.historicalComparisonNotice} />
                 ) : displayedDetail?.status === 'error' ? (
                   <section className={styles.loadFailure} role="alert">
                     <h2>{selected?.displayName}</h2>
@@ -144,7 +139,6 @@ export function MarketFlowPage() {
                 ) : <LoadingNotice>{`${selected?.displayName ?? '분야'} 상세를 불러오는 중입니다.`}</LoadingNotice>}
               </div>
             </div>
-            <p className={styles.historyNotice}>{summary.historicalComparisonNotice}</p>
           </>
         )}
 

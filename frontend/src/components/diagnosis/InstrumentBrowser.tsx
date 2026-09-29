@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'
+import { useEffect, useId, useRef } from 'react'
+import { Check, Maximize2, Minimize2 } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { PriceTrend } from '@/components/diagnosis/PriceTrend'
 import {
@@ -23,8 +23,11 @@ type InstrumentBrowserProps = {
   onView: (code: string) => void
   onToggleSelected: (code: string, selected: boolean) => void
   onExpandedChange: (expanded: boolean) => void
-  /** 카드 바닥 오른쪽에 붙는 한 줄. 목록 화면이 출처를 여기에 둔다. */
-  footer?: ReactNode
+  /**
+   * 이 카드 자료의 출처 문장(원칙 X). 가격 흐름이 그려지면 기간 줄 오른쪽 끝에 잇고, 그리지 못했을 때만 카드
+   * 바닥 오른쪽에 따로 둔다 — 어느 경우든 화면에서 빠지지 않는다.
+   */
+  source?: string
   className?: string
 }
 
@@ -40,8 +43,8 @@ type InstrumentBrowserProps = {
  * 오른쪽에 담긴 종목을 나란히 둔다. 같은 것을 세로로 이어 붙이면 아래쪽 사실이 화면 밖으로
  * 밀려, 넓혔는데도 스크롤로 찾아야 하는 일이 생긴다.
  *
- * <b>누르는 것과 담는 것을 가른다.</b> 왼쪽 목록을 누르면 보는 대상만 바뀌고, 백테스트 대상에
- * 담는 일은 가운데 머리의 단추 하나가 맡는다.
+ * <b>목록을 누르면 보고, 담는다.</b> 왼쪽 목록의 한 줄을 누르면 그 대상을 가운데에 펼치면서 백테스트
+ * 대상에 담고, 담긴 줄을 다시 누르면 뺀다. 담는 단추를 따로 두지 않아 누르는 자리가 하나다.
  */
 export function InstrumentBrowser({
   sectors,
@@ -51,7 +54,7 @@ export function InstrumentBrowser({
   onView,
   onToggleSelected,
   onExpandedChange,
-  footer,
+  source,
   className,
 }: InstrumentBrowserProps) {
   const headingId = useId()
@@ -69,7 +72,6 @@ export function InstrumentBrowser({
     미루면 가장 먼저 보이는 자리가 비어 있게 된다.
   */
   const priceSeries = useInstrumentPriceSeries(viewing.code)
-  const selected = isSelected(viewing.code)
 
   /*
     지금 보고 있는 대상을 카드에 표시할 때는 목록 항목과 다른 이름(`data-viewing-code`)을 쓴다.
@@ -97,24 +99,6 @@ export function InstrumentBrowser({
       data-viewing-code={viewing.code}
       aria-labelledby={headingId}
     >
-      {/*
-        카드의 크기를 바꾸는 단추다. 아이콘 하나뿐이라 보조 기술이 읽을 이름을 직접 준다.
-        `aria-expanded`가 지금 어느 크기인지, `aria-controls`가 무엇이 넓어지는지 알린다.
-      */}
-      <button
-        type="button"
-        data-slot="zoom"
-        aria-label={expanded ? '간단히 보기' : '상세 보기'}
-        aria-expanded={expanded}
-        aria-controls={bodyId}
-        onClick={() => onExpandedChange(!expanded)}
-      >
-        {expanded ? (
-          <Minimize2 size={17} strokeWidth={1.8} aria-hidden="true" />
-        ) : (
-          <Maximize2 size={17} strokeWidth={1.8} aria-hidden="true" />
-        )}
-      </button>
 
       <div id={bodyId} data-slot="body">
         {/*
@@ -127,21 +111,24 @@ export function InstrumentBrowser({
               const picked = isSelected(sector.code)
               return (
                 <li key={sector.code} data-sector-code={sector.code} data-selected={picked}>
+                  {/*
+                    누르면 그 대상을 보면서 담고, 담긴 줄을 다시 누르면 뺀다(보는 대상은 그대로 둔다).
+                    담긴 상태는 `aria-pressed`가 보조 기술에 알리고, 화면에서는 색만이 아니라 체크 표시로도 보인다.
+                  */}
                   <button
                     type="button"
                     data-slot="pill"
                     aria-current={sector.code === viewing.code ? 'true' : undefined}
-                    onClick={() => onView(sector.code)}
+                    aria-pressed={picked}
+                    onClick={() => {
+                      onView(sector.code)
+                      onToggleSelected(sector.code, !picked)
+                    }}
                   >
                     <span data-slot="pill-name">{sector.representativeEtf.name}</span>
-                    {/*
-                      담아 둔 대상이라는 표시다. 색만으로 알리지 않는다 — 형태로도 보이도록
-                      체크 표시를 두고, 소리로만 듣는 사용자를 위해 글자를 함께 싣는다.
-                    */}
                     {picked ? (
                       <span data-slot="pill-check">
                         <Check size={13} strokeWidth={2.4} aria-hidden="true" />
-                        <span data-slot="sr-only">선택됨</span>
                       </span>
                     ) : null}
                   </button>
@@ -154,51 +141,52 @@ export function InstrumentBrowser({
         <div data-slot="main">
           <header data-slot="main-header">
             <div data-slot="main-title">
-              <h3 id={headingId} data-slot="detail-name">
-                {viewing.representativeEtf.name}
-              </h3>
               {/*
-                접은 카드에서도 이 둘은 보인다. 목록 응답이 이미 주는 값이라 따로 부르지 않으며,
-                무엇을 따라가는 상품인지가 이름 다음으로 먼저 필요한 사실이다.
+                카드를 넓혀 담긴 종목을 보는 단추다. 상품 이름 바로 오른쪽에 두어 무엇의 종목인지 이어 읽히게 한다.
+                보이는 글자('포함 종목')가 이름에 들어가야 음성으로 부르는 사용자가 찾는다.
+                `aria-expanded`가 지금 어느 크기인지, `aria-controls`가 무엇이 넓어지는지 알린다.
               */}
-              <p data-slot="main-subtitle">
-                <span data-slot="main-fact">{viewing.name}</span>
-                <span data-slot="main-fact">
-                  {viewing.representativeEtf.benchmarkIndex}
-                </span>
-                <span data-slot="main-fact">
-                  {viewing.representativeEtf.listedOn} 상장
-                </span>
-              </p>
+              <div data-slot="detail-name-row">
+                <h3 id={headingId} data-slot="detail-name">
+                  {viewing.representativeEtf.name}
+                </h3>
+                <button
+                  type="button"
+                  data-slot="zoom"
+                  aria-label={expanded ? '포함 종목 접기' : '포함 종목 보기'}
+                  aria-expanded={expanded}
+                  aria-controls={bodyId}
+                  onClick={() => onExpandedChange(!expanded)}
+                >
+                  <span aria-hidden="true">포함 종목</span>
+                  {expanded ? (
+                    <Minimize2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                  ) : (
+                    <Maximize2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+              {/*
+                섹터·기준 지수·상장일은 '포함 종목'을 펼쳤을 때만 보인다. 접은 카드는 여러 대상을 빠르게 견주는
+                자리라 이름과 가격 흐름만 둔다. 목록 응답이 이미 주는 값이라 펼쳐도 따로 부르지 않는다.
+              */}
+              {expanded ? (
+                <p data-slot="main-subtitle">
+                  <span data-slot="main-fact">{viewing.name}</span>
+                  <span data-slot="main-fact">
+                    {viewing.representativeEtf.benchmarkIndex}
+                  </span>
+                  <span data-slot="main-fact">
+                    {viewing.representativeEtf.listedOn} 상장
+                  </span>
+                </p>
+              ) : null}
             </div>
-
-            {/*
-              담고 빼는 자리다. 담긴 뒤에도 같은 자리에 남아 '선택됨'을 말하고, 한 번 더 누르면 뺀다.
-              빼는 길은 오른쪽 선택 목록의 X가 따로 있어 '빼기'를 글자로 되풀이하지 않는다.
-            */}
-            <button
-              type="button"
-              data-slot="pick"
-              data-selected={selected}
-              aria-pressed={selected}
-              onClick={() => onToggleSelected(viewing.code, !selected)}
-            >
-              {selected ? (
-                <>
-                  <Check size={15} strokeWidth={2.2} aria-hidden="true" />
-                  <span>선택됨</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={15} strokeWidth={2.2} aria-hidden="true" />
-                  <span>투자 대상에 추가</span>
-                </>
-              )}
-            </button>
           </header>
 
           <PriceTrend
             name={viewing.representativeEtf.name}
+            source={source}
             result={priceSeries.result}
             onReload={priceSeries.reload}
             expanded={expanded}
@@ -213,7 +201,11 @@ export function InstrumentBrowser({
 
         {expanded ? <HoldingsColumn result={result} /> : null}
       </div>
-      {footer ? <div data-slot="footer">{footer}</div> : null}
+      {source && priceSeries.result?.status !== 'loaded' ? (
+        <div data-slot="footer">
+          <p data-slot="source">{source}</p>
+        </div>
+      ) : null}
     </section>
   )
 }

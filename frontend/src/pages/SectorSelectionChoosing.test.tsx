@@ -116,7 +116,7 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 카드 왼쪽 목록의 한 줄이다. 누르면 보는 대상만 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 그 대상을 보면서 담고, 담긴 줄을 다시 누르면 뺀다. */
 function row(code: string): HTMLButtonElement {
   return document.querySelector(
     `[data-slot="list"] [data-sector-code="${code}"] [data-slot="pill"]`,
@@ -125,11 +125,6 @@ function row(code: string): HTMLButtonElement {
 
 function detailName(): string {
   return document.querySelector('[data-slot="detail-name"]')?.textContent ?? ''
-}
-
-/** 담고 빼는 단추다. 카드 가운데 머리에 있다. */
-function actionButton(): HTMLButtonElement {
-  return document.querySelector('[data-slot="pick"]') as HTMLButtonElement
 }
 
 /** 카드를 넓히고 접는 단추다. 오른쪽 위에 아이콘 하나로 있다. */
@@ -143,26 +138,15 @@ function cardExpanded(): boolean {
   )
 }
 
-/** 상세 상태가 바깥 보드와 선택 요약까지 전달되는가. */
-function boardExpanded(): boolean {
-  return (
-    document.querySelector('[data-detail-expanded]')?.getAttribute('data-detail-expanded') ===
-    'true'
-  )
-}
-
-/** 오른쪽 선택 요약에 담긴 코드를 순서대로 모은다. */
+/** 왼쪽 목록에서 담긴 줄(`aria-pressed`)의 코드를 표시 순서대로 모은다. */
 function railCodes(): string[] {
-  return [...document.querySelectorAll('[data-slot="rail-item"]')].map(
-    (node) => node.getAttribute('data-sector-code') ?? '',
-  )
+  return [...document.querySelectorAll('[data-slot="list"] [data-sector-code]')]
+    .filter((node) => node.querySelector('[aria-pressed="true"]') !== null)
+    .map((node) => node.getAttribute('data-sector-code') ?? '')
 }
 
 async function add(user: User, ...codes: string[]) {
-  for (const code of codes) {
-    await user.click(row(code))
-    await user.click(actionButton())
-  }
+  for (const code of codes) await user.click(row(code))
 }
 
 describe('투자 대상 고르기', () => {
@@ -189,7 +173,7 @@ describe('투자 대상 고르기', () => {
     expect(row('SEMICONDUCTOR').getAttribute('aria-current')).toBe('true')
   })
 
-  it('목록을 눌러도 고르지 않고 보는 대상만 바뀐다', async () => {
+  it('목록을 누르면 그 대상을 보면서 투자 대상에 담는다', async () => {
     const user = userEvent.setup()
     await openPage()
 
@@ -198,45 +182,38 @@ describe('투자 대상 고르기', () => {
     expect(detailName()).toBe('KODEX 자동차')
     expect(row('AUTO').getAttribute('aria-current')).toBe('true')
     expect(row('SEMICONDUCTOR').getAttribute('aria-current')).toBeNull()
-    // 확인하려고 누른 것이 담는 일이 되면 안 된다.
-    expect(railCodes()).toEqual([])
-  })
-
-  it('추가를 눌러야 담기고 선택 요약과 목록에 함께 드러난다', async () => {
-    const user = userEvent.setup()
-    await openPage()
-
-    await add(user, 'AUTO')
-
+    expect(row('AUTO').getAttribute('aria-pressed')).toBe('true')
     expect(railCodes()).toEqual(['AUTO'])
-    // 목록에서도 담긴 사실이 색이 아니라 글자로 보인다.
-    expect(row('AUTO').textContent).toContain('선택됨')
-    expect(screen.getByText('1개 선택됨')).toBeTruthy()
+    expect(screen.getByText(/1개 선택됨/)).toBeTruthy()
   })
 
-  it('담은 대상은 같은 단추로 다시 뺄 수 있다', async () => {
+  it('담긴 줄을 다시 누르면 빠지고 보던 대상은 그대로다', async () => {
     const user = userEvent.setup()
     await openPage()
     await add(user, 'AUTO')
 
-    expect(actionButton().getAttribute('aria-pressed')).toBe('true')
-    await user.click(actionButton())
+    await user.click(row('AUTO'))
 
+    expect(row('AUTO').getAttribute('aria-pressed')).toBe('false')
     expect(railCodes()).toEqual([])
-    expect(actionButton().textContent).toContain('투자 대상에 추가')
+    expect(detailName()).toBe('KODEX 자동차')
   })
 
-  it('선택 요약에서도 뺄 수 있다', async () => {
-    const user = userEvent.setup()
+  it('담는 단추를 따로 두지 않는다', async () => {
     await openPage()
-    await add(user, 'SEMICONDUCTOR', 'AUTO')
 
-    await user.click(screen.getByRole('button', { name: '자동차 빼기' }))
-
-    expect(railCodes()).toEqual(['SEMICONDUCTOR'])
+    expect(screen.queryByRole('button', { name: /투자 대상에 추가/ })).toBeNull()
   })
 
-  it('선택 요약은 표시 순서를 지킨다', async () => {
+  it('선택 요약 상자를 따로 두지 않는다', async () => {
+    await openPage()
+
+    // 담긴 것은 목록의 체크 표시가, 개수는 다음 단계 단추 아래 한 줄이 말한다.
+    expect(screen.queryByRole('complementary', { name: '선택한 투자 대상' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '선택한 투자 대상 도움말' })).toBeNull()
+  })
+
+  it('담긴 것은 고른 차례가 아니라 표시 순서로 읽힌다', async () => {
     const user = userEvent.setup()
     await openPage()
 
@@ -249,30 +226,38 @@ describe('투자 대상 고르기', () => {
   it('지금 보고 있는 것과 담아 둔 것을 따로 드러낸다', async () => {
     const user = userEvent.setup()
     await openPage()
-    await add(user, 'AUTO')
+    await add(user, 'AUTO', 'STEEL')
 
+    // 담긴 줄을 다시 눌러 빼면, 보고는 있지만 담지 않은 상태가 된다. 둘은 서로를 뜻하지 않는다.
     await user.click(row('STEEL'))
 
-    // 담지 않은 대상을 보고 있는 상태다. 둘은 서로를 뜻하지 않는다.
     expect(row('STEEL').getAttribute('aria-current')).toBe('true')
-    expect(row('STEEL').textContent).not.toContain('선택됨')
+    expect(row('STEEL').getAttribute('aria-pressed')).toBe('false')
     expect(row('AUTO').getAttribute('aria-current')).toBeNull()
-    expect(row('AUTO').textContent).toContain('선택됨')
+    expect(row('AUTO').getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('아무것도 담지 않았으면 빈 자리 대신 무엇을 해야 하는지 알린다', async () => {
+  it('아무것도 담지 않았으면 다음 단계 단추 아래에서 무엇을 해야 하는지 알린다', async () => {
     await openPage()
 
-    expect(screen.getByText(/아직 선택한 투자 대상이 없습니다/)).toBeTruthy()
+    expect(screen.getByText('투자 대상을 2개 이상 골라 주세요.')).toBeTruthy()
     expect(railCodes()).toEqual([])
   })
 
-  it('접은 카드는 목록이 이미 준 사실만 보인다', async () => {
+  it('접은 카드는 이름과 가격 흐름만 두고, 펼치면 목록이 준 섹터·기준 지수·상장일을 보인다', async () => {
+    const user = userEvent.setup()
     await openPage()
 
-    // 기준 지수와 상장일은 목록 응답에 있다. 이것만으로 견주는 동안에는 상품 정보를 부르지 않는다.
-    expect(screen.getByText(/KRX 반도체/)).toBeTruthy()
-    expect(screen.getByText(/2018-09-12 상장/)).toBeTruthy()
+    // 접은 카드는 빠르게 견주는 자리라 설명 줄을 두지 않는다.
+    expect(screen.queryByText(/2018-09-12 상장/)).toBeNull()
+    await user.click(expandButton())
+    expect(await screen.findByText(/2018-09-12 상장/)).toBeTruthy()
+    expect(screen.getAllByText(/KRX 반도체/).length).toBeGreaterThan(0)
+  })
+
+  it('접은 카드는 상품 정보를 부르지 않는다', async () => {
+    await openPage()
+
     expect(screen.queryByText('삼성자산운용')).toBeNull()
     expect(screen.queryByText('삼성전자')).toBeNull()
     expect(apiMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
@@ -288,12 +273,9 @@ describe('투자 대상 고르기', () => {
     expect(screen.getByText('삼성자산운용')).toBeTruthy()
     expect(screen.getByText(/3개월 일평균 거래대금/)).toBeTruthy()
     expect(cardExpanded()).toBe(true)
-    expect(boardExpanded()).toBe(true)
-    expect(document.querySelector('[data-slot="rail-compact-summary"]')?.textContent).toContain(
-      '0개 선택2개 더',
-    )
-    expect(document.querySelector('[data-compact]')?.getAttribute('data-compact')).toBe('true')
-    expect(expandButton().getAttribute('aria-label')).toBe('간단히 보기')
+    // 넓혀도 다음 단계 단추는 카드 안에 그대로 있다.
+    expect(screen.getByRole('button', { name: 'STEP 02 - 전략 고르기' })).toBeTruthy()
+    expect(expandButton().getAttribute('aria-label')).toBe('포함 종목 접기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')
   })
@@ -313,14 +295,13 @@ describe('투자 대상 고르기', () => {
   it('카드를 여닫아도 보던 대상과 담아 둔 것이 그대로다', async () => {
     const user = userEvent.setup()
     await openPage()
-    await add(user, 'SEMICONDUCTOR')
-    await user.click(row('AUTO'))
+    await add(user, 'SEMICONDUCTOR', 'AUTO')
 
     await user.click(expandButton())
     await user.click(expandButton())
 
     expect(detailName()).toBe('KODEX 자동차')
-    expect(railCodes()).toEqual(['SEMICONDUCTOR'])
+    expect(railCodes()).toEqual(['SEMICONDUCTOR', 'AUTO'])
   })
 
   it('넓힌 채 다른 대상으로 옮기면 그 크기를 유지한다', async () => {

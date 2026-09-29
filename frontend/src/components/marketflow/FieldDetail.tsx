@@ -10,7 +10,11 @@ import { describeAxis, formatObservation, formatUpdatedAt, sourceParts } from '.
 import styles from './MarketFlow.module.css'
 
 /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */
-export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
+export function FieldDetail({ detail, historyNotice }: {
+  detail: FieldDetailResult
+  /** 서버(목록 응답)가 정한 역사 비교 안내 문장(FR-012). 있을 때만 시점 줄에 짧은 표시를 단다 */
+  historyNotice?: string | null
+}) {
   const reducedMotion = useReducedMotion()
   const titleId = `field-${detail.fieldId}-title`
   const similarNoteId = `similar-note-${detail.fieldId}`
@@ -24,17 +28,55 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reducedMotion ? 0 : 0.2 }}
     >
+      {/*
+        머리는 두 줄 격자다. 윗줄은 왼쪽 제목·오른쪽 기준 시점, 아랫줄은 왼쪽 요약 문장·오른쪽 '비슷했던 때 보기'.
+        버튼을 시점 밑에 세로로 쌓으면 머리가 그만큼 높아지므로, 요약 문장과 같은 가로 줄에 세운다.
+      */}
       <header className={styles.detailHeader}>
-        {/* 상태 표(수집 실패·예시 자료일 때만)는 분야 제목 줄에 맞춰 오른쪽에 선다. */}
-        <div className={styles.detailTitle}>
-          <h2 id={titleId}>{detail.displayName}</h2>
+        <h2 id={titleId} className={styles.detailName}>{detail.displayName}</h2>
+        <div className={styles.detailMeta}>
+          {/*
+            '최신 개정자료 기준'은 역사 탐색의 자료 기준을 화면에 밝히라는 constitution 원칙 V(FR-012)의 표시다. 긴 안내 문장
+            대신 시점 줄에 짧게 두고, 문장의 원본은 서버가 준 안내다 — 짧은 표시는 그 안내가 있을 때만 보이고, 원문은
+            마우스를 올리면(title) 보이며 보조기기에도 읽힌다. 상태 표(수집 실패·예시 자료일 때만)는 그 밑에 선다.
+          */}
+          <p className={styles.detailTiming}>
+            <span>대상월 {detail.referenceMonth ?? '확인할 수 없음'}</span>
+            <span>마지막 갱신 {formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</span>
+            {historyNotice ? (
+              <span title={historyNotice}>
+                최신 개정자료 기준<span className={styles.srOnly}>: {historyNotice}</span>
+              </span>
+            ) : null}
+          </p>
           <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />
         </div>
-        <p className={styles.detailNarrative}>{detail.narrative ?? '아래 기준 시점과 자료 상태를 확인해 주세요.'}</p>
-        <p className={styles.detailTiming}>
-          <span>대상월 {detail.referenceMonth ?? '확인할 수 없음'}</span>
-          <span>마지막 갱신 {formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</span>
-        </p>
+        <p className={styles.detailNarrative}>{detail.narrative ?? '기준 시점과 자료 상태를 확인해 주세요.'}</p>
+        {/*
+          넘기는 값은 분야와 그 분야의 기준월뿐이며 섹터를 골랐어도 달라지지 않는다(FR-016). 무엇을 찾는지는 버튼 설명으로
+          보조기기에만 읽히고, 찾을 수 없는 까닭(기준월 미정)만 화면에 남긴다 — 버튼이 왜 눌리지 않는지는 보여야 한다.
+        */}
+        <div className={styles.detailAction}>
+          {similarPath === null ? (
+            <button type="button" className={styles.similarButton} disabled aria-describedby={similarNoteId}>
+              비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
+            </button>
+          ) : (
+            <Link
+              to={similarPath}
+              className={styles.similarButton}
+              aria-describedby={similarNoteId}
+              data-handoff={JSON.stringify(similarPeriod)}
+            >
+              비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
+            </Link>
+          )}
+          {similarPeriod === null ? (
+            <p id={similarNoteId} className={styles.similarNote}>이 분야는 기준월이 아직 정해지지 않아 비슷했던 시기를 찾을 수 없습니다.</p>
+          ) : (
+            <p id={similarNoteId} className={styles.srOnly}>{`${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾습니다.`}</p>
+          )}
+        </div>
       </header>
       {detail.indicators.length === 0 ? (
         <div className={styles.emptyDetail}><ScanLine size={28} aria-hidden="true" /><p>표시할 지표 자료가 없습니다.</p><span>다른 분야의 자료는 계속 살펴볼 수 있습니다.</span></div>
@@ -70,40 +112,14 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
           ))}
         </div>
       )}
-      {/* 분야마다 기준월이 다를 수 있다는 안내(FR-008)는 지표를 다 본 뒤 읽히도록 카드 아래 오른쪽에 둔다. */}
-      <div className={styles.referenceNotes}>
-        <p className={styles.referenceNote}>{detail.multipleReferenceMonthNotice}</p>
-        {detail.referenceMonthHeldBackBy.length > 0 ? (
+      {/* 기준월을 늦춘 지표가 있을 때만 그 이름을 카드 아래 오른쪽에 적는다(FR-008). */}
+      {detail.referenceMonthHeldBackBy.length > 0 ? (
+        <div className={styles.referenceNotes}>
           <p className={styles.referenceNote}>
             기준월 결정에 반영된 지표: {detail.referenceMonthHeldBackBy.map((id) => detail.indicators.find((indicator) => indicator.indicatorId === id)?.name ?? id).join(', ')}
           </p>
-        ) : null}
-      </div>
-      {/* 넘기는 값은 분야와 그 분야의 기준월뿐이다. 섹터를 골랐어도 달라지지 않는다(FR-016). */}
-      <div className={styles.similarEntry}>
-        <div>
-          <span className={styles.detailEyebrow}>EXPLORE THE PAST</span>
-          <p id={similarNoteId}>
-            {similarPeriod === null
-              ? '이 분야는 기준월이 아직 정해지지 않아 비슷했던 시기를 찾을 수 없습니다.'
-              : `${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾습니다.`}
-          </p>
         </div>
-        {similarPath === null ? (
-          <button type="button" className={styles.similarButton} disabled aria-describedby={similarNoteId}>
-            비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
-          </button>
-        ) : (
-          <Link
-            to={similarPath}
-            className={styles.similarButton}
-            aria-describedby={similarNoteId}
-            data-handoff={JSON.stringify(similarPeriod)}
-          >
-            비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
-          </Link>
-        )}
-      </div>
+      ) : null}
     </motion.section>
   )
 }
