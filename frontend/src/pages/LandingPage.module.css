@@ -304,7 +304,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 32px;
+  /* 설명 문장과 붙어 보이지 않게 한 단 더 띄운다. 첫 화면의 행동이 설명과 따로 읽혀야 한다. */
+  margin-top: 48px;
 }
 
 .primaryCta,
