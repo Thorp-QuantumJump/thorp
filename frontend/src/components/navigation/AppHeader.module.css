@@ -148,14 +148,20 @@
 }
 
 /*
-  가리킬 때 깔리는 면. 가운데에서 작게 시작해 넓어지면서 짙어진다. 글자 뒤에 깔리도록 링크 안에서만 아래로 둔다.
+  가리킬 때 깔리는 면. 가운데에서 작게 시작해 넓어지면서 짙어진다. 면 자체도 가운데가 가장 밝고 바깥으로 갈수록
+  배경색(검정)으로 녹아들어, 테두리 없이 빛이 퍼진 것처럼 보인다. 글자 뒤에 깔리도록 링크 안에서만 아래로 둔다.
 */
 .desktopNav a::before {
   position: absolute;
   z-index: -1;
   inset: 0;
   border-radius: inherit;
-  background: var(--thorp-surface-raised);
+  background: radial-gradient(
+    ellipse 60% 85% at 50% 50%,
+    color-mix(in srgb, var(--thorp-foreground) 14%, transparent) 0%,
+    color-mix(in srgb, var(--thorp-foreground) 6%, transparent) 55%,
+    transparent 100%
+  );
   content: '';
   opacity: 0;
   transform: scale(0.6);
