@@ -1,6 +1,7 @@
 import { Newspaper } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { fetchNewsSectors } from '@/api/marketNews'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { NewsDigestSection } from '@/components/marketflow/NewsDigestSection'
 import { groupNewsSectors } from '@/diagnosis/newsSectorGroups'
 import type { NewsSector } from '@/types/marketNews'
@@ -37,10 +38,21 @@ export function SectorNews() {
 
   return (
     <section className={styles.card} aria-labelledby="sector-news-title">
-      <h2 id="sector-news-title" className={styles.title}>
-        <Newspaper size={16} aria-hidden="true" />
-        뉴스
-      </h2>
+      {/*
+        갱신 주기는 제목 옆 i 표시 뒤에 둔다. 주기는 백엔드 수집 설정(thorp.news.collection-interval, 기본 PT15M)을 따르며
+        API가 주기를 내주지 않아 여기 문장에 적는다 — 설정을 바꾸면 이 문장도 함께 고친다. 회차가 끝난 뒤 쉬는
+        방식이라 '약'을 붙이고, 오래된 뉴스를 '실시간'이라 부르지 않는다(012 FR-014).
+      */}
+      <div className={styles.head}>
+        <h2 id="sector-news-title" className={styles.title}>
+          <Newspaper size={16} aria-hidden="true" />
+          뉴스
+        </h2>
+        <InlineHelp label="뉴스 갱신" mark="i" side="bottom">
+          <p>뉴스는 약 15분마다 새로 모아 같은 사건끼리 묶습니다.</p>
+          <p>수집이 늦어지면 마지막으로 모은 뉴스를 그대로 보여 드립니다.</p>
+        </InlineHelp>
+      </div>
       <div className={styles.groups} role="group" aria-label="분류별로 보기">
         <button
           type="button"
