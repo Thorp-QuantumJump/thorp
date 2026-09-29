@@ -259,32 +259,42 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
             자리에서 그 결과가 바로 보여야 한다. 하나만 골라도 그 대상의 시작일부터 오늘까지를
             보여 주고, 아무것도 고르지 않았으면 빈 축과 한 줄 안내로 자리를 지킨다.
           */}
-          <AvailabilityTimeline className={styles.timeline} timeline={timeline} />
-          {listingWindow.status === 'unavailable' ? (
-            <ListingWindowNotice
-              className={styles.listingNotice}
-              listingWindow={listingWindow}
+          {/*
+            기간 카드와 탐색 카드는 같은 폭으로 왼쪽 칸에 쌓고, 다음 단계 단추는 오른쪽 칸에서 두 카드 사이
+            틈에 원의 가운데를 맞춘다. 두 카드의 오른쪽 모서리에 함께 걸쳐, 고른 결과(기간)와 고르는 자리(목록)
+            를 지나 다음 단계로 넘어가는 자리로 읽힌다.
+          */}
+          <div className={styles.cardRow}>
+            <AvailabilityTimeline
+              className={`${styles.timeline} ${styles.rowTimeline}`}
+              timeline={timeline}
             />
-          ) : null}
-
-          {viewing ? (
-            <div className={styles.cardRow}>
-              <InstrumentBrowser
-                className={styles.browserCard}
-                sectors={sectors}
-                viewing={viewing}
-                expanded={detailExpanded}
-                isSelected={selection.isSelected}
-                onView={setViewingCode}
-                onToggleSelected={selection.toggleSector}
-                onExpandedChange={setDetailExpanded}
-                source={`출처: ${KRX_SOURCE_ATTRIBUTION}`}
+            {listingWindow.status === 'unavailable' ? (
+              <ListingWindowNotice
+                className={`${styles.listingNotice} ${styles.rowNotice}`}
+                listingWindow={listingWindow}
               />
-              {proceedAction}
-            </div>
-          ) : (
-            attribution
-          )}
+            ) : null}
+
+            {viewing ? (
+              <>
+                <InstrumentBrowser
+                  className={`${styles.browserCard} ${styles.rowCard}`}
+                  sectors={sectors}
+                  viewing={viewing}
+                  expanded={detailExpanded}
+                  isSelected={selection.isSelected}
+                  onView={setViewingCode}
+                  onToggleSelected={selection.toggleSector}
+                  onExpandedChange={setDetailExpanded}
+                  source={`출처: ${KRX_SOURCE_ATTRIBUTION}`}
+                />
+                {proceedAction}
+              </>
+            ) : (
+              <div className={styles.rowCard}>{attribution}</div>
+            )}
+          </div>
 
           {/*
             보관이 막혀 003이 읽을 값을 남기지 못한 경우다. 조용히 넘기면 사용자는 선택이 사라진 빈
