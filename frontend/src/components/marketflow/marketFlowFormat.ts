@@ -1,4 +1,4 @@
-import type { IndicatorDisplay } from '@/types/marketFlow'
+import type { FieldStatus, IndicatorDisplay } from '@/types/marketFlow'
 
 /**
  * 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다.
@@ -110,4 +110,20 @@ export function describeAxis(indicator: IndicatorDisplay): string {
   return axis.includesZero
     ? '세로축이 0을 포함합니다.'
     : `세로축은 ${formatObservation(axis.domain[0])}~${formatObservation(axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
+}
+
+/** 분야 자료 공급 상태의 표 글자. */
+export const fieldStateLabels: Record<FieldStatus, string> = {
+  READY: '자료 확인',
+  EXAMPLE: '예시 자료',
+  EMPTY: '표시할 자료 없음',
+  COLLECTION_FAILED: '최근 수집 실패',
+}
+
+/** 목록 한 줄에 다는 상태 표. 정상 공급이면 없고, 수집 실패·자료 없음과 예시 자료만 단다. */
+export function stateLineLabels(status: FieldStatus, isExampleData = false): string[] {
+  return [
+    status === 'READY' ? null : fieldStateLabels[status],
+    isExampleData && status !== 'EXAMPLE' ? fieldStateLabels.EXAMPLE : null,
+  ].filter((label): label is string => label !== null)
 }
