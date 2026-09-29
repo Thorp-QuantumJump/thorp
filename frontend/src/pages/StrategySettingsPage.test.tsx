@@ -194,6 +194,7 @@ function renderPage(support?: AnalysisSupport) {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   };
 
   return render(
@@ -230,6 +231,7 @@ function renderPageWithSectorRoute(support: AnalysisSupport) {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   };
 
   return render(
@@ -271,6 +273,7 @@ function renderPageWithParamSearchRoute(support: AnalysisSupport) {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   };
 
   return render(
@@ -304,6 +307,7 @@ function renderPageWithResultRoute(support: AnalysisSupport) {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   };
 
   return render(
@@ -382,6 +386,7 @@ function renderHost(makeSupportFor: (generation: number) => AnalysisSupport) {
     login: vi.fn(),
     logout: vi.fn(),
     recheck: vi.fn(),
+    updateNickname: vi.fn(),
   };
 
   return render(

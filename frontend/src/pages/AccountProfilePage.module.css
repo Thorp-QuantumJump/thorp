@@ -172,6 +172,16 @@
   line-height: 1.5;
 }
 
+.formError {
+  margin: 0;
+  padding: var(--thorp-pad-notice, 14px 16px);
+  border: 1px solid var(--thorp-negative);
+  border-radius: var(--thorp-radius-inset, 0);
+  color: var(--thorp-negative);
+  font-size: var(--thorp-text-small, 1rem);
+  line-height: 1.5;
+}
+
 .notice svg {
   flex: 0 0 auto;
   color: var(--thorp-accent);
