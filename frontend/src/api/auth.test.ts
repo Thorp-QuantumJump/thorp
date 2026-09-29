@@ -8,6 +8,7 @@ import {
 } from '@/test/authFixtures'
 import { type ApiClientError, apiClient, resetCsrfToken } from './client'
 import {
+  changeNickname,
   confirmEmailVerification,
   getCurrentUser,
   login,
@@ -180,5 +181,31 @@ describe('auth API', () => {
     await expect(
       login({ email: 'user@example.com', password: 'wrong-password' }),
     ).rejects.toMatchObject({ kind: 'api', code: 'INVALID_CREDENTIALS' })
+  })
+
+  it('닉네임 변경은 CSRF를 준비하고 앞뒤 공백을 뗀 닉네임만 보내 바뀐 사용자를 돌려준다', async () => {
+    const csrfSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))
+    const changed = { ...authenticatedUser, nickname: '새닉네임' }
+    const patchSpy = vi.spyOn(apiClient, 'patch').mockResolvedValue(
+      axiosResponse({ success: true, data: changed, error: null }),
+    )
+
+    await expect(changeNickname('  새닉네임 ')).resolves.toEqual(changed)
+    expect(csrfSpy).toHaveBeenCalledWith('/auth/csrf')
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/accounts/me',
+      { nickname: '새닉네임' },
+      { signal: undefined },
+    )
+  })
+
+  it('닉네임 변경 실패 envelope를 안정된 코드의 오류로 변환한다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))
+    const response = axiosResponse(authError('INVALID_INPUT', '입력값이 올바르지 않습니다.'), 400)
+    vi.spyOn(apiClient, 'patch').mockRejectedValue(
+      new AxiosError('Request failed', 'ERR_BAD_REQUEST', undefined, undefined, response),
+    )
+
+    await expect(changeNickname('가')).rejects.toMatchObject({ kind: 'api', code: 'INVALID_INPUT' })
   })
 })
