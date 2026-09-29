@@ -95,7 +95,7 @@ export function MarketFlowPage() {
         <header className={styles.hero}>
           <motion.div initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             {/* classic은 예전의 아이콘 작은 제목, 새 디자인은 첫 화면과 같은 선 작은 제목이다. */}
-            <span className={`${styles.eyebrow} ${styles.classicOnly}`}><Activity size={14} aria-hidden="true" /> MARKET FLOW</span>
+            <span className={`${styles.eyebrow} ${heading.classicOnly}`}><Activity size={14} aria-hidden="true" /> MARKET FLOW</span>
             <p className={heading.eyebrow} aria-hidden="true">MARKET FLOW</p>
             {/* 넓은 화면에서는 한 줄로 읽힌다. 뒷부분은 통째로 움직이는 덩어리라 폭이 모자라면 '분야별로'부터
                 아랫줄로 내려가고, 단어 중간에서 끊기지 않는다. */}

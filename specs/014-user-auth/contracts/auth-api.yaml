@@ -4,7 +4,8 @@ info:
   version: 0.1.0
   description: >-
     014-user-auth의 외부 /api 계약이다. 2026-09-16 기준 7개 operation은
-    Backend 내부 경로와 FE proxy 경로에서 구현·검증됐다.
+    Backend 내부 경로와 FE proxy 경로에서 구현·검증됐다. 2026-09-29에 회원정보
+    수정(닉네임 변경, PATCH /accounts/me)을 더했다.
 servers:
   - url: /api
 paths:
@@ -74,6 +75,39 @@ paths:
                 $ref: '#/components/schemas/SignupSuccessEnvelope'
         '400':
           $ref: '#/components/responses/SignupRejected'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /accounts/me:
+    patch:
+      operationId: changeNickname
+      summary: 로그인한 사용자의 닉네임 변경
+      description: >-
+        회원정보 수정에서 바꿀 수 있는 것은 닉네임 하나다. 이메일은 가입 때 인증한 값이라
+        바꾸지 않는다. 닉네임은 앞뒤 공백을 뗀 뒤 2~20자여야 하며 유일하지 않다.
+        성공 응답은 현재 사용자 조회와 같은 AuthenticatedUser다.
+      x-implementation-status: implemented
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeNicknameRequest'
+      responses:
+        '200':
+          description: 닉네임 변경 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '401':
+          $ref: '#/components/responses/AuthenticationRequired'
         '403':
           $ref: '#/components/responses/InvalidCsrf'
         '500':
@@ -228,6 +262,16 @@ components:
         password:
           type: string
           writeOnly: true
+    ChangeNicknameRequest:
+      type: object
+      additionalProperties: false
+      required: [nickname]
+      properties:
+        nickname:
+          type: string
+          minLength: 2
+          maxLength: 20
+          description: 앞뒤 공백을 뗀 뒤의 길이로 검증한다
     SignupResponse:
       type: object
       additionalProperties: false

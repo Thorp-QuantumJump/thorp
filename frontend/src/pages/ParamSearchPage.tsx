@@ -344,7 +344,7 @@ export function ParamSearchPage() {
 
       <main className={styles.main} aria-labelledby="param-search-title">
         {/* classic은 예전의 한글 작은 제목, 새 디자인은 첫 화면과 같은 영문 작은 제목이다. */}
-        <div className={`${styles.eyebrow} ${styles.classicOnly}`}>
+        <div className={`${styles.eyebrow} ${heading.classicOnly}`}>
           <SlidersHorizontal size={16} aria-hidden="true" />
           설정 조합 자동 비교
         </div>

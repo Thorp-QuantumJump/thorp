@@ -85,6 +85,7 @@ const anonymousAuth: AuthContextValue = {
   login: vi.fn(),
   logout: vi.fn(),
   recheck: vi.fn(),
+  updateNickname: vi.fn(),
 }
 const authenticatedAuth: AuthContextValue = {
   ...anonymousAuth,

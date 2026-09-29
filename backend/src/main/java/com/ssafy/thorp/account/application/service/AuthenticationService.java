@@ -1,5 +1,6 @@
 package com.ssafy.thorp.account.application.service;
 
+import com.ssafy.thorp.account.application.AuthenticatedPrincipal;
 import com.ssafy.thorp.account.application.EmailNormalizer;
 import com.ssafy.thorp.account.application.command.LoginCommand;
 import com.ssafy.thorp.account.application.repository.UserRepository;
@@ -124,7 +125,8 @@ public class AuthenticationService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // 세션 식별자는 남기지 않는다. 로그에 남으면 그 줄을 본 사람이 세션을 그대로 흉내 낼 수 있다.
-        userId(authentication).ifPresent(id -> log.info("Logout: userId={}", id));
+        AuthenticatedPrincipal.userId(authentication)
+                .ifPresent(id -> log.info("Logout: userId={}", id));
 
         logoutHandler.logout(request, response, authentication);
 
@@ -154,7 +156,7 @@ public class AuthenticationService {
      */
     @Transactional(readOnly = true)
     public AuthenticatedUserResult currentUser(Authentication authentication) {
-        return userId(authentication)
+        return AuthenticatedPrincipal.userId(authentication)
                 .flatMap(userRepository::findById)
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .map(AuthenticationService::projectionOf)
@@ -186,19 +188,6 @@ public class AuthenticationService {
         }
 
         return user;
-    }
-
-    /** 인증 주체는 로그인이 넣어 둔 사용자 식별자다. 그 형태가 아니면 우리가 만든 세션이 아니므로 로그인 상태로 보지 않는다. */
-    private static Optional<Long> userId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Long.valueOf(authentication.getName()));
-        } catch (NumberFormatException e) {
-            log.warn("Unusable authentication principal in session");
-            return Optional.empty();
-        }
     }
 
     private static AuthenticatedUserResult projectionOf(User user) {

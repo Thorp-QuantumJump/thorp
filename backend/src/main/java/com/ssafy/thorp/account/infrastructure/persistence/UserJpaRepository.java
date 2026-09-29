@@ -26,4 +26,18 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
     @Modifying
     @Query("update UserEntity u set u.lastLoginAt = :lastLoginAt where u.id = :id")
     int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") Instant lastLoginAt);
+
+    /**
+     * 닉네임 컬럼과 수정 시각만 쓰는 UPDATE. JPQL UPDATE는 {@code @PreUpdate}를 거치지 않으므로 수정 시각을 함께 넘긴다.
+     *
+     * <p>{@code clearAutomatically}로 영속성 컨텍스트를 비운다. 같은 트랜잭션에서 방금 읽은 엔티티가 남아 있으면 이후 조회가 옛 닉네임을 본다.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(
+            "update UserEntity u set u.nickname = :nickname, u.updatedAt = :updatedAt"
+                    + " where u.id = :id")
+    int updateNickname(
+            @Param("id") Long id,
+            @Param("nickname") String nickname,
+            @Param("updatedAt") Instant updatedAt);
 }
