@@ -100,24 +100,6 @@ export function InstrumentBrowser({
       data-viewing-code={viewing.code}
       aria-labelledby={headingId}
     >
-      {/*
-        카드의 크기를 바꾸는 단추다. 아이콘 하나뿐이라 보조 기술이 읽을 이름을 직접 준다.
-        `aria-expanded`가 지금 어느 크기인지, `aria-controls`가 무엇이 넓어지는지 알린다.
-      */}
-      <button
-        type="button"
-        data-slot="zoom"
-        aria-label={expanded ? '간단히 보기' : '상세 보기'}
-        aria-expanded={expanded}
-        aria-controls={bodyId}
-        onClick={() => onExpandedChange(!expanded)}
-      >
-        {expanded ? (
-          <Minimize2 size={17} strokeWidth={1.8} aria-hidden="true" />
-        ) : (
-          <Maximize2 size={17} strokeWidth={1.8} aria-hidden="true" />
-        )}
-      </button>
 
       <div id={bodyId} data-slot="body">
         {/*
@@ -157,9 +139,31 @@ export function InstrumentBrowser({
         <div data-slot="main">
           <header data-slot="main-header">
             <div data-slot="main-title">
-              <h3 id={headingId} data-slot="detail-name">
-                {viewing.representativeEtf.name}
-              </h3>
+              {/*
+                카드를 넓혀 담긴 종목을 보는 단추다. 상품 이름 바로 오른쪽에 두어 무엇의 종목인지 이어 읽히게 한다.
+                보이는 글자('포함 종목')가 이름에 들어가야 음성으로 부르는 사용자가 찾는다.
+                `aria-expanded`가 지금 어느 크기인지, `aria-controls`가 무엇이 넓어지는지 알린다.
+              */}
+              <div data-slot="detail-name-row">
+                <h3 id={headingId} data-slot="detail-name">
+                  {viewing.representativeEtf.name}
+                </h3>
+                <button
+                  type="button"
+                  data-slot="zoom"
+                  aria-label={expanded ? '포함 종목 접기' : '포함 종목 보기'}
+                  aria-expanded={expanded}
+                  aria-controls={bodyId}
+                  onClick={() => onExpandedChange(!expanded)}
+                >
+                  <span aria-hidden="true">포함 종목</span>
+                  {expanded ? (
+                    <Minimize2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                  ) : (
+                    <Maximize2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
               {/*
                 접은 카드에서도 이 둘은 보인다. 목록 응답이 이미 주는 값이라 따로 부르지 않으며,
                 무엇을 따라가는 상품인지가 이름 다음으로 먼저 필요한 사실이다.
