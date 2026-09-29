@@ -19,6 +19,8 @@ interface InlineHelpProps {
   on?: "click" | "hover";
   /** 도움말을 펼칠 방향. 오른쪽 끝 칸처럼 위로 펼치면 화면을 벗어나는 자리에서 바꾼다(427) */
   side?: "top" | "bottom" | "right";
+  /** 트리거에 보일 글자. 기본은 물음표이고, 설명이 아니라 알림을 내린 자리는 `"i"`를 쓴다 */
+  mark?: ReactNode;
 }
 
 /** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */
@@ -47,7 +49,7 @@ const CLOSE_DELAY_MS = 80;
  * 처리된다. 말풍선에는 초점을 옮기지 않는다 — 초점이 트리거에 남아야 Esc 를 누른 사람이 제자리에
  * 있고(005 FR-022), 트리거를 떠날 때 닫는 판단도 그대로 산다.
  */
-export function InlineHelp({ label, children, on = "hover", side = "top" }: InlineHelpProps) {
+export function InlineHelp({ label, children, on = "hover", side = "top", mark = "?" }: InlineHelpProps) {
   const [open, setOpen] = useState(false);
   const timerRef = useRef<number | undefined>(undefined);
 
@@ -100,7 +102,7 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
             onBlur={() => settle(false)}
             onClick={() => settle(!open)}
           >
-            ?
+            {mark}
           </button>
         </Popover.Anchor>
         <Popover.Portal>
@@ -135,7 +137,7 @@ export function InlineHelp({ label, children, on = "hover", side = "top" }: Inli
         className={styles.trigger}
         aria-label={`${label} 도움말`}
       >
-        ?
+        {mark}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
