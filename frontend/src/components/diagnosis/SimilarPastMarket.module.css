@@ -142,7 +142,9 @@
   color: var(--thorp-warning);
 }
 
-.composite[aria-pressed='true'] {
+/* 호버 규칙(:hover:not(:disabled))이 더 구체적이라, 눌린 채 가리켜도 채움이 풀리지 않게 같은 무게로 적는다. */
+.composite[aria-pressed='true'],
+.composite[aria-pressed='true']:hover:not(:disabled) {
   border-color: var(--thorp-warning);
   background: var(--thorp-warning);
   color: var(--thorp-background);
@@ -186,33 +188,9 @@
   line-height: 1.5;
 }
 
-.notesLine svg {
-  flex-shrink: 0;
-  color: var(--thorp-warning);
-}
-
-.notesLine[data-tone='error'] svg {
-  color: var(--thorp-negative);
-}
-
-.notesLine:focus-visible {
-  border-radius: 4px;
-  outline: var(--thorp-focus-outline-compact);
-  outline-offset: var(--thorp-focus-offset-compact);
-}
-
-.notesDivider {
-  color: var(--thorp-muted);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+/* i 표시는 앞말이 없는 자리에 홀로 선다. 도움말 기본 여백(앞말과 떼는 틈)을 걷는다. */
+.notesLine > button {
+  margin-inline-start: 0;
 }
 
 .cases {
@@ -290,6 +268,15 @@
 
 .differentLabel {
   background: color-mix(in srgb, var(--thorp-warning) 16%, transparent);
+  color: var(--thorp-warning);
+}
+
+/* 설명 문장도 이름표와 같은 색이다. 어느 줄이 비슷한 점이고 어느 줄이 다른 점인지 문장만 보고도 가른다. */
+.similarText {
+  color: var(--thorp-accent-soft);
+}
+
+.differentText {
   color: var(--thorp-warning);
 }
 
