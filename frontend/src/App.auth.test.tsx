@@ -12,6 +12,12 @@ vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면
 vi.mock('@/pages/MyRecordsPage', () => ({
   MyRecordsPage: () => <h1>내 기록 화면</h1>,
 }))
+vi.mock('@/pages/AccountProfilePage', () => ({
+  AccountProfilePage: () => <h1>회원정보 수정 화면</h1>,
+}))
+vi.mock('@/pages/AccountProfilePreviewPage', () => ({
+  AccountProfilePreviewPage: () => <h1>회원정보 미리보기 화면</h1>,
+}))
 
 const anonymousAuth: AuthContextValue = {
   status: 'anonymous',
@@ -95,7 +101,7 @@ describe('App authentication routes', () => {
     expect(screen.getByTestId('pathname').textContent).toBe('/')
   })
 
-  it('내 기록 경로만 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {
+  it('내 기록 경로는 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {
     renderApp('/records/run-17?tab=trades#cost')
 
     expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()
@@ -109,5 +115,25 @@ describe('App authentication routes', () => {
     renderApp('/records', authenticatedAuth)
 
     expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()
+  })
+
+  it('비로그인 사용자가 회원정보 경로로 오면 로그인 후 돌아올 위치를 저장한다', async () => {
+    renderApp('/account/profile')
+
+    expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()
+    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBe('/account/profile')
+  })
+
+  it('로그인 사용자는 회원정보 수정 화면으로 들어갈 수 있다', async () => {
+    authenticatedAuth.recheck = vi.fn().mockResolvedValue(authenticatedAuth)
+    renderApp('/account/profile', authenticatedAuth)
+
+    expect(await screen.findByRole('heading', { name: '회원정보 수정 화면' })).toBeTruthy()
+  })
+
+  it('개발용 미리보기 경로는 비로그인 상태에서도 열린다', async () => {
+    renderApp('/dev/account-profile')
+
+    expect(await screen.findByRole('heading', { name: '회원정보 미리보기 화면' })).toBeTruthy()
   })
 })
