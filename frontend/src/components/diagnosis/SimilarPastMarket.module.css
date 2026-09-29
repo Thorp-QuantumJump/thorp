@@ -11,25 +11,29 @@
 
 .head {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
 }
 
-.kicker {
-  margin: 0 0 6px;
-  color: var(--thorp-eyebrow, var(--thorp-accent-soft));
-  font-size: var(--thorp-text-label, 0.66rem);
-  font-weight: 670;
-  letter-spacing: 0.16em;
-}
-
+/* 옆 뉴스 카드 제목과 같은 짜임이다. 아이콘 하나와 제목 한 줄. */
 .head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: var(--thorp-text-heading, 1.08rem);
   font-weight: 650;
 }
 
+.head h2 svg {
+  flex-shrink: 0;
+  color: var(--thorp-accent-soft);
+}
+
 .basis {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.72rem);
   font-variant-numeric: tabular-nums;
@@ -120,10 +124,29 @@
   font-weight: 600;
 }
 
-/* 종합 비교는 분야와 다른 무게라 떼어 두고 점선 테두리로 구분한다. */
+/*
+  종합 비교는 분야와 다른 무게라 끝에 떼어 두고 노란 버튼으로 눈에 띄게 한다. 분야 칩과 같은 초록을 쓰면
+  분야 하나처럼 읽힌다. 눌렸을 때는 채워진 노랑으로 바뀐다.
+*/
 .composite {
   margin-left: auto;
-  border-style: dashed;
+  border-color: var(--thorp-warning);
+  background: color-mix(in srgb, var(--thorp-warning) 14%, transparent);
+  color: var(--thorp-warning);
+  font-weight: 650;
+}
+
+.composite:hover:not(:disabled) {
+  border-color: var(--thorp-warning);
+  background: color-mix(in srgb, var(--thorp-warning) 24%, transparent);
+  color: var(--thorp-warning);
+}
+
+.composite[aria-pressed='true'] {
+  border-color: var(--thorp-warning);
+  background: var(--thorp-warning);
+  color: var(--thorp-background);
+  font-weight: 680;
 }
 
 .composite:disabled {
@@ -134,7 +157,8 @@
 .field:focus-visible,
 .composite:focus-visible,
 .pick:focus-visible,
-.detail:focus-visible {
+.detail:focus-visible,
+.detailButton:focus-visible {
   outline: var(--thorp-focus-outline-compact);
   outline-offset: var(--thorp-focus-offset-compact);
 }
@@ -151,10 +175,44 @@
   gap: 12px;
 }
 
-.notes {
+.notesLine {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  line-height: 1.5;
+}
+
+.notesLine svg {
+  flex-shrink: 0;
+  color: var(--thorp-warning);
+}
+
+.notesLine[data-tone='error'] svg {
+  color: var(--thorp-negative);
+}
+
+.notesLine:focus-visible {
+  border-radius: 4px;
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.notesDivider {
+  color: var(--thorp-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .cases {
@@ -215,10 +273,24 @@
   line-height: 1.55;
 }
 
+/* 비슷한 점·다른 점 이름표. 카드 바탕과 구분되도록 옅은 색 바탕을 깐다. 문구가 함께 있어 색만으로 가르지 않는다. */
 .reason b {
-  margin-right: 6px;
-  color: var(--thorp-muted);
-  font-weight: 600;
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 650;
+}
+
+.similarLabel {
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-accent-soft);
+}
+
+.differentLabel {
+  background: color-mix(in srgb, var(--thorp-warning) 16%, transparent);
+  color: var(--thorp-warning);
 }
 
 .caseActions {
@@ -272,6 +344,28 @@
   color: var(--thorp-accent-soft);
 }
 
+/* 사례 줄의 '자세히'. 옆 주 버튼보다 한 단 낮은 보조 버튼이라 같은 높이에 면만 옅게 둔다. */
+.detailButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--thorp-control, 40px);
+  padding: 0 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-control-font, 0.82rem);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.detailButton:hover {
+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));
+  color: var(--thorp-foreground);
+}
+
 @media (max-width: 800px) {
   .case {
     grid-template-columns: 1fr;
@@ -289,7 +383,8 @@
 @media (prefers-reduced-motion: reduce) {
   .field,
   .composite,
-  .pick {
+  .pick,
+  .detailButton {
     transition: none;
   }
 }

@@ -8,7 +8,7 @@
   z-index: 30;
   top: 0;
   box-sizing: border-box;
-  min-height: 82px;
+  min-height: var(--thorp-header-height, 64px);
   border-bottom: 1px solid var(--thorp-line);
   background: var(--thorp-background);
 }
@@ -78,7 +78,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   width: min(100% - 40px, 1440px);
-  min-height: 82px;
+  min-height: var(--thorp-header-height, 64px);
   margin: 0 auto;
   padding: 0;
   background: transparent;
@@ -126,7 +126,7 @@
 }
 
 .desktopNav {
-  gap: 5px;
+  gap: 12px;
   justify-self: center;
   padding: 0;
   border: 0;
@@ -135,23 +135,34 @@
 
 .desktopNav a {
   position: relative;
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 13px;
-  border-radius: 4px;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 6px;
   color: var(--thorp-copy);
   font-size: 0.76rem;
   font-weight: 650;
   text-decoration: none;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+/* 아이콘은 글자보다 한 단계 옅게 두고, 가리키거나 현재 위치일 때만 강조색으로 올린다. */
+.desktopNav a svg {
+  color: var(--thorp-muted);
   transition: color 160ms ease;
 }
 
 .desktopNav a:hover {
+  background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
 }
 
+.desktopNav a:hover svg,
+.desktopNav a[aria-current='page'] svg {
+  color: var(--thorp-accent-soft);
+}
+
 .desktopNav a[aria-current='page'] {
-  border-radius: 0;
   background: transparent;
   color: var(--thorp-accent-soft);
 }
@@ -165,6 +176,7 @@
   height: 2px;
   border-radius: 2px;
   background: var(--thorp-accent);
+  box-shadow: 0 0 10px var(--thorp-accent);
 }
 
 .accountLinks {
@@ -353,6 +365,14 @@
 }
 
 @media (max-width: 1100px) {
+  .desktopNav {
+    gap: 4px;
+  }
+
+  .desktopNav a {
+    padding: 0 11px;
+  }
+
   .authButton {
     width: 36px;
     padding: 0;

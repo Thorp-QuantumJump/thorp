@@ -156,7 +156,7 @@ function AnimatedRoutes() {
             {/* 배우기는 로그인 없이 연다. 진단의 전제가 아니다(013 FR-011·FR-012). */}
             <Route path="/learn" element={<LearningListPage />} />
             <Route path="/learn/:articleId" element={<LearningArticlePage />} />
-            {/* 첫 화면의 '비중 비교하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
+            {/* 첫 화면의 '전략 진단하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />
             {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}
             <Route path="/strategy" element={<StrategySettingsPage />} />

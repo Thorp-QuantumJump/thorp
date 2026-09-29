@@ -147,7 +147,7 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {
             {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라
                 다른 화면으로 보내지 않는다. */}
             <Link className={styles.primaryCta} to="/diagnosis/sectors">
-              비중 비교하기
+              전략 진단하기
               <ArrowUpRight aria-hidden="true" size={18} />
             </Link>
             <button type="button" className={styles.secondaryCta} onClick={moveToMarket}>
@@ -167,11 +167,6 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {
             <MarketPreviewWindow indicators={indicators} />
           </motion.div>
         </motion.div>
-      </div>
-
-      <div className={styles.heroFootnote} aria-hidden="true">
-        <span>01</span>
-        <span>SCROLL TO EXPLORE</span>
       </div>
     </section>
   )

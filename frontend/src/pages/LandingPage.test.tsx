@@ -109,10 +109,10 @@ describe('LandingPage', () => {
     }
   })
 
-  it("가장 중요한 행동 버튼은 '비중 비교하기' 하나이며 섹터 선택으로 간다", () => {
+  it("가장 중요한 행동 버튼은 '전략 진단하기' 하나이며 섹터 선택으로 간다", () => {
     renderLanding()
 
-    const cta = screen.getByRole('link', { name: /비중 비교하기/ })
+    const cta = screen.getByRole('link', { name: /전략 진단하기/ })
     expect(cta.getAttribute('href')).toBe('/diagnosis/sectors')
 
     // 행동 줄에서 다른 화면으로 보내는 것은 이 버튼 하나뿐이다. 옆에 있는 '서비스 알아보기'는
@@ -135,7 +135,7 @@ describe('LandingPage', () => {
   it('머리 영역의 주 버튼이 대시보드로 가지 않는다', () => {
     renderLanding()
 
-    // 이 자리를 '비중 비교하기'가 대신한다. 옛 버튼이 남으면 첫 화면의 주된 행동이 둘이 된다.
+    // 이 자리를 '전략 진단하기'가 대신한다. 옛 버튼이 남으면 첫 화면의 주된 행동이 둘이 된다.
     expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()
   })
 
