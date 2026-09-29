@@ -1,7 +1,8 @@
-import { ArrowUpRight, Check, History, Info } from 'lucide-react'
+import { ArrowUpRight, Check, History } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getRegimeBaselineMonths, getRegimeSearch } from '@/api/regime'
+import { InlineHelp } from '@/components/common/InlineHelp'
 import { Disclosure } from '@/components/regime/Disclosure'
 import { EmptyResult } from '@/components/regime/EmptyResult'
 import { buildCaseId, buildRegimeLinkStartPath, parseCaseId } from '@/marketflow/handoff'
@@ -150,33 +151,25 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
         ) : result ? (
           <div className={styles.result}>
             {/*
-              검색 상태와 사례 구분을 사례 목록 위 한 줄로 줄여 둔다. 호버로 숨기지 않는다 — 결과를 어디까지
-              믿어도 되는지 말하는 문구라 늘 보이고, 키보드로 닿고, 보조기기가 어느 결과의 것인지 읽어야 한다
-              (010 FR-037·SC-014). 이름표('검색 상태'·'사례 구분')는 화면에서 빼고 보조기기에만 남긴다.
+              검색 상태와 사례 구분은 이 카드에서 i 표시 뒤로 내린다. 가리키거나 키보드 초점을 주면 그 자리에
+              펼쳐진다. 결과를 곁들여 보이는 요약 카드라서이고, 같은 결과의 '비슷했던 때 보기' 화면에서는 늘
+              펼쳐 둔다(010 FR-037). 보조기기에는 펼치지 않아도 읽히도록 같은 문장을 알림 영역에 남긴다.
             */}
-            <p
-              className={styles.notesLine}
-              data-tone={result.status === 'NOT_COMPUTABLE' ? 'error' : 'warning'}
-              tabIndex={0}
-              role="status"
-              aria-live="polite"
-              aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}
-            >
-              <Info size={14} aria-hidden="true" />
-              <span>
-                <span className="sr-only">검색 상태: </span>
-                {result.statusNote}
-              </span>
-              {result.caseLabel ? (
-                <>
-                  <span className={styles.notesDivider} aria-hidden="true">·</span>
-                  <span>
-                    <span className="sr-only">사례 구분: </span>
-                    {result.caseLabel}
-                  </span>
-                </>
-              ) : null}
-            </p>
+            <div className={styles.notesLine}>
+              <InlineHelp label={`검색 상태${result.caseLabel ? '와 사례 구분' : ''}`} mark="i" side="bottom">
+                <p><b>검색 상태</b> {result.statusNote}</p>
+                {result.caseLabel ? <p><b>사례 구분</b> {result.caseLabel}</p> : null}
+              </InlineHelp>
+              <p
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+                aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}
+              >
+                검색 상태: {result.statusNote}
+                {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}
+              </p>
+            </div>
             {result.status !== 'NOT_COMPUTABLE' && result.cases.length === 0 && result.thresholdNote ? (
               // 교정된 기준을 넘는 사례가 없다(spec US3 시나리오 4). 참고 사례는 검색 화면에서 따로 연다.
               <Disclosure label="유사성 기준" context={context} tone="warning">
@@ -206,8 +199,18 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {
                           <span>관측 구간</span>
                           <strong>{observationRange(item.observationMonths) ?? item.endMonth}</strong>
                         </p>
-                        {item.similar[0] ? <p className={styles.reason}><b className={styles.similarLabel}>비슷한 점</b> {item.similar[0]}</p> : null}
-                        {item.different[0] ? <p className={styles.reason}><b className={styles.differentLabel}>다른 점</b> {item.different[0]}</p> : null}
+                        {item.similar[0] ? (
+                          <p className={styles.reason}>
+                            <b className={styles.similarLabel}>비슷한 점</b>
+                            <span className={styles.similarText}>{item.similar[0]}</span>
+                          </p>
+                        ) : null}
+                        {item.different[0] ? (
+                          <p className={styles.reason}>
+                            <b className={styles.differentLabel}>다른 점</b>
+                            <span className={styles.differentText}>{item.different[0]}</span>
+                          </p>
+                        ) : null}
                       </div>
                       <div className={styles.caseActions}>
                         {itemCaseId === null ? null : isChosen ? (
