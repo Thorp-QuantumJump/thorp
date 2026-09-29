@@ -48,7 +48,9 @@
   margin-bottom: 0;
 }
 
+/* 안내 칸을 오른쪽 끝에 붙인다. 글이 아래 탐색 카드·선택 요약 카드의 오른쪽 끝에서 끝난다. */
 .hero .lead {
+  justify-self: end;
   max-width: 440px;
   margin: 0;
   padding: 0 0 3px 22px;
@@ -65,6 +67,7 @@
   }
 
   .hero .lead {
+    justify-self: start;
     max-width: 540px;
     padding: 0;
     border: 0;

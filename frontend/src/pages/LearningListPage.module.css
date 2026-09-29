@@ -13,7 +13,7 @@
 }
 
 .title {
-  margin: 0 0 28px;
+  margin: 0;
   font-size: var(--thorp-text-title, clamp(1.9rem, 5vw, 3.2rem));
   line-height: var(--thorp-title-leading, 1.05);
   letter-spacing: var(--thorp-title-tracking, -0.05em);

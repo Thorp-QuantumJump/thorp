@@ -34,3 +34,42 @@
   background-clip: text;
   color: transparent;
 }
+
+/*
+  제목 머리 두 칸: 왼쪽 작은 제목·제목, 오른쪽 인용 모양 안내 문장. 안내 칸은 오른쪽 끝에 붙여 글이 아래 카드의
+  오른쪽 끝에서 끝나게 한다. 좁은 화면에서는 한 칸으로 쌓고 인용 선을 뗀다.
+  투자 대상 고르기·시장 흐름은 자기 모듈에 같은 짜임을 두고, 배우기·내 기록이 이 공용 규칙을 쓴다.
+*/
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.lead {
+  justify-self: end;
+  max-width: 440px;
+  margin: 0;
+  padding: 0 0 3px 22px;
+  border-left: 1px solid var(--thorp-line-strong);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.84rem);
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+@media (max-width: 800px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .lead {
+    justify-self: start;
+    max-width: 540px;
+    padding: 0;
+    border: 0;
+  }
+}

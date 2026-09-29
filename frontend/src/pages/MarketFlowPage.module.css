@@ -17,7 +17,8 @@
 .hero h1 span { display: inline-block; color: var(--thorp-copy); white-space: nowrap; }
 :global(:root:not([data-design='classic'])) .hero h1 span { color: inherit; }
 :global(:root:not([data-design='classic'])) .classicOnly { display: none; }
-.heroAside { position: relative; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
+/* 안내 칸을 오른쪽 끝에 붙여 글이 아래 카드의 오른쪽 끝에서 끝나게 한다. */
+.heroAside { position: relative; justify-self: end; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }
 .heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
 .heroAside > span { color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
 /* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */
@@ -45,7 +46,7 @@
   .page { --thorp-content-gutter: 32px; }
   .main { width: calc(100% - 32px); padding-top: 16px; }
   .hero { grid-template-columns: 1fr; gap: 18px; padding-bottom: 22px; }
-  .heroAside { border: 0; padding: 0; max-width: 540px; }
+  .heroAside { justify-self: start; border: 0; padding: 0; max-width: 540px; }
   .heroAside > span { display: none; }
   .heroAside p { margin: 0; }
 }

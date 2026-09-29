@@ -42,10 +42,18 @@ export function LearningListPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="learning-list-title">
-        <p className={heading.eyebrow} aria-hidden="true">LEARN</p>
-        <h1 id="learning-list-title" className={styles.title}>
-          <em className={heading.emphasis}>배우기</em>
-        </h1>
+        {/* 다른 주요 화면과 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다. */}
+        <header className={heading.hero}>
+          <div>
+            <p className={heading.eyebrow} aria-hidden="true">LEARN</p>
+            <h1 id="learning-list-title" className={styles.title}>
+              <em className={heading.emphasis}>배우기</em>
+            </h1>
+          </div>
+          <p className={heading.lead}>
+            투자 개념과 지표 읽는 법을 짧은 글로 익힙니다. 글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.
+          </p>
+        </header>
 
         {state.status === 'loading' ? (
           <p className={styles.loading} role="status">

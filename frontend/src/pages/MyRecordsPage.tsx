@@ -99,10 +99,18 @@ export function MyRecordsPage() {
           <FolderClock size={15} aria-hidden="true" />
           MY RECORDS
         </p>
-        <p className={heading.eyebrow} aria-hidden="true">MY RECORDS</p>
-        <h1 id="records-title" className={styles.title}>
-          {user?.nickname}님의 <em className={heading.emphasis}>내 기록</em>
-        </h1>
+        {/* 다른 주요 화면과 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다. */}
+        <header className={heading.hero}>
+          <div>
+            <p className={heading.eyebrow} aria-hidden="true">MY RECORDS</p>
+            <h1 id="records-title" className={styles.title}>
+              {user?.nickname}님의 <em className={heading.emphasis}>내 기록</em>
+            </h1>
+          </div>
+          <p className={heading.lead}>
+            저장한 분석과 자동 탐색, 경제환경 검색 기록을 한곳에서 봅니다. 기록을 다시 열거나 설정을 바꿔 비교할 수 있습니다.
+          </p>
+        </header>
 
         <RecordFilters
           query={query}
