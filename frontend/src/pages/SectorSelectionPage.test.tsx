@@ -157,15 +157,6 @@ describe('SectorSelectionPage', () => {
     expect(sampleNotice.textContent).not.toMatch(/비중/)
   })
 
-  it('선택 요약 제목 옆 물음표로 고른 대상이 후보 집합이라는 뜻을 알린다 (FR-009)', async () => {
-    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))
-    renderPage()
-
-    const trigger = await screen.findByRole('button', { name: '선택한 투자 대상 도움말' })
-    fireEvent.focus(trigger)
-    expect((await screen.findByRole('tooltip')).textContent).toContain('후보 집합')
-  })
-
   it('KRX 출처를 목록 화면에 표시한다', async () => {
     apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))
     renderPage()

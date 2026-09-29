@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Check, Maximize2, Minimize2 } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { PriceTrend } from '@/components/diagnosis/PriceTrend'
@@ -28,6 +28,8 @@ type InstrumentBrowserProps = {
    * 바닥 오른쪽에 따로 둔다 — 어느 경우든 화면에서 빠지지 않는다.
    */
   source?: string
+  /** 카드 오른쪽 위에 늘 두는 행동이다. 다음 단계로 넘어가는 단추가 들어온다. */
+  action?: ReactNode
   className?: string
 }
 
@@ -55,6 +57,7 @@ export function InstrumentBrowser({
   onToggleSelected,
   onExpandedChange,
   source,
+  action,
   className,
 }: InstrumentBrowserProps) {
   const headingId = useId()
@@ -183,6 +186,7 @@ export function InstrumentBrowser({
               ) : null}
             </div>
 
+            {action ? <div data-slot="card-action">{action}</div> : null}
           </header>
 
           <PriceTrend
