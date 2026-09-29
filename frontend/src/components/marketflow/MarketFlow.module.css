@@ -1,17 +1,19 @@
-.summaryCard { position: relative; padding: 10px 10px 10px 15px; border-bottom: 1px solid var(--thorp-line); transition: background 180ms ease; }
-.summaryCard:last-child { border-bottom: 0; }
-.summaryCard:hover, .summaryCard:focus-within { background: var(--thorp-surface); }
-.summaryCard[data-selected='true'] { background: linear-gradient(90deg, var(--thorp-accent-muted), transparent); }
-.selectionLine { position: absolute; inset: 10px auto 10px 0; width: 2px; background: var(--thorp-accent); }
-.summaryHeading { margin: 0; font-size: var(--thorp-text-body, .92rem); }
-.openButton { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 28px; padding: 0; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
-.openButton::after { position: absolute; inset: 0; content: ''; }
-.openButton svg { margin-left: auto; color: var(--thorp-copy); transition: transform 180ms ease, color 180ms ease; flex-shrink: 0; }
-.openButton:hover svg, .openButton:focus-visible svg { transform: translate(2px, -2px); color: var(--thorp-accent-soft); }
-.fieldNumber { color: var(--thorp-copy); font: 500 var(--thorp-text-label, .67rem)/1 var(--thorp-font-display); }
-.summaryCard[data-selected='true'] .fieldNumber, .summaryCard[data-selected='true'] .openButton svg { color: var(--thorp-accent-soft); }
-.openButton:focus-visible { outline: none; }
-.openButton:focus-visible::after { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
+/* 분야 메뉴 버튼 하나. 일곱 개가 한 줄에 따로 선다. 고른 버튼만 초록 테두리와 바탕을 얻는다. */
+.summaryCard { position: relative; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 6px); transition: border-color 160ms ease, background 160ms ease; }
+.summaryCard:hover, .summaryCard:focus-within { border-color: var(--thorp-line-control-hover, var(--thorp-copy)); }
+.summaryCard[data-selected='true'] { border-color: var(--thorp-accent-soft); background: var(--thorp-accent-muted); }
+.selectionLine { position: absolute; right: 10px; bottom: -1px; left: 10px; height: 2px; border-radius: 2px; background: var(--thorp-accent); }
+.summaryHeading { margin: 0; font-size: var(--thorp-text-small, .82rem); }
+.openButton { display: flex; align-items: center; gap: 8px; min-height: var(--thorp-control, 40px); padding: 0 16px; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.openButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); border-radius: var(--thorp-radius-control, 6px); }
+/*
+  변화 요약 팝오버. 버튼을 가리키거나 초점을 줄 때만 그 아래에 뜬다. 버튼이 aria-describedby로 이 칸을 가리켜
+  보조기기는 뜨지 않아도 읽는다. 오른쪽 끝 버튼들은 화면을 넘지 않도록 오른쪽에 맞춰 편다.
+*/
+.fieldTip { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: max-content; max-width: min(300px, calc(100vw - 32px)); padding: var(--thorp-pad-notice, 12px 14px); border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-inset, 8px); background: var(--thorp-surface-raised); box-shadow: 0 12px 32px rgb(0 0 0 / 40%); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-4px); transition: opacity 140ms ease, transform 140ms ease, visibility 0s linear 140ms; }
+.summaryCard:nth-last-child(-n+3) .fieldTip { right: 0; left: auto; }
+.summaryCard:hover .fieldTip, .summaryCard:focus-within .fieldTip { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.fieldTip .narrative { margin: 0 0 6px; color: var(--thorp-foreground); }
 .narrative { margin: 2px 0 7px; color: var(--thorp-copy); font-size: var(--thorp-text-caption, .76rem); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
 .stateLine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.45; font-variant-numeric: tabular-nums; }
 .dataState { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--thorp-copy); }
@@ -38,6 +40,7 @@
 .detailTiming span + span::before { margin: 0 8px; opacity: .5; content: '·'; }
 /* 카드 바닥: 왼쪽 출처 줄, 오른쪽 아래 물음표. */
 .indicatorFooter { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; }
+.indicatorFooter > button { margin-inline-start: 0; }
 .referenceNotes { display: grid; justify-items: end; gap: 2px; margin-top: 10px; text-align: right; }
 .referenceNotes .referenceNote { margin: 0; }
 .referenceNote { margin: 7px 0 0; color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); line-height: 1.5; }
@@ -60,7 +63,7 @@
 .chartNote { color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); margin: -6px 0 14px; }
 .afterRelease { display: flex; flex-wrap: wrap; gap: 4px 12px; border-left: 2px solid var(--thorp-line-strong); padding: 4px 10px; margin: 0 0 14px; color: var(--thorp-foreground); font-size: var(--thorp-text-caption, .73rem); line-height: 1.5; }
 .afterRelease span { color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); }
-.indicatorSource { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.5; font-variant-numeric: tabular-nums; }
+.indicatorSource { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px 0; margin: 0 0 0 auto; text-align: right; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.5; font-variant-numeric: tabular-nums; }
 .indicatorSource span + span::before { margin: 0 6px; opacity: .5; content: '·'; }
 .emptyDetail { display: grid; justify-items: start; align-content: center; min-height: 240px; color: var(--thorp-copy); }
 .emptyDetail p { margin: 16px 0 8px; color: var(--thorp-foreground); }
@@ -76,13 +79,15 @@
 /* 찾을 기준월이 정해지지 않은 분야다. 못 누른다는 것이 커서에도 보여야 한다. */
 .similarButton:disabled { color: var(--thorp-muted); cursor: not-allowed; }
 .similarButton:disabled:hover svg { transform: none; color: var(--thorp-copy); }
-@media (max-width: 1100px) {
-  .summaryCard { padding-left: 12px; padding-right: 7px; }
+/*
+  좁은 화면에서는 팝오버를 띄우지 않는다. 메뉴가 여러 줄로 접혀 팝오버가 화면 밖으로 나가고, 누르면 곧바로 그
+  분야가 열려 요약이 상세 머리에 보인다. 버튼의 설명 연결은 그대로라 보조기기는 계속 읽는다.
+*/
+@media (max-width: 600px) {
+  .fieldTip { display: none; }
 }
 @media (max-width: 800px) {
-  .summaryCard { padding: 12px 14px; }
-  .openButton { min-height: 30px; }
-  .narrative { font-size: var(--thorp-text-small, .8rem); }
+  .openButton { padding: 0 12px; }
   .chartGrid text { font-size: 19px; }
 }
 @media (max-width: 480px) {
@@ -92,8 +97,7 @@
   .similarButton { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .summaryCard, .openButton svg { transition: none; }
-  .openButton:hover svg, .openButton:focus-visible svg { transform: none; }
+  .summaryCard, .fieldTip { transition: none; }
 }
 
 /* 섹터 선택. FR-005가 요구하는 하나뿐인 주요 행동(분야 열기)과 경쟁하지 않도록 낮은 무게로 둔다. */
@@ -117,22 +121,16 @@
   카드 안 선택 목록으로, 상세를 머리·지표 칸·바닥으로 나뉜 카드로, 지표를 두 열 칸으로 묶는다.
   상세의 바깥 카드와 안쪽 여백(24px)은 MarketFlowPage의 .detailPanel이 정한다.
 */
-:global(:root:not([data-design='classic'])) .summaryCard {
-  padding: 12px 14px 12px 16px;
-  border-bottom: 0;
-  border-radius: var(--thorp-radius-inset);
-}
-:global(:root:not([data-design='classic'])) .summaryCard:hover,
-:global(:root:not([data-design='classic'])) .summaryCard:focus-within { background: var(--thorp-surface-muted); }
-:global(:root:not([data-design='classic'])) .summaryCard[data-selected='true'] { background: var(--thorp-accent-muted); }
-:global(:root:not([data-design='classic'])) .selectionLine { inset: 12px auto 12px 0; width: 3px; border-radius: 0 2px 2px 0; }
-:global(:root:not([data-design='classic'])) .openButton::after { border-radius: var(--thorp-radius-inset); }
 :global(:root:not([data-design='classic'])) .stateLabel { padding: 1px 7px; border-radius: 999px; }
 
 /* 상세 머리는 카드 안쪽 여백을 넘어 가로 끝까지 선을 긋는다. */
 :global(:root:not([data-design='classic'])) .detailHeader { margin: -24px -24px 20px; padding: 24px 24px 20px; border-bottom: 1px solid var(--thorp-line); }
 :global(:root:not([data-design='classic'])) .detailTitle h2 { font-size: 1.6rem; }
-:global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/*
+  지표 칸은 가로로 나란히 선다. 보통 세 개라 넓은 화면에서 왼쪽·가운데·오른쪽 세 칸이고, 칸이 240px보다 좁아지면
+  두 칸, 한 칸으로 접힌다. 개수가 적으면 남는 폭을 나눠 갖는다.
+*/
+:global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 :global(:root:not([data-design='classic'])) .indicator {
   display: flex;
   flex-direction: column;
@@ -142,8 +140,6 @@
   border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-muted);
 }
-/* 지표가 홀수면 마지막 칸이 혼자 남아 옆이 비므로 가로를 채운다. */
-:global(:root:not([data-design='classic'])) .indicator:last-child:nth-child(odd) { grid-column: 1 / -1; }
 :global(:root:not([data-design='classic'])) .indicatorHeading { align-items: flex-start; }
 :global(:root:not([data-design='classic'])) .observation { font-size: clamp(1.35rem, 1.9vw, 1.7rem); }
 :global(:root:not([data-design='classic'])) .chartBlock { margin-top: 12px; }
@@ -164,16 +160,11 @@
 /* --thorp-ink·--thorp-paper는 정의된 적이 없어 선택이 드러나지 않았다. 좋고 나쁨이 없는 밝기 반전으로 보인다(FR-003). */
 
 /* 참고 지표는 값이 먼저 읽히게 키운다. 등락은 응답에 없어 색으로 칠하지 않는다. */
-:global(:root:not([data-design='classic'])) .openButton svg { color: var(--thorp-accent-soft); }
 :global(:root:not([data-design='classic'])) .newsList { gap: 0; }
 :global(:root:not([data-design='classic'])) .newsList li { padding: 12px 0; border-bottom: 1px solid var(--thorp-line); }
 :global(:root:not([data-design='classic'])) .newsList li:first-child { padding-top: 0; }
 :global(:root:not([data-design='classic'])) .newsList li:last-child { padding-bottom: 0; border-bottom: 0; }
 
-/* 상세 칸이 좁아지면 지표를 한 열로 둔다. 두 열이면 3개월 경로 칸이 읽기 어려워진다. */
-@media (max-width: 1180px) {
-  :global(:root:not([data-design='classic'])) .indicatorList { grid-template-columns: 1fr; }
-}
 @media (max-width: 1100px) {
   :global(:root:not([data-design='classic'])) .detailHeader { margin: -20px -20px 18px; padding: 20px 20px 18px; }
   :global(:root:not([data-design='classic'])) .similarEntry { margin: 18px -20px -20px; padding: 14px 20px; }
@@ -191,7 +182,6 @@
 :global(:root:not([data-design='classic'])) .openButton { color: var(--thorp-copy); }
 :global(:root:not([data-design='classic'])) .summaryCard[data-selected='true'] .openButton,
 :global(:root:not([data-design='classic'])) .summaryCard:hover .openButton { color: var(--thorp-foreground); }
-:global(:root:not([data-design='classic'])) .summaryCard:not([data-selected='true']) .narrative { color: var(--thorp-muted); }
 :global(:root:not([data-design='classic'])) .detailNarrative { color: var(--thorp-copy); }
 :global(:root:not([data-design='classic'])) .chartValue { fill: var(--thorp-copy); }
 :global(:root:not([data-design='classic'])) .chartCaption,

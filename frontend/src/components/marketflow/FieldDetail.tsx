@@ -25,15 +25,10 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
       transition={{ duration: reducedMotion ? 0 : 0.2 }}
     >
       <header className={styles.detailHeader}>
-        <span className={styles.detailEyebrow}>FIELD / {String(detail.displayOrder).padStart(2, '0')}</span>
-        {/* 소속 지표 수와 상태 표는 분야 제목 줄에 맞춰 오른쪽에 선다. */}
+        {/* 상태 표(수집 실패·예시 자료일 때만)는 분야 제목 줄에 맞춰 오른쪽에 선다. */}
         <div className={styles.detailTitle}>
           <h2 id={titleId}>{detail.displayName}</h2>
-          <DataStateFacts
-            indicatorCount={detail.indicators.length}
-            status={detail.status}
-            isExampleData={detail.isExampleData}
-          />
+          <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />
         </div>
         <p className={styles.detailNarrative}>{detail.narrative ?? '아래 기준 시점과 자료 상태를 확인해 주세요.'}</p>
         <p className={styles.detailTiming}>
@@ -63,13 +58,13 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
                 출처와 작성기관을 이름을 붙여 한 줄로 잇는다(FR-015). 발표일은 실제 자료가 주지 않아 적지 않는다(2026-09-24).
                 대상월은 분야 머리와 다를 때만 적고, 마지막 갱신은 분야마다 하나라 머리에만 둔다(FR-011).
               */}
+              {/* 출처는 카드 오른쪽 아래, 세로축 범위 물음표는 왼쪽 아래에 둔다. 그래프 위에 두면 제목 줄과 겹쳐 읽힌다. */}
               <div className={styles.indicatorFooter}>
+                <InlineHelp label="세로축 범위" side="top"><p>{describeAxis(indicator)}</p></InlineHelp>
                 <p className={styles.indicatorSource}>
                   {indicator.referenceMonth !== detail.referenceMonth ? <span>대상월 {indicator.referenceMonth}</span> : null}
                   {sourceParts(indicator.agency, indicator.source).map((part) => <span key={part}>{part}</span>)}
                 </p>
-                {/* 세로축 범위 설명은 카드 오른쪽 아래 물음표 뒤에 둔다. 그래프 위에 두면 제목 줄과 겹쳐 읽힌다. */}
-                <InlineHelp label="세로축 범위" side="top"><p>{describeAxis(indicator)}</p></InlineHelp>
               </div>
             </article>
           ))}
