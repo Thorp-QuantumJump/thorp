@@ -3,6 +3,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { AuthField } from '@/components/auth/AuthField'
+import heading from '@/components/common/PageHeading.module.css'
+import { Button } from '@/components/ui/button'
 import styles from './AccountProfilePage.module.css'
 
 /** 현재 사용자 응답으로 확인할 수 있는 정보만 보여 주는 회원정보 수정 준비 화면이다. */
@@ -40,19 +42,24 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
           </p>
         ) : null}
         <div className={styles.heading}>
-          <span className={styles.eyebrow}>ACCOUNT / PROFILE</span>
-          <h1>회원정보 수정</h1>
-          <p>계정에 표시되는 정보를 확인하고 수정할 내용을 입력할 수 있습니다.</p>
+          <span className={`${styles.eyebrow} ${styles.classicOnly}`}>ACCOUNT / PROFILE</span>
+          <p className={heading.eyebrow} aria-hidden="true">ACCOUNT</p>
+          <h1 className={styles.title}>
+            <em className={heading.emphasis}>회원정보</em> 수정
+          </h1>
+          <p className={styles.lead}>회원 정보를 확인하고 수정할 내용을 입력할 수 있습니다.</p>
         </div>
 
         <section className={styles.section} aria-labelledby="profile-section-title">
           <div className={styles.sectionHeading}>
-            <span className={styles.sectionIndex}>01</span>
+            <span className={`${styles.sectionIndex} ${styles.classicOnly}`}>01</span>
+            <span className={styles.sectionIcon} aria-hidden="true">
+              <UserRound size={18} />
+            </span>
             <div>
               <h2 id="profile-section-title">기본 정보</h2>
               <p>현재 로그인한 계정의 정보입니다.</p>
             </div>
-            <UserRound size={22} aria-hidden="true" />
           </div>
 
           <form className={styles.form} noValidate onSubmit={handleSubmit}>
@@ -99,7 +106,7 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
 
             <div className={styles.actions}>
               <p>서버 기능이 연결되기 전에는 입력한 내용이 계정에 반영되지 않습니다.</p>
-              <button type="submit">입력값 확인</button>
+              <Button type="submit" className={styles.submit}>입력값 확인</Button>
             </div>
           </form>
         </section>
