@@ -39,7 +39,7 @@ describe('ExampleEntry', () => {
     const user = userEvent.setup()
     renderEntry('tide-reading', tideArticle.example)
 
-    const button = screen.getByRole('button', { name: '이 예시로 비중 비교하기' })
+    const button = screen.getByRole('button', { name: '이 예시로 전략 진단하기' })
     expect(button.tagName).toBe('BUTTON')
     await user.click(button)
 

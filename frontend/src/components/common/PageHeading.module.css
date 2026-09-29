@@ -50,7 +50,7 @@
 
 .lead {
   justify-self: end;
-  max-width: 440px;
+  max-width: 560px;
   margin: 0;
   padding: 0 0 3px 22px;
   border-left: 1px solid var(--thorp-line-strong);
@@ -58,6 +58,11 @@
   font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.65;
   word-break: keep-all;
+}
+
+/* 안내 문장은 뜻이 나뉘는 자리에서 줄을 바꾼다. 줄마다 span 하나다. */
+.lead span {
+  display: block;
 }
 
 @media (max-width: 800px) {

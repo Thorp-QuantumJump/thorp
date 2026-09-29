@@ -374,7 +374,9 @@ export function SectorSelectionPage() {
             </h1>
           </div>
           <p className={styles.lead}>
-            백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.
+            {/* 뜻이 나뉘는 자리에서 줄을 바꾼다. 폭에 맡기면 낱말 하나만 아랫줄로 떨어진다. */}
+            <span>백테스트에 쓸 ETF를 고릅니다.</span>
+            <span>목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.</span>
           </p>
         </header>
 

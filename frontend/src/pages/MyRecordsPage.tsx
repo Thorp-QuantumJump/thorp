@@ -108,7 +108,8 @@ export function MyRecordsPage() {
             </h1>
           </div>
           <p className={heading.lead}>
-            저장한 분석과 자동 탐색, 경제환경 검색 기록을 한곳에서 봅니다. 기록을 다시 열거나 설정을 바꿔 비교할 수 있습니다.
+            <span>저장한 분석과 자동 탐색, 경제환경 검색 기록을 한곳에서 봅니다.</span>
+            <span>기록을 다시 열거나 설정을 바꿔 비교할 수 있습니다.</span>
           </p>
         </header>
 

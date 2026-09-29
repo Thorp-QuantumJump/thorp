@@ -72,7 +72,7 @@ describe('LearningArticlePage', () => {
     expect(within(example).getByText('62.5%')).not.toBeNull()
     expect(within(example).getByText('37.5%')).not.toBeNull()
     expect(within(example).getByText('설명을 위한 예시이며 투자 권고가 아닙니다.')).not.toBeNull()
-    expect(within(example).getByRole('button', { name: '이 예시로 비중 비교하기' })).not.toBeNull()
+    expect(within(example).getByRole('button', { name: '이 예시로 전략 진단하기' })).not.toBeNull()
   })
 
   it('대응표에 없는 섹터는 이름 대신 코드로 보이고 진입 버튼 대신 안내를 둔다', async () => {
@@ -128,7 +128,7 @@ describe('LearningArticlePage', () => {
     expect(apiMocks.fetchLearningArticle).toHaveBeenCalledTimes(1)
     // 글을 받지 못해도 진단을 시작하는 연결은 남는다(US1 시나리오 7, T081).
     expect(
-      screen.getByRole('link', { name: /비중 비교 시작하기/ }).getAttribute('href'),
+      screen.getByRole('link', { name: /바로 전략 진단하기/ }).getAttribute('href'),
     ).toBe('/diagnosis/sectors')
 
     await user.tab()
@@ -164,7 +164,7 @@ describe('LearningArticlePage', () => {
     expect(back.getAttribute('href')).toBe('/strategy')
     // 글 화면의 행동 버튼은 예시 진입 하나다(원칙 II).
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
-      '이 예시로 비중 비교하기',
+      '이 예시로 전략 진단하기',
     ])
   })
 
