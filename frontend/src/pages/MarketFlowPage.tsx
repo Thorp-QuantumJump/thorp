@@ -129,7 +129,7 @@ export function MarketFlowPage() {
                 <p className={styles.srOnly} role="status">{displayedDetail?.status === 'success' ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>
                 {displayedDetail?.status === 'success' ? (
                   // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.
-                  <FieldDetail key={displayedDetail.fieldId} detail={displayedDetail.data} />
+                  <FieldDetail key={displayedDetail.fieldId} detail={displayedDetail.data} historyNotice={summary.historicalComparisonNotice} />
                 ) : displayedDetail?.status === 'error' ? (
                   <section className={styles.loadFailure} role="alert">
                     <h2>{selected?.displayName}</h2>
