@@ -99,23 +99,15 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 카드 왼쪽 목록의 한 줄이다. 누르면 고르는 것이 아니라 보는 대상이 그 항목으로 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 그 대상을 보면서 담는다. */
 function row(code: string): HTMLButtonElement {
   return document.querySelector(
     `[data-slot="list"] [data-sector-code="${code}"] [data-slot="pill"]`,
   ) as HTMLButtonElement
 }
 
-function addButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: /투자 대상에 추가/ }) as HTMLButtonElement
-}
-
-/** 보고 나서 담는다. 화면이 두 행동을 가르므로 검사도 그 순서를 그대로 밟는다. */
 async function add(user: User, ...codes: string[]) {
-  for (const code of codes) {
-    await user.click(row(code))
-    await user.click(addButton())
-  }
+  for (const code of codes) await user.click(row(code))
 }
 
 function proceedButton(): HTMLButtonElement {

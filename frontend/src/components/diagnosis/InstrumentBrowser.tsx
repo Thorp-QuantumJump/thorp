@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'
+import { Check, Maximize2, Minimize2 } from 'lucide-react'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
 import { PriceTrend } from '@/components/diagnosis/PriceTrend'
 import {
@@ -43,8 +43,8 @@ type InstrumentBrowserProps = {
  * 오른쪽에 담긴 종목을 나란히 둔다. 같은 것을 세로로 이어 붙이면 아래쪽 사실이 화면 밖으로
  * 밀려, 넓혔는데도 스크롤로 찾아야 하는 일이 생긴다.
  *
- * <b>누르는 것과 담는 것을 가른다.</b> 왼쪽 목록을 누르면 보는 대상만 바뀌고, 백테스트 대상에
- * 담는 일은 가운데 머리의 단추 하나가 맡는다.
+ * <b>목록을 누르면 보고, 담는다.</b> 왼쪽 목록의 한 줄을 누르면 그 대상을 가운데에 펼치면서 백테스트
+ * 대상에 담고, 담긴 줄을 다시 누르면 뺀다. 담는 단추를 따로 두지 않아 누르는 자리가 하나다.
  */
 export function InstrumentBrowser({
   sectors,
@@ -72,7 +72,6 @@ export function InstrumentBrowser({
     미루면 가장 먼저 보이는 자리가 비어 있게 된다.
   */
   const priceSeries = useInstrumentPriceSeries(viewing.code)
-  const selected = isSelected(viewing.code)
 
   /*
     지금 보고 있는 대상을 카드에 표시할 때는 목록 항목과 다른 이름(`data-viewing-code`)을 쓴다.
@@ -112,21 +111,24 @@ export function InstrumentBrowser({
               const picked = isSelected(sector.code)
               return (
                 <li key={sector.code} data-sector-code={sector.code} data-selected={picked}>
+                  {/*
+                    누르면 그 대상을 보면서 담고, 담긴 줄을 다시 누르면 뺀다(보는 대상은 그대로 둔다).
+                    담긴 상태는 `aria-pressed`가 보조 기술에 알리고, 화면에서는 색만이 아니라 체크 표시로도 보인다.
+                  */}
                   <button
                     type="button"
                     data-slot="pill"
                     aria-current={sector.code === viewing.code ? 'true' : undefined}
-                    onClick={() => onView(sector.code)}
+                    aria-pressed={picked}
+                    onClick={() => {
+                      onView(sector.code)
+                      onToggleSelected(sector.code, !picked)
+                    }}
                   >
                     <span data-slot="pill-name">{sector.representativeEtf.name}</span>
-                    {/*
-                      담아 둔 대상이라는 표시다. 색만으로 알리지 않는다 — 형태로도 보이도록
-                      체크 표시를 두고, 소리로만 듣는 사용자를 위해 글자를 함께 싣는다.
-                    */}
                     {picked ? (
                       <span data-slot="pill-check">
                         <Check size={13} strokeWidth={2.4} aria-hidden="true" />
-                        <span data-slot="sr-only">선택됨</span>
                       </span>
                     ) : null}
                   </button>
@@ -181,29 +183,6 @@ export function InstrumentBrowser({
               ) : null}
             </div>
 
-            {/*
-              담고 빼는 자리다. 담긴 뒤에도 같은 자리에 남아 '선택됨'을 말하고, 한 번 더 누르면 뺀다.
-              빼는 길은 오른쪽 선택 목록의 X가 따로 있어 '빼기'를 글자로 되풀이하지 않는다.
-            */}
-            <button
-              type="button"
-              data-slot="pick"
-              data-selected={selected}
-              aria-pressed={selected}
-              onClick={() => onToggleSelected(viewing.code, !selected)}
-            >
-              {selected ? (
-                <>
-                  <Check size={15} strokeWidth={2.2} aria-hidden="true" />
-                  <span>선택됨</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={15} strokeWidth={2.2} aria-hidden="true" />
-                  <span>투자 대상에 추가</span>
-                </>
-              )}
-            </button>
           </header>
 
           <PriceTrend
