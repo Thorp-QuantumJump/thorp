@@ -22,8 +22,14 @@ function LoginRedirect({ target }: { target: string }) {
   return <Navigate to="/login" replace />
 }
 
-/** 현재 사용자 확인이 끝난 경우에만 내 기록 화면을 노출한다. */
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+/** 현재 사용자 확인이 끝난 경우에만 보호된 화면을 노출한다. */
+export function ProtectedRoute({
+  children,
+  recoveryTitle = '내 기록을 잠시 숨겼습니다.',
+}: {
+  children: ReactNode
+  recoveryTitle?: string
+}) {
   const { status, logout, recheck } = useAuth()
   const location = useLocation()
   const target = `${location.pathname}${location.search}${location.hash}`
@@ -53,7 +59,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return (
       <main className={styles.checking}>
         <section className={styles.recovery} aria-labelledby="auth-recovery-title">
-          <h1 id="auth-recovery-title">내 기록을 잠시 숨겼습니다.</h1>
+          <h1 id="auth-recovery-title">{recoveryTitle}</h1>
           <p role={status === 'logoutUnconfirmed' ? 'alert' : 'status'}>
             {status === 'logoutUnconfirmed'
               ? '로그아웃 결과를 확인하지 못했습니다.'

@@ -58,6 +58,20 @@ const MyRecordsPage = lazy(() =>
   })),
 )
 
+const AccountProfilePage = lazy(() =>
+  import('@/pages/AccountProfilePage').then((module) => ({
+    default: module.AccountProfilePage,
+  })),
+)
+
+const AccountProfilePreviewPage = import.meta.env.DEV
+  ? lazy(() =>
+      import('@/pages/AccountProfilePreviewPage').then((module) => ({
+        default: module.AccountProfilePreviewPage,
+      })),
+    )
+  : null
+
 // 013 배우기. 글의 예시는 002 `/diagnosis/sectors`로 넘어간다.
 const LearningListPage = lazy(() =>
   import('@/pages/LearningListPage').then((module) => ({
@@ -156,6 +170,17 @@ function AnimatedRoutes() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/account/profile"
+              element={
+                <ProtectedRoute recoveryTitle="회원정보를 잠시 숨겼습니다.">
+                  <AccountProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            {AccountProfilePreviewPage ? (
+              <Route path="/dev/account-profile" element={<AccountProfilePreviewPage />} />
+            ) : null}
             {/* 관리 화면은 로그인이 전제다. 권한 판정은 서버가 하고 화면은 200일 때만 그린다. */}
             <Route
               path="/admin/learning"

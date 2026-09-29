@@ -74,7 +74,7 @@ function isCurrentPath(pathname: string, covers: readonly string[]): boolean {
 }
 
 /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */
-export function AppHeader() {
+export function AppHeader({ preview = false }: { preview?: boolean }) {
   const location = useLocation()
   const { status: authStatus, user, logout, recheck } = useAuth()
   const rememberReturn = useLoginReturn()
@@ -172,19 +172,21 @@ export function AppHeader() {
     if (authStatus === 'authenticated' && user) {
       return (
         <div className={styles.authActions}>
-          <Link className={styles.authLink} to="/records" aria-label={`${user.nickname} 로그인됨`}>
+          <Link className={styles.authLink} to={preview ? '/dev/account-profile' : '/account/profile'} aria-label={`${user.nickname} 회원정보 수정`}>
             <UserRound size={16} aria-hidden="true" />
             {user.nickname}
           </Link>
-          <button
-            type="button"
-            className={styles.authButton}
-            disabled={pendingAuthAction !== null}
-            onClick={() => void handleLogout()}
-          >
-            <LogOut size={16} aria-hidden="true" />
-            로그아웃
-          </button>
+          {preview ? <span className={styles.authState}>미리보기</span> : (
+            <button
+              type="button"
+              className={styles.authButton}
+              disabled={pendingAuthAction !== null}
+              onClick={() => void handleLogout()}
+            >
+              <LogOut size={16} aria-hidden="true" />
+              로그아웃
+            </button>
+          )}
         </div>
       )
     }
@@ -303,8 +305,7 @@ export function AppHeader() {
 
           {/*
             '내 기록'은 위 메뉴에 있으므로 여기 같은 이름의 링크를 따로 두지 않는다.
-            아래 로그인 표시는 목적지가 같아도 하는 일이 다르다. 메뉴 항목이 아니라 지금 누가
-            로그인해 있는지를 알리는 자리다.
+            로그인한 사용자의 닉네임은 계정 정보 화면으로 이동한다.
           */}
           <div className={styles.accountLinks}>{desktopAuthControl}</div>
         </div>
@@ -373,19 +374,21 @@ export function AppHeader() {
 
               {authStatus === 'authenticated' && user ? (
                 <div className={styles.drawerAuthActions}>
-                  <Link className={styles.drawerAuth} to="/records" onClick={() => setIsMenuOpen(false)}>
+                  <Link className={styles.drawerAuth} to={preview ? '/dev/account-profile' : '/account/profile'} onClick={() => setIsMenuOpen(false)}>
                     <UserRound size={18} aria-hidden="true" />
                     {user.nickname}
                   </Link>
-                  <button
-                    type="button"
-                    className={styles.drawerAuth}
-                    disabled={pendingAuthAction !== null}
-                    onClick={() => void handleLogout()}
-                  >
-                    <LogOut size={18} aria-hidden="true" />
-                    로그아웃
-                  </button>
+                  {preview ? <span className={styles.drawerAuth}>미리보기</span> : (
+                    <button
+                      type="button"
+                      className={styles.drawerAuth}
+                      disabled={pendingAuthAction !== null}
+                      onClick={() => void handleLogout()}
+                    >
+                      <LogOut size={18} aria-hidden="true" />
+                      로그아웃
+                    </button>
+                  )}
                 </div>
               ) : authStatus === 'checking' ? (
                 <span className={styles.drawerAuth} role="status">
