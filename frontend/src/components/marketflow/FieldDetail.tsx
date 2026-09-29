@@ -10,7 +10,7 @@ import { describeAxis, formatObservation, formatUpdatedAt, sourceParts } from '.
 import styles from './MarketFlow.module.css'
 
 /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */
-export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
+export function FieldDetail({ detail, historyNotice }: { detail: FieldDetailResult; historyNotice?: string }) {
   const reducedMotion = useReducedMotion()
   const titleId = `field-${detail.fieldId}-title`
   const similarNoteId = `similar-note-${detail.fieldId}`
@@ -25,16 +25,18 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
       transition={{ duration: reducedMotion ? 0 : 0.2 }}
     >
       <header className={styles.detailHeader}>
-        {/* 상태 표(수집 실패·예시 자료일 때만)는 분야 제목 줄에 맞춰 오른쪽에 선다. */}
+        {/* 기준 시점(대상월·마지막 갱신)과 상태 표(수집 실패·예시 자료일 때만)는 분야 제목 줄 오른쪽 위에 선다. */}
         <div className={styles.detailTitle}>
           <h2 id={titleId}>{detail.displayName}</h2>
-          <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />
+          <div className={styles.detailMeta}>
+            <p className={styles.detailTiming}>
+              <span>대상월 {detail.referenceMonth ?? '확인할 수 없음'}</span>
+              <span>마지막 갱신 {formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</span>
+            </p>
+            <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />
+          </div>
         </div>
-        <p className={styles.detailNarrative}>{detail.narrative ?? '아래 기준 시점과 자료 상태를 확인해 주세요.'}</p>
-        <p className={styles.detailTiming}>
-          <span>대상월 {detail.referenceMonth ?? '확인할 수 없음'}</span>
-          <span>마지막 갱신 {formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</span>
-        </p>
+        <p className={styles.detailNarrative}>{detail.narrative ?? '기준 시점과 자료 상태를 확인해 주세요.'}</p>
       </header>
       {detail.indicators.length === 0 ? (
         <div className={styles.emptyDetail}><ScanLine size={28} aria-hidden="true" /><p>표시할 지표 자료가 없습니다.</p><span>다른 분야의 자료는 계속 살펴볼 수 있습니다.</span></div>
@@ -70,9 +72,13 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
           ))}
         </div>
       )}
-      {/* 분야마다 기준월이 다를 수 있다는 안내(FR-008)는 지표를 다 본 뒤 읽히도록 카드 아래 오른쪽에 둔다. */}
+      {/*
+        분야마다 기준월이 다를 수 있다는 안내(FR-008)와 최신 개정자료로 비교한다는 안내(FR-012)는 지표를 다 본 뒤
+        읽히도록 카드 아래 오른쪽에 작게 둔다. 역사 비교 안내는 예전에 화면 맨 아래 따로 있던 줄이다.
+      */}
       <div className={styles.referenceNotes}>
         <p className={styles.referenceNote}>{detail.multipleReferenceMonthNotice}</p>
+        {historyNotice ? <p className={styles.referenceNote}>{historyNotice}</p> : null}
         {detail.referenceMonthHeldBackBy.length > 0 ? (
           <p className={styles.referenceNote}>
             기준월 결정에 반영된 지표: {detail.referenceMonthHeldBackBy.map((id) => detail.indicators.find((indicator) => indicator.indicatorId === id)?.name ?? id).join(', ')}
@@ -80,15 +86,16 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {
         ) : null}
       </div>
       {/* 넘기는 값은 분야와 그 분야의 기준월뿐이다. 섹터를 골랐어도 달라지지 않는다(FR-016). */}
+      {/*
+        버튼 하나만 오른쪽에 둔다. 무엇을 찾는지는 버튼의 설명으로 보조기기에만 읽히고, 찾을 수 없는 까닭(기준월 미정)만
+        화면에 남긴다 — 버튼이 왜 눌리지 않는지는 보여야 한다.
+      */}
       <div className={styles.similarEntry}>
-        <div>
-          <span className={styles.detailEyebrow}>EXPLORE THE PAST</span>
-          <p id={similarNoteId}>
-            {similarPeriod === null
-              ? '이 분야는 기준월이 아직 정해지지 않아 비슷했던 시기를 찾을 수 없습니다.'
-              : `${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾습니다.`}
-          </p>
-        </div>
+        {similarPeriod === null ? (
+          <p id={similarNoteId}>이 분야는 기준월이 아직 정해지지 않아 비슷했던 시기를 찾을 수 없습니다.</p>
+        ) : (
+          <p id={similarNoteId} className={styles.srOnly}>{`${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾습니다.`}</p>
+        )}
         {similarPath === null ? (
           <button type="button" className={styles.similarButton} disabled aria-describedby={similarNoteId}>
             비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden="true" />
