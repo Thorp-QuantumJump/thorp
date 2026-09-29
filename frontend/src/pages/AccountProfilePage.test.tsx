@@ -50,14 +50,14 @@ describe('AccountProfilePage', () => {
       .toBe('/account/profile')
   })
 
-  it('현재 응답에 있는 이메일·닉네임만 채우고 전화번호나 변경 저장을 꾸며내지 않는다', async () => {
+  it('이메일은 보기만, 닉네임만 수정 칸으로 두고 휴대폰 번호 칸이나 변경 저장을 꾸며내지 않는다', async () => {
     const user = userEvent.setup()
     renderPage()
 
     expect((screen.getByLabelText('이메일') as HTMLInputElement).value).toBe('user@example.com')
     expect((screen.getByLabelText('이메일') as HTMLInputElement).readOnly).toBe(true)
     expect((screen.getByLabelText('닉네임') as HTMLInputElement).value).toBe('쏘프사용자')
-    expect((screen.getByLabelText('휴대폰 번호') as HTMLInputElement).disabled).toBe(true)
+    expect(screen.queryByLabelText('휴대폰 번호')).toBeNull()
 
     await user.clear(screen.getByLabelText('닉네임'))
     await user.click(screen.getByRole('button', { name: '입력값 확인' }))

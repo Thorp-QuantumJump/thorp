@@ -87,15 +87,6 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
                 setNotice('')
               }}
             />
-            <AuthField
-              label="휴대폰 번호"
-              type="tel"
-              name="phoneNumber"
-              value=""
-              placeholder="현재 등록된 번호를 불러올 수 없습니다"
-              hint="현재 사용자 조회에는 전화번호가 포함되지 않습니다. 조회·수정 기능이 연결되면 사용할 수 있습니다."
-              disabled
-            />
 
             {notice ? (
               <p className={styles.notice} role="status">
