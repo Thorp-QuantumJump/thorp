@@ -109,8 +109,10 @@ describe('SectorSelectionPage', () => {
     const items = await screen.findAllByRole('listitem')
     expect(within(items[0]).getByText('KODEX 반도체')).toBeTruthy()
 
-    // 어느 섹터의 상품인지는 지금 보고 있는 대상을 설명하는 자리에서 말한다.
-    const subtitle = document.querySelector('[data-slot="main-subtitle"]')
+    // 어느 섹터의 상품인지는 '포함 종목'을 펼쳤을 때 보고 있는 대상을 설명하는 자리에서 말한다.
+    expect(document.querySelector('[data-slot="main-subtitle"]')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '포함 종목 보기' }))
+    const subtitle = await waitFor(() => document.querySelector('[data-slot="main-subtitle"]'))
     expect(subtitle?.textContent).toContain('반도체')
   })
 
