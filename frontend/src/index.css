@@ -41,6 +41,12 @@
   --thorp-flow-side: 19rem;
   --thorp-page-gutter: 40px;
   /*
+    지금 화면의 내용 틀 폭과 좌우 여백(합). 상단 바가 이 값을 따라 로고와 로그인을 내용의 양 끝에 맞춘다.
+    기본은 전략 진단 틀이고, 틀이 다른 화면(첫 화면·시장 흐름)은 자기 .page 에서 다시 정한다.
+  */
+  --thorp-content-width: var(--thorp-page-width-flow);
+  --thorp-content-gutter: var(--thorp-page-gutter);
+  /*
     상단 바 높이와 화면 위 여백. 둘을 합친 만큼 본문이 아래로 밀린다. 예전에는 82px 바에 최대 56px
     여백과 44px 제목이 겹쳐, 넓은 화면에서도 본문을 보려면 먼저 스크롤해야 했다.
   */
@@ -264,6 +270,8 @@
   --thorp-flow-gap: initial;
   --thorp-reading-width: initial;
   --thorp-records-top: initial;
+  --thorp-content-width: initial;
+  --thorp-content-gutter: initial;
   --thorp-header-height: initial;
   --thorp-records-title-margin: initial;
   --thorp-flow-side: initial;

@@ -1,4 +1,7 @@
 .page {
+  /* 상단 바의 폭과 여백을 첫 화면 칸(.heroLayout)과 맞춘다. 로그인 오른쪽 끝이 아래 창의 오른쪽 끝에 선다. */
+  --thorp-content-width: 1320px;
+  --thorp-content-gutter: calc(2 * clamp(24px, 4vw, 68px));
   /* 상단 바(AppHeader .header의 min-height + 아래 선 1px) 높이. 한 칸씩 넘기는 섹션이 상단 바에 가리지 않게 뺀다. */
   --landing-header-height: calc(var(--thorp-header-height, 82px) + 1px);
   /*

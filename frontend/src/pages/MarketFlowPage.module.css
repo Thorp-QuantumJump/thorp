@@ -4,7 +4,7 @@
   color: var(--thorp-foreground);
   background: var(--thorp-background);
 }
-.main { width: min(var(--market-flow-width, var(--thorp-page-width-flow, 1320px)), calc(100% - var(--thorp-page-gutter, 80px))); margin: 0 auto; padding: var(--thorp-page-top, 26px) 0 64px; }
+.main { width: min(var(--thorp-content-width, var(--thorp-page-width-flow, 1320px)), calc(100% - var(--thorp-page-gutter, 80px))); margin: 0 auto; padding: var(--thorp-page-top, 26px) 0 64px; }
 .hero { position: relative; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: end; padding-bottom: 20px; }
 .hero::before {
   position: absolute; inset: -25px 0 0 30%; content: ''; pointer-events: none;
@@ -37,10 +37,12 @@
 .loadFailure button:hover { border-color: var(--thorp-accent); }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 1100px) {
+  .page { --thorp-content-gutter: 48px; }
   .main { width: calc(100% - 48px); }
 }
 @media (max-width: 800px) {
   .fieldList { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .page { --thorp-content-gutter: 32px; }
   .main { width: calc(100% - 32px); padding-top: 16px; }
   .hero { grid-template-columns: 1fr; gap: 18px; padding-bottom: 22px; }
   .heroAside { border: 0; padding: 0; max-width: 540px; }
@@ -49,6 +51,7 @@
 }
 @media (max-width: 420px) {
   .fieldList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page { --thorp-content-gutter: 28px; }
   .main { width: calc(100% - 28px); }
   .hero h1 { font-size: 1.95rem; }
 }
@@ -69,7 +72,8 @@
   시장 흐름은 분야 메뉴 일곱 칸과 지표 칸 세 개가 가로로 서므로 전략 진단 틀(1320px)보다 조금 넓게 쓴다.
   전략 진단 화면들이 함께 쓰는 --thorp-page-width-flow는 건드리지 않는다.
 */
-:global(:root:not([data-design='classic'])) .main { --market-flow-width: 1400px; }
+/* 상단 바도 같은 값을 읽어 로그인 오른쪽 끝을 이 틀 끝에 맞춘다. */
+:global(:root:not([data-design='classic'])) .page { --thorp-content-width: 1400px; }
 :global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }
 /* 분야 메뉴는 카드로 묶지 않는다. 버튼 하나하나가 따로 고르는 메뉴로 읽혀야 한다. */
 :global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {
