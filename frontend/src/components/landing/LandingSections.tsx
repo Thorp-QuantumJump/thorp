@@ -168,11 +168,6 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {
           </motion.div>
         </motion.div>
       </div>
-
-      <div className={styles.heroFootnote} aria-hidden="true">
-        <span>01</span>
-        <span>SCROLL TO EXPLORE</span>
-      </div>
     </section>
   )
 }
