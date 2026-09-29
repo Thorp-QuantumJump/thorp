@@ -220,7 +220,7 @@ cd worker && uv run ruff check src tests scripts && uv run ruff format --check s
 cd data && uv run ruff check src scripts tests && uv run pytest
 ```
 
-브랜치·커밋·Jira·AI 협업 규칙은 [`AGENTS.md`](AGENTS.md), 최상위 제품 원칙과 완료 기준은
+브랜치·커밋·MR·AI 협업 규칙은 [`AGENTS.md`](AGENTS.md), 최상위 제품 원칙과 완료 기준은
 [`constitution`](.specify/memory/constitution.md)을 따릅니다.
 
 ## 주의
