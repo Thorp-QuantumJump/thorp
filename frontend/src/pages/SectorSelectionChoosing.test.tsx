@@ -115,7 +115,7 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 카드 왼쪽 목록의 한 줄이다. 누르면 보는 대상만 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 그 대상을 보면서 담고, 담긴 줄을 다시 누르면 뺀다. */
 function row(code: string): HTMLButtonElement {
   return document.querySelector(
     `[data-slot="list"] [data-sector-code="${code}"] [data-slot="pill"]`,
@@ -124,11 +124,6 @@ function row(code: string): HTMLButtonElement {
 
 function detailName(): string {
   return document.querySelector('[data-slot="detail-name"]')?.textContent ?? ''
-}
-
-/** 담고 빼는 단추다. 카드 가운데 머리에 있다. */
-function actionButton(): HTMLButtonElement {
-  return document.querySelector('[data-slot="pick"]') as HTMLButtonElement
 }
 
 /** 카드를 넓히고 접는 단추다. 오른쪽 위에 아이콘 하나로 있다. */
@@ -158,10 +153,7 @@ function railCodes(): string[] {
 }
 
 async function add(user: User, ...codes: string[]) {
-  for (const code of codes) {
-    await user.click(row(code))
-    await user.click(actionButton())
-  }
+  for (const code of codes) await user.click(row(code))
 }
 
 describe('투자 대상 고르기', () => {
@@ -188,7 +180,7 @@ describe('투자 대상 고르기', () => {
     expect(row('SEMICONDUCTOR').getAttribute('aria-current')).toBe('true')
   })
 
-  it('목록을 눌러도 고르지 않고 보는 대상만 바뀐다', async () => {
+  it('목록을 누르면 그 대상을 보면서 투자 대상에 담는다', async () => {
     const user = userEvent.setup()
     await openPage()
 
@@ -197,32 +189,27 @@ describe('투자 대상 고르기', () => {
     expect(detailName()).toBe('KODEX 자동차')
     expect(row('AUTO').getAttribute('aria-current')).toBe('true')
     expect(row('SEMICONDUCTOR').getAttribute('aria-current')).toBeNull()
-    // 확인하려고 누른 것이 담는 일이 되면 안 된다.
-    expect(railCodes()).toEqual([])
-  })
-
-  it('추가를 눌러야 담기고 선택 요약과 목록에 함께 드러난다', async () => {
-    const user = userEvent.setup()
-    await openPage()
-
-    await add(user, 'AUTO')
-
+    expect(row('AUTO').getAttribute('aria-pressed')).toBe('true')
     expect(railCodes()).toEqual(['AUTO'])
-    // 목록에서도 담긴 사실이 색이 아니라 글자로 보인다.
-    expect(row('AUTO').textContent).toContain('선택됨')
     expect(screen.getByText('1개 선택됨')).toBeTruthy()
   })
 
-  it('담은 대상은 같은 단추로 다시 뺄 수 있다', async () => {
+  it('담긴 줄을 다시 누르면 빠지고 보던 대상은 그대로다', async () => {
     const user = userEvent.setup()
     await openPage()
     await add(user, 'AUTO')
 
-    expect(actionButton().getAttribute('aria-pressed')).toBe('true')
-    await user.click(actionButton())
+    await user.click(row('AUTO'))
 
+    expect(row('AUTO').getAttribute('aria-pressed')).toBe('false')
     expect(railCodes()).toEqual([])
-    expect(actionButton().textContent).toContain('투자 대상에 추가')
+    expect(detailName()).toBe('KODEX 자동차')
+  })
+
+  it('담는 단추를 따로 두지 않는다', async () => {
+    await openPage()
+
+    expect(screen.queryByRole('button', { name: /투자 대상에 추가/ })).toBeNull()
   })
 
   it('선택 요약에서도 뺄 수 있다', async () => {
@@ -248,15 +235,15 @@ describe('투자 대상 고르기', () => {
   it('지금 보고 있는 것과 담아 둔 것을 따로 드러낸다', async () => {
     const user = userEvent.setup()
     await openPage()
-    await add(user, 'AUTO')
+    await add(user, 'AUTO', 'STEEL')
 
+    // 담긴 줄을 다시 눌러 빼면, 보고는 있지만 담지 않은 상태가 된다. 둘은 서로를 뜻하지 않는다.
     await user.click(row('STEEL'))
 
-    // 담지 않은 대상을 보고 있는 상태다. 둘은 서로를 뜻하지 않는다.
     expect(row('STEEL').getAttribute('aria-current')).toBe('true')
-    expect(row('STEEL').textContent).not.toContain('선택됨')
+    expect(row('STEEL').getAttribute('aria-pressed')).toBe('false')
     expect(row('AUTO').getAttribute('aria-current')).toBeNull()
-    expect(row('AUTO').textContent).toContain('선택됨')
+    expect(row('AUTO').getAttribute('aria-pressed')).toBe('true')
   })
 
   it('아무것도 담지 않았으면 빈 자리 대신 무엇을 해야 하는지 알린다', async () => {
@@ -320,14 +307,13 @@ describe('투자 대상 고르기', () => {
   it('카드를 여닫아도 보던 대상과 담아 둔 것이 그대로다', async () => {
     const user = userEvent.setup()
     await openPage()
-    await add(user, 'SEMICONDUCTOR')
-    await user.click(row('AUTO'))
+    await add(user, 'SEMICONDUCTOR', 'AUTO')
 
     await user.click(expandButton())
     await user.click(expandButton())
 
     expect(detailName()).toBe('KODEX 자동차')
-    expect(railCodes()).toEqual(['SEMICONDUCTOR'])
+    expect(railCodes()).toEqual(['SEMICONDUCTOR', 'AUTO'])
   })
 
   it('넓힌 채 다른 대상으로 옮기면 그 크기를 유지한다', async () => {

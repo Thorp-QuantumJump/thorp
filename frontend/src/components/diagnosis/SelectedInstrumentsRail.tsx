@@ -85,8 +85,7 @@ export function SelectedInstrumentsRail({
 
       {count === 0 ? (
         <p data-slot="rail-empty">
-          아직 선택한 투자 대상이 없습니다. 왼쪽에서 ETF를 확인한 뒤 백테스트할 대상을 추가해
-          주세요.
+          아직 선택한 투자 대상이 없습니다. 왼쪽 목록에서 백테스트할 ETF를 눌러 담아 주세요.
         </p>
       ) : (
         <ul data-slot="rail-list" role="list">

@@ -114,7 +114,7 @@ async function openPage() {
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** 카드 왼쪽 목록의 한 줄이다. 누르면 보는 대상만 바뀐다. */
+/** 카드 왼쪽 목록의 한 줄이다. 누르면 그 대상을 보면서 담고, 다시 누르면 뺀다. */
 function row(sectorCode: string): HTMLButtonElement {
   return document.querySelector(
     `[data-slot="list"] [data-sector-code="${sectorCode}"] [data-slot="pill"]`,
@@ -472,16 +472,14 @@ describe('대표 상품 정보 패널', () => {
     expect(facts?.textContent).not.toContain('2026-09-06')
   })
 
-  it('살펴보는 것과 투자 대상에 담는 것이 서로 섞이지 않는다', async () => {
+  it('포함 종목을 펼치기만 해서는 투자 대상에 담기지 않는다', async () => {
     const user = userEvent.setup()
     await openPage()
 
-    await openProfile(user, '반도체', 'SEMICONDUCTOR')
+    // 처음 보고 있는 대상을 목록을 누르지 않고 넓힌다. 무엇을 사는지 보는 일이 담는 일이 되면 안 된다.
+    await user.click(expandToggle())
 
-    // 무엇을 사는지 보려던 사용자가 그 행동만으로 백테스트 대상을 정하게 되면 안 된다.
-    expect(document.querySelectorAll('[data-slot="rail-item"]')).toHaveLength(0)
-    expect(
-      document.querySelector('[data-slot="pick"]')?.getAttribute('aria-pressed'),
-    ).toBe('false')
+    expect(expanded()).toBe(true)
+    expect(row('SEMICONDUCTOR').getAttribute('aria-pressed')).toBe('false')
   })
 })
