@@ -40,7 +40,12 @@
   --thorp-records-title-margin: 0 0 6px;
   --thorp-flow-side: 19rem;
   --thorp-page-gutter: 40px;
-  --thorp-page-top: clamp(30px, 5vh, 56px);
+  /*
+    상단 바 높이와 화면 위 여백. 둘을 합친 만큼 본문이 아래로 밀린다. 예전에는 82px 바에 최대 56px
+    여백과 44px 제목이 겹쳐, 넓은 화면에서도 본문을 보려면 먼저 스크롤해야 했다.
+  */
+  --thorp-header-height: 64px;
+  --thorp-page-top: clamp(16px, 3vh, 28px);
   --thorp-page-bottom: 80px;
   /*
     현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다.
@@ -110,7 +115,7 @@
     여기 모은다. 화면마다 0.7~0.95rem 사이의 값을 제각각 적었더니 글자 크기가 열여섯 가지로 갈라졌다.
     글자는 제목·안내문·소제목·본문·작은 글·설명·라벨 일곱 단만 쓴다.
   */
-  --thorp-text-title: clamp(2rem, 3.2vw, 2.75rem);
+  --thorp-text-title: clamp(1.75rem, 2.5vw, 2.25rem);
   --thorp-text-lead: clamp(0.95rem, 1.3vw, 1.08rem);
   --thorp-text-heading: 1.08rem;
   --thorp-text-body: 0.86rem;
@@ -300,7 +305,7 @@
 @media (max-width: 600px) {
   :root {
     --thorp-page-gutter: 28px;
-    --thorp-page-top: 24px;
+    --thorp-page-top: 16px;
   }
   :root:not([data-design='classic']) {
     --thorp-pad-card: 16px 18px;
