@@ -35,7 +35,7 @@ export function SectorNews() {
     <section className={styles.card} aria-labelledby="sector-news-title">
       <h2 id="sector-news-title" className={styles.title}>
         <Newspaper size={16} aria-hidden="true" />
-        시장 흐름 뉴스
+        뉴스
       </h2>
       <div className={styles.filter} role="group" aria-label="섹터별로 보기">
         {options.map((option) => (

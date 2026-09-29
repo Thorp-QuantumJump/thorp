@@ -1,4 +1,3 @@
-import { ArrowUpRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { fetchMarketNewsDigests } from '@/api/marketNews'
 import type { NewsDigestResult, NewsDigestState } from '@/types/marketNews'
@@ -69,16 +68,19 @@ export function NewsDigestSection({ sectorCode }: NewsDigestSectionProps) {
           {result.digests.map((digest) => (
             <li key={digest.digestId}>
               <a href={digest.articles[0].originalUrl} target="_blank" rel="noreferrer noopener">
-                {digest.representativeTitle} <ArrowUpRight size={14} aria-hidden="true" />
+                {digest.representativeTitle}
               </a>
-              <p>{digest.factualSummary}</p>
-              <span className={styles.newsMeta}>
-                매체 {digest.publisherCount}곳
-                {/* 확인하지 못한 발행 시각을 확인한 것처럼 쓰지 않는다(012 계약). */}
-                {digest.publicationTimeStatus === 'VERIFIED' && digest.firstPublishedAt !== null
-                  ? ` · ${digest.firstPublishedAt.slice(0, 10).replaceAll('-', '.')}`
-                  : ' · 발행 시각 확인 안 됨'}
-              </span>
+              {/* 매체 수와 날짜는 요약 오른쪽에 붙인다. 요약 아래 줄로 내리면 요약의 한 줄처럼 읽힌다. */}
+              <div className={styles.newsBody}>
+                <p>{digest.factualSummary}</p>
+                <span className={styles.newsMeta}>
+                  매체 {digest.publisherCount}곳
+                  {/* 확인하지 못한 발행 시각을 확인한 것처럼 쓰지 않는다(012 계약). */}
+                  {digest.publicationTimeStatus === 'VERIFIED' && digest.firstPublishedAt !== null
+                    ? ` · ${digest.firstPublishedAt.slice(0, 10).replaceAll('-', '.')}`
+                    : ' · 발행 시각 확인 안 됨'}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
