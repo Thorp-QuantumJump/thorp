@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -153,6 +153,15 @@ describe('SectorSelectionPage', () => {
     const sampleNotice = await screen.findByText(/예시 대응표/)
     // 이 문장이 가리키는 것은 목록이 어디서 왔는지다. 비중은 이 화면이 다루지 않는다.
     expect(sampleNotice.textContent).not.toMatch(/비중/)
+  })
+
+  it('선택 요약 제목 옆 물음표로 고른 대상이 후보 집합이라는 뜻을 알린다 (FR-009)', async () => {
+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))
+    renderPage()
+
+    const trigger = await screen.findByRole('button', { name: '선택한 투자 대상 도움말' })
+    fireEvent.focus(trigger)
+    expect((await screen.findByRole('tooltip')).textContent).toContain('후보 집합')
   })
 
   it('KRX 출처를 목록 화면에 표시한다', async () => {
