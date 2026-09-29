@@ -60,6 +60,15 @@
   word-break: keep-all;
 }
 
+/* classic 에는 없던 머리다. 예전 화면으로 돌아가도록 안내 문장은 숨기고 제목만 한 칸으로 둔다. */
+:global(:root[data-design='classic']) .hero {
+  display: block;
+}
+
+:global(:root[data-design='classic']) .lead {
+  display: none;
+}
+
 /* 안내 문장은 뜻이 나뉘는 자리에서 줄을 바꾼다. 줄마다 span 하나다. */
 .lead span {
   display: block;
