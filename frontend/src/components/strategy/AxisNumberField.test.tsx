@@ -14,7 +14,6 @@ const range = { min: 10, max: 100, step: 5 };
 
 function renderField(initial: number | undefined) {
   const onChange = vi.fn();
-  const onReset = vi.fn();
 
   // 실제 상태처럼 받은 값을 되돌려 주는 틀. 입력칸이 바깥 값과 맞춰지는 경로까지 함께 본다.
   function Harness() {
@@ -31,10 +30,6 @@ function renderField(initial: number | undefined) {
             onChange(next);
             setValue(next);
           }}
-          onReset={() => {
-            onReset();
-            setValue(20);
-          }}
         />
         <output data-testid="stored">
           {value === undefined ? "비어 있음" : String(value)}
@@ -46,7 +41,6 @@ function renderField(initial: number | undefined) {
   render(<Harness />);
   return {
     onChange,
-    onReset,
     input: screen.getByRole("textbox", { name: /합성 상한/ }),
   };
 }
@@ -119,34 +113,10 @@ describe("AxisNumberField", () => {
     expect(screen.getByText(/숫자로 입력해 주세요/)).not.toBeNull();
   });
 
-  it("기본값 복원은 등록표 기본값으로 되돌리고 입력칸도 맞춘다", async () => {
-    const user = userEvent.setup();
-    const { onReset, input } = renderField(35);
+  it("되돌리는 단추를 두지 않는다 — 설정 행 이름 옆 아이콘이 맡는다", () => {
+    renderField(35);
 
-    // 반영되지 않은 글이 남아 있어도 복원하면 입력칸이 기본값으로 돌아온다.
-    await user.clear(input);
-    await user.type(input, "7");
-    await user.click(
-      screen.getByRole("button", { name: "합성 상한 기본값 복원" }),
-    );
-
-    expect(onReset).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("stored").textContent).toContain("20");
-    expect((input as HTMLInputElement).value).toBe("20");
-    expect(input.getAttribute("aria-invalid")).toBe("false");
-  });
-
-  it("상태가 이미 기본값일 때 복원해도 남아 있던 글을 기본값으로 되돌린다", async () => {
-    const user = userEvent.setup();
-    const { input } = renderField(20);
-
-    await user.clear(input);
-    await user.type(input, "999");
-    await user.click(
-      screen.getByRole("button", { name: "합성 상한 기본값 복원" }),
-    );
-
-    expect((input as HTMLInputElement).value).toBe("20");
+    expect(screen.queryByRole("button", { name: /기본값 복원/ })).toBeNull();
   });
 
   it("재검증이 비워 둔 항목은 빈칸으로 두고 값을 넣으라고 안내한다", () => {

@@ -1,11 +1,14 @@
-/* 왼쪽 목록의 항목 하나. 빠르게 훑는 자리라 높이를 낮게 잡는다. */
+/* 가로로 늘어선 전략 하나. 빠르게 견주는 자리라 이름과 한 줄 설명만 둔다. */
 .card {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   width: 100%;
+  height: 100%;
   padding: var(--thorp-pad-inset, 10px 12px);
+  /* 줄 오른쪽 끝의 카드 모서리에는 분석하기 원이 조금 걸친다. 글이 그 밑으로 들어가지 않게 끝 여백을 넉넉히 둔다. */
+  padding-inline-end: 22px;
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-inset, var(--thorp-radius-card, 8px));
   background: var(--thorp-surface);
@@ -45,7 +48,7 @@
 }
 
 .card:focus-visible {
-  outline: var(--thorp-focus-outline);
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
@@ -66,7 +69,8 @@
 .card[data-selectable='false'] {
   cursor: not-allowed;
   border-style: dashed;
-  background: var(--thorp-surface);
+  border-color: var(--thorp-line-strong);
+  background: transparent;
 }
 
 .card[data-selectable='false'] .indicator {
@@ -81,7 +85,7 @@
 
 /*
   고른 뒤에 막힌 항목. 최소 평가 기간을 바꾸면 이런 상태가 된다. **고른 사실을 지우지 않는다** —
-  선택 표시를 거두면 사용자가 무엇을 골랐는지 잃고, 오른쪽 단이 무엇을 말하고 있는지도 흐려진다.
+  선택 표시를 거두면 사용자가 무엇을 골랐는지 잃고, 아래 상세 설정 카드가 무엇을 말하고 있는지도 흐려진다.
   막혔다는 것은 점선 테두리와 사유 문장이 맡는다.
 */
 .card[data-selected='true'][data-selectable='false'] {
@@ -94,17 +98,35 @@
   background: var(--thorp-accent);
 }
 
+/*
+  이름과 사유 번호가 한 줄이다. 번호가 설명 줄 수에 따라 오르내리지 않는다. 카드가 좁아 둘이 한 줄에 서지 못하면
+  번호가 이름 아래로 내려간다. 이름을 낱말 가운데서 끊어 번호 자리를 만들지 않는다.
+*/
+.nameLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 6px;
+  min-width: 0;
+}
+
 .name {
   color: var(--thorp-foreground);
   font-size: var(--thorp-text-body, 0.88rem);
   font-weight: 700;
   line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .description {
   color: var(--thorp-copy);
   font-size: var(--thorp-text-caption, 0.75rem);
   line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 .notice {
@@ -113,16 +135,48 @@
   margin-top: 1px;
 }
 
-/* 사유 문장. 딱지 없이 문장만 두되 왼쪽 선으로 본문과 가른다. */
+/* 사유 문장(카드 하나만 쓰는 자리). 딱지 없이 문장만 두되 왼쪽 선으로 본문과 가른다. */
 .reason {
   padding-left: 7px;
   border-left: 2px solid var(--thorp-warning);
   color: var(--thorp-copy);
   font-size: var(--thorp-text-caption, 0.71rem);
   line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-.card[data-warmup='reduced'] .reason[data-kind='warmup'],
-.card[data-warmup='unknown'] .reason[data-kind='warmup'] {
+/* 판정하지 못했을 뿐 고를 수 있다. 경고색을 쓰지 않는다. */
+.reason[data-tone='pending'] {
   border-left-color: var(--thorp-line-strong);
+}
+
+/*
+  목록 아래에 모아 적은 안내를 가리키는 번호. 같은 사유가 카드마다 되풀이되면 무엇 때문에 막혔는지보다 경고가
+  많다는 인상만 남는다.
+*/
+.markers {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+}
+
+.marker {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 50%;
+  color: var(--thorp-warning);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* 판정하지 못했을 뿐 고를 수 있는 사유의 번호. 경고색을 쓰지 않는다. */
+.marker[data-tone='pending'] {
+  border-color: var(--thorp-line-strong);
+  color: var(--thorp-muted);
 }

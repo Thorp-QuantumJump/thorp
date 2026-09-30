@@ -218,14 +218,19 @@ function renderPage(entry: string, support: AnalysisSupport) {
   );
 }
 
-/** 전략 카드를 고르고 '분석 조건'을 펼친다. */
+/** 전략 카드를 고르고 '분석 기간' 행을 펼친다. 행마다 여닫으므로 폼을 보려면 그 행을 열어야 한다. */
 async function openConditions(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole("radio", {
       name: new RegExp(selectableStrategy.name),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "분석 조건" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: (name, element) =>
+        element.getAttribute("data-slot") === "setting-toggle" && name.startsWith("분석 기간"),
+    }),
+  );
 }
 
 beforeEach(() => {

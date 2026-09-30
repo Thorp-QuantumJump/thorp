@@ -1,13 +1,111 @@
-/* 세로 목록. 왼쪽 단에서 위에서 아래로 훑는다. */
+.wrapper {
+  display: grid;
+  gap: 10px;
+}
+
+/*
+  가로로 늘어선 전략 카드. 몇 줄로 설지는 전략 선택 화면의 짜임 폭(strategy-flow)으로 정한다 — 이 목록이 놓인 칸은
+  분석하기 원이 드러나는 만큼 좁아지므로, 그 칸 폭으로 정하면 카드를 고를 때마다 줄 수가 바뀐다. 짜임 밖에서
+  쓰이면 한 열로 쌓는다.
+
+  한 줄에 다 서지 않을 때는 여섯 칸 격자에 카드를 두 칸씩 놓아 세 장씩 서고, 마지막 줄이 둘이면 세 칸씩, 하나면
+  여섯 칸을 차지하게 해 한 장만 외톨이로 남지 않게 한다. 전략 수는 등록표가 정하므로 개수에 기대지 않는 규칙이다.
+*/
 .list {
   display: grid;
-  gap: 7px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-content: start;
 }
 
+@container strategy-flow (min-width: 520px) {
+  .list {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .list > * {
+    grid-column: span 2;
+  }
+
+  .list > :nth-child(3n + 1):nth-last-child(2),
+  .list > :nth-child(3n + 2):nth-last-child(1) {
+    grid-column: span 3;
+  }
+
+  .list > :nth-child(3n + 1):nth-last-child(1) {
+    grid-column: span 6;
+  }
+}
+
+@container strategy-flow (min-width: 860px) {
+  .list {
+    grid-template-columns: none;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+  }
+
+  .list > *,
+  .list > :nth-child(3n + 1):nth-last-child(2),
+  .list > :nth-child(3n + 2):nth-last-child(1),
+  .list > :nth-child(3n + 1):nth-last-child(1) {
+    grid-column: auto;
+  }
+}
+
 .list:focus-visible {
-  outline: var(--thorp-focus-outline);
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
   outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/*
+  카드 줄 아래에 모아 적은 사유. 카드의 번호와 같은 번호로 한 번씩 적고, 걸린 전략 이름을 앞에 둔다. 오른쪽 끝은
+  카드와 같이 '분석하기' 원이 걸치는 만큼 비워 둔다.
+*/
+.shared {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0 22px 0 0;
+  list-style: none;
+}
+
+.sharedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  line-height: 1.55;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.sharedNumber {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 1px solid var(--thorp-warning);
+  border-radius: 50%;
+  color: var(--thorp-warning);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* 판정하지 못했을 뿐 고를 수 있는 사유. 경고색을 쓰지 않는다. */
+.sharedNumber[data-tone='pending'] {
+  border-color: var(--thorp-line-strong);
+  color: var(--thorp-muted);
+}
+
+.sharedNames {
+  color: var(--thorp-foreground);
+  font-weight: 600;
 }
 
 .loading {
@@ -16,9 +114,10 @@
   font-size: var(--thorp-text-caption, 0.76rem);
 }
 
+/* 자리 표시. 실제 카드(이름과 두 줄 설명)와 비슷한 높이·모서리로 두어 목록이 오면 줄이 덜 튄다. */
 .placeholder {
-  height: 58px;
+  min-height: 76px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 8px);
+  border-radius: var(--thorp-radius-inset, var(--thorp-radius-card, 8px));
   background: var(--thorp-surface-raised);
 }

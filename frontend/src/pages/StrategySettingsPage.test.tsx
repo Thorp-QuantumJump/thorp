@@ -415,6 +415,48 @@ function actionButton(label: string): HTMLElement {
   });
 }
 
+/**
+ * 설정 행의 펼침 단추. 접근 가능 이름이 '항목 이름 + 지금 값'이라 이름 전체로는 찾을 수 없으므로, 이름이 가리키는
+ * 첫 조각(항목 이름)으로 찾는다.
+ */
+function rowToggle(
+  label: string,
+  container: ParentNode = document,
+): HTMLButtonElement | null {
+  return (
+    Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[data-slot="setting-toggle"]'),
+    ).find((button) => {
+      const [labelId] = (button.getAttribute("aria-labelledby") ?? "").split(" ");
+      return document.getElementById(labelId)?.textContent === label;
+    }) ?? null
+  );
+}
+
+/**
+ * 설정 행 하나를 펼친다. 후보가 몇 개뿐인 행은 행 오른쪽에 이미 선택지가 있어 여는 단추가 없으므로 그대로 둔다.
+ */
+async function openSetting(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) {
+  const toggle = rowToggle(label);
+  if (toggle?.getAttribute("aria-expanded") === "false") await user.click(toggle);
+}
+
+/**
+ * 카드가 보조기술에 전하는 설명 전체. 여러 카드에 같은 사유가 걸리면 문장은 목록 아래 한 곳에 있고 카드는 번호만
+ * 보이므로, 사유가 전해지는지는 카드 안 글이 아니라 `aria-describedby`가 가리키는 글로 본다.
+ */
+function descriptionOf(card: HTMLElement): string {
+  return (card.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
+}
+
+
 beforeEach(() => {
   apiMocks.fetchSectorCatalog.mockResolvedValue(loadedCatalog);
   apiMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture);
@@ -628,7 +670,7 @@ describe("StrategySettingsPage", () => {
     }
   });
 
-  it("요약 줄에 보인 시작 금액이 그대로 요청에 실린다", async () => {
+  it("시작 금액 행에 보인 금액이 그대로 요청에 실린다", async () => {
     // T092, quickstart 4. 사용자가 보지 못한 금액으로 분석이 접수되지 않는다.
     const user = userEvent.setup();
     const { support, requests } = makeSupport();
@@ -637,7 +679,7 @@ describe("StrategySettingsPage", () => {
     await user.click(await findCardNamed(selectableStrategy.name));
 
     const amount = registryFixture.analysisConditions.initialAmount;
-    const summary = screen.getByLabelText("분석 조건 요약");
+    const summary = screen.getByRole("region", { name: "분석 조건" });
     expect(summary.textContent).toContain(
       `${amount.default.toLocaleString("ko-KR")}${amount.unit ?? ""}`,
     );
@@ -652,22 +694,26 @@ describe("StrategySettingsPage", () => {
     expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2));
   });
 
-  it("변동성 제한을 켜면 요약 줄에 보이고 요청에 목표 변동성을 싣고 워밍업은 서버에 맡긴다", async () => {
+  it("변동성 제한을 켜면 그 행에 보이고 요청에 목표 변동성을 싣고 워밍업은 서버에 맡긴다", async () => {
     const user = userEvent.setup();
     const { support, requests } = makeSupport();
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
-    await user.click(screen.getByRole("button", { name: "분석 조건" }));
+    await openSetting(user, "변동성 제한");
     await user.click(screen.getByRole("radio", { name: "씀" }));
     const volatility = registryFixture.analysisConditions.targetVolatility;
     await user.selectOptions(
       screen.getByRole("combobox", { name: "목표 변동성(연)" }),
       String(volatility.max),
     );
-    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
-      `변동성 제한연 ${volatility.max}%`,
-    );
+    expect(
+      (
+        screen.getByRole("combobox", {
+          name: "목표 변동성(연)",
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe(String(volatility.max));
 
     await waitFor(() =>
       expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
@@ -683,22 +729,111 @@ describe("StrategySettingsPage", () => {
     });
   });
 
-  it("기본 화면의 입력은 전략 선택 하나다", async () => {
-    // SC-005. 전략 설정과 분석 조건은 접혀 있고 입력 요소를 내놓지 않는다.
+  it("기본 화면에는 짧은 선택만 바로 보이고 날짜·금액·숫자 입력칸은 눌러야 열린다", async () => {
+    // SC-005(2026-09-30 개정), T046·T102. 후보가 몇 개뿐인 선택은 알약으로 바로 두고, 범위 안내가 따라야 하는
+    // 입력은 그 행을 눌러야 연다.
     const user = userEvent.setup();
     const { support } = makeSupport();
     const { container } = renderPage(support);
+    const radioFieldsets = () =>
+      Array.from(container.querySelectorAll("fieldset")).filter((fieldset) =>
+        fieldset.querySelector('input[type="radio"]'),
+      );
+
+    // 고르기 전에는 분석 조건의 짧은 선택 둘만 바로 보인다.
+    await findCardNamed(selectableStrategy.name);
+    await waitFor(() =>
+      expect(radioFieldsets().map((fieldset) => fieldset.getAttribute("aria-label")).sort()).toEqual(
+        ["최소 평가 기간", "변동성 제한"].sort(),
+      ),
+    );
 
     await user.click(await findCardNamed(selectableStrategy.name));
 
-    expect(container.querySelectorAll("input, select, textarea")).toHaveLength(
-      0,
-    );
+    expect(
+      container.querySelectorAll('input:not([type="radio"]), select, textarea'),
+    ).toHaveLength(0);
 
-    // 축 라벨은 응답에 실려 오지만 기본 화면에 보이지 않는다.
-    for (const axis of selectableStrategy.axes) {
-      expect(screen.queryByText(axis.label)).toBeNull();
+    // 바로 보이는 선택지 묶음은 정확히 이것들이다: 최소 평가 기간, 변동성 제한, 후보가 넷 이하인 목록형 축.
+    // 라디오를 빼고 세는 위 검사가 새로 생긴 선택지 묶음을 놓치지 않게 이름으로 못 박는다.
+    const expectedGroups = [
+      "최소 평가 기간",
+      "변동성 제한",
+      ...selectableStrategy.axes
+        .filter((axis) => axis.inputType === "CHOICE" && (axis.choices ?? []).length <= 4)
+        .map((axis) => axis.label),
+    ];
+    const radioGroups = radioFieldsets().map((fieldset) => fieldset.getAttribute("aria-label"));
+    expect(radioGroups.sort()).toEqual([...expectedGroups].sort());
+    // 바로 보이는 선택지 묶음은 어느 것도 후보가 넷을 넘지 않는다.
+    for (const fieldset of radioFieldsets()) {
+      expect(fieldset.querySelectorAll('input[type="radio"]').length).toBeLessThanOrEqual(4);
     }
+
+    for (const axis of selectableStrategy.axes) {
+      if (axis.inputType !== "CHOICE") {
+        expect(rowToggle(axis.label)?.getAttribute("aria-expanded")).toBe("false");
+      }
+    }
+  });
+
+  it("상세 설정 카드는 제목이 고정이고, 두 열 위에 기본값 안내와 자동 배분 설명을 둔다", async () => {
+    const user = userEvent.setup();
+    const { support } = makeSupport();
+    renderPage(support);
+
+    // 고르기 전에도 제목과 기본값 안내(FR-004)가 있고, 전략 설정 자리는 무엇을 기다리는지 말한다.
+    expect(await screen.findByRole("heading", { name: "상세 설정" })).toBeTruthy();
+    expect(
+      await screen.findByText(/편의용 출발점이며 최적값이나 투자 권고가 아닙니다/),
+    ).toBeTruthy();
+    expect(screen.getByText("위에서 전략을 고르면 여기에 전략 설정이 나타납니다.")).toBeTruthy();
+
+    // 자동 배분 전략을 고르면 출력 비중이 계산 결과라는 설명(FR-012)이 붙고, 제목은 그대로다.
+    await user.click(await findCardNamed(selectableStrategy.name));
+    expect(screen.getByRole("region", { name: "상세 설정" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "상세 설정" })).toBeTruthy();
+    // 전략 이름은 제목이 아니라 제목 옆 글이다.
+    expect(screen.queryByRole("heading", { name: selectableStrategy.name })).toBeNull();
+    expect(screen.getByText(selectableStrategy.name, { selector: "strong" })).toBeTruthy();
+    expect(
+      screen.getByText("출력 비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다."),
+    ).toBeTruthy();
+
+    // 동일 비중은 계산으로 비중을 내지 않으므로 그 설명이 없다. 전략을 바꿔도 제목은 그대로다.
+    await user.click(await findCardNamed(plainStrategy.name));
+    expect(screen.queryByText(/계산 결과이며 입력한 비중과 다릅니다/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "상세 설정" })).toBeTruthy();
+    expect(screen.getByText(plainStrategy.name, { selector: "strong" })).toBeTruthy();
+  });
+
+  it("분석하기 원은 고르기 전 숨고, 막히면 절반, 누를 수 있으면 다 드러나며, 이유는 원 옆 문장이 말한다", async () => {
+    const user = userEvent.setup();
+    const { support } = makeSupport({ fetchAnalysisVersions: async () => null });
+    renderPage(support);
+
+    const orb = () => document.querySelector<HTMLButtonElement>('[data-action="analyze"]')!;
+    await findCardNamed(selectableStrategy.name);
+    expect(orb().getAttribute("data-stage")).toBe("0");
+    // 설정 준비가 끝나기 전 한 차례는 "불러오기 전" 문장이다. 자리 잡은 문장을 기다린다.
+    await waitFor(() => expect(reasonOf(orb())).toContain("전략 카드를 먼저"));
+
+    // 분석 조건 버전을 받지 못해 막힌다. 고른 뒤라 절반만 나온다. 조회 중에는 "확인하는 중"이 먼저 온다.
+    await user.click(await findCardNamed(selectableStrategy.name));
+    await waitFor(() => expect(orb().getAttribute("data-stage")).toBe("1"));
+    expect(orb().getAttribute("aria-disabled")).toBe("true");
+    await waitFor(() => expect(reasonOf(orb())).toContain("분석 조건 버전"));
+    // 이유 문장은 원 바로 왼쪽, 상세 설정 카드의 머리 줄에 있다. 카드 아래 멀리 두지 않는다.
+    const reasonId = orb().getAttribute("aria-describedby")!;
+    const reason = document.getElementById(reasonId)!;
+    const detail = screen.getByRole("region", { name: "상세 설정" });
+    expect(
+      within(detail).getByRole("heading", { name: "상세 설정" }).parentElement?.contains(reason),
+    ).toBe(true);
+    // 원 칸 안의 사본(좁은 화면용)은 같은 문장이지만 보조기술에 숨는다. 원이 가리키는 문장은 하나다.
+    const copy = orb().parentElement?.querySelector("p");
+    expect(copy?.textContent).toBe(reason.textContent);
+    expect(copy?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("앞 단계로 돌아가는 길이 제목 위에 있고 섹터 선택을 가리킨다", async () => {
@@ -975,9 +1110,7 @@ describe("StrategySettingsPage", () => {
 
     const card = await findCardNamed(selectableStrategy.name);
     expect(card.getAttribute("aria-disabled")).toBe("true");
-    expect(
-      within(card).getByText(/최소 평가 기간\(3년\)에 못 미칩니다/),
-    ).toBeTruthy();
+    expect(descriptionOf(card)).toMatch(/최소 평가 기간\(3년\)에 못 미칩니다/);
 
     await user.click(card);
     expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe("true");
@@ -1100,9 +1233,13 @@ describe("StrategySettingsPage", () => {
     await user.click(actionButton("분석하기"));
     await waitFor(() => expect(calls).toHaveLength(1));
 
-    // 보내는 중에는 같은 버튼이 다른 이름으로 바뀌고 다시 눌리지 않는다.
+    // 보내는 중에는 같은 버튼이 다른 이름으로 바뀌고 다시 눌리지 않는다. 조건이 빠진 것이 아니라 원은 다 드러난
+    // 채로 두고, 보이는 글자도 바뀐다.
     const busy = actionButton("분석 요청을 보내는 중");
     expect(busy.getAttribute("aria-disabled")).toBe("true");
+    expect(busy.getAttribute("aria-busy")).toBe("true");
+    expect(busy.getAttribute("data-stage")).toBe("2");
+    expect(busy.textContent).toContain("보내는 중");
     await user.click(busy);
     expect(calls).toHaveLength(1);
 
@@ -1275,7 +1412,7 @@ describe("StrategySettingsPage", () => {
     await user.click(await findCardNamed(selectableStrategy.name));
 
     // 기본값으로 대신 보이지 않는다.
-    const summary = screen.getByLabelText("분석 조건 요약");
+    const summary = screen.getByRole("region", { name: "분석 조건" });
     expect(summary.textContent).not.toContain(
       amount.default.toLocaleString("ko-KR"),
     );
@@ -1652,7 +1789,7 @@ describe("StrategySettingsPage", () => {
         let card = await findCardNamed(selectableStrategy.name);
         expect(card.getAttribute("data-warmup")).toBe("reduced");
 
-        await user.click(screen.getByRole("button", { name: "전략 설정" }));
+        await openSetting(user, "표류 관측 창");
         await user.click(screen.getByRole("radio", { name: "90거래일" }));
 
         // 고른 카드는 지금 설정으로 다시 판정되어 막히지만 고른 사실은 남는다.
@@ -1660,7 +1797,7 @@ describe("StrategySettingsPage", () => {
         expect(card.getAttribute("data-warmup")).toBe("blocked");
         expect(card.getAttribute("aria-disabled")).toBe("true");
         expect(card.getAttribute("aria-checked")).toBe("true");
-        expect(within(card).getByText(/워밍업 90거래일을 채우면/)).toBeTruthy();
+        expect(descriptionOf(card).match(/워밍업 90거래일을 채우면/)).toBeTruthy();
         expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
           "true",
         );
@@ -1704,7 +1841,7 @@ describe("StrategySettingsPage", () => {
           "false",
         ),
       );
-      await user.click(screen.getByRole("button", { name: "전략 설정" }));
+      await openSetting(user, "허용 이탈 폭");
 
       const band = screen.getByRole("textbox", { name: /허용 이탈 폭/ });
       await user.clear(band);
@@ -1745,7 +1882,7 @@ describe("StrategySettingsPage", () => {
       renderPage(support);
 
       await user.click(await findCardNamed(selectableStrategy.name));
-      await user.click(screen.getByRole("button", { name: "전략 설정" }));
+      await openSetting(user, "표류 관측 창");
       await user.click(screen.getByRole("radio", { name: "15거래일" }));
       await waitFor(() =>
         expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
@@ -1846,7 +1983,7 @@ describe("StrategySettingsPage", () => {
         "reloading",
       );
       // 다시 받는 동안 비용 조건을 "확인할 수 없음"으로 말하지 않는다. '분석하기' 사유와 같은 말을 한다.
-      const summary = screen.getByLabelText("분석 조건 요약");
+      const summary = screen.getByRole("region", { name: "분석 조건" });
       expect(summary.textContent).toContain("확인하는 중");
       expect(summary.textContent).not.toContain("확인할 수 없음");
       await user.click(actionButton("분석하기"));
@@ -2088,7 +2225,7 @@ describe("StrategySettingsPage", () => {
       );
       expect(card.getAttribute("data-warmup")).toBe("unknown");
       expect(
-        within(card).getByText(/현재 설정으로 워밍업을 계산할 수 없습니다/),
+        descriptionOf(card).match(/현재 설정으로 워밍업을 계산할 수 없습니다/),
       ).toBeTruthy();
       // 고를 수 없다는 뜻이 아니다. 기본 설정의 워밍업(45)으로 대신 판정했다면 'reduced'였다.
       // 호출 횟수로는 보지 않는다 — 재검증을 마치기 전 첫 렌더에서는 고른 전략이 없어 카드 목록이
@@ -2182,9 +2319,10 @@ describe("StrategySettingsPage", () => {
       await waitFor(() => expect(calls).toHaveLength(1));
 
       await user.click(await findCardNamed(plainStrategy.name));
+      // 단 제목은 '상세 설정'으로 고정이고, 고른 전략의 이름은 카드 첫 줄이 말한다.
       await waitFor(() =>
         expect(
-          screen.getByRole("heading", { name: plainStrategy.name }),
+          screen.getByText(plainStrategy.name, { selector: "strong" }),
         ).toBeTruthy(),
       );
 
@@ -2307,12 +2445,20 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     );
   }
 
+  /** 분석 조건의 접힌 행을 모두 펼치고 영역을 돌려준다. 행마다 여닫으므로 폼을 보려면 열어야 한다. */
   async function openConditions(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole("button", { name: "분석 조건" }));
-    return screen.getByRole("region", { name: "분석 조건" });
+    const panel = screen.getByRole("region", { name: "분석 조건" });
+    for (const toggle of Array.from(
+      panel.querySelectorAll<HTMLButtonElement>(
+        '[data-slot="setting-toggle"][aria-expanded="false"]',
+      ),
+    )) {
+      await user.click(toggle);
+    }
+    return panel;
   }
 
-  it("패널에서 바꾼 기간과 금액이 요약 줄과 요청에 함께 실린다", async () => {
+  it("분석 조건에서 바꾼 기간과 금액이 그 행 값과 요청에 함께 실린다", async () => {
     const user = userEvent.setup();
     const { support, requests } = makeSupport();
     renderPage(support);
@@ -2335,7 +2481,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
       },
     );
 
-    const summary = screen.getByLabelText("분석 조건 요약");
+    const summary = screen.getByRole("region", { name: "분석 조건" });
     expect(summary.textContent).toContain("2021-01-04 ~ 2023-12-28");
     expect(summary.textContent).toContain(chosenAmount.toLocaleString("ko-KR"));
 
@@ -2509,8 +2655,8 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     await waitFor(() =>
       expect(reasonOf(actionButton("분석하기"))).toContain(outOfRange),
     );
-    // 요약 줄은 사용자가 고른 기간을 그대로 보인다. 경계로 잘라 보이지 않는다.
-    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+    // 분석 기간 행은 사용자가 고른 기간을 그대로 보인다. 경계로 잘라 보이지 않는다.
+    expect(screen.getByRole("region", { name: "분석 조건" }).textContent).toContain(
       "2019-03-04 ~ 2023-12-28",
     );
 
@@ -2620,7 +2766,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
         "범위(2022-01-03 ~ 2024-12-30) 밖입니다",
       ),
     );
-    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+    expect(screen.getByRole("region", { name: "분석 조건" }).textContent).toContain(
       "2021-01-04 ~ 2024-12-30",
     );
     expect(
@@ -2654,7 +2800,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
       expect(stored.analysisCondition).toBeTruthy();
       expect(stored.analysisCondition.initialAmount).toBeUndefined();
     });
-    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+    expect(screen.getByRole("region", { name: "분석 조건" }).textContent).toContain(
       amount.default.toLocaleString("ko-KR"),
     );
   });
@@ -2689,17 +2835,17 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     );
     await user.click(card);
     expect(card.getAttribute("aria-checked")).toBe("false");
-    // 기본 화면의 입력은 늘지 않는다(SC-005). 패널은 접힌 채다.
-    expect(container.querySelectorAll("input, select, textarea")).toHaveLength(
-      0,
-    );
-
-    const panel = await openConditions(user);
-    // 전략을 고르기 전에는 기간을 정할 범위가 없다. 날짜를 지어 보이지 않는다.
+    // 기본 화면에서 바로 쓰는 입력은 짧은 선택뿐이다(SC-005, 2026-09-30 개정). 날짜·금액 행은 접힌 채다.
     expect(
-      (within(panel).getByLabelText("시작일") as HTMLInputElement).disabled,
-    ).toBe(true);
-    expect(within(panel).getByText(/전략을 고르면/)).toBeTruthy();
+      container.querySelectorAll('input:not([type="radio"]), select, textarea'),
+    ).toHaveLength(0);
+
+    // 전략을 고르기 전에는 기간을 정할 범위가 없다. 날짜를 지어 보이지 않고, 펼칠 자리 없이 까닭을 늘 보인다(FR-003).
+    const conditions = screen.getByRole("region", { name: "분석 조건" });
+    expect(within(conditions).getByText(/전략을 고르면/)).toBeTruthy();
+    expect(within(conditions).getByText("정해지지 않음")).toBeTruthy();
+    const panel = await openConditions(user);
+    expect(within(panel).queryByLabelText("시작일")).toBeNull();
 
     await user.click(
       within(panel).getByRole("radio", { name: "완화(제한 없음)" }),
@@ -2720,7 +2866,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
       target: { value: "2021-01-04" },
     });
     await waitFor(() =>
-      expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+      expect(screen.getByRole("region", { name: "분석 조건" }).textContent).toContain(
         "2021-01-04 ~ 2024-12-30",
       ),
     );
@@ -2729,7 +2875,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     renderPage(makeSupport().support);
     await findCardNamed(selectableStrategy.name);
     await waitFor(() =>
-      expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
+      expect(screen.getByRole("region", { name: "분석 조건" }).textContent).toContain(
         "2021-01-04 ~ 2024-12-30",
       ),
     );
@@ -2791,13 +2937,13 @@ describe("StrategySettingsPage 공통 평가 기간 연결(T042, T098)", () => {
         maxWarmupTradingDays: 90,
       });
 
-      await user.click(screen.getByRole("button", { name: "전략 설정" }));
+      await openSetting(user, "표류 관측 창");
       await user.click(screen.getByRole("radio", { name: "90거래일" }));
 
       const card = await findCardNamed(selectableStrategy.name);
       expect(card.getAttribute("data-warmup")).toBe("blocked");
       expect(
-        within(card).getByText(/최소 평가 기간\(1년\)에 못 미칩니다/),
+        descriptionOf(card).match(/최소 평가 기간\(1년\)에 못 미칩니다/),
       ).toBeTruthy();
       expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
         "true",

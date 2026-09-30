@@ -8,7 +8,7 @@ import {
 } from "./TargetWeightEditor";
 
 /**
- * 자산 배분 영역이다. 무엇을 담을지는 앞 단계가 정했고 여기서는 얼마를 줄지만 정한다.
+ * 목표 비중 편집기다. 무엇을 담을지는 앞 단계가 정했고 여기서는 얼마를 줄지만 정한다.
  *
  * <p>합계를 자동으로 맞추지 않는다는 것이 이 영역의 핵심 규칙이다(SC-002). 한 값을 고쳤다고
  * 나머지가 저절로 움직이면 사용자가 방금 정한 값이 말없이 달라진다.
@@ -43,7 +43,7 @@ function renderEditor(
 }
 
 function region(): HTMLElement {
-  return screen.getByRole("region", { name: "자산 배분" });
+  return screen.getByRole("region", { name: "목표 비중" });
 }
 
 function totalText(): string {
@@ -54,7 +54,7 @@ function totalText(): string {
   );
 }
 
-describe("자산 배분 영역", () => {
+describe("목표 비중 편집기", () => {
   it("고른 대상마다 값을 정하는 수단을 둘 준다", () => {
     renderEditor();
 

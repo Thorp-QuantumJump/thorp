@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState } from "react";
 import { checkNumberInRange } from "@/hooks/useStrategySettings";
 import type { RangeView } from "@/types/strategyRegistry";
 import { type QuickAdd, groupThousands } from "./amountQuickAdd";
@@ -14,11 +14,6 @@ interface AxisNumberFieldProps {
   value: number | undefined;
   /** 범위 안이고 간격에 맞는 값일 때만 불린다 */
   onChange: (value: number) => void;
-  onReset: () => void;
-  /** 설명 옆에 붙일 용어 도움말. 없으면 그리지 않는다 */
-  help?: ReactNode;
-  /** 값 아래에 한 줄 더. 이 값이 다른 것을 움직일 때 그 사실을 적는다. 없으면 그리지 않는다 */
-  note?: ReactNode;
   /** 세 자리마다 쉼표를 넣어 보인다. 자릿수가 큰 금액에서만 켠다 */
   groupDigits?: boolean;
   /**
@@ -59,7 +54,9 @@ function parseDraft(draft: string): number | null {
 }
 
 /**
- * 입력형 설정 항목(FR-006, quickstart 5).
+ * 입력형 설정 항목(FR-006, quickstart 5). 설정 행(SettingRow)의 값을 눌러 연 자리에 놓인다 — 이름·도움말·
+ * 되돌리기는 행 머리가 맡고, 입력칸은 `aria-label`로 행과 같은 이름을 가진다. 되돌리면 행이 이 필드를 새로
+ * 그려 입력 중이던 글까지 기본값으로 맞춘다.
  *
  * <p><b>허용 범위 밖이거나 간격에 맞지 않는 값은 상태에 반영하지 않는다.</b> 입력칸에는 사용자가 넣은
  * 글을 그대로 남기고 허용 범위를 안내한다 — 최솟값·최댓값으로 잘라 넣으면 사용자가 넣지 않은 값으로
@@ -79,14 +76,10 @@ export function AxisNumberField({
   defaultValue,
   value,
   onChange,
-  onReset,
-  help,
-  note,
   groupDigits = false,
   roundToStep = false,
   quickAdd,
 }: AxisNumberFieldProps) {
-  const inputId = useId();
   const messageId = useId();
 
   /** 칸에 적을 모양. 쉼표는 보기 위한 것이고 `parseDraft`가 읽을 때 걷어 낸다. */
@@ -153,12 +146,6 @@ export function AxisNumberField({
     onChange(nextValue);
   };
 
-  const handleReset = () => {
-    // 상태가 이미 기본값이면 바깥 값이 바뀌지 않아 입력칸이 맞춰지지 않으므로 여기서 맞춘다.
-    setDraft(show(defaultValue));
-    onReset();
-  };
-
   /** 값을 확정하고 칸의 글까지 그 값의 모양으로 맞춘다. */
   const commit = (next: number) => {
     // 바깥 값이 돌아오며 `setDraft`를 덮어쓰지 않게 먼저 맞춰 둔다.
@@ -196,29 +183,32 @@ export function AxisNumberField({
 
   return (
     <div className={styles.field}>
-      <div className={styles.header}>
-        {/*
-          제목과 물음표를 한 덩이로 묶는다. header 가 양끝 정렬이라 따로 두면 물음표만 오른쪽 끝으로
-          밀리고, 목록형 축은 제목 안에 있어 두 항목의 간격이 달라 보인다. label 안에 넣지 않는 까닭은
-          label 을 누르면 입력칸으로 초점이 가기 때문이다 — 도움말 버튼이 그 안에 있으면 안 된다.
-        */}
-        <span className={styles.labelGroup}>
-          <label className={styles.label} htmlFor={inputId}>
-            {label}
-            {unit ? <span className={styles.unit}>({unit})</span> : null}
-          </label>
-          {help}
-        </span>
-      </div>
-
+      {/* 빠른 더하기와 입력칸이 한 줄이다. 입력칸이 오른쪽 끝에 서서 행의 값과 같은 선에 놓인다. */}
       <div className={styles.inputRow}>
+        {/* 자주 쓰는 액수를 한 번에 더한다. 상한을 넘게 되는 단추는 누를 수 없다. */}
+        {quickAdd && quickAdd.length > 0 ? (
+          <div className={styles.quickAdd}>
+            {quickAdd.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={styles.quickAddButton}
+                aria-label={`${label} ${item.label}`}
+                disabled={(value ?? defaultValue) + item.amount > range.max}
+                onClick={() => handleQuickAdd(item.amount)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <input
-          id={inputId}
           className={styles.input}
           type="text"
           inputMode="decimal"
           autoComplete="off"
           value={draft}
+          aria-label={label}
           aria-invalid={problem ? "true" : "false"}
           aria-describedby={describedBy}
           onFocus={() => {
@@ -227,33 +217,7 @@ export function AxisNumberField({
           onChange={(event) => handleChange(event.target.value)}
           onBlur={handleBlur}
         />
-        <button
-          type="button"
-          className={styles.reset}
-          aria-label={`${label} 기본값 복원`}
-          onClick={handleReset}
-        >
-          기본값 복원
-        </button>
       </div>
-
-      {/* 자주 쓰는 액수를 한 번에 더한다. 상한을 넘게 되는 단추는 누를 수 없다. */}
-      {quickAdd && quickAdd.length > 0 ? (
-        <div className={styles.quickAdd}>
-          {quickAdd.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className={styles.quickAddButton}
-              aria-label={`${label} ${item.label}`}
-              disabled={(value ?? defaultValue) + item.amount > range.max}
-              onClick={() => handleQuickAdd(item.amount)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {/* 자리를 늘 두고 글만 바꾼다. 안내가 생길 때 자리가 새로 붙으면 보조기술이 읽지 않을 수 있다. */}
       <p
@@ -263,8 +227,6 @@ export function AxisNumberField({
       >
         {problem ?? rangeText}
       </p>
-
-      {note ? <p className={styles.hint}>{note}</p> : null}
     </div>
   );
 }

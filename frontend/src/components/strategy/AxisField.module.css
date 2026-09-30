@@ -1,106 +1,21 @@
-/* 목록형·입력형 설정 항목이 함께 쓰는 틀이다. 두 항목이 같은 자리에 같은 순서로 놓여야 읽는 흐름이 흔들리지 않는다. */
+/*
+  설정 행(SettingRow)의 값을 눌러 연 자리에 놓이는 입력 폼의 틀이다. 행이 이미 이름·값·선을 가지므로 상자를
+  한 번 더 두르지 않고, 입력과 안내 줄이 행의 오른쪽 끝에 맞춰 선다.
+*/
 .field {
   display: grid;
+  justify-items: end;
   gap: 8px;
   min-width: 0;
   margin: 0;
-  padding: var(--thorp-pad-inset, 14px 16px);
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 12px);
-}
-
-/*
-  legend 를 상자 테두리에 걸치지 않고 상자 안에 둔다.
-
-  브라우저는 fieldset 의 첫 legend 를 "rendered legend"로 삼아 위쪽 테두리를 끊고 그 틈에 그린다. float 이
-  none 이 아니면 그 대상에서 빠져 평범한 상자가 된다(HTML 표준). 그래서 legend 를 쓰는 항목(기간·최소 평가
-  기간·목록형 축)만 글씨가 테두리에 걸쳐 있고, div 로 묶은 항목(운용 방식·비용 가정)은 안에 들어가 두 모양이
-  섞여 보였다. 묶음의 뜻(fieldset/legend)은 그대로 두고 그리는 자리만 맞춘다.
-*/
-.header {
-  float: left;
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px 12px;
   padding: 0;
-}
-
-/* 제목과 물음표 한 덩이. 사이 간격은 물음표가 가진 여백 하나로 정해진다. */
-.labelGroup {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  min-width: 0;
-}
-
-/* 이름·단위·물음표가 한 줄에서 가운데를 맞춘다. 맞추지 않으면 물음표만 글자 아래로 처진다. */
-.label {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.92rem);
-  font-weight: 700;
-}
-
-.unit {
-  margin-left: 6px;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
-  font-weight: 400;
-}
-
-.description {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
-  line-height: 1.6;
-}
-
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--thorp-control-pad-block, 6px) 12px;
-  border: 1px solid var(--thorp-line);
-  border-radius: 999px;
-  font-size: var(--thorp-text-body, 0.84rem);
-  cursor: pointer;
-  justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
-}
-
-.choice:has(input:checked) {
-  border-color: var(--thorp-accent);
-}
-
-.choice:has(input:focus-visible) {
-  outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset-compact);
-}
-
-/* 고를 수 없는 후보는 빼지 않고 흐리게 둔다. 낱말로도 알린다. */
-.choice[data-selectable="false"] {
-  color: var(--thorp-muted);
-  border-style: dashed;
-  cursor: not-allowed;
+  border: 0;
 }
 
 .input {
   width: min(100%, 180px);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   padding: var(--thorp-control-pad-block, 7px) 12px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 8px);
@@ -119,6 +34,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -126,6 +42,9 @@
   margin: 0;
   color: var(--thorp-copy);
   font-size: var(--thorp-text-small, 0.78rem);
+  text-align: right;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .problem {
@@ -133,25 +52,9 @@
   color: var(--thorp-warning);
   font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
-}
-
-.reset {
-  padding: var(--thorp-control-pad-block, 4px) 10px;
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-control, 999px);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: var(--thorp-text-small, 0.78rem);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
-}
-
-.reset:hover {
-  border-color: currentColor;
+  text-align: right;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* 금액 칸의 빠른 더하기 줄. 이 줄이 없는 축에서는 아예 그려지지 않는다. */
@@ -188,9 +91,10 @@
   cursor: not-allowed;
 }
 
-.quickAddButton:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset-compact);
+.quickAddButton:focus-visible,
+.input:focus-visible {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

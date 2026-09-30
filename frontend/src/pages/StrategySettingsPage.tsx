@@ -8,6 +8,10 @@ import {
   normalizeStrategyRegistryError,
 } from "@/api/strategyRegistry";
 import { NotReadyNotice } from "@/components/common/NotReadyNotice";
+import {
+  StepOrbButton,
+  type StepOrbStage,
+} from "@/components/common/StepOrbButton";
 import { InlineHelp } from "@/components/common/InlineHelp";
 import { SECTOR_SELECTION_PATH } from "@/components/result/prefillStrategySettings";
 import { buildSectorSelectionPath } from "@/marketflow/handoff";
@@ -35,7 +39,6 @@ import {
   rangeCoversCase,
   type CasePeriodConstraint,
 } from "@/components/strategy/casePeriodConstraint";
-import { ConditionSummaryLine } from "@/components/strategy/ConditionSummaryLine";
 import { defaultAnalysisSupport } from "@/components/strategy/connectedAnalysisSupport";
 import { DetailSettingsPanel } from "@/components/strategy/DetailSettingsPanel";
 import {
@@ -49,7 +52,7 @@ import {
   RegistryChangedNotice,
   type RegistryReloadPhase,
 } from "@/components/strategy/RegistryChangedNotice";
-import type { WarmupVerdict } from "@/components/strategy/StrategyCard";
+import type { WarmupVerdict } from "@/components/strategy/cardNotices";
 import {
   StrategyCardList,
   type RegistryViewState,
@@ -128,6 +131,11 @@ function periodTooShortMessage(label: string): string {
   return `고른 분석 기간이 최소 평가 기간(${label})보다 짧습니다. 기간을 늘리거나 최소 평가 기간을 바꿔 주세요.`;
 }
 
+/**
+ * '분석하기'가 막힌 이유 문장의 id. 문장은 원 바로 옆에 놓이고, 원은 `aria-describedby`로 이 문장을 가리킨다.
+ */
+const ANALYZE_REASON_ID = "action-analyze-reason";
+
 const RANGE_NEEDS_STRATEGY =
   "전략을 고르면 평가할 수 있는 범위가 정해지고 그 안에서 기간을 바꿀 수 있습니다.";
 
@@ -152,7 +160,7 @@ const REQUEST_BUILD_FAILED =
  * 보이지 않게 한다.
  */
 function weightsUnbalancedMessage(totalTenths: number): string {
-  return `목표 비중의 합계가 100%가 아닙니다(현재 ${formatDisplayWeight(totalTenths)}%). 전략 설정의 자산 배분에서 맞춰 주세요.`;
+  return `목표 비중의 합계가 100%가 아닙니다(현재 ${formatDisplayWeight(totalTenths)}%). 전략 설정의 목표 비중에서 맞춰 주세요.`;
 }
 
 /**
@@ -226,8 +234,11 @@ function InvalidValueList({
  * 전략 선택 화면(US1, FR-001·FR-002·FR-018). 흐름은 002 섹터·비중 → <b>003 전략 선택</b> →
  * 004 분석 / 007 자동 비교다.
  *
- * <p><b>기본 화면의 입력은 전략 선택 하나다(SC-005).</b> 카드를 고르면 '기본 설정' 표시, 조건 한 줄,
- * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 분석 조건(US3)도 접힌 패널이다.
+ * <p><b>위에서 아래로 흐른다(2026-09-30).</b> 전략 카드를 가로 한 줄에서 고르고, 그 아래 '상세 설정' 카드에서
+ * 분석 조건과 전략 설정을 두 열로 확인·조정한 뒤, 두 카드 사이 틈에 걸친 원으로 넘어간다. 투자 대상 고르기
+ * (STEP 01)와 같은 짜임이다. 설정은 항목마다 한 행이 지금 값을 늘 보이고, 후보가 몇 개뿐인 선택만 행 오른쪽에서
+ * 바로 고르며, 날짜·금액·숫자는 값을 눌러 편다(SC-005, 2026-09-30 개정). 행동은 '분석하기'와 '설정 조합 자동
+ * 비교' 둘이다.
  *
  * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 전략 설정에서 값을 바꾸면 규칙 위반,
  * 워밍업, 고른 카드의 판정, 기본 설정 표시, '분석하기'의 막힘이 한 렌더 안에서 다시 계산된다. 값을
@@ -745,7 +756,7 @@ export function StrategySettingsPage({
   /**
    * 요청에 실을 시작 금액. **화면에 보이는 값과 보내는 값이 같은 자리에서 나온다(T092).**
    *
-   * 사용자가 바꾸지 않았으면 등록표의 기본값이다. 요약 줄과 요청 조립이 이 값 하나를 함께 읽어,
+   * 사용자가 바꾸지 않았으면 등록표의 기본값이다. 분석 조건 행과 요청 조립이 이 값 하나를 함께 읽어,
    * 한쪽만 바뀌어 보이는 금액과 보내는 금액이 갈라지는 일이 없게 한다. B10(T067)이 상태에 값을
    * 채우면 그 값이 여기로 온다.
    */
@@ -756,7 +767,7 @@ export function StrategySettingsPage({
         registry.analysisConditions.initialAmount.default);
 
   /**
-   * 분석 기간(FR-009, T067). **요약 줄·패널·요청이 이 값 하나를 함께 읽는다.**
+   * 분석 기간(FR-009, T067). **분석 조건 행·요청이 이 값 하나를 함께 읽는다.**
    *
    * <p>사용자가 고르지 않았으면 평가 가능 범위 전체다. 골랐으면 그 기간이다. 범위가 나중에 바뀌어(다른
    * 워밍업, 다른 전략) 고른 기간이 범위를 벗어나도 <b>잘라 맞추지 않는다.</b> 막고 되돌릴 길을 보인다.
@@ -1057,7 +1068,7 @@ export function StrategySettingsPage({
     )
       return;
 
-    // 값을 만들지 않는다. 시작 금액은 요약 줄에 보인 값을 그대로 싣는다.
+    // 값을 만들지 않는다. 시작 금액은 그 행에 보인 값을 그대로 싣는다.
     //
     // **조립도 실패를 알리는 길 안에 둔다.** 조립은 금액·비중이 계약 모양으로 옮겨지지 않으면 예외를
     // 던지는데, 앞서는 이것이 `try` 밖이라 거부된 프로미스로 버려졌다. 버튼을 눌러도 진행 표시도
@@ -1198,7 +1209,7 @@ export function StrategySettingsPage({
         ? "reloaded"
         : "reloading";
 
-  /** 자산 배분 표의 줄이다. 이름은 섹터 목록에서, 비중은 지금 화면이 들고 있는 값에서 온다. */
+  /** 목표 비중 편집기의 줄이다. 이름은 섹터 목록에서, 비중은 지금 화면이 들고 있는 값에서 온다. */
   const targetWeights = useMemo((): TargetWeightRow[] | null => {
     if (effectiveSelection === null || catalog?.status !== "loaded") return null;
     const names = new Map(
@@ -1212,15 +1223,6 @@ export function StrategySettingsPage({
   }, [effectiveSelection, catalog]);
   // 조회 중과 조회 실패를 가른다. 409 뒤 다시 받는 동안을 "확인할 수 없음"으로 보이면 곧 끝날 조회가 실패로
   // 읽히고, 같은 화면의 '분석하기' 사유("확인하는 중")와 두 말을 하게 된다.
-  const costProfile =
-    versions === "loading"
-      ? ("loading" as const)
-      : versions !== null
-        ? {
-            version: versions.costProfileVersion,
-            provisional: versions.costProfileProvisional,
-          }
-        : null;
   const costAssumption =
     versions === "loading"
       ? ("loading" as const)
@@ -1231,6 +1233,20 @@ export function StrategySettingsPage({
             rates: versions.costRates,
           }
         : null;
+
+  /*
+    '분석하기' 원이 드러난 정도다. 전략을 고르기 전에는 숨고(0), 골랐지만 막혀 있으면 절반쯤 나오며(1), 누를 수
+    있으면 다 드러난다(2). 투자 대상 고르기의 다음 단계 단추와 같은 셈법이라, 하나를 더 해야 열린다는 것이
+    두 화면에서 같은 움직임으로 읽힌다. 보내는 중은 눌 수 없어도 다 드러난 채로 둔다 — 조건이 빠진 것이 아니다.
+  */
+  const analyzeBusy = submission.status === "sending";
+  const analyzeBlocked = analyzeBlocker !== null || analyzeBusy;
+  const analyzeStage: StepOrbStage =
+    !settings.selectedStrategy || selectedId === null
+      ? 0
+      : analyzeBlocker !== null
+        ? 1
+        : 2;
 
   return (
     <div className={styles.page}>
@@ -1258,7 +1274,7 @@ export function StrategySettingsPage({
             <ArrowLeft size={15} aria-hidden="true" />
             섹터·비중 고르기
           </Link>
-          <p className={heading.eyebrow} aria-hidden="true">STEP 02 · STRATEGY</p>
+          <p className={heading.eyebrow} aria-hidden="true">STEP 02</p>
           <h1 id="strategy-settings-title" className={styles.title}>
             <em className={heading.emphasis}>전략</em> 선택
           </h1>
@@ -1329,7 +1345,7 @@ export function StrategySettingsPage({
             ) : null}
 
             {/*
-              전략과 무관한 보관값의 안내다. **두 단보다 위에, 전략을 고르기 전에 보인다.**
+              전략과 무관한 보관값의 안내다. **카드 줄보다 위에, 전략을 고르기 전에 보인다.**
               최소 평가 기간이 그렇다 — 그 값이 카드의 선택 가능 여부를 정하므로(FR-011a) 카드를
               보기 전에 지금 어떤 값이 쓰이고 있는지 알아야 한다.
             */}
@@ -1342,9 +1358,10 @@ export function StrategySettingsPage({
             ) : null}
 
             {/*
-              왼쪽에서 고르고 오른쪽에서 확인한다. **고른 전략의 상세를 목록 사이에 끼워 넣지
-              않는다** — 그러면 고를 때마다 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 두 단의
-              폭은 전략을 바꿔도 변하지 않는다.
+              위에서 고르고 아래에서 확인한다. **고른 전략의 상세를 카드 사이에 끼워 넣지 않는다** — 그러면
+              고를 때마다 다른 카드가 밀려 견주던 자리를 잃는다. 카드 줄과 상세 카드는 오른쪽 칸의 원이 드러나는
+              만큼 함께 좁아지지만(STEP 01과 같은 움직임), 카드 줄의 줄 수와 설정의 열 수는 원과 무관한 짜임 폭으로
+              정해 고를 때마다 줄이 바뀌지 않는다.
             */}
             <div className={styles.layout}>
               <section
@@ -1393,22 +1410,51 @@ export function StrategySettingsPage({
                 className={styles.detail}
                 aria-labelledby="selected-strategy-title"
               >
-                <h2 id="selected-strategy-title" className={styles.columnTitle}>
-                  {settings.selectedStrategy
-                    ? settings.selectedStrategy.name
-                    : "선택한 전략"}
-                </h2>
-
                 <div className={styles.detailBody}>
-                  {settings.selectedStrategy ? (
-                    <p className={styles.detailDescription}>
-                      {settings.selectedStrategy.description}
+                  {/*
+                    제목은 '상세 설정'으로 고정이다(2026-09-30). 제목이 전략마다 바뀌면 이 카드가 무엇을 하는
+                    자리인지가 이름에 묻힌다. 고른 전략의 이름은 제목 옆에 두고, 설명은 바로 위 고른 카드가 이미
+                    보이므로 되풀이하지 않는다. 제목을 카드 안에 두어 카드 줄과 이 카드 사이 틈이 비고, 분석하기
+                    원이 그 틈에 걸친다.
+
+                    머리 오른쪽 끝에는 '분석하기'가 막힌 이유를 둔다. 원이 카드 오른쪽 위 모서리에 걸쳐 있어 바로
+                    그 왼쪽이다. 원이 `aria-describedby`로 이 문장을 가리키므로 초점을 받은 원이 까닭을 함께
+                    읽힌다. 스스로 알리지는 않는다: 같은 문장을 카드 안 안내가 이미 알린다.
+                  */}
+                  <div className={styles.detailHead}>
+                    <h2 id="selected-strategy-title" className={styles.detailTitle}>
+                      상세 설정
+                    </h2>
+                    {settings.selectedStrategy ? (
+                      <strong className={styles.detailStrategy}>
+                        {settings.selectedStrategy.name}
+                      </strong>
+                    ) : null}
+                    <p id={ANALYZE_REASON_ID} className={styles.detailReason}>
+                      {analyzeBlocker ?? ""}
                     </p>
-                  ) : (
-                    <p className={styles.empty}>
-                      왼쪽에서 전략을 고르면 여기에 설명과 조건이 나타납니다.
-                    </p>
-                  )}
+                  </div>
+
+                  {/*
+                    기본값은 편의용 출발점이라는 말(FR-004)과 자동 배분 전략의 출력 비중 설명(FR-012)은 두 열
+                    위에 둔다. 분석 조건의 기본값에도 해당하고, 한쪽 열에만 두면 두 열의 행 선이 어긋난다.
+                    도움말로 내리지 않는다(frontend/CLAUDE.md).
+                  */}
+                  {registry !== null && settings.ready ? (
+                    <div className={styles.detailNotes}>
+                      <p className={styles.detailNote}>
+                        처음 보이는 값은 등록표의 기본값입니다. 편의용 출발점이며
+                        최적값이나 투자 권고가 아닙니다.
+                      </p>
+                      {settings.selectedStrategy?.targetWeightSource ===
+                      "COMPUTED" ? (
+                        <p className={styles.detailNote}>
+                          출력 비중은 선택한 규칙의 계산 결과이며 입력한 비중과
+                          다릅니다.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {settings.ready &&
                   settings.selectedStrategy &&
@@ -1477,14 +1523,17 @@ export function StrategySettingsPage({
                   ) : null}
 
                   {/*
-                  분석 조건은 **한 자리에만 둔다.** 요약과 편집 폼을 다른 곳에 두면 같은 값이 화면
-                  두 곳에서 각각 말해진다. 요약은 늘 보이고(FR-002) 편집은 접힌 채로 시작한다(SC-005).
+                    분석 조건은 **한 자리에만 둔다.** 항목마다 한 행이 지금 값을 늘 보인다(FR-002). 요약 줄을 따로
+                    두면 같은 값이 화면 두 곳에서 각각 말해진다.
 
-                  **전략을 고르기 전에도 닿는다**(T102). 최소 평가 기간은 카드의 선택 가능 여부를
-                  바꾸는 값이라, 그 값이 모든 카드를 막으면 선택에 묶인 입력으로는 되돌릴 길이
-                  없다(FR-011a). 기간은 고른 전략의 평가 가능 범위가 있어야 정할 수 있으므로 그
-                  전에는 막고 까닭을 적는다.
-                */}
+                    **전략을 고르기 전에도 닿는다**(T102). 최소 평가 기간은 카드의 선택 가능 여부를 바꾸는 값이라,
+                    그 값이 모든 카드를 막으면 선택에 묶인 입력으로는 되돌릴 길이 없다(FR-011a). 기간은 고른
+                    전략의 평가 가능 범위가 있어야 정할 수 있으므로 그 전에는 막고 까닭을 적는다.
+
+                    분석 조건 | 전략 설정 두 열이다. 오른쪽 열은 전략을 고르기 전에도 자리를 지켜, 고르는 순간
+                    분석 조건이 옆으로 옮겨 가지 않게 한다. 좁으면 한 열로 쌓는다.
+                  */}
+                  <div className={styles.settingsGrid}>
                   {registry !== null && settings.ready ? (
                     <AnalysisConditionsPanel
                       rangeReason={
@@ -1494,25 +1543,7 @@ export function StrategySettingsPage({
                           </InlineHelp>
                         )
                       }
-                      summary={
-                        <ConditionSummaryLine
-                          period={period}
-                          sectorCount={universeSize ?? 0}
-                          initialAmount={
-                            initialAmount === null
-                              ? null
-                              : {
-                                  value: initialAmount,
-                                  unit: registry.analysisConditions
-                                    .initialAmount.unit,
-                                }
-                          }
-                          costProfile={costProfile}
-                          targetVolatility={
-                            settings.analysisCondition.targetVolatility
-                          }
-                        />
-                      }
+                      sectorCount={universeSize ?? 0}
                       conditions={registry.analysisConditions}
                       range={evaluableRange}
                       rangeUnavailableMessage={
@@ -1550,6 +1581,7 @@ export function StrategySettingsPage({
                     />
                   ) : null}
 
+                  <div className={styles.strategyTrack}>
                   {settings.ready &&
                   settings.selectedStrategy &&
                   selectedId !== null &&
@@ -1571,26 +1603,59 @@ export function StrategySettingsPage({
                       }
                       onResetAll={() => settings.resetAll(selectedId)}
                     />
-                  ) : null}
+                  ) : (
+                    <p className={styles.empty}>
+                      위에서 전략을 고르면 여기에 전략 설정이 나타납니다.
+                    </p>
+                  )}
 
-                  {/* 마지막 단계. 화면에서 실행 버튼이 나오는 자리는 여기 하나뿐이다. */}
+                  {/*
+                    우회로 '설정 조합 자동 비교'. 고른 전략의 설정 조합을 찾는 길이라 전략 설정 아래에 둔다(FR-013).
+                    '분석하기' 단추 자체는 카드 밖 원이다.
+                  */}
                   <ActionButtons
-                    analyze={{
-                      disabled: analyzeBlocker !== null,
-                      reason: analyzeBlocker ?? undefined,
-                      busy: submission.status === "sending",
-                    }}
                     autoCompare={{
                       disabled: autoCompareBlocker !== null,
                       reason: autoCompareBlocker ?? undefined,
                     }}
-                    onAnalyze={() => {
-                      void handleAnalyze();
-                    }}
                     onAutoCompare={handleAutoCompare}
                   />
+                  </div>
+                  </div>
                 </div>
+
               </section>
+
+              {/*
+                마지막 걸음 '분석하기'. 전략 카드 줄과 상세 설정 카드 사이 틈에 걸친 원으로, 투자 대상 고르기의
+                STEP 02 단추와 같은 자리·모양·움직임이다. 화면에서 실행 단추가 나오는 자리는 여기 하나뿐이다.
+
+                막힌 이유는 원 바로 왼쪽(상세 설정 카드 머리 줄)에 한 문장으로 두고 `aria-describedby`로 잇는다. 원에서
+                멀리 떨어진 카드 아래에 두면 절반만 나온 원을 본 사용자가 이유를 찾아 내려가야 한다. 원이 카드 아래로
+                내려가는 좁은 화면에서는 원 칸 안의 사본이 대신 보인다. 사본은 보조기술에 숨긴다: 원이 가리키는
+                문장은 머리 쪽 하나다. `disabled` 대신 `aria-disabled`를 쓰는 까닭은 ActionButtons와 같다(NFR-001).
+                보내는 중에는 이름이 바뀌고 다시 눌리지 않으며, 원은 다 드러난 채 글자를 보인다.
+              */}
+              <StepOrbButton
+                className={styles.analyzeDock}
+                stage={analyzeStage}
+                step="STEP 03"
+                label={analyzeBusy ? "보내는 중" : "분석하기"}
+                aria-label={analyzeBusy ? "분석 요청을 보내는 중" : "분석하기"}
+                aria-disabled={analyzeBlocked}
+                aria-busy={analyzeBusy}
+                aria-describedby={
+                  analyzeBlocker !== null ? ANALYZE_REASON_ID : undefined
+                }
+                data-action="analyze"
+                onClick={() => {
+                  if (!analyzeBlocked) void handleAnalyze();
+                }}
+              >
+                <p className={styles.analyzeStatus} aria-hidden="true">
+                  {analyzeBlocker ?? ""}
+                </p>
+              </StepOrbButton>
             </div>
 
             {versions === null || versionsRetrying ? (
