@@ -50,6 +50,11 @@ export function StepOrbButton({
   return (
     <div className={className ? `${styles.dock} ${className}` : styles.dock} data-stage={stage}>
       <button type="button" className={styles.orb} data-stage={stage} {...buttonProps}>
+        {/*
+          원의 채움·테두리·흐림은 이 장식 요소가 맡는다. 단추 자체에 흐림 가림막을 걸면 가림막이 초점 테두리까지
+          잘라 내, 이 화면의 주된 행동에 초점이 왔는지 보이지 않는다(WCAG 2.4.7).
+        */}
+        <span className={styles.fill} aria-hidden="true" />
         <span className={styles.step} aria-hidden="true">
           {step}
         </span>

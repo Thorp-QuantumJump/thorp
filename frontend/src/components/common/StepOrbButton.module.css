@@ -41,7 +41,53 @@
 }
 
 /*
-  단계를 오간다.
+  단추. 모양은 원이라 누를 수 있는 자리도 원이고(모서리를 눌러도 반응하지 않는다), 초점 테두리도 원을 따라
+  그려진다. 보이는 원은 안쪽 장식 요소(.fill)가 그린다.
+
+  넘어갈 수 없는 동안(0~1)은 눌러도 아무 일이 없으므로 포인터를 받지 않는다 — 원 칸이 카드 모서리에 걸쳐 있어,
+  받으면 흐려져 보이지도 않는 원이 카드 모서리 클릭을 가로챈다. 키보드 초점은 그대로 받는다.
+*/
+.orb {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  padding: 0 0 0 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--thorp-action-foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  isolation: isolate;
+  transition:
+    color var(--orb-motion),
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.14s ease;
+}
+
+.orb[data-stage='0'],
+.orb[data-stage='1'] {
+  pointer-events: none;
+}
+
+.orb[aria-busy='true'] {
+  cursor: progress;
+}
+
+.orb:focus-visible {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 4px;
+}
+
+/*
+  보이는 원. 단계를 오간다.
 
   넘어갈 수 없는 동안(0~1)은 원의 앞쪽만 카드 테두리 위에 남는다. 원을 칼로 자르지 않고, 흐림 가림막을
   왼쪽으로 당겨 앞쪽은 선명하고 뒤쪽은 배경에 스며드는 초승달로 둔다.
@@ -53,27 +99,17 @@
   가림막은 원 폭의 두 배 길이다. 앞 절반은 불투명, 그다음 원 폭의 30%에 걸쳐 투명해진다. 가림막을 얼마나
   당기느냐(`mask-position`)만 바꾸므로 흐린 구간의 모양이 유지된 채 부드럽게 움직인다.
 */
-.orb {
+.fill {
   --thorp-orb-fill: var(--thorp-accent);
 
-  position: relative;
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-  width: var(--orb-size);
-  height: var(--orb-size);
-  padding: 0 0 0 26px;
+  position: absolute;
+  z-index: -1;
+  inset: 0;
   border: 1.5px solid color-mix(in srgb, var(--thorp-accent) 70%, #000);
   border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
   background: var(--thorp-orb-fill);
-  color: var(--thorp-action-foreground);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
   box-shadow: none;
+  pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, #000 50%, transparent 65%);
   mask-image: linear-gradient(90deg, #000 50%, transparent 65%);
   -webkit-mask-size: calc(var(--orb-size) * 2) 100%;
@@ -87,25 +123,14 @@
     mask-position var(--orb-motion),
     border-color var(--orb-motion),
     box-shadow var(--orb-motion),
-    color var(--orb-motion),
-    --thorp-orb-fill var(--orb-motion),
-    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.14s ease;
-}
-
-.orb > * {
-  /* 아래 빛 번짐(::before)보다 위에 그린다. */
-  position: relative;
-  transition:
-    opacity 300ms ease 260ms,
-    transform var(--orb-motion);
+    --thorp-orb-fill var(--orb-motion);
 }
 
 /*
   숨은 단계의 빛 번짐이다. 왼쪽 위에 옅게 번진 빛이 평평한 조각을 둥근 면으로 보이게 한다. 다 드러나면
   모양·색과 같은 속도로 사라져 단색 채움만 남는다.
 */
-.orb::before {
+.fill::before {
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -115,17 +140,23 @@
     transparent 58%
   );
   opacity: 0;
-  pointer-events: none;
   content: '';
   transition: opacity var(--orb-motion);
 }
 
-.orb[data-stage='0']::before {
+.orb[data-stage='0'] .fill::before {
   opacity: 0.55;
 }
 
-.orb[data-stage='1']::before {
+.orb[data-stage='1'] .fill::before {
   opacity: 1;
+}
+
+.orb > :not(.fill) {
+  position: relative;
+  transition:
+    opacity 300ms ease 260ms,
+    transform var(--orb-motion);
 }
 
 .step {
@@ -155,13 +186,9 @@
   transform: translateX(6px);
 }
 
-.orb:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: 3px;
-}
-
 /*
   아직 넘어갈 수 없다(0~1). 글자는 보이지 않고 눌리지 않는다. `disabled`든 `aria-disabled`든 같은 모양이다.
+  다 드러난 뒤 잠깐 눌리지 않는 때(요청을 보내는 중)는 조건이 빠진 것이 아니므로 글자를 그대로 둔다.
 
   세 단계는 **한 색상 계열**에서 밝기와 채도만 오른다: 카드 면에 가까운 깊은 에메랄드(0) → 중간 톤의 초록(1)
   → 브랜드 초록(2). 불이 점점 켜지는 흐름으로 읽히게 하려는 것이다. 회색이나 다른 색을 끼우면 초록 단추의 앞
@@ -175,13 +202,17 @@
   1은 모든 것이 절반쯤 나아간 상태다. 가림막이 반쯤 걷혀 몸체가 밀려 나오고, 모양도 원과 물방울 사이다.
 */
 .orb:disabled,
-.orb[aria-disabled='true'] {
-  border-color: transparent;
+.orb[aria-disabled='true']:not([data-stage='2']) {
   color: transparent;
   cursor: default;
 }
 
-.orb[data-stage='0'] {
+.orb:disabled .fill,
+.orb[aria-disabled='true']:not([data-stage='2']) .fill {
+  border-color: transparent;
+}
+
+.orb[data-stage='0'] .fill {
   --thorp-orb-fill: color-mix(in oklab, var(--thorp-accent) 28%, var(--thorp-surface-raised, #1f2321));
 
   border-radius: 50%;
@@ -190,7 +221,7 @@
   mask-position: calc(var(--orb-size) * -0.76) 0;
 }
 
-.orb[data-stage='1'] {
+.orb[data-stage='1'] .fill {
   --thorp-orb-fill: color-mix(in oklab, var(--thorp-accent) 58%, var(--thorp-surface-raised, #1f2321));
 
   border-radius: 47% 53% 53% 47% / 50% 50% 50% 50%;
@@ -202,9 +233,9 @@
 .orb:disabled > .step,
 .orb:disabled > .label,
 .orb:disabled > .arrow,
-.orb[aria-disabled='true'] > .step,
-.orb[aria-disabled='true'] > .label,
-.orb[aria-disabled='true'] > .arrow {
+.orb[aria-disabled='true']:not([data-stage='2']) > .step,
+.orb[aria-disabled='true']:not([data-stage='2']) > .label,
+.orb[aria-disabled='true']:not([data-stage='2']) > .arrow {
   opacity: 0;
   transform: translateX(-12px);
   transition-delay: 0s;
@@ -216,15 +247,15 @@
   한 번 밀려 나오듯 출렁인다. 단계가 바뀌면 애니메이션 이름이 바뀌어 처음부터 다시 돈다. 끝 모양은 각
   단계의 정지 모양과 같아 멈출 때 튀지 않는다.
 */
-.orb[data-stage='2'] {
+.orb[data-stage='2'] .fill {
   animation: orb-emerge var(--orb-motion);
 }
 
-.orb[data-stage='1'] {
+.orb[data-stage='1'] .fill {
   animation: orb-nudge var(--orb-motion);
 }
 
-.orb[data-stage='0'] {
+.orb[data-stage='0'] .fill {
   animation: orb-recede var(--orb-motion);
 }
 
@@ -293,7 +324,9 @@
 @media (prefers-reduced-motion: reduce) {
   .dock,
   .orb,
-  .orb > * {
+  .fill,
+  .fill::before,
+  .orb > :not(.fill) {
     transition: none;
     animation: none;
   }

@@ -27,16 +27,8 @@ const resetTiming = axisNamed(selectableStrategy.axes, "resetTiming");
 function renderField(axis: AxisView, ...given: [] | [AxisValue | undefined]) {
   const value = given.length === 0 ? axis.defaultValue : given[0];
   const onChange = vi.fn();
-  const onReset = vi.fn();
-  render(
-    <AxisChoiceField
-      axis={axis}
-      value={value}
-      onChange={onChange}
-      onReset={onReset}
-    />,
-  );
-  return { onChange, onReset };
+  render(<AxisChoiceField axis={axis} value={value} onChange={onChange} />);
+  return { onChange };
 }
 
 describe("AxisChoiceField", () => {
@@ -90,19 +82,14 @@ describe("AxisChoiceField", () => {
     }
   });
 
-  it("단위와 항목별 기본값 복원이 보이고, 설명은 본문에 늘어놓지 않는다", async () => {
-    const user = userEvent.setup();
+  it("후보만 그린다: 이름·설명·되돌리기는 설정 행이 맡아 여기 두지 않는다", () => {
     const drift = axisNamed(selectableStrategy.axes, "driftWindow");
-    const { onReset } = renderField(drift, 15);
+    renderField(drift, 15);
 
-    expect(screen.getByRole("group", { name: /표류 관측 창/ })).not.toBeNull();
-    expect(screen.getByText(`(${drift.unit})`)).not.toBeNull();
-    // 설명은 도움말 안으로 내렸다(`S15P21E205-406`). 항목을 훑는 자리에는 이름과 값만 남는다.
+    // 묶음 이름은 행 이름과 같다. 보이는 제목은 행 머리가 가진다.
+    expect(screen.getByRole("group", { name: drift.label })).not.toBeNull();
+    // 설명은 행 이름 옆 도움말 안에 있다(`S15P21E205-406`). 후보 자리에는 후보만 남는다.
     expect(screen.queryByText(drift.description ?? "")).toBeNull();
-
-    await user.click(
-      screen.getByRole("button", { name: "표류 관측 창 기본값 복원" }),
-    );
-    expect(onReset).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

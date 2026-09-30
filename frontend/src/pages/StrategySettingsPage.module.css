@@ -27,6 +27,8 @@
   color: var(--thorp-copy);
   font-size: var(--thorp-text-lead, clamp(0.92rem, 1.7vw, 1rem));
   line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .loading {
@@ -111,55 +113,73 @@
 }
 
 /*
-  왼쪽은 고르는 자리, 오른쪽은 고른 것을 확인하고 실행하는 자리다. 두 단의 폭은 전략을 바꿔도
-  변하지 않는다 — 고를 때마다 레이아웃이 움직이면 견주던 자리를 놓친다.
+  위에서 아래로 흐른다: 전략을 고르고(가로 한 줄) → 그 아래 카드에서 조정하고 → 두 카드 사이 틈에 걸친 원으로
+  넘어간다. 투자 대상 고르기(STEP 01)와 같은 짜임이다. 원이 놓이는 오른쪽 칸의 폭이 곧 두 카드의 폭을 정해,
+  원이 드러나는 만큼 두 카드가 함께 좁아진다.
+
+  카드 줄의 줄 수와 설정의 열 수는 이 짜임의 폭(strategy-flow)으로 정한다. 두 카드가 놓인 칸은 원의 단계에 따라
+  넓어지고 좁아지므로, 그 칸 폭으로 정하면 카드를 고르는 순간 줄 수나 열 수가 바뀌어 누르던 자리가 움직인다.
 */
 .layout {
+  --layout-gap: var(--thorp-flow-gap, 16px);
+
   display: grid;
-  grid-template-columns: minmax(260px, var(--thorp-flow-side, 320px)) minmax(0, 1fr);
+  grid-template-areas:
+    'master .'
+    'detail dock';
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: var(--layout-gap);
   align-items: start;
-  gap: var(--thorp-flow-gap, 16px);
+  container: strategy-flow / inline-size;
 }
 
-/*
-  두 단은 같은 모양으로 시작한다. 제목 한 줄이 먼저 오고 그 아래에서 내용이 시작하므로, 왼쪽
-  첫 항목과 오른쪽 카드의 윗변이 같은 높이에 놓인다. 제목을 한쪽 카드 안에 넣으면 그만큼
-  어긋난다.
-*/
-.master,
-.detail {
+.master {
   display: grid;
+  grid-area: master;
   gap: 10px;
   align-content: start;
+  min-width: 0;
 }
 
-/* 스크롤 막대를 따로 만들지 않는다. 전략이 다섯 남짓이라 그대로 늘어서는 편이 읽기 쉽다. */
-
-/*
-  오른쪽 단은 제목 줄, 카드, 그리고 카드 오른쪽 테두리에 걸친 '분석하기' 원으로 짜인다. 원의 가운데는 제목과
-  카드 사이 틈 높이다 — 투자 대상 고르기의 STEP 02 단추와 같은 짜임이다. 원이 드러난 만큼 카드가 좁아진다.
-*/
 .detail {
-  grid-template-areas:
-    'title .'
-    'body dock';
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 0;
+  display: grid;
+  grid-area: detail;
+  min-width: 0;
 }
 
-.detail .columnTitle {
-  grid-area: title;
-}
-
+/* 원의 가운데를 전략 줄과 상세 카드 사이 틈에 맞춘다. */
 .analyzeDock {
   grid-area: dock;
-  margin-top: calc(var(--orb-size) / -2 - 5px);
+  margin-top: calc(var(--orb-size) / -2 - var(--layout-gap) / 2);
+}
+
+/*
+  '분석하기'가 막힌 이유. 원 바로 왼쪽, 상세 설정 카드의 머리 줄 높이에 오른쪽 끝을 맞춰 선다(STEP 01의 개수
+  안내와 같은 계산). 원 칸의 위쪽은 카드 위쪽보다 원 반지름과 틈 절반만큼 높고, 칸 왼쪽은 카드 오른쪽 끝보다
+  18px 안쪽이다. 문장이 길면 줄을 바꾸되 카드 머리의 비워 둔 자리를 넘지 않는다.
+*/
+.analyzeStatus {
+  position: absolute;
+  top: calc(var(--orb-size) / 2 + var(--layout-gap) / 2 + var(--thorp-pad-card, 18px));
+  right: calc(100% + 4px);
+  width: max-content;
+  max-width: min(22rem, 38cqi);
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.74rem);
+  line-height: 1.5;
+  text-align: right;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.analyzeStatus:empty {
+  display: none;
 }
 
 .detailBody {
   display: grid;
-  grid-area: body;
-  gap: 14px;
+  gap: 18px;
   align-content: start;
   min-width: 0;
   padding: var(--thorp-pad-card, 18px);
@@ -168,48 +188,83 @@
   background: var(--thorp-surface);
 }
 
-.columnTitle {
+/*
+  카드 머리. 제목은 카드 줄 위 '전략'과 같은 층이고, 고른 전략의 이름이 그 옆에 선다. 오른쪽은 원 옆 막힘 문장이
+  내려앉을 자리로 비워 둔다.
+*/
+.detailHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding-right: min(22rem, 38cqi);
+}
+
+.columnTitle,
+.detailTitle {
   margin: 0;
+  color: var(--thorp-foreground);
   font-size: var(--thorp-text-heading, 1.05rem);
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.detailDescription {
-  margin: 0;
+.detailStrategy {
   color: var(--thorp-copy);
   font-size: var(--thorp-text-body, 0.88rem);
-  line-height: 1.65;
+  font-weight: 600;
 }
 
-/* 고른 전략의 이름. 단 제목이 '상세 설정'으로 고정되어, 무엇의 설정인지는 이 첫 줄이 말한다. */
-.detailDescription strong {
-  margin-right: 4px;
-  color: var(--thorp-foreground);
-  font-weight: 700;
-}
-
-/* 아직 고르지 않았을 때 오른쪽 단이 무엇을 기다리는지 알린다. */
-.empty {
-  margin: 0;
-  color: var(--thorp-muted);
-  font-size: var(--thorp-text-body, 0.86rem);
-  line-height: 1.65;
-}
-
-/* 기간·금액·대상·비용이 모이는 한 자리. 요약은 늘 보이고 편집은 접힌다. */
-.conditions {
+/* 기본값이 출발점이라는 말(FR-004)과 자동 배분 설명(FR-012). 두 열 위에 늘 보인다. */
+.detailNotes {
   display: grid;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--thorp-line);
+  gap: 2px;
+  margin-top: -8px;
 }
 
-.groupTitle {
+.detailNote {
   margin: 0;
   color: var(--thorp-copy);
   font-size: var(--thorp-text-small, 0.82rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/*
+  분석 조건 | 전략 설정 두 열. 짜임이 넓으면 두 열로 서고 좁으면 한 열로 쌓는다. 오른쪽 열(전략 설정 자리)은 전략을
+  고르기 전에도 그려져, 고르는 순간 분석 조건이 옆으로 옮겨 가지 않는다.
+*/
+.settingsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px 40px;
+  align-items: start;
+}
+
+@container strategy-flow (min-width: 860px) {
+  .settingsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 전략 설정 자리. 고른 전략의 설정과 그 아래 우회로 '설정 조합 자동 비교'가 선다. */
+.strategyTrack {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 아직 고르지 않았을 때 전략 설정 자리가 무엇을 기다리는지 알린다. */
+.empty {
+  margin: 0;
+  padding: 36px 0 6px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-body, 0.86rem);
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .invalidList {
@@ -238,6 +293,8 @@
   color: var(--thorp-copy);
   font-size: var(--thorp-text-body, 0.84rem);
   line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .judgement[data-state='blocked'],
@@ -292,6 +349,8 @@
 
 .weightNotice p {
   margin: 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .weightNotice button {
@@ -313,36 +372,41 @@
   border-color: currentColor;
 }
 
-/* 태블릿 아래에서는 한 단으로 내린다. 고르기 → 확인 → 실행 차례가 그대로 세로로 이어진다. */
-@media (max-width: 880px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .detailBody {
-    padding: var(--thorp-pad-card, 16px);
-  }
-}
-
-/* 폭이 좁으면 원을 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. */
+/*
+  폭이 좁으면 원을 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. 원은 카드 아래
+  모서리에 22px 걸친다(STEP 01과 같다) — 이 짜임은 행 간격이 있어 그만큼 더 올린다. 막힘 문장은 원 왼쪽에 선다.
+*/
 @media (max-width: 760px) {
-  .detail {
+  .layout {
     grid-template-areas:
-      'title'
-      'body'
+      'master'
+      'detail'
       'dock';
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* 공용 칸 규칙(.dock[data-stage])보다 앞서도록 단 안에서 고른다. */
-  .detail .analyzeDock,
-  .detail .analyzeDock[data-stage='1'],
-  .detail .analyzeDock[data-stage='2'] {
+  /* 공용 칸 규칙(.dock[data-stage])보다 앞서도록 짜임 안에서 고른다. */
+  .layout .analyzeDock,
+  .layout .analyzeDock[data-stage='1'],
+  .layout .analyzeDock[data-stage='2'] {
     --orb-size: 118px;
 
+    flex-direction: row-reverse;
+    align-items: center;
     justify-self: end;
+    gap: 12px;
     width: auto;
-    margin: -22px 0 0;
+    margin: calc(-22px - var(--layout-gap)) 0 0;
+  }
+
+  .analyzeStatus {
+    position: static;
+    width: auto;
+    max-width: 16rem;
+  }
+
+  .detailHead {
+    padding-right: 0;
   }
 }
 

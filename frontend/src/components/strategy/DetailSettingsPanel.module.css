@@ -1,19 +1,28 @@
-/* 행 안 폼과 묶음 제목 옆 단추에서만 쓰는 규칙. 행·묶음의 모양은 SettingRow.module.css 가 갖는다. */
+/*
+  전략 설정 묶음과 목표 비중 편집기, 규칙 위반 안내가 함께 쓰는 규칙. 행·묶음의 모양은 SettingRow.module.css 가
+  갖는다.
+*/
 
 .note {
   margin: 0;
   color: var(--thorp-copy);
   font-size: var(--thorp-text-small, 0.82rem);
   line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-.subTitle {
-  margin: 0;
-  font-size: var(--thorp-text-body, 0.92rem);
+/* 행 아래 한 줄이 두 가지를 말할 때(고를 수 없는 후보, 평가 가능 범위) 줄을 나눠 쌓는다. */
+.captionLines {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
 }
 
+/* 펼친 목표 비중 편집기. 행의 오른쪽 끝에 맞춰 열리되 폭은 행 전체를 쓴다. */
 .weights {
   display: grid;
+  justify-self: stretch;
   gap: 8px;
   padding: var(--thorp-pad-notice, 14px 16px);
   border: 1px solid var(--thorp-line);
@@ -174,15 +183,18 @@
   border-color: var(--thorp-line-control-hover);
 }
 
-/* 묶음 제목 옆의 '모두 기본값 복원'. 항목별 복원과 같은 크기라 둘의 무게가 갈리지 않는다. */
+/*
+  묶음 제목 옆의 '모두 기본값 복원'. 바꾼 값이 있을 때만 나타나고, 행 이름 옆 되돌리기 아이콘과 같은 모양의
+  아이콘을 앞에 둔 글자 단추라 묶음 제목보다 무겁지 않다.
+*/
 .resetAll {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
-  padding: var(--thorp-control-pad-block, 4px) 10px;
-  border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-control, 999px);
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--thorp-radius-control, 6px);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
@@ -191,13 +203,12 @@
 }
 
 .resetAll:hover {
-  border-color: currentColor;
   color: var(--thorp-foreground);
 }
 
 .resetAll:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset-compact);
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
 }
 
 .violations {
