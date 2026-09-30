@@ -1,50 +1,20 @@
+/*
+  전략 설정 아래의 우회로 한 줄. 이 화면의 마지막 걸음인 '분석하기'는 카드 밖 원으로 화면이 따로 그린다. 글자와
+  화살표만 두어 그 원과 무게를 가른다 — 같은 모양으로 두면 사용자가 무엇을 눌러야 할지 화면에 묻고도 답을
+  얻지 못한다.
+*/
 .actions {
   display: grid;
-  gap: 10px;
+  justify-items: end;
+  gap: 4px;
+  padding-top: 10px;
 }
 
-/*
-  왼쪽은 우회로, 오른쪽은 이 화면의 마지막 걸음이다. 크기와 색으로 어느 쪽이 주된 행동인지
-  말한다 — 같은 모양으로 두면 사용자가 무엇을 눌러야 할지 화면에 묻고도 답을 얻지 못한다.
-*/
-.bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 14px;
-}
-
-.primary {
-  min-height: var(--thorp-control-cta, 46px);
-  padding: var(--thorp-control-pad-block, 11px) 26px;
-  border: 1px solid var(--thorp-accent);
-  border-radius: var(--thorp-radius-control, 9px);
-  background: var(--thorp-accent);
-  color: var(--thorp-action-foreground);
-  font: inherit;
-  font-size: var(--thorp-control-font, var(--thorp-text-body, 0.92rem));
-  font-weight: var(--thorp-control-weight, 700);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-  transition: transform 180ms ease, background-color 180ms ease;
-}
-
-.primary:hover:not([aria-disabled='true']) {
-  border-color: var(--thorp-accent-hover, var(--thorp-accent-soft));
-  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
-  transform: translateY(var(--thorp-cta-lift, 0));
-}
-
-/* 우회로. 글자와 화살표만 두어 주된 행동과 무게를 가른다. */
 .secondary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: var(--thorp-control-cta, 46px);
+  min-height: 36px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -52,7 +22,7 @@
   font: inherit;
   font-size: var(--thorp-text-body, 0.84rem);
   cursor: pointer;
-  text-align: left;
+  text-align: right;
 }
 
 .secondary:hover:not([aria-disabled='true']) {
@@ -60,71 +30,23 @@
   text-decoration: underline;
 }
 
-.primary:focus-visible,
 .secondary:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: var(--thorp-focus-offset);
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
 }
 
 /* 누를 수 없는 상태. 초점은 받되 눌리지 않는다. 이유는 아래 문장이 말한다. */
-.primary[aria-disabled='true'] {
-  cursor: not-allowed;
-  border-color: var(--thorp-line-strong);
-  background: var(--thorp-surface-raised);
-  color: var(--thorp-muted);
-}
-
 .secondary[aria-disabled='true'] {
   cursor: not-allowed;
   color: var(--thorp-muted);
 }
 
-.reasons {
-  display: grid;
-  gap: 4px;
-}
-
 .reason {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
   margin: 0;
-  color: var(--thorp-copy);
+  color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.76rem);
   line-height: 1.55;
-}
-
-.reasonLabel {
-  color: var(--thorp-muted);
-  font-size: var(--thorp-text-label, 0.68rem);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* 좁은 화면에서는 세로로 쌓고 주된 행동이 폭을 채운다. */
-@media (max-width: 480px) {
-  .bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .primary {
-    order: 2;
-  }
-
-  .secondary {
-    order: 1;
-    min-height: 34px;
-  }
-}
-
-/* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
-@media (prefers-reduced-motion: reduce) {
-  .primary {
-    transition: none;
-  }
-
-  .primary:hover:not([aria-disabled='true']) {
-    transform: none;
-  }
+  text-align: right;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }

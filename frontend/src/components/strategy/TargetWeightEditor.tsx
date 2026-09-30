@@ -24,7 +24,8 @@ interface TargetWeightEditorProps {
 }
 
 /**
- * 고른 투자 대상에 얼마씩 줄지 정한다(FR-003).
+ * 고른 투자 대상에 얼마씩 줄지 정한다(FR-003). 전략 설정의 '목표 비중' 행을 펼친 자리에 놓인다 — 이름은 그
+ * 행이 이미 보이므로 제목을 따로 두지 않고, 영역 이름만 같은 이름으로 붙인다.
  *
  * <p><b>무엇을 담을지는 여기서 고치지 않는다.</b> 대상을 고르는 일은 앞 단계가 소유하고, 이
  * 화면은 그 대상에 붙는 값만 다룬다. 두 가지를 한자리에서 다루면 사용자가 무엇을 하는 중인지
@@ -49,11 +50,7 @@ export function TargetWeightEditor({
   );
 
   return (
-    <section className={styles.weights} aria-labelledby="target-weights-title">
-      <h3 id="target-weights-title" className={styles.subTitle}>
-        자산 배분
-      </h3>
-
+    <section className={styles.weights} aria-label="목표 비중">
       {rows === null ? (
         <p className={styles.note}>앞 단계에서 고른 투자 대상을 읽지 못했습니다.</p>
       ) : (

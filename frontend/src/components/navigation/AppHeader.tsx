@@ -32,7 +32,7 @@ import styles from './AppHeader.module.css'
  * 대체될 임시 화면이라 언젠가 빠질 자리이기 때문이다. **두 경로 자체는 지우지 않았다.**
  *
  * `covers`는 이 메뉴가 현재 위치로 표시될 경로들이다. **`path` 하나로는 모자란다** — 전략 진단은
- * 섹터·비중(`/diagnosis/sectors`) → 전략 고르기(`/strategy`) → 설정 조합 자동 비교(`/param-search`)
+ * 섹터·비중(`/diagnosis/sectors`) → 전략 선택(`/strategy`) → 설정 조합 자동 비교(`/param-search`)
  * → 결과(`/results/…`)로 이어지는 한 흐름인데 주소가 서로 형제라, 두 번째 단계로 넘어가는 순간
  * 표시가 꺼져 사용자는 흐름에서 벗어난 것처럼 겪는다. 흐름이 늘면 여기에 적는다.
  */

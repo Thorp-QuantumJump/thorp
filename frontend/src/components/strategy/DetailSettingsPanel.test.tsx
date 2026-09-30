@@ -100,6 +100,16 @@ function Harness({
   );
 }
 
+/** 등록표에서 전략 하나만 바꿔 끼운다. 축 구성이 다른 경우를 보려고 쓴다. */
+function registryWith(strategy: StrategyView): RegistryResponse {
+  return {
+    ...registryFixture,
+    strategies: registryFixture.strategies.map((candidate) =>
+      candidate.strategyId === strategy.strategyId ? strategy : candidate,
+    ),
+  };
+}
+
 async function renderOpened(
   strategy: StrategyView,
   registry?: RegistryResponse,
@@ -110,12 +120,43 @@ async function renderOpened(
       <Harness strategy={strategy} registry={registry} />
     </MemoryRouter>,
   );
-  const toggle = await screen.findByRole("button", { name: "전략 설정" });
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  await user.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  const region = await screen.findByRole("region", { name: "전략 설정" });
+  await openAllRows(user, region);
   return user;
 }
+
+/** 영역 안의 접힌 설정 행을 모두 펼친다. 행마다 여닫으므로 폼을 보려면 그 행을 열어야 한다. */
+/**
+ * 설정 행의 펼침 단추. 접근 가능 이름이 '항목 이름 + 지금 값'이라 이름 전체로는 찾을 수 없으므로, 이름이 가리키는
+ * 첫 조각(항목 이름)으로 찾는다.
+ */
+function rowToggle(
+  label: string,
+  container: ParentNode = document,
+): HTMLButtonElement | null {
+  return (
+    Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[data-slot="setting-toggle"]'),
+    ).find((button) => {
+      const [labelId] = (button.getAttribute("aria-labelledby") ?? "").split(" ");
+      return document.getElementById(labelId)?.textContent === label;
+    }) ?? null
+  );
+}
+
+async function openAllRows(
+  user: ReturnType<typeof userEvent.setup>,
+  region: HTMLElement,
+) {
+  for (const toggle of Array.from(
+    region.querySelectorAll<HTMLButtonElement>(
+      '[data-slot="setting-toggle"][aria-expanded="false"]',
+    ),
+  )) {
+    await user.click(toggle);
+  }
+}
+
 
 let fetchSpy: ReturnType<typeof vi.spyOn>;
 let xhrSpy: ReturnType<typeof vi.spyOn>;
@@ -132,17 +173,246 @@ afterEach(() => {
 });
 
 describe("DetailSettingsPanel", () => {
-  it("접힌 채로 시작해 설정 항목을 그리지 않는다", async () => {
+  it("후보가 몇 개뿐인 목록형은 바로 고르고, 숫자 축은 값만 보이다가 눌러야 입력칸이 열린다", async () => {
     render(
       <MemoryRouter>
         <Harness strategy={selectableStrategy} />
       </MemoryRouter>,
     );
-    await screen.findByRole("button", { name: "전략 설정" });
+    const region = await screen.findByRole("region", { name: "전략 설정" });
 
     for (const axis of selectableStrategy.axes) {
-      expect(screen.queryByText(axis.label)).toBeNull();
+      if (axis.inputType === "CHOICE") {
+        // 등록표 후보 그대로 알약이 선다(FR-005). 펼칠 까닭이 없어 여는 단추가 없다.
+        expect(
+          within(region).getByRole("group", { name: axis.label }),
+        ).toBeTruthy();
+        expect(rowToggle(axis.label, region)).toBeNull();
+      } else {
+        expect(rowToggle(axis.label, region)?.getAttribute("aria-expanded")).toBe("false");
+      }
     }
+    // 숫자 입력칸은 펼치기 전에는 없다.
+    expect(within(region).queryByRole("textbox")).toBeNull();
+    // 바꾼 것이 없으면 되돌리기가 하나도 없다. '모두 기본값 복원'도 바꾼 값이 생겨야 나타난다.
+    expect(within(region).queryAllByRole("button", { name: /기본값 복원/ })).toHaveLength(0);
+  });
+
+  it("후보가 넷을 넘는 목록형 축은 값을 눌러 펼치고, 넷까지는 행 오른쪽에서 바로 고른다", async () => {
+    const drift = selectableStrategy.axes.find((axis) => axis.name === "driftWindow")!;
+    const five = {
+      ...drift,
+      choices: [15, 30, 45, 60, 90].map((days) => ({
+        value: days,
+        label: `${days}거래일`,
+        selectable: true,
+      })),
+    };
+    const wide = { ...selectableStrategy, axes: selectableStrategy.axes.map((axis) => (axis.name === drift.name ? five : axis)) };
+    const registry = {
+      ...registryFixture,
+      strategies: registryFixture.strategies.map((strategy) =>
+        strategy.strategyId === wide.strategyId ? wide : strategy,
+      ),
+    };
+    render(
+      <MemoryRouter>
+        <Harness strategy={wide} registry={registry} />
+      </MemoryRouter>,
+    );
+    const region = await screen.findByRole("region", { name: "전략 설정" });
+
+    // 다섯 후보는 펼쳐야 보인다. 접힌 행은 지금 값을 등록표 라벨로 보인다.
+    const user = userEvent.setup();
+    const toggle = rowToggle(drift.label, region)!;
+    expect(toggle).not.toBeNull();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.textContent).toContain("45거래일");
+    expect(within(region).queryByRole("group", { name: drift.label })).toBeNull();
+    await user.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(within(region).getAllByRole("radio", { name: /거래일$/ }).length).toBeGreaterThanOrEqual(5);
+
+    // 펼친 자리에서 고르면 접힌 값도 바뀌고, 되돌리면 등록표 기본값의 라벨로 돌아오며 초점은 그 행에 남는다.
+    await user.click(within(region).getByRole("radio", { name: "90거래일" }));
+    expect(toggle.textContent).toContain("90거래일");
+    await user.click(
+      within(region).getByRole("button", { name: `${drift.label} 기본값 복원` }),
+    );
+    expect(toggle.textContent).toContain("45거래일");
+    expect(
+      within(region).queryByRole("button", { name: `${drift.label} 기본값 복원` }),
+    ).toBeNull();
+    expect(document.activeElement).toBe(toggle);
+
+    // 후보가 둘인 축은 여전히 행 오른쪽에 바로 있다.
+    const resetTiming = selectableStrategy.axes.find((axis) => axis.name === "resetTiming")!;
+    expect(within(region).getByRole("group", { name: resetTiming.label })).toBeTruthy();
+    expect(rowToggle(resetTiming.label, region)).toBeNull();
+  });
+
+  it("후보가 정확히 넷인 목록형 축은 펼치지 않고 행 오른쪽에서 바로 고른다", async () => {
+    // 펼침의 경계(INLINE_CHOICE_LIMIT = 4)를 못 박는다. 셋이나 다섯만 보면 경계를 옮겨도 통과한다.
+    const drift = selectableStrategy.axes.find((axis) => axis.name === "driftWindow")!;
+    const four = {
+      ...drift,
+      choices: [15, 30, 45, 60].map((days) => ({
+        value: days,
+        label: `${days}거래일`,
+        selectable: true,
+      })),
+    };
+    const edged = {
+      ...selectableStrategy,
+      axes: selectableStrategy.axes.map((axis) => (axis.name === drift.name ? four : axis)),
+    };
+    render(
+      <MemoryRouter>
+        <Harness strategy={edged} registry={registryWith(edged)} />
+      </MemoryRouter>,
+    );
+    const region = await screen.findByRole("region", { name: "전략 설정" });
+
+    const group = within(region).getByRole("group", { name: drift.label });
+    expect(within(group).getAllByRole("radio")).toHaveLength(4);
+    expect(rowToggle(drift.label, region)).toBeNull();
+  });
+
+  it("후보 라벨에 단위가 없는 긴 목록 행은 펼침 단추 이름에도 단위를 담는다", async () => {
+    // 행 이름 옆에 '(거래일)'이 보이면 음성으로도 같은 이름으로 불려야 한다(WCAG 2.5.3).
+    const drift = selectableStrategy.axes.find((axis) => axis.name === "driftWindow")!;
+    const bare = {
+      ...drift,
+      choices: [15, 30, 45, 60, 90].map((days) => ({
+        value: days,
+        label: String(days),
+        selectable: true,
+      })),
+    };
+    const strategy = {
+      ...selectableStrategy,
+      axes: selectableStrategy.axes.map((axis) => (axis.name === drift.name ? bare : axis)),
+    };
+    render(
+      <MemoryRouter>
+        <Harness strategy={strategy} registry={registryWith(strategy)} />
+      </MemoryRouter>,
+    );
+    const region = await screen.findByRole("region", { name: "전략 설정" });
+
+    expect(
+      within(region).getByRole("button", { name: `${drift.label} (${drift.unit}) 45` }),
+    ).toBe(rowToggle(drift.label, region));
+  });
+
+  it("허용 범위를 받지 못한 입력형 축은 펼칠 자리 없이 그 사실을 늘 보인다", async () => {
+    const band = selectableStrategy.axes.find((axis) => axis.inputType === "NUMBER")!;
+    const broken = {
+      ...selectableStrategy,
+      axes: selectableStrategy.axes.map((axis) => (axis.name === band.name ? { ...axis, range: undefined } : axis)),
+    };
+    const registry = {
+      ...registryFixture,
+      strategies: registryFixture.strategies.map((strategy) =>
+        strategy.strategyId === broken.strategyId ? broken : strategy,
+      ),
+    };
+    render(
+      <MemoryRouter>
+        <Harness strategy={broken} registry={registry} />
+      </MemoryRouter>,
+    );
+    const region = await screen.findByRole("region", { name: "전략 설정" });
+
+    expect(
+      within(region).getByText("이 항목의 허용 범위를 확인하지 못해 값을 바꿀 수 없습니다."),
+    ).toBeTruthy();
+    expect(rowToggle(band.label, region)).toBeNull();
+  });
+
+  it("'모두 기본값 복원'은 바꾼 값이 있을 때만 묶음 제목 옆에 나타난다", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Harness strategy={selectableStrategy} />
+      </MemoryRouter>,
+    );
+    const region = await screen.findByRole("region", { name: "전략 설정" });
+
+    expect(within(region).queryByRole("button", { name: "모두 기본값 복원" })).toBeNull();
+    await user.click(within(region).getByRole("radio", { name: "90거래일" }));
+    const title = within(region).getByRole("heading", { name: "전략 설정" });
+    const resetAll = within(region).getByRole("button", { name: "모두 기본값 복원" });
+    // 묶음 제목과 같은 줄이다.
+    expect(title.parentElement?.contains(resetAll)).toBe(true);
+    await user.click(resetAll);
+    expect(
+      (within(region).getByRole("radio", { name: "45거래일" }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(within(region).queryByRole("button", { name: "모두 기본값 복원" })).toBeNull();
+    // 누른 단추가 사라지므로 초점은 묶음 제목이 이어받는다. 문서 맨 앞으로 떨어지지 않는다(NFR-001).
+    expect(document.activeElement).toBe(title);
+  });
+
+  it("항목이 하나뿐인 전략은 값을 바꿔도 '모두 기본값 복원'을 두지 않고 그 행의 되돌리기만 둔다", async () => {
+    const user = userEvent.setup();
+    const drift = selectableStrategy.axes.find((axis) => axis.name === "driftWindow")!;
+    const single = { ...selectableStrategy, axes: [drift], validationRules: [] };
+    render(
+      <MemoryRouter>
+        <Harness strategy={single} registry={registryWith(single)} />
+      </MemoryRouter>,
+    );
+    const region = await screen.findByRole("region", { name: "전략 설정" });
+
+    await user.click(within(region).getByRole("radio", { name: "90거래일" }));
+    expect(within(region).queryByRole("button", { name: "모두 기본값 복원" })).toBeNull();
+    expect(
+      within(region).getByRole("button", { name: `${drift.label} 기본값 복원` }),
+    ).toBeTruthy();
+  });
+
+  it("저장되지 않은 범위 밖 입력도 '모두 기본값 복원'이 지운다", async () => {
+    // 범위 밖 값은 상태에 들어가지 않아 그 행에는 되돌리기가 없다. 묶음 전체 복원이 입력칸까지 맞춰야 한다.
+    const user = await renderOpened(selectableStrategy);
+    await user.click(screen.getByRole("radio", { name: "90거래일" }));
+    const band = screen.getByRole("textbox", { name: /허용 이탈 폭/ });
+    await user.clear(band);
+    await user.type(band, "55");
+    expect(screen.getByText(/허용 범위 밖입니다/)).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "모두 기본값 복원" }));
+
+    // 행은 펼친 채 남고, 입력칸이 기본값으로 다시 맞춰진다.
+    expect(
+      (screen.getByRole("textbox", { name: /허용 이탈 폭/ }) as HTMLInputElement).value,
+    ).toBe(String(selectableStrategy.axes[2].defaultValue));
+    expect(screen.queryByText(/허용 범위 밖입니다/)).toBeNull();
+  });
+
+  it("숫자 항목을 바꾸면 그 행에만 되돌리기가 나타나고, 누르면 기본값으로 돌아가며 사라진다", async () => {
+    const user = await renderOpened(selectableStrategy);
+    const band = screen.getByRole("textbox", { name: /허용 이탈 폭/ });
+    await user.clear(band);
+    await user.type(band, "20");
+
+    expect(
+      screen.getByRole("button", { name: "허용 이탈 폭 기본값 복원" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "표류 관측 창 기본값 복원" }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "허용 이탈 폭 기본값 복원" }));
+
+    expect(
+      (screen.getByRole("textbox", { name: /허용 이탈 폭/ }) as HTMLInputElement).value,
+    ).toBe(String(selectableStrategy.axes[2].defaultValue));
+    expect(
+      screen.queryByRole("button", { name: "허용 이탈 폭 기본값 복원" }),
+    ).toBeNull();
+    // 아이콘이 사라진 뒤 초점은 그 행의 펼침 단추가 받는다.
+    expect(document.activeElement).toBe(rowToggle("허용 이탈 폭"));
   });
 
   it("선택한 전략의 축만 그리고 다른 전략의 축은 그리지 않는다", async () => {
@@ -155,16 +425,12 @@ describe("DetailSettingsPanel", () => {
       for (const axis of other.axes)
         expect(screen.queryByText(axis.label)).toBeNull();
     }
-    // 기본값은 추천이 아니라는 문장(FR-004)
-    expect(
-      screen.getByText(/편의용 출발점이며 최적값이나 투자 권고가 아닙니다/),
-    ).not.toBeNull();
   });
 
   it("사용자 비중 전략은 비중을 고칠 수 있게 보이고 앞 단계로 가는 연결을 둔다", async () => {
     await renderOpened(unselectableStrategy);
 
-    const region = screen.getByRole("region", { name: "자산 배분" });
+    const region = screen.getByRole("region", { name: "목표 비중" });
     expect(within(region).getByText("합성 섹터 가 비중")).not.toBeNull();
     // 값을 정하는 수단이 둘이고 가리키는 값은 하나다.
     expect(within(region).getAllByRole("slider")).toHaveLength(weights.length);
@@ -186,7 +452,7 @@ describe("DetailSettingsPanel", () => {
     const user = userEvent.setup();
     await renderOpened(unselectableStrategy);
 
-    const region = screen.getByRole("region", { name: "자산 배분" });
+    const region = screen.getByRole("region", { name: "목표 비중" });
     const field = within(region).getAllByRole("spinbutton")[0];
     await user.clear(field);
     await user.type(field, "55.5");
@@ -194,24 +460,17 @@ describe("DetailSettingsPanel", () => {
     expect(onTargetWeightChange).toHaveBeenLastCalledWith("SEC-SYN-A", 555);
   });
 
-  it("자동 배분 전략은 출력 비중이 계산 결과라는 설명을 보이고 비중 표를 그리지 않는다", async () => {
+  it("자동 배분·동일 비중 전략은 비중 편집기를 두지 않는다", async () => {
+    // 출력 비중이 계산 결과라는 설명(FR-012)과 기본값이 출발점이라는 말(FR-004)은 상세 설정 카드 머리가
+    // 보인다(페이지 검사). 이 묶음은 전략 설정 행만 그린다.
     await renderOpened(selectableStrategy);
-
-    expect(
-      screen.getByText(
-        "출력 비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.",
-      ),
-    ).not.toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByRole("region", { name: "목표 비중" })).toBeNull();
   });
 
-  it("동일 비중 전략은 비중 표도 자동 배분 설명도 보이지 않는다", async () => {
+  it("동일 비중 전략은 비중 편집기를 두지 않는다", async () => {
     await renderOpened(plainStrategy);
 
-    expect(screen.queryByRole("table")).toBeNull();
-    expect(
-      screen.queryByText(/계산 결과이며 입력한 비중과 다릅니다/),
-    ).toBeNull();
+    expect(screen.queryByRole("region", { name: "목표 비중" })).toBeNull();
   });
 
   it("규칙을 어기는 값은 즉시 등록표 문구로 알리고, 모두 복원하면 사라지며 서버에 묻지 않는다", async () => {
@@ -231,9 +490,10 @@ describe("DetailSettingsPanel", () => {
     await user.click(screen.getByRole("button", { name: "모두 기본값 복원" }));
 
     expect(screen.queryByRole("alert")).toBeNull();
-    expect((band as HTMLInputElement).value).toBe(
-      String(selectableStrategy.axes[2].defaultValue),
-    );
+    // 펼친 폼은 새로 그려진다. 같은 행의 새 입력칸이 기본값을 보인다.
+    expect(
+      (screen.getByRole("textbox", { name: /허용 이탈 폭/ }) as HTMLInputElement).value,
+    ).toBe(String(selectableStrategy.axes[2].defaultValue));
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(xhrSpy).not.toHaveBeenCalled();
@@ -254,13 +514,13 @@ describe("DetailSettingsPanel", () => {
     expect(stored[axis.name]).toEqual(axis.defaultValue);
   });
 
-  it("패널을 접어도 규칙 위반 안내는 남는다", async () => {
+  it("행을 접어도 규칙 위반 안내는 남는다", async () => {
     const user = await renderOpened(selectableStrategy);
     const band = screen.getByRole("textbox", { name: /허용 이탈 폭/ });
 
     await user.clear(band);
     await user.type(band, "15");
-    await user.click(screen.getByRole("button", { name: "전략 설정" }));
+    await user.click(rowToggle("허용 이탈 폭")!);
 
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.getByRole("alert").textContent).toBe(
@@ -399,7 +659,7 @@ describe("DetailSettingsPanel", () => {
 
     expect(
       screen.getByText(
-        "지금 값으로 평가할 수 있는 범위는 2019-06-03 ~ 2024-12-30입니다.",
+        "평가 가능 범위 2019-06-03 ~ 2024-12-30",
       ),
     ).toBeTruthy();
 
@@ -411,6 +671,18 @@ describe("DetailSettingsPanel", () => {
         /이 값을 바꾸면 평가할 수 있는 범위가 달라집니다/,
       ),
     ).toBeTruthy();
+  });
+
+  it("이어진 워밍업 축 묶음에는 평가 가능 범위를 마지막 행 아래에 한 번만 적는다", async () => {
+    // 맥박 관측 창과 직전 구간 제외 기간이 함께 워밍업을 이룬다(warmupRule.sum). 같은 날짜를 두 번 적지 않는다.
+    await renderOpened(unselectableStrategy);
+
+    const lines = screen.getAllByText("평가 가능 범위 2019-06-03 ~ 2024-12-30");
+    expect(lines).toHaveLength(1);
+    const lastRow = screen
+      .getByRole("group", { name: "직전 구간 제외 기간" })
+      .closest('[tabindex="-1"]');
+    expect(lastRow?.contains(lines[0])).toBe(true);
   });
 
   it("도움말은 초점을 받아도 열린다 — 키보드와 터치에서 닿는 길이다", async () => {

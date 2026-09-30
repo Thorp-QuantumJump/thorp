@@ -1,0 +1,332 @@
+/* 설정 묶음. 제목 한 줄 아래 행들이 가는 선으로 나뉘어 선다. 상자를 겹쳐 두르지 않는다. */
+.group {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-height: 30px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* '모두 기본값 복원' 뒤에 초점을 받는 자리다. 누른 단추가 사라지므로 묶음 제목이 초점을 이어받는다. */
+.groupTitle:focus {
+  outline: none;
+}
+
+.groupTitle:focus-visible {
+  border-radius: 4px;
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
+}
+
+.rows {
+  display: grid;
+  border-top: 1px solid var(--thorp-line);
+}
+
+/* 행 하나. 이름은 왼쪽, 값과 조작은 오른쪽 끝이다. */
+.row {
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+/* 되돌린 뒤 초점을 받을 조작이 없을 때만 행 자신이 초점을 받는다. */
+.row:focus-visible {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-height: 48px;
+  padding: 6px 0;
+}
+
+.labelGroup {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.82rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.unit {
+  margin-left: 4px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 400;
+}
+
+/* 바꾼 행 이름 옆의 되돌리기. 바꾼 행이라는 표시를 겸한다. */
+.reset {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line));
+  border-radius: 50%;
+  background: transparent;
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+
+.reset:hover {
+  border-color: currentColor;
+  color: var(--thorp-foreground);
+}
+
+.reset:focus-visible {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
+}
+
+/* 행 오른쪽에 바로 두는 조작. 좁으면 다음 줄로 내려가되 오른쪽 끝은 그대로다. */
+.control {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+/*
+  값 단추. 테두리가 있어 누를 수 있는 값으로 읽힌다(맨 글씨는 읽기 전용이다). 누르면 그 행 아래에 편집 폼이
+  붙는다.
+*/
+.toggle {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 10px 0 13px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
+  border-radius: 999px;
+  background: var(--thorp-surface-raised, transparent);
+  color: var(--thorp-foreground);
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.toggle:hover {
+  border-color: var(--thorp-line-control-hover, var(--thorp-accent-soft));
+}
+
+.toggle[aria-expanded='true'] {
+  border-color: var(--thorp-accent);
+}
+
+.toggle:focus-visible {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
+}
+
+.value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--thorp-text-body, 0.88rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 읽기 전용 값. 누를 것이 없으므로 테두리 없이 글자만 둔다. */
+.staticValue {
+  margin-left: auto;
+  color: var(--thorp-copy);
+}
+
+.chevron {
+  flex: none;
+  color: var(--thorp-copy);
+  transition: transform 0.16s ease;
+}
+
+.toggle:hover .chevron,
+.toggle[aria-expanded='true'] .chevron {
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+}
+
+.toggle[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+/* 행 아래 한 줄. 오른쪽 끝에 맞춰 값에 딸린 말로 읽힌다. */
+.caption {
+  margin: -4px 0 10px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.74rem);
+  line-height: 1.55;
+  text-align: right;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+/* 펼친 편집 폼. 오른쪽 끝에 맞춰 값 바로 아래에서 열린다. */
+.body {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  padding: 2px 0 14px;
+}
+
+/*
+  선택지 트랙. 후보들이 한 트랙 안에 서고 고른 것만 채워진다. 줄이 넘치면 모서리를 덜 둥글게 해 여러 줄 트랙이
+  알약처럼 찌그러지지 않게 한다(아래 좁은 묶음 규칙).
+*/
+.choices {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
+  border-radius: 999px;
+  background: var(--thorp-surface-raised, transparent);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 11px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease;
+}
+
+/* 트랙 안의 라디오 동그라미는 숨기고 채움이 선택을 말한다. 입력은 보조기술과 키보드에 남는다. */
+.choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.choice:hover:not([data-selectable='false']) {
+  color: var(--thorp-foreground);
+}
+
+.choice:has(input:checked) {
+  border-color: var(--thorp-accent);
+  background: var(--thorp-accent-muted, transparent);
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.choice:has(input:focus-visible) {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 1px;
+}
+
+/* 고를 수 없는 후보는 빼지 않고 점선으로 흐리게 둔다. 까닭은 행 아래 한 줄과 보조기술 글이 말한다. */
+.choice[data-selectable='false'] {
+  border: 1px dashed var(--thorp-line-strong);
+  color: var(--thorp-muted);
+  cursor: not-allowed;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.select {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
+  border-radius: 999px;
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+  color: inherit;
+  font: inherit;
+  font-size: var(--thorp-text-small, 0.8rem);
+}
+
+.select:focus-visible {
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
+}
+
+/*
+  좁은 묶음. 이름 줄 아래에 조작 줄이 오른쪽 끝에 붙는 한 가지 모양으로 모든 조작 행을 맞춘다. 행마다 넘치는
+  자리가 달라 어떤 행은 한 줄, 어떤 행은 두 줄로 들쭉날쭉하지 않게 한다.
+
+  기준은 묶음 자신의 폭이 아니라 전략 선택 화면 짜임(strategy-flow)의 폭이다. 묶음 폭은 '분석하기' 원이 드러나는
+  만큼 줄어서, 묶음 폭으로 가르면 원의 단계가 바뀔 때마다 모든 행이 한 줄과 두 줄 사이를 오간다. 문턱은 원이 다
+  드러났을 때 묶음 폭이 480px(가장 긴 행이 한 줄에 서는 폭)보다 좁아지는 짜임 폭이다. 설정이 한 열이면 짜임 폭
+  644px, 두 열(짜임 860px 이상)이면 1164px이 그 자리다.
+*/
+@container strategy-flow (max-width: 643px) or ((min-width: 860px) and (max-width: 1163px)) {
+  .head:has(.control, .toggle) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .head:has(.control, .toggle) .control,
+  .head:has(.control, .toggle) .toggle {
+    align-self: flex-end;
+  }
+
+  .choices {
+    border-radius: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle,
+  .chevron,
+  .reset,
+  .choice {
+    transition: none;
+  }
+}

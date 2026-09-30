@@ -1,4 +1,4 @@
-import type { WarmupVerdict } from './StrategyCard'
+import type { WarmupVerdict } from './cardNotices'
 import type { BacktestAccepted, BacktestCreateRequest } from '@/types/backtestRequest'
 import type { EvaluationWindow, EvaluationWindowQuery } from '@/types/evaluationWindow'
 import type { StrategyView } from '@/types/strategyRegistry'
