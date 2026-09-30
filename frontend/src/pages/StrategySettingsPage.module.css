@@ -12,6 +12,10 @@
   width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
+
+  /* 한국어 문장이 낱말 가운데서 끊기지 않게 한다. 이 화면 안의 글이 모두 물려받는다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .title {
@@ -154,26 +158,10 @@
 }
 
 /*
-  '분석하기'가 막힌 이유. 원 바로 왼쪽, 상세 설정 카드의 머리 줄 높이에 오른쪽 끝을 맞춰 선다(STEP 01의 개수
-  안내와 같은 계산). 원 칸의 위쪽은 카드 위쪽보다 원 반지름과 틈 절반만큼 높고, 칸 왼쪽은 카드 오른쪽 끝보다
-  18px 안쪽이다. 문장이 길면 줄을 바꾸되 카드 머리의 비워 둔 자리를 넘지 않는다.
+  원이 카드 아래로 내려가는 좁은 화면에서만 쓰는, 원 옆 막힘 문장의 사본이다. 넓은 화면에서는 상세 설정 카드
+  머리의 문장(.detailReason)이 원 바로 왼쪽에 선다.
 */
 .analyzeStatus {
-  position: absolute;
-  top: calc(var(--orb-size) / 2 + var(--layout-gap) / 2 + var(--thorp-pad-card, 18px));
-  right: calc(100% + 4px);
-  width: max-content;
-  max-width: min(22rem, 38cqi);
-  margin: 0;
-  color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.74rem);
-  line-height: 1.5;
-  text-align: right;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-}
-
-.analyzeStatus:empty {
   display: none;
 }
 
@@ -189,15 +177,32 @@
 }
 
 /*
-  카드 머리. 제목은 카드 줄 위 '전략'과 같은 층이고, 고른 전략의 이름이 그 옆에 선다. 오른쪽은 원 옆 막힘 문장이
-  내려앉을 자리로 비워 둔다.
+  카드 머리. 제목은 카드 줄 위 '전략'과 같은 층이고, 고른 전략의 이름이 그 옆에 선다. 오른쪽 끝에는 '분석하기'가
+  막힌 이유가 선다. 원이 카드 오른쪽 위 모서리에 걸쳐 있어 그 바로 왼쪽이다.
 */
 .detailHead {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
-  padding-right: min(22rem, 38cqi);
+}
+
+/*
+  막힌 이유. 머리 줄 안에 흐름대로 두어, 문장이 길어 줄을 바꾸면 머리가 그만큼 자라고 아래 안내를 덮지 않는다.
+  제목과 한 줄에 서지 못하면 다음 줄 오른쪽 끝으로 내려간다.
+*/
+.detailReason {
+  flex: 0 1 auto;
+  max-width: min(22rem, 100%);
+  margin: 0 0 0 auto;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.74rem);
+  line-height: 1.5;
+  text-align: right;
+}
+
+.detailReason:empty {
+  display: none;
 }
 
 .columnTitle,
@@ -374,7 +379,8 @@
 
 /*
   폭이 좁으면 원을 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. 원은 카드 아래
-  모서리에 22px 걸친다(STEP 01과 같다) — 이 짜임은 행 간격이 있어 그만큼 더 올린다. 막힘 문장은 원 왼쪽에 선다.
+  모서리에 22px 걸친다(STEP 01과 같다). 이 짜임은 행 간격이 있어 그만큼 더 올린다. 막힘 문장은 카드 머리 대신
+  원 왼쪽에 서되, 카드 아래 테두리 밑에서 시작해 여러 줄이어도 카드를 넘보지 않는다.
 */
 @media (max-width: 760px) {
   .layout {
@@ -392,7 +398,7 @@
     --orb-size: 118px;
 
     flex-direction: row-reverse;
-    align-items: center;
+    align-items: flex-start;
     justify-self: end;
     gap: 12px;
     width: auto;
@@ -400,13 +406,18 @@
   }
 
   .analyzeStatus {
-    position: static;
-    width: auto;
+    display: block;
     max-width: 16rem;
+    margin: 30px 0 0;
+    color: var(--thorp-muted);
+    font-size: var(--thorp-text-caption, 0.74rem);
+    line-height: 1.5;
+    text-align: right;
   }
 
-  .detailHead {
-    padding-right: 0;
+  .analyzeStatus:empty,
+  .detailReason {
+    display: none;
   }
 }
 

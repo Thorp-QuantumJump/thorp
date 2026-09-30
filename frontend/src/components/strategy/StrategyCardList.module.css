@@ -57,12 +57,15 @@
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
-/* 카드 줄 아래에 모아 적은 사유. 카드의 번호와 같은 번호로 한 번씩 적고, 걸린 전략 이름을 앞에 둔다. */
+/*
+  카드 줄 아래에 모아 적은 사유. 카드의 번호와 같은 번호로 한 번씩 적고, 걸린 전략 이름을 앞에 둔다. 오른쪽 끝은
+  카드와 같이 '분석하기' 원이 걸치는 만큼 비워 둔다.
+*/
 .shared {
   display: grid;
   gap: 4px;
   margin: 0;
-  padding: 0;
+  padding: 0 22px 0 0;
   list-style: none;
 }
 

@@ -17,3 +17,8 @@
   display: block;
   margin-top: 2px;
 }
+
+/* 행 아래 여러 줄. 줄마다 오른쪽 끝에 맞춘다. */
+.captionLine {
+  display: block;
+}

@@ -1,13 +1,9 @@
-/*
-  설정 묶음. 제목 한 줄 아래 행들이 가는 선으로 나뉘어 선다. 상자를 겹쳐 두르지 않는다.
-  묶음이 좁아지면(카드가 한 열이거나 화면이 좁을 때) 행 모양을 한 가지로 바꾸려고 묶음을 크기 기준으로 둔다.
-*/
+/* 설정 묶음. 제목 한 줄 아래 행들이 가는 선으로 나뉘어 선다. 상자를 겹쳐 두르지 않는다. */
 .group {
   display: grid;
   align-content: start;
   gap: 6px;
   min-width: 0;
-  container-type: inline-size;
 }
 
 .groupHead {
@@ -25,6 +21,17 @@
   font-size: var(--thorp-text-caption, 0.72rem);
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+/* '모두 기본값 복원' 뒤에 초점을 받는 자리다. 누른 단추가 사라지므로 묶음 제목이 초점을 이어받는다. */
+.groupTitle:focus {
+  outline: none;
+}
+
+.groupTitle:focus-visible {
+  border-radius: 4px;
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
+  outline-offset: 2px;
 }
 
 .rows {
@@ -290,10 +297,15 @@
 }
 
 /*
-  좁은 묶음. 이름 줄 아래에 조작 줄이 오른쪽 끝에 붙는 한 가지 모양으로 모든 조작 행을 맞춘다 — 행마다 넘치는
+  좁은 묶음. 이름 줄 아래에 조작 줄이 오른쪽 끝에 붙는 한 가지 모양으로 모든 조작 행을 맞춘다. 행마다 넘치는
   자리가 달라 어떤 행은 한 줄, 어떤 행은 두 줄로 들쭉날쭉하지 않게 한다.
+
+  기준은 묶음 자신의 폭이 아니라 전략 선택 화면 짜임(strategy-flow)의 폭이다. 묶음 폭은 '분석하기' 원이 드러나는
+  만큼 줄어서, 묶음 폭으로 가르면 원의 단계가 바뀔 때마다 모든 행이 한 줄과 두 줄 사이를 오간다. 문턱은 원이 다
+  드러났을 때 묶음 폭이 480px(가장 긴 행이 한 줄에 서는 폭)보다 좁아지는 짜임 폭이다. 설정이 한 열이면 짜임 폭
+  644px, 두 열(짜임 860px 이상)이면 1164px이 그 자리다.
 */
-@container (max-width: 520px) {
+@container strategy-flow (max-width: 643px) or ((min-width: 860px) and (max-width: 1163px)) {
   .head:has(.control, .toggle) {
     flex-direction: column;
     align-items: stretch;

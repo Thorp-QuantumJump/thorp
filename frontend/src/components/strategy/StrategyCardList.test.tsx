@@ -298,6 +298,8 @@ describe('StrategyCardList', () => {
     // 같은 문장은 한 번만 적히고, 걸린 전략 이름이 앞에 선다.
     const items = sharedItems().filter((node) => node.textContent?.includes(shared))
     expect(items).toHaveLength(1)
+    // 고를 수 없는 사유는 경고 표시다. 판정 불가(중립)와 섞이지 않는다.
+    expect(items[0].querySelector('[data-tone]')?.getAttribute('data-tone')).toBe('blocking')
     for (const strategy of registryFixture.strategies) {
       expect(items[0].textContent).toContain(strategy.name)
       const card = cardNamed(strategy.name)
