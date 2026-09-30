@@ -30,6 +30,11 @@ interface AxisNumberFieldProps {
   roundToStep?: boolean;
   /** 누르면 그만큼 더하는 단추들. 주지 않으면 그리지 않는다 */
   quickAdd?: readonly QuickAdd[];
+  /**
+   * 설정 행(SettingRow) 안에 놓였는가. 참이면 이름 줄과 상자를 그리지 않는다 — 이름·도움말은 행 머리가
+   * 보이고, 입력칸은 `aria-label`로 같은 이름을 가진다.
+   */
+  embedded?: boolean;
 }
 
 /** 간격의 소수 자릿수. 반올림한 값에 부동소수 찌꺼기가 남지 않게 다시 자른다. */
@@ -85,6 +90,7 @@ export function AxisNumberField({
   groupDigits = false,
   roundToStep = false,
   quickAdd,
+  embedded = false,
 }: AxisNumberFieldProps) {
   const inputId = useId();
   const messageId = useId();
@@ -195,22 +201,25 @@ export function AxisNumberField({
   const describedBy = messageId;
 
   return (
-    <div className={styles.field}>
-      <div className={styles.header}>
-        {/*
-          제목과 물음표를 한 덩이로 묶는다. header 가 양끝 정렬이라 따로 두면 물음표만 오른쪽 끝으로
-          밀리고, 목록형 축은 제목 안에 있어 두 항목의 간격이 달라 보인다. label 안에 넣지 않는 까닭은
-          label 을 누르면 입력칸으로 초점이 가기 때문이다 — 도움말 버튼이 그 안에 있으면 안 된다.
-        */}
-        <span className={styles.labelGroup}>
-          <label className={styles.label} htmlFor={inputId}>
-            {label}
-            {unit ? <span className={styles.unit}>({unit})</span> : null}
-          </label>
-          {help}
-        </span>
-      </div>
+    <div className={embedded ? `${styles.field} ${styles.embedded}` : styles.field}>
+      {embedded ? null : (
+        <div className={styles.header}>
+          {/*
+            제목과 물음표를 한 덩이로 묶는다. header 가 양끝 정렬이라 따로 두면 물음표만 오른쪽 끝으로
+            밀리고, 목록형 축은 제목 안에 있어 두 항목의 간격이 달라 보인다. label 안에 넣지 않는 까닭은
+            label 을 누르면 입력칸으로 초점이 가기 때문이다 — 도움말 버튼이 그 안에 있으면 안 된다.
+          */}
+          <span className={styles.labelGroup}>
+            <label className={styles.label} htmlFor={inputId}>
+              {label}
+              {unit ? <span className={styles.unit}>({unit})</span> : null}
+            </label>
+            {help}
+          </span>
+        </div>
+      )}
 
+      {/* 입력칸, 빠른 더하기, 기본값 복원이 한 줄이다. 복원은 늘 오른쪽 끝이다. */}
       <div className={styles.inputRow}>
         <input
           id={inputId}
@@ -219,6 +228,7 @@ export function AxisNumberField({
           inputMode="decimal"
           autoComplete="off"
           value={draft}
+          aria-label={embedded ? label : undefined}
           aria-invalid={problem ? "true" : "false"}
           aria-describedby={describedBy}
           onFocus={() => {
@@ -227,33 +237,32 @@ export function AxisNumberField({
           onChange={(event) => handleChange(event.target.value)}
           onBlur={handleBlur}
         />
+        {/* 자주 쓰는 액수를 한 번에 더한다. 상한을 넘게 되는 단추는 누를 수 없다. */}
+        {quickAdd && quickAdd.length > 0 ? (
+          <div className={styles.quickAdd}>
+            {quickAdd.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={styles.quickAddButton}
+                aria-label={`${label} ${item.label}`}
+                disabled={(value ?? defaultValue) + item.amount > range.max}
+                onClick={() => handleQuickAdd(item.amount)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <button
           type="button"
-          className={styles.reset}
+          className={`${styles.reset} ${styles.resetEnd}`}
           aria-label={`${label} 기본값 복원`}
           onClick={handleReset}
         >
           기본값 복원
         </button>
       </div>
-
-      {/* 자주 쓰는 액수를 한 번에 더한다. 상한을 넘게 되는 단추는 누를 수 없다. */}
-      {quickAdd && quickAdd.length > 0 ? (
-        <div className={styles.quickAdd}>
-          {quickAdd.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className={styles.quickAddButton}
-              aria-label={`${label} ${item.label}`}
-              disabled={(value ?? defaultValue) + item.amount > range.max}
-              onClick={() => handleQuickAdd(item.amount)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {/* 자리를 늘 두고 글만 바꾼다. 안내가 생길 때 자리가 새로 붙으면 보조기술이 읽지 않을 수 있다. */}
       <p

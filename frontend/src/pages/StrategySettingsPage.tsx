@@ -42,7 +42,6 @@ import {
   rangeCoversCase,
   type CasePeriodConstraint,
 } from "@/components/strategy/casePeriodConstraint";
-import { ConditionSummaryLine } from "@/components/strategy/ConditionSummaryLine";
 import { defaultAnalysisSupport } from "@/components/strategy/connectedAnalysisSupport";
 import { DetailSettingsPanel } from "@/components/strategy/DetailSettingsPanel";
 import {
@@ -1219,15 +1218,6 @@ export function StrategySettingsPage({
   }, [effectiveSelection, catalog]);
   // 조회 중과 조회 실패를 가른다. 409 뒤 다시 받는 동안을 "확인할 수 없음"으로 보이면 곧 끝날 조회가 실패로
   // 읽히고, 같은 화면의 '분석하기' 사유("확인하는 중")와 두 말을 하게 된다.
-  const costProfile =
-    versions === "loading"
-      ? ("loading" as const)
-      : versions !== null
-        ? {
-            version: versions.costProfileVersion,
-            provisional: versions.costProfileProvisional,
-          }
-        : null;
   const costAssumption =
     versions === "loading"
       ? ("loading" as const)
@@ -1414,15 +1404,18 @@ export function StrategySettingsPage({
                 className={styles.detail}
                 aria-labelledby="selected-strategy-title"
               >
+                {/*
+                  단 제목은 고정이다. 고른 전략의 이름은 카드 첫 줄이 설명과 함께 말한다 — 제목이 전략마다
+                  바뀌면 이 단이 무엇을 하는 자리인지가 이름에 묻힌다(2026-09-30).
+                */}
                 <h2 id="selected-strategy-title" className={styles.columnTitle}>
-                  {settings.selectedStrategy
-                    ? settings.selectedStrategy.name
-                    : "선택한 전략"}
+                  상세 설정
                 </h2>
 
                 <div className={styles.detailBody}>
                   {settings.selectedStrategy ? (
                     <p className={styles.detailDescription}>
+                      <strong>{settings.selectedStrategy.name}</strong>{" "}
                       {settings.selectedStrategy.description}
                     </p>
                   ) : (
@@ -1498,8 +1491,8 @@ export function StrategySettingsPage({
                   ) : null}
 
                   {/*
-                  분석 조건은 **한 자리에만 둔다.** 요약과 편집 폼을 다른 곳에 두면 같은 값이 화면
-                  두 곳에서 각각 말해진다. 요약은 늘 보이고(FR-002) 편집은 접힌 채로 시작한다(SC-005).
+                  분석 조건은 **한 자리에만 둔다.** 항목마다 한 행이 지금 값을 늘 보이고(FR-002), 그 행을
+                  펼쳐야 편집 폼이 나온다(SC-005). 요약 줄을 따로 두면 같은 값이 화면 두 곳에서 각각 말해진다.
 
                   **전략을 고르기 전에도 닿는다**(T102). 최소 평가 기간은 카드의 선택 가능 여부를
                   바꾸는 값이라, 그 값이 모든 카드를 막으면 선택에 묶인 입력으로는 되돌릴 길이
@@ -1515,25 +1508,7 @@ export function StrategySettingsPage({
                           </InlineHelp>
                         )
                       }
-                      summary={
-                        <ConditionSummaryLine
-                          period={period}
-                          sectorCount={universeSize ?? 0}
-                          initialAmount={
-                            initialAmount === null
-                              ? null
-                              : {
-                                  value: initialAmount,
-                                  unit: registry.analysisConditions
-                                    .initialAmount.unit,
-                                }
-                          }
-                          costProfile={costProfile}
-                          targetVolatility={
-                            settings.analysisCondition.targetVolatility
-                          }
-                        />
-                      }
+                      sectorCount={universeSize ?? 0}
                       conditions={registry.analysisConditions}
                       range={evaluableRange}
                       rangeUnavailableMessage={

@@ -181,6 +181,13 @@
   line-height: 1.65;
 }
 
+/* 고른 전략의 이름. 단 제목이 '상세 설정'으로 고정되어, 무엇의 설정인지는 이 첫 줄이 말한다. */
+.detailDescription strong {
+  margin-right: 4px;
+  color: var(--thorp-foreground);
+  font-weight: 700;
+}
+
 /* 아직 고르지 않았을 때 오른쪽 단이 무엇을 기다리는지 알린다. */
 .empty {
   margin: 0;

@@ -1,4 +1,3 @@
-import { ChevronDown } from "lucide-react";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { DateField } from "@/components/common/DateField";
 import { InlineHelp } from "@/components/common/InlineHelp";
@@ -20,6 +19,7 @@ import styles from "./AnalysisConditionsPanel.module.css";
 import fieldStyles from "./AxisField.module.css";
 import type { CostRates } from "./analysisSupport";
 import { AxisNumberField } from "./AxisNumberField";
+import { SettingGroup, SettingRow } from "./SettingRow";
 
 /** 화면에 보일 비용 조건. 004가 등록한 현재 버전의 것이다. */
 export type CostAssumptionView = {
@@ -48,10 +48,10 @@ interface AnalysisConditionsPanelProps {
    * 지금과 같다. 있으면 시작일에 상한이, 종료일에 하한이 더 걸리고 고정 문구를 보인다
    */
   caseConstraint?: CasePeriodConstraint | null;
+  /** 002가 확정한 섹터 수. 비교 대상 행에 읽기 전용으로 보인다 */
+  sectorCount: number;
   /** 지금 쓰이는 시작 금액. 재검증이 비워 두고 복원을 기다리면 `undefined`다 */
   initialAmount: number | undefined;
-  /** 접혀 있을 때도 보이는 조건 요약(FR-002). 머리줄에 실린다 */
-  summary?: ReactNode;
   /** 평가할 수 있는 범위 옆에 붙는 도움말. 워밍업이 앞을 깎았을 때만 온다 */
   rangeReason?: ReactNode;
   minEvaluationYears: number;
@@ -73,6 +73,10 @@ export const COST_UNAVAILABLE =
 const COST_BASIS = "2026년 한국 ETF 거래에 적용되는 기준과 같습니다.";
 
 export const COST_LOADING = "비용 조건을 확인하는 중입니다.";
+
+/** 모르는 값을 채우지 않는다. 확인하지 못한 항목은 그 사실을 적는다(원칙 IV). */
+const UNAVAILABLE = "확인할 수 없음";
+const LOADING = "확인하는 중";
 
 export const TARGET_RISK_HELP = (
   <>
@@ -141,7 +145,7 @@ function checkCaseConstraint(
 }
 
 /**
- * 분석 기간(FR-009).
+ * 분석 기간(FR-009). '분석 기간' 행을 펼치면 나오는 폼이라 제목은 따로 두지 않는다.
  *
  * <p><b>범위 밖 날짜는 반영하지 않는다.</b> 달력의 `min`·`max`는 고르는 것을 돕기만 하고 직접 친 날짜를
  * 막지 못하므로, 바뀔 때마다 `checkPeriodInput`으로 다시 본다. 입력칸에는 사용자가 넣은 날짜를 그대로
@@ -278,10 +282,10 @@ function PeriodField({
     : rangeUnavailableMessage;
 
   return (
-    <fieldset className={fieldStyles.field}>
-      <legend className={fieldStyles.header}>
-        <span className={fieldStyles.label}>분석 기간</span>
-      </legend>
+    <fieldset
+      className={`${fieldStyles.field} ${fieldStyles.embedded}`}
+      aria-label="분석 기간"
+    >
       <div className={fieldStyles.inputRow}>
         <label htmlFor={startId} className={styles.dateLabel}>
           시작일
@@ -318,7 +322,7 @@ function PeriodField({
         {periodChosen ? (
           <button
             type="button"
-            className={fieldStyles.reset}
+            className={`${fieldStyles.reset} ${fieldStyles.resetEnd}`}
             onClick={() => {
               // 이미 범위 전체와 같은 날짜를 골라 두었으면 바깥 값이 바뀌지 않아 입력칸이 맞춰지지 않는다.
               if (range) setDraft(range);
@@ -349,17 +353,21 @@ function PeriodField({
 }
 
 /**
- * 분석 조건(US3, FR-009·FR-010·FR-011a).
+ * 분석 조건(US3, FR-002·FR-009·FR-010·FR-011a).
  *
- * <p><b>접힌 채로 시작하고 열면 그 자리가 편집 폼이다.</b> 기본 화면의 입력은 전략 선택 하나이고(SC-005),
- * 지금 적용되는 조건은 머리줄의 요약이 늘 보인다(FR-002). 요약과 '조건 바꾸기'를 따로 두었더니 한 조건이
- * 화면 세 곳(제목·요약·여는 버튼)에서 말해졌다 — 2026-09-22에 하나로 합쳤다(`S15P21E205-406`).
- * 전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).
+ * <p><b>항목마다 한 행이고, 행의 값이 곧 요약이다.</b> 예전에는 요약 한 줄과 '분석 조건' 아코디언이
+ * 따로 있어 열면 같은 값이 두 번 보였고, 바꿀 수 있는 넷과 읽기만 하는 둘이 한 덩이에 섞여 있었다
+ * (2026-09-30). 지금은 분석 기간·시작 금액·최소 평가 기간·변동성 제한을 각자 펼쳐 고치고, 비교 대상·
+ * 운용 방식은 값만 보이며, 비용 가정은 펼치면 수치를 읽기 전용으로 보인다. 기본 화면의 입력은 전략
+ * 선택 하나라는 규칙(SC-005)은 그대로다 — 입력 요소는 펼친 행에만 생긴다.
+ *
+ * <p>전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).
  *
  * <p><b>바꿀 수 있는 것은 넷뿐이다.</b> 분석 기간(평가 가능 범위 안), 시작 금액(등록표 범위 안), 최소 평가
- * 기간(등록표 후보 가운데), 변동성 제한(끔 또는 등록표 범위 안의 목표 변동성). 비용 가정은 004가 등록한 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고,
- * 운용 방식은 연속 운용으로 고정해 보인다. 수수료·세금을 고치거나 수익이 높아지는 쪽으로 조건을 골라 주는
- * 선택지를 두지 않는다(FR-010, 원칙 IV). 변동성 제한은 004의 '목표 위험 맞춤'(`TARGET_RISK`) 시나리오다.
+ * 기간(등록표 후보 가운데), 변동성 제한(끔 또는 등록표 범위 안의 목표 변동성). 비용 가정은 004가 등록한
+ * 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고, 운용 방식은 연속 운용으로 고정해 보인다. 수수료·세금을
+ * 고치거나 수익이 높아지는 쪽으로 조건을 골라 주는 선택지를 두지 않는다(FR-010, 원칙 IV). 변동성 제한은
+ * 004의 '목표 위험 맞춤'(`TARGET_RISK`) 시나리오다.
  *
  * <p><b>값을 모른다.</b> 범위·후보·라벨·단위는 모두 props로 받은 등록표와 판정에서 읽는다(FR-005).
  */
@@ -370,17 +378,15 @@ export function AnalysisConditionsPanel({
   period,
   periodChosen,
   caseConstraint = null,
+  sectorCount,
   initialAmount,
   minEvaluationYears,
   targetVolatility,
   cost,
-  summary,
   rangeReason,
   onChange,
   onReset,
 }: AnalysisConditionsPanelProps) {
-  const [open, setOpen] = useState(false);
-  const bodyId = useId();
   const yearsGroup = useId();
   const volatilityGroup = useId();
   const volatilityId = useId();
@@ -388,200 +394,213 @@ export function AnalysisConditionsPanel({
   const volatility = conditions.targetVolatility;
   const years = conditions.minEvaluationYears;
 
+  const yearsLabel =
+    years.choices.find((choice) => toNumber(choice.value) === minEvaluationYears)
+      ?.label ?? `${minEvaluationYears}${years.unit ?? "년"}`;
+
+  const costValue =
+    cost === "loading" ? (
+      LOADING
+    ) : cost ? (
+      <>
+        {cost.version}
+        {cost.provisional ? <ProvisionalBadge label="비용 조건" /> : null}
+      </>
+    ) : (
+      UNAVAILABLE
+    );
+
   return (
-    <section className={styles.panel} aria-label="분석 조건">
-      <button
-        type="button"
-        className={styles.toggle}
-        aria-expanded={open}
-        aria-controls={open ? bodyId : undefined}
-        onClick={() => setOpen((current) => !current)}
+    <SettingGroup title="분석 조건" rowsLabel="분석 조건 요약">
+      <SettingRow
+        label="분석 기간"
+        value={period ? `${period.start} ~ ${period.end}` : UNAVAILABLE}
       >
-        <span>분석 조건</span>
-        <span className={styles.toggleEnd}>
-          {/* 접혀 있을 때만 여는 자리임을 알린다(S15P21E205-451). 버튼 이름에는 넣지 않는다. */}
-          {open ? null : (
-            <span className={styles.toggleHint} aria-hidden="true">
-              직접 선택해보세요
-            </span>
+        <PeriodField
+          rangeReason={rangeReason}
+          range={range}
+          rangeUnavailableMessage={rangeUnavailableMessage}
+          period={period}
+          periodChosen={periodChosen}
+          caseConstraint={caseConstraint}
+          onChange={(next) =>
+            onChange({ periodStart: next.start, periodEnd: next.end })
+          }
+          onReset={() => onReset("period")}
+        />
+      </SettingRow>
+
+      <SettingRow
+        label="시작 금액"
+        value={
+          initialAmount === undefined
+            ? UNAVAILABLE
+            : `${initialAmount.toLocaleString("ko-KR")}${amount.unit ?? ""}`
+        }
+      >
+        <AxisNumberField
+          embedded
+          label="시작 금액"
+          unit={amount.unit}
+          range={amount}
+          defaultValue={amount.default}
+          value={initialAmount}
+          groupDigits
+          roundToStep
+          quickAdd={buildAmountQuickAdds(
+            amount.step,
+            amount.max - amount.min,
           )}
-          <ChevronDown
-            className={styles.toggleIcon}
-            size={16}
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
-        </span>
-      </button>
-      {summary}
+          onChange={(next) => onChange({ initialAmount: next })}
+          onReset={() => onReset("initialAmount")}
+        />
+      </SettingRow>
 
-      {open ? (
-        <div id={bodyId} className={styles.body}>
-          <PeriodField
-            rangeReason={rangeReason}
-            range={range}
-            rangeUnavailableMessage={rangeUnavailableMessage}
-            period={period}
-            periodChosen={periodChosen}
-            caseConstraint={caseConstraint}
-            onChange={(next) =>
-              onChange({ periodStart: next.start, periodEnd: next.end })
-            }
-            onReset={() => onReset("period")}
-          />
-
-          <AxisNumberField
-            label="시작 금액"
-            unit={amount.unit}
-            range={amount}
-            defaultValue={amount.default}
-            value={initialAmount}
-            groupDigits
-            roundToStep
-            quickAdd={buildAmountQuickAdds(
-              amount.step,
-              amount.max - amount.min,
-            )}
-            onChange={(next) => onChange({ initialAmount: next })}
-            onReset={() => onReset("initialAmount")}
-          />
-
-          <fieldset className={fieldStyles.field}>
-            <legend className={fieldStyles.header}>
-              <span className={fieldStyles.label}>최소 평가 기간</span>
-            </legend>
-            <p className={fieldStyles.description}>
-              워밍업을 채운 뒤 남는 평가 기간이 이보다 짧으면 그 전략으로
-              분석하지 않습니다.
-            </p>
-            <div className={fieldStyles.choices}>
-              {years.choices.map((choice) => {
-                const value = toNumber(choice.value);
-                if (value === null) return null;
-                return (
-                  <label
-                    key={String(choice.value)}
-                    className={fieldStyles.choice}
-                  >
-                    <input
-                      type="radio"
-                      name={yearsGroup}
-                      checked={value === minEvaluationYears}
-                      onChange={() => onChange({ minEvaluationYears: value })}
-                    />
-                    {choice.label}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          <fieldset className={fieldStyles.field}>
-            <legend className={fieldStyles.header}>
-              <span className={fieldStyles.label}>
-                변동성 제한
-                <InlineHelp label="변동성 제한" on="hover">
-                  {TARGET_RISK_HELP}
-                </InlineHelp>
-              </span>
-            </legend>
-            <div className={fieldStyles.choices}>
-              <label className={fieldStyles.choice}>
-                <input
-                  type="radio"
-                  name={volatilityGroup}
-                  checked={targetVolatility === undefined}
-                  onChange={() => onChange({ targetVolatility: undefined })}
-                />
-                쓰지 않음
-              </label>
-              <label className={fieldStyles.choice}>
-                <input
-                  type="radio"
-                  name={volatilityGroup}
-                  checked={targetVolatility !== undefined}
-                  onChange={() => onChange({ targetVolatility: volatility.default })}
-                />
-                씀
-              </label>
-            </div>
-            {targetVolatility !== undefined ? (
-              <div className={fieldStyles.inputRow}>
-                <label htmlFor={volatilityId} className={styles.dateLabel}>
-                  목표 변동성(연)
-                </label>
-                <select
-                  id={volatilityId}
-                  className={fieldStyles.input}
-                  value={targetVolatility}
-                  onChange={(event) =>
-                    onChange({ targetVolatility: Number(event.target.value) })
-                  }
+      <SettingRow label="최소 평가 기간" value={yearsLabel}>
+        <fieldset
+          className={`${fieldStyles.field} ${fieldStyles.embedded}`}
+          aria-label="최소 평가 기간"
+        >
+          <div className={fieldStyles.choices}>
+            {years.choices.map((choice) => {
+              const value = toNumber(choice.value);
+              if (value === null) return null;
+              return (
+                <label
+                  key={String(choice.value)}
+                  className={fieldStyles.choice}
                 >
-                  {rangeChoices(volatility).map((value) => (
-                    <option key={value} value={value}>
-                      {value}%
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            <p className={fieldStyles.hint}>
-              {targetVolatility === undefined
-                ? "흔들림과 상관없이 전략의 비중대로 계속 투자합니다."
-                : "값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다."}
-            </p>
-          </fieldset>
+                  <input
+                    type="radio"
+                    name={yearsGroup}
+                    checked={value === minEvaluationYears}
+                    onChange={() => onChange({ minEvaluationYears: value })}
+                  />
+                  {choice.label}
+                </label>
+              );
+            })}
+          </div>
+          <p className={fieldStyles.hint}>
+            워밍업을 채운 뒤 남는 평가 기간이 이보다 짧으면 그 전략으로 분석하지 않습니다.
+          </p>
+        </fieldset>
+      </SettingRow>
 
-          <div className={fieldStyles.field}>
-            <span className={fieldStyles.label}>운용 방식</span>
+      <SettingRow
+        label="변동성 제한"
+        help={
+          <InlineHelp label="변동성 제한" on="hover">
+            {TARGET_RISK_HELP}
+          </InlineHelp>
+        }
+        value={
+          targetVolatility === undefined ? "쓰지 않음" : `연 ${targetVolatility}%`
+        }
+      >
+        <fieldset
+          className={`${fieldStyles.field} ${fieldStyles.embedded}`}
+          aria-label="변동성 제한"
+        >
+          <div className={fieldStyles.choices}>
+            <label className={fieldStyles.choice}>
+              <input
+                type="radio"
+                name={volatilityGroup}
+                checked={targetVolatility === undefined}
+                onChange={() => onChange({ targetVolatility: undefined })}
+              />
+              쓰지 않음
+            </label>
+            <label className={fieldStyles.choice}>
+              <input
+                type="radio"
+                name={volatilityGroup}
+                checked={targetVolatility !== undefined}
+                onChange={() => onChange({ targetVolatility: volatility.default })}
+              />
+              씀
+            </label>
+          </div>
+          {targetVolatility !== undefined ? (
+            <div className={fieldStyles.inputRow}>
+              <label htmlFor={volatilityId} className={styles.dateLabel}>
+                목표 변동성(연)
+              </label>
+              <select
+                id={volatilityId}
+                className={fieldStyles.input}
+                value={targetVolatility}
+                onChange={(event) =>
+                  onChange({ targetVolatility: Number(event.target.value) })
+                }
+              >
+                {rangeChoices(volatility).map((value) => (
+                  <option key={value} value={value}>
+                    {value}%
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <p className={fieldStyles.hint}>
+            {targetVolatility === undefined
+              ? "흔들림과 상관없이 전략의 비중대로 계속 투자합니다."
+              : "값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다."}
+          </p>
+        </fieldset>
+      </SettingRow>
+
+      {/* 002가 정한 값이라 여기서 고치지 않는다. */}
+      <SettingRow label="비교 대상" value={`섹터 ${sectorCount}개`} />
+
+      {/* 004의 다른 시나리오가 소유한다. 이 화면에서 바꾸지 않는다. */}
+      <SettingRow label="운용 방식" value="연속 운용" />
+
+      <SettingRow
+        label="비용 가정"
+        help={
+          <InlineHelp label="비용 가정" on="hover">
+            {COST_BASIS}
+          </InlineHelp>
+        }
+        value={costValue}
+      >
+        <div
+          className={`${fieldStyles.field} ${fieldStyles.embedded}`}
+          role="group"
+          aria-label="비용 가정"
+        >
+          {cost === "loading" ? (
+            <p className={styles.readOnly} role="status">
+              {COST_LOADING}
+            </p>
+          ) : cost ? (
             <p className={styles.readOnly}>
-              연속 운용 (이 화면에서 바꾸지 않습니다)
+              <span>수수료 {formatBps(cost.rates.commissionBps)}</span>
+              <span>호가 차이 {formatBps(cost.rates.spreadBps)}</span>
+              <span>슬리피지 {formatBps(cost.rates.slippageBps)}</span>
+              <span>세금 {formatBps(cost.rates.taxBps)}</span>
+              <span>
+                버전 {cost.version}
+                {cost.provisional ? (
+                  <ProvisionalBadge label="비용 가정" />
+                ) : null}
+              </span>
             </p>
-          </div>
-
-          <div
-            className={fieldStyles.field}
-            role="group"
-            aria-label="비용 가정"
-          >
-            <span className={fieldStyles.label}>
-              비용 가정
-              <InlineHelp label="비용 가정" on="hover">
-                {COST_BASIS}
-              </InlineHelp>
-            </span>
-            {cost === "loading" ? (
-              <p className={styles.readOnly} role="status">
-                {COST_LOADING}
-              </p>
-            ) : cost ? (
-              <p className={styles.readOnly}>
-                <span>수수료 {formatBps(cost.rates.commissionBps)}</span>
-                <span>호가 차이 {formatBps(cost.rates.spreadBps)}</span>
-                <span>슬리피지 {formatBps(cost.rates.slippageBps)}</span>
-                <span>세금 {formatBps(cost.rates.taxBps)}</span>
-                <span>
-                  버전 {cost.version}
-                  {cost.provisional ? (
-                    <ProvisionalBadge label="비용 가정" />
-                  ) : null}
-                </span>
-              </p>
-            ) : (
-              <p className={fieldStyles.problem} role="status">
-                {COST_UNAVAILABLE}
-              </p>
-            )}
-            {cost !== "loading" && cost?.provisional ? (
-              <p className={fieldStyles.hint}>
-                팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지
-                마세요.
-              </p>
-            ) : null}
-          </div>
+          ) : (
+            <p className={fieldStyles.problem} role="status">
+              {COST_UNAVAILABLE}
+            </p>
+          )}
+          {cost !== "loading" && cost?.provisional ? (
+            <p className={fieldStyles.hint}>
+              팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지
+              마세요.
+            </p>
+          ) : null}
         </div>
-      ) : null}
-    </section>
+      </SettingRow>
+    </SettingGroup>
   );
 }

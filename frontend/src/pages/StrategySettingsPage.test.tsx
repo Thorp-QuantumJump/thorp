@@ -415,6 +415,16 @@ function actionButton(label: string): HTMLElement {
   });
 }
 
+/** 설정 행 하나를 펼친다. 행마다 여닫으므로 폼을 보려면 그 행을 열어야 한다. 단추 이름이 행 이름이다. */
+async function openSetting(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) {
+  const toggle = screen.getByRole("button", { name: label });
+  if (toggle.getAttribute("aria-expanded") === "false") await user.click(toggle);
+}
+
+
 beforeEach(() => {
   apiMocks.fetchSectorCatalog.mockResolvedValue(loadedCatalog);
   apiMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture);
@@ -658,15 +668,15 @@ describe("StrategySettingsPage", () => {
     renderPage(support);
 
     await user.click(await findCardNamed(selectableStrategy.name));
-    await user.click(screen.getByRole("button", { name: "분석 조건" }));
+    await openSetting(user, "변동성 제한");
     await user.click(screen.getByRole("radio", { name: "씀" }));
     const volatility = registryFixture.analysisConditions.targetVolatility;
     await user.selectOptions(
       screen.getByRole("combobox", { name: "목표 변동성(연)" }),
       String(volatility.max),
     );
-    expect(screen.getByLabelText("분석 조건 요약").textContent).toContain(
-      `변동성 제한연 ${volatility.max}%`,
+    expect(screen.getByLabelText("분석 조건 요약").textContent).toMatch(
+      new RegExp(`변동성 제한.*연 ${volatility.max}%`),
     );
 
     await waitFor(() =>
@@ -684,7 +694,7 @@ describe("StrategySettingsPage", () => {
   });
 
   it("기본 화면의 입력은 전략 선택 하나다", async () => {
-    // SC-005. 전략 설정과 분석 조건은 접혀 있고 입력 요소를 내놓지 않는다.
+    // SC-005. 설정 행은 모두 접혀 있어 이름과 값만 보이고 입력 요소를 내놓지 않는다.
     const user = userEvent.setup();
     const { support } = makeSupport();
     const { container } = renderPage(support);
@@ -695,9 +705,11 @@ describe("StrategySettingsPage", () => {
       0,
     );
 
-    // 축 라벨은 응답에 실려 오지만 기본 화면에 보이지 않는다.
+    // 축은 행으로 보이되 모두 접혀 있다.
     for (const axis of selectableStrategy.axes) {
-      expect(screen.queryByText(axis.label)).toBeNull();
+      expect(
+        screen.getByRole("button", { name: axis.label }).getAttribute("aria-expanded"),
+      ).toBe("false");
     }
   });
 
@@ -1652,7 +1664,7 @@ describe("StrategySettingsPage", () => {
         let card = await findCardNamed(selectableStrategy.name);
         expect(card.getAttribute("data-warmup")).toBe("reduced");
 
-        await user.click(screen.getByRole("button", { name: "전략 설정" }));
+        await openSetting(user, "표류 관측 창");
         await user.click(screen.getByRole("radio", { name: "90거래일" }));
 
         // 고른 카드는 지금 설정으로 다시 판정되어 막히지만 고른 사실은 남는다.
@@ -1704,7 +1716,7 @@ describe("StrategySettingsPage", () => {
           "false",
         ),
       );
-      await user.click(screen.getByRole("button", { name: "전략 설정" }));
+      await openSetting(user, "허용 이탈 폭");
 
       const band = screen.getByRole("textbox", { name: /허용 이탈 폭/ });
       await user.clear(band);
@@ -1745,7 +1757,7 @@ describe("StrategySettingsPage", () => {
       renderPage(support);
 
       await user.click(await findCardNamed(selectableStrategy.name));
-      await user.click(screen.getByRole("button", { name: "전략 설정" }));
+      await openSetting(user, "표류 관측 창");
       await user.click(screen.getByRole("radio", { name: "15거래일" }));
       await waitFor(() =>
         expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe(
@@ -2182,9 +2194,10 @@ describe("StrategySettingsPage", () => {
       await waitFor(() => expect(calls).toHaveLength(1));
 
       await user.click(await findCardNamed(plainStrategy.name));
+      // 단 제목은 '상세 설정'으로 고정이고, 고른 전략의 이름은 카드 첫 줄이 말한다.
       await waitFor(() =>
         expect(
-          screen.getByRole("heading", { name: plainStrategy.name }),
+          screen.getByText(plainStrategy.name, { selector: "strong" }),
         ).toBeTruthy(),
       );
 
@@ -2307,9 +2320,17 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     );
   }
 
+  /** 분석 조건의 접힌 행을 모두 펼치고 영역을 돌려준다. 행마다 여닫으므로 폼을 보려면 열어야 한다. */
   async function openConditions(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole("button", { name: "분석 조건" }));
-    return screen.getByRole("region", { name: "분석 조건" });
+    const panel = screen.getByRole("region", { name: "분석 조건" });
+    for (const toggle of Array.from(
+      panel.querySelectorAll<HTMLButtonElement>(
+        '[data-slot="setting-toggle"][aria-expanded="false"]',
+      ),
+    )) {
+      await user.click(toggle);
+    }
+    return panel;
   }
 
   it("패널에서 바꾼 기간과 금액이 요약 줄과 요청에 함께 실린다", async () => {
@@ -2791,7 +2812,7 @@ describe("StrategySettingsPage 공통 평가 기간 연결(T042, T098)", () => {
         maxWarmupTradingDays: 90,
       });
 
-      await user.click(screen.getByRole("button", { name: "전략 설정" }));
+      await openSetting(user, "표류 관측 창");
       await user.click(screen.getByRole("radio", { name: "90거래일" }));
 
       const card = await findCardNamed(selectableStrategy.name);

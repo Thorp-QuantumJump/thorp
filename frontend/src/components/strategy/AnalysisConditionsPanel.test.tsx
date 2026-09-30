@@ -51,6 +51,7 @@ function Harness({
         range={range}
         period={chosen ?? range}
         periodChosen={chosen !== null}
+        sectorCount={3}
         initialAmount={condition.initialAmount ?? amount.default}
         minEvaluationYears={condition.minEvaluationYears}
         targetVolatility={condition.targetVolatility}
@@ -79,16 +80,27 @@ function stateCondition(): Record<string, unknown> {
   ) as Record<string, unknown>;
 }
 
+/** 영역 안의 접힌 설정 행을 모두 펼친다. 행마다 여닫으므로 폼을 보려면 그 행을 열어야 한다. */
+async function openAllRows(
+  user: ReturnType<typeof userEvent.setup>,
+  region: HTMLElement,
+) {
+  for (const toggle of Array.from(
+    region.querySelectorAll<HTMLButtonElement>(
+      '[data-slot="setting-toggle"][aria-expanded="false"]',
+    ),
+  )) {
+    await user.click(toggle);
+  }
+}
+
 async function renderOpen(costView?: CostAssumptionView | "loading" | null) {
   const onChange = vi.fn<(patch: AnalysisConditionPatch) => void>();
   const user = userEvent.setup();
   render(<Harness onChange={onChange} costView={costView} />);
-  await user.click(await screen.findByRole("button", { name: "분석 조건" }));
-  return {
-    onChange,
-    user,
-    panel: screen.getByRole("region", { name: "분석 조건" }),
-  };
+  const panel = await screen.findByRole("region", { name: "분석 조건" });
+  await openAllRows(user, panel);
+  return { onChange, user, panel };
 }
 
 beforeEach(() => {
@@ -100,17 +112,33 @@ afterEach(() => {
 });
 
 describe("AnalysisConditionsPanel", () => {
-  it("접힌 채로 시작하고 펼치기 전에는 입력 요소를 내놓지 않는다", async () => {
+  it("행마다 접힌 채로 시작하고, 펼치기 전에는 값만 보이고 입력 요소를 내놓지 않는다", async () => {
     render(<Harness onChange={vi.fn()} />);
 
-    const toggle = await screen.findByRole("button", { name: "분석 조건" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    const panel = await screen.findByRole("region", { name: "분석 조건" });
+    const toggles = Array.from(
+      panel.querySelectorAll('[data-slot="setting-toggle"]'),
+    );
+    // 바꿀 수 있는 넷과 읽기 전용 상세(비용 가정) 하나가 펼쳐진다. 비교 대상·운용 방식은 값만 있다.
+    expect(toggles.map((toggle) => toggle.getAttribute("aria-label"))).toEqual(
+      ["분석 기간", "시작 금액", "최소 평가 기간", "변동성 제한", "비용 가정"],
+    );
+    for (const toggle of toggles) {
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+      // 접힌 동안에는 없는 요소를 가리키지 않는다.
+      expect(toggle.getAttribute("aria-controls")).toBeNull();
+    }
     // 날짜 칸은 textbox 역할이 아니라서 요소로 함께 본다.
     expect(document.querySelectorAll("input, select, textarea")).toHaveLength(
       0,
     );
-    // 접힌 동안에는 없는 요소를 가리키지 않는다.
-    expect(toggle.getAttribute("aria-controls")).toBeNull();
+    // 값은 접혀 있어도 늘 보인다(FR-002).
+    const summary = screen.getByLabelText("분석 조건 요약").textContent ?? "";
+    expect(summary).toContain(`${range.start} ~ ${range.end}`);
+    expect(summary).toContain(amount.default.toLocaleString("ko-KR"));
+    expect(summary).toContain("섹터 3개");
+    expect(summary).toContain("쓰지 않음");
+    expect(summary).toContain("SYN-COST-1");
   });
 
   it("입력 도중 반영된 날짜는 마지막 날짜가 무효가 되면 입력 전 기간으로 되돌린다", async () => {
@@ -292,20 +320,21 @@ describe("AnalysisConditionsPanel", () => {
     expect(text).toContain("세금 20bp");
     expect(text).toContain("SYN-COST-1");
     expect(text).toContain("임시값");
-    // 비용은 고칠 수단이 없다. 하나뿐인 버튼은 값을 바꾸는 것이 아니라 도움말이다.
+    // 비용은 고칠 수단이 없다. 상세 안에는 단추가 없고, 도움말은 행 머리에 하나 있다.
     expect(within(group).queryByRole("textbox")).toBeNull();
     expect(within(group).queryByRole("spinbutton")).toBeNull();
-    const buttons = within(group).getAllByRole("button");
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0].getAttribute("aria-label")).toBe("비용 가정 도움말");
+    expect(within(group).queryByRole("button")).toBeNull();
+    expect(
+      within(panel).getByRole("button", { name: "비용 가정 도움말" }),
+    ).toBeTruthy();
   });
 
   it("비용 가정 도움말에 마우스를 얹으면 어느 기준의 수치인지 말한다", async () => {
     const { panel, user } = await renderOpen();
 
-    const group = within(panel).getByRole("group", { name: "비용 가정" });
+    // 도움말은 행 머리에 있다. 상세를 펼치지 않아도 닿는다.
     await user.hover(
-      within(group).getByRole("button", { name: "비용 가정 도움말" }),
+      within(panel).getByRole("button", { name: "비용 가정 도움말" }),
     );
 
     expect(await screen.findByText(/2026년 한국 ETF/)).toBeTruthy();
