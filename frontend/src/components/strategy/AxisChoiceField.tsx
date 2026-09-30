@@ -1,29 +1,19 @@
-import { useId, type ReactNode } from "react";
 import { axisValueEquals } from "@/hooks/useStrategySettings";
 import type { AxisValue, AxisView } from "@/types/strategyRegistry";
-import styles from "./AxisField.module.css";
+import { InlineChoices } from "./SettingRow";
 
 interface AxisChoiceFieldProps {
-  /** `inputType`이 `CHOICE`인 축. 후보·문구·단위를 모두 여기서 읽는다 */
+  /** `inputType`이 `CHOICE`인 축. 후보·문구를 모두 여기서 읽는다 */
   axis: AxisView;
   /** 지금 값. 재검증이 비워 둔 축이면 `undefined`이고 아무 후보도 고른 상태가 아니다 */
   value: AxisValue | undefined;
   /** 등록된 후보 가운데 고를 수 있는 것을 골랐을 때만 불린다. 값은 후보의 것을 그대로 넘긴다 */
   onChange: (value: AxisValue) => void;
-  onReset: () => void;
-  /** 설명 옆에 붙일 용어 도움말. 없으면 그리지 않는다 */
-  help?: ReactNode;
-  /** 값 아래에 한 줄 더. 이 값이 다른 것을 움직일 때 그 사실을 적는다. 없으면 그리지 않는다 */
-  note?: ReactNode;
-  /**
-   * 설정 행(SettingRow) 안에 놓였는가. 참이면 이름 줄과 상자를 그리지 않는다 — 이름·단위·도움말은 행 머리가
-   * 보이고, 묶음은 `aria-label`로 같은 이름을 가진다.
-   */
-  embedded?: boolean;
 }
 
 /**
- * 목록형 설정 항목(FR-006, 계약 §1 `choices`).
+ * 목록형 설정 항목(FR-006, 계약 §1 `choices`). 설정 행(SettingRow) 안에 놓인다 — 이름·단위·도움말·되돌리기는
+ * 행 머리가 맡고, 이 컴포넌트는 후보만 그린다. 후보가 몇 개뿐이면 행 오른쪽에, 많으면 펼친 자리에 선다.
  *
  * <p><b>등록된 후보만 그린다. 다른 값을 넣을 경로가 없다.</b> 자유 입력칸을 두지 않으므로 등록되지
  * 않은 값은 이 컴포넌트를 거쳐 상태에 들어갈 수 없다.
@@ -34,75 +24,17 @@ interface AxisChoiceFieldProps {
  * <p><b>값의 뜻을 읽지 않는다.</b> 합성 값(리밸런싱 주기)도 등록표의 `label`로 보이고, 고르면 후보의
  * 값을 그대로 넘긴다. 칸 이름으로 문구를 짓지 않는다(FR-005).
  */
-export function AxisChoiceField({
-  axis,
-  value,
-  onChange,
-  onReset,
-  help,
-  note,
-  embedded = false,
-}: AxisChoiceFieldProps) {
-  const groupName = useId();
-  const choices = axis.choices ?? [];
-
+export function AxisChoiceField({ axis, value, onChange }: AxisChoiceFieldProps) {
   return (
-    <fieldset
-      className={embedded ? `${styles.field} ${styles.embedded}` : styles.field}
-      aria-label={embedded ? axis.label : undefined}
-    >
-      {embedded ? null : (
-        <legend className={styles.header}>
-          <span className={styles.label}>
-            {axis.label}
-            {axis.unit ? (
-              <span className={styles.unit}>({axis.unit})</span>
-            ) : null}
-            {help}
-          </span>
-        </legend>
-      )}
-
-      {/* 후보와 기본값 복원이 한 줄이다. 복원은 늘 오른쪽 끝이다. */}
-      <div className={styles.choices}>
-        {choices.map((choice, index) => {
-          const checked =
-            value !== undefined && axisValueEquals(choice.value, value);
-          return (
-            <label
-              key={`${index}:${choice.label}`}
-              className={styles.choice}
-              data-selectable={choice.selectable ? "true" : "false"}
-            >
-              <input
-                type="radio"
-                name={groupName}
-                checked={checked}
-                disabled={!choice.selectable}
-                onChange={() => {
-                  if (choice.selectable) onChange(choice.value);
-                }}
-              />
-              {choice.label}
-              {choice.selectable ? null : (
-                <span className={styles.unit}>
-                  (지금 조건에서 고를 수 없음)
-                </span>
-              )}
-            </label>
-          );
-        })}
-        <button
-          type="button"
-          className={`${styles.reset} ${styles.resetEnd}`}
-          aria-label={`${axis.label} 기본값 복원`}
-          onClick={onReset}
-        >
-          기본값 복원
-        </button>
-      </div>
-
-      {note ? <p className={styles.hint}>{note}</p> : null}
-    </fieldset>
+    <InlineChoices
+      label={axis.label}
+      choices={(axis.choices ?? []).map((choice, index) => ({
+        key: `${index}:${choice.label}`,
+        label: choice.label,
+        checked: value !== undefined && axisValueEquals(choice.value, value),
+        disabled: !choice.selectable,
+        onSelect: () => onChange(choice.value),
+      }))}
+    />
   );
 }

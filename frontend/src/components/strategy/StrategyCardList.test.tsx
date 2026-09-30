@@ -7,7 +7,7 @@ import {
   unselectableStrategy,
 } from '@/test/strategyRegistryFixtures'
 import type { StrategyView } from '@/types/strategyRegistry'
-import type { WarmupVerdict } from './StrategyCard'
+import type { WarmupVerdict } from './cardNotices'
 import { StrategyCardList, type RegistryViewState } from './StrategyCardList'
 
 /**
@@ -53,6 +53,20 @@ function renderList(
     />,
   )
   return { ...result, onSelect, onRetry }
+}
+
+/** 카드가 보조기술에 전하는 설명 전체. 사유 문장은 목록 아래 한 곳에 있고 카드는 `aria-describedby`로 가리킨다. */
+function descriptionOf(card: HTMLElement): string {
+  return (card.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ')
+}
+
+/** 카드 줄 아래에 모아 적은 사유 목록의 항목들. */
+function sharedItems(): HTMLElement[] {
+  return screen.queryAllByRole('listitem')
 }
 
 describe('StrategyCardList', () => {
@@ -124,7 +138,13 @@ describe('StrategyCardList', () => {
     // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 이유를 읽을 수 있다.
     expect(card.getAttribute('aria-disabled')).toBe('true')
     expect(card.getAttribute('aria-checked')).toBe('false')
-    expect(card.textContent).toContain(unselectableStrategy.unselectableReason)
+    // 사유는 카드 줄 아래 목록에 전략 이름과 함께 적히고, 카드는 번호와 설명 연결로 그 문장을 가리킨다.
+    expect(descriptionOf(card)).toContain(unselectableStrategy.unselectableReason)
+    const item = sharedItems().find((node) =>
+      node.textContent?.includes(unselectableStrategy.unselectableReason ?? '∅'),
+    )
+    expect(item?.textContent).toContain(unselectableStrategy.name)
+    expect(card.textContent).not.toContain(unselectableStrategy.unselectableReason)
 
     await user.click(card)
     expect(onSelect).not.toHaveBeenCalled()
@@ -148,7 +168,7 @@ describe('StrategyCardList', () => {
 
     const card = cardNamed(selectableStrategy.name)
     expect(card.getAttribute('aria-disabled')).toBe('true')
-    expect(card.textContent).toContain('평가할 구간이 남지 않습니다.')
+    expect(descriptionOf(card)).toContain('평가할 구간이 남지 않습니다.')
 
     await user.click(card)
     expect(onSelect).not.toHaveBeenCalled()
@@ -238,8 +258,15 @@ describe('StrategyCardList', () => {
     const card = cardNamed(selectableStrategy.name)
 
     // 판정하지 못했다는 사실이 화면에 남는다. 말하지 않으면 사용자는 판정을 통과한 줄로 읽는다.
-    // 그 사실은 사유 문장이 말한다 — 앞에 붙이던 '확인하지 못함' 딱지는 두지 않는다.
-    expect(card.textContent).toContain('분석 기간을 아직 확인하지 못했습니다.')
+    // 모든 카드가 같은 문장이라 목록 아래에 한 번 적히고, 카드는 그 문장을 설명으로 가리킨다.
+    expect(screen.getByText('분석 기간을 아직 확인하지 못했습니다.')).toBeTruthy()
+    const describedBy = (card.getAttribute('aria-describedby') ?? '').split(' ')
+    expect(
+      describedBy.some(
+        (id) =>
+          document.getElementById(id)?.textContent === '분석 기간을 아직 확인하지 못했습니다.',
+      ),
+    ).toBe(true)
 
     // 다만 "판정하지 못했다"는 "고를 수 없다"가 아니다. 등록표가 내린 판정을 뒤집지 않는다.
     expect(card.getAttribute('aria-disabled')).toBe('false')
@@ -259,7 +286,40 @@ describe('StrategyCardList', () => {
 
     const card = cardNamed(unselectableStrategy.name)
     expect(card.getAttribute('aria-disabled')).toBe('true')
-    expect(card.textContent).toContain('고를 수 없는 이유를 확인하지 못했습니다.')
+    expect(descriptionOf(card)).toContain('고를 수 없는 이유를 확인하지 못했습니다.')
+  })
+
+  it('사유는 카드마다 되풀이하지 않고 번호를 붙여 목록 아래에 한 번씩 적는다', () => {
+    const shared = '같은 사유 문장입니다.'
+    renderList(loaded, {
+      judgeWarmup: () => ({ state: 'blocked', message: shared }),
+    })
+
+    // 같은 문장은 한 번만 적히고, 걸린 전략 이름이 앞에 선다.
+    const items = sharedItems().filter((node) => node.textContent?.includes(shared))
+    expect(items).toHaveLength(1)
+    for (const strategy of registryFixture.strategies) {
+      expect(items[0].textContent).toContain(strategy.name)
+      const card = cardNamed(strategy.name)
+      expect(card.textContent).not.toContain(shared)
+      expect(descriptionOf(card)).toContain(shared)
+    }
+  })
+
+  it('판정하지 못했을 뿐인 사유는 경고가 아니라 중립 표시로 둔다', () => {
+    renderList(loaded, {
+      judgeWarmup: () => ({ state: 'unknown', message: '평가 기간을 아직 모릅니다.' }),
+    })
+
+    const item = sharedItems().find((node) =>
+      node.textContent?.includes('평가 기간을 아직 모릅니다.'),
+    )
+    expect(item?.querySelector('[data-tone]')?.getAttribute('data-tone')).toBe('pending')
+    // 고를 수 있다는 판정은 바뀌지 않는다.
+    expect(cardNamed(selectableStrategy.name).getAttribute('aria-disabled')).toBe('false')
+    expect(
+      cardNamed(selectableStrategy.name).querySelector('[data-tone]')?.getAttribute('data-tone'),
+    ).toBe('pending')
   })
 
   it('불러오는 중에는 고를 수 있는 카드가 없다', () => {

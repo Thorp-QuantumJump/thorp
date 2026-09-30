@@ -225,7 +225,12 @@ async function openConditions(user: ReturnType<typeof userEvent.setup>) {
       name: new RegExp(selectableStrategy.name),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "분석 기간" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: (name, element) =>
+        element.getAttribute("data-slot") === "setting-toggle" && name.startsWith("분석 기간"),
+    }),
+  );
 }
 
 beforeEach(() => {

@@ -4,15 +4,16 @@
   font-size: var(--thorp-text-small, 0.82rem);
 }
 
-/* 읽기 전용 값은 입력칸처럼 보이지 않게 글로만 늘어놓는다. */
-.readOnly {
-  display: flex;
+/* 비용 수치 한 줄. 값 아래에서 오른쪽 끝에 맞춘다. */
+.rates {
+  display: inline-flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 14px;
-  margin: 0;
-  color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.86rem);
-  line-height: 1.6;
+  justify-content: flex-end;
+  gap: 2px 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.provisionalNote {
+  display: block;
+  margin-top: 2px;
 }

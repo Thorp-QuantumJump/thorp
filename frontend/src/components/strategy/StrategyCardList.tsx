@@ -1,6 +1,12 @@
-import { type KeyboardEvent, useEffect, useRef } from 'react'
+import { type KeyboardEvent, useEffect, useId, useRef } from 'react'
 import { RegistryUnavailableNotice } from './RegistryUnavailableNotice'
-import { StrategyCard, type WarmupVerdict } from './StrategyCard'
+import {
+  collectNotices,
+  type NoticeTone,
+  type SharedNoticeRef,
+  type WarmupVerdict,
+} from './cardNotices'
+import { StrategyCard } from './StrategyCard'
 import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
 import styles from './StrategyCardList.module.css'
 
@@ -51,7 +57,7 @@ interface StrategyCardListProps {
  */
 const PLACEHOLDER_COUNT = 3
 
-/** 화살표 키가 초점을 옮기는 방향. 목록이 세로이므로 위아래와 좌우를 같게 다룬다. */
+/** 화살표 키가 초점을 옮기는 방향. 목록이 가로로 늘어서도 좁은 폭에서는 접히므로 위아래와 좌우를 같게 다룬다. */
 const FOCUS_STEP: Record<string, number> = {
   ArrowDown: 1,
   ArrowRight: 1,
@@ -77,7 +83,14 @@ const FOCUS_STEP: Record<string, number> = {
  * <code>RegistryUnavailableNotice</code>를 두고 <b>임시 값이나 예비 등록표로 대신 동작하지 않는다.</b>
  *
  * <p><b>고른 전략의 상세는 이 목록이 그리지 않는다.</b> 목록 사이에 상세를 끼워 넣으면 고를 때마다
- * 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 상세는 옆 단이 맡는다.
+ * 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 상세는 목록 아래 카드가 맡는다.
+ *
+ * <p><b>사유는 목록 아래 한 곳에 모아 적는다.</b> 고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는데,
+ * 그 문장을 카드마다 되풀이하면 무엇 때문에 막혔는지보다 경고가 많다는 인상만 남는다. 카드 한 장에만 걸린 사유도
+ * 같은 자리에 모아, 사유가 있는 카드만 높아져 줄이 들쭉날쭉하지 않게 한다. 문장마다 번호를 붙이고 해당 전략
+ * 이름을 앞에 두며, 카드는 이름 옆에 그 번호만 보인다. 보조기술에는 카드의 설명으로 그 문장이 그대로
+ * 읽힌다(`aria-describedby`). 같은 문장은 한 번만 적고, 어떤 문장이 겹치는지는 문장이 같은지만 본다 — 전략을
+ * 보고 정하지 않는다. 판정하지 못했을 뿐 고를 수 있는 사유는 경고색을 쓰지 않는다.
  */
 export function StrategyCardList({
   state,
@@ -88,6 +101,7 @@ export function StrategyCardList({
 }: StrategyCardListProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const recoveredFromFailure = useRef(false)
+  const sharedIdBase = useId()
 
   useEffect(() => {
     if (state.status === 'failed') {
@@ -113,19 +127,43 @@ export function StrategyCardList({
   }
 
   if (state.status === 'loading') {
+    // 알림 문장은 격자 밖에 둔다. 격자 안에 두면 문장이 카드 한 칸을 차지해 빈 카드처럼 읽힌다.
     return (
-      <div className={styles.list}>
+      <div className={styles.wrapper}>
         <p className={styles.loading} role="status">
           전략 설정을 불러오는 중입니다.
         </p>
-        {Array.from({ length: PLACEHOLDER_COUNT }, (_, index) => (
-          <div key={index} className={styles.placeholder} aria-hidden="true" />
-        ))}
+        <div className={styles.list} aria-hidden="true">
+          {Array.from({ length: PLACEHOLDER_COUNT }, (_, index) => (
+            <div key={index} className={styles.placeholder} />
+          ))}
+        </div>
       </div>
     )
   }
 
   const strategies = state.registry.strategies
+  const verdicts = strategies.map((strategy) => judgeWarmup(strategy))
+
+  // 문장마다 걸린 전략을 모은다. 순서는 처음 나온 차례다. 같은 문장이 막힘과 판정 불가로 함께 쓰였다면
+  // 막힘으로 적는다 — 실제로 막힌 것을 중립으로 보이면 안 된다.
+  const owners = new Map<string, { names: string[]; tone: NoticeTone }>()
+  strategies.forEach((strategy, index) => {
+    for (const notice of collectNotices(strategy, verdicts[index])) {
+      const entry = owners.get(notice.text) ?? { names: [], tone: notice.tone }
+      entry.names.push(strategy.name)
+      if (notice.tone === 'blocking') entry.tone = 'blocking'
+      owners.set(notice.text, entry)
+    }
+  })
+  const sharedList = [...owners.entries()]
+  const shared = new Map<string, SharedNoticeRef>(
+    sharedList.map(([text, entry], index) => [
+      text,
+      { id: `${sharedIdBase}-shared-${index}`, number: index + 1, tone: entry.tone },
+    ]),
+  )
+
   const selectedIndex = strategies.findIndex(
     (strategy) => strategy.strategyId === selectedStrategyId,
   )
@@ -145,25 +183,48 @@ export function StrategyCardList({
   }
 
   return (
-    <div
-      ref={listRef}
-      className={styles.list}
-      // 재시도에 성공했을 때 초점을 받을 자리다. 탭 차례에는 들어가지 않는다.
-      tabIndex={-1}
-      role="radiogroup"
-      aria-label="전략 고르기"
-      onKeyDown={handleKeyDown}
-    >
-      {strategies.map((strategy, index) => (
-        <StrategyCard
-          key={strategy.strategyId}
-          strategy={strategy}
-          selected={selectedStrategyId === strategy.strategyId}
-          warmup={judgeWarmup(strategy)}
-          onSelect={() => onSelect(strategy.strategyId)}
-          tabIndex={index === tabStopIndex ? 0 : -1}
-        />
-      ))}
+    <div className={styles.wrapper}>
+      <div
+        ref={listRef}
+        className={styles.list}
+        // 재시도에 성공했을 때 초점을 받을 자리다. 탭 차례에는 들어가지 않는다.
+        tabIndex={-1}
+        role="radiogroup"
+        aria-label="전략 고르기"
+        onKeyDown={handleKeyDown}
+      >
+        {strategies.map((strategy, index) => (
+          <StrategyCard
+            key={strategy.strategyId}
+            strategy={strategy}
+            selected={selectedStrategyId === strategy.strategyId}
+            warmup={verdicts[index]}
+            onSelect={() => onSelect(strategy.strategyId)}
+            tabIndex={index === tabStopIndex ? 0 : -1}
+            shared={shared}
+          />
+        ))}
+      </div>
+
+      {sharedList.length > 0 ? (
+        <ol className={styles.shared}>
+          {sharedList.map(([text, entry], index) => (
+            <li key={text} className={styles.sharedItem}>
+              <span
+                className={styles.sharedNumber}
+                data-tone={entry.tone}
+                aria-hidden="true"
+              >
+                {index + 1}
+              </span>
+              <span>
+                <span className={styles.sharedNames}>{entry.names.join(' · ')}</span>{' '}
+                <span id={`${sharedIdBase}-shared-${index}`}>{text}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </div>
   )
 }

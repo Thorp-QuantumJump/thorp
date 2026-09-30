@@ -81,6 +81,24 @@ function stateCondition(): Record<string, unknown> {
 }
 
 /** 영역 안의 접힌 설정 행을 모두 펼친다. 행마다 여닫으므로 폼을 보려면 그 행을 열어야 한다. */
+/**
+ * 설정 행의 펼침 단추. 접근 가능 이름이 '항목 이름 + 지금 값'이라 이름 전체로는 찾을 수 없으므로, 이름이 가리키는
+ * 첫 조각(항목 이름)으로 찾는다.
+ */
+function rowToggle(
+  label: string,
+  container: ParentNode = document,
+): HTMLButtonElement | null {
+  return (
+    Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[data-slot="setting-toggle"]'),
+    ).find((button) => {
+      const [labelId] = (button.getAttribute("aria-labelledby") ?? "").split(" ");
+      return document.getElementById(labelId)?.textContent === label;
+    }) ?? null
+  );
+}
+
 async function openAllRows(
   user: ReturnType<typeof userEvent.setup>,
   region: HTMLElement,
@@ -112,33 +130,109 @@ afterEach(() => {
 });
 
 describe("AnalysisConditionsPanel", () => {
-  it("행마다 접힌 채로 시작하고, 펼치기 전에는 값만 보이고 입력 요소를 내놓지 않는다", async () => {
+  it("범위 안내가 따라야 하는 기간·금액만 펼치고, 짧은 선택은 바로 두며, 값은 늘 보인다", async () => {
     render(<Harness onChange={vi.fn()} />);
 
     const panel = await screen.findByRole("region", { name: "분석 조건" });
     const toggles = Array.from(
       panel.querySelectorAll('[data-slot="setting-toggle"]'),
     );
-    // 바꿀 수 있는 넷과 읽기 전용 상세(비용 가정) 하나가 펼쳐진다. 비교 대상·운용 방식은 값만 있다.
-    expect(toggles.map((toggle) => toggle.getAttribute("aria-label"))).toEqual(
-      ["분석 기간", "시작 금액", "최소 평가 기간", "변동성 제한", "비용 가정"],
-    );
+    // 펼치는 행은 기간과 금액 둘이다. 최소 평가 기간·변동성 제한은 바로 고르고, 나머지는 값만 있다.
+    expect(toggles).toEqual([rowToggle("분석 기간"), rowToggle("시작 금액")]);
     for (const toggle of toggles) {
       expect(toggle.getAttribute("aria-expanded")).toBe("false");
       // 접힌 동안에는 없는 요소를 가리키지 않는다.
       expect(toggle.getAttribute("aria-controls")).toBeNull();
     }
-    // 날짜 칸은 textbox 역할이 아니라서 요소로 함께 본다.
-    expect(document.querySelectorAll("input, select, textarea")).toHaveLength(
-      0,
-    );
+    // 날짜·금액 칸은 펼치기 전에는 없다. 날짜 칸은 textbox 역할이 아니라서 요소로 함께 본다.
+    expect(
+      document.querySelectorAll('input:not([type="radio"]), select, textarea'),
+    ).toHaveLength(0);
+    expect(
+      within(panel).getByRole("group", { name: "최소 평가 기간" }),
+    ).toBeTruthy();
+    expect(within(panel).getByRole("group", { name: "변동성 제한" })).toBeTruthy();
     // 값은 접혀 있어도 늘 보인다(FR-002).
-    const summary = screen.getByLabelText("분석 조건 요약").textContent ?? "";
+    const summary = panel.textContent ?? "";
     expect(summary).toContain(`${range.start} ~ ${range.end}`);
     expect(summary).toContain(amount.default.toLocaleString("ko-KR"));
     expect(summary).toContain("섹터 3개");
     expect(summary).toContain("쓰지 않음");
     expect(summary).toContain("SYN-COST-1");
+  });
+
+  it("펼침 단추의 이름에 지금 값이 들어가 펼치지 않아도 값이 읽힌다", async () => {
+    render(<Harness onChange={vi.fn()} />);
+    await screen.findByRole("region", { name: "분석 조건" });
+
+    // 보이는 글자(값)가 이름에 들어가야 음성으로 부르는 사용자가 찾고, 화면 읽기 사용자가 값을 듣는다(WCAG 2.5.3).
+    expect(
+      screen.getByRole("button", {
+        name: `시작 금액 ${amount.default.toLocaleString("ko-KR")}${amount.unit ?? ""}`,
+      }),
+    ).toBe(rowToggle("시작 금액"));
+    expect(
+      screen.getByRole("button", { name: `분석 기간 ${range.start} ~ ${range.end}` }),
+    ).toBe(rowToggle("분석 기간"));
+  });
+
+  it("되돌리기는 바꾼 행 이름 옆에만 나타나고, 누르면 기본값으로 돌아가며 초점이 그 행에 남는다", async () => {
+    const user = userEvent.setup();
+    render(<Harness onChange={vi.fn()} />);
+    const panel = await screen.findByRole("region", { name: "분석 조건" });
+
+    // 바꾼 것이 없으면 되돌리기가 하나도 없다.
+    expect(within(panel).queryByRole("button", { name: /기본값 복원|범위 전체로/ })).toBeNull();
+
+    // 짧은 선택: 최소 평가 기간
+    await user.click(within(panel).getByRole("radio", { name: "엄격(3년)" }));
+    const yearsReset = within(panel).getByRole("button", { name: "최소 평가 기간 기본값 복원" });
+    await user.click(yearsReset);
+    expect(stateCondition().minEvaluationYears).toBe(1);
+    expect(within(panel).queryByRole("button", { name: "최소 평가 기간 기본값 복원" })).toBeNull();
+    // 사라진 아이콘 대신 그 행의 고른 후보가 초점을 받는다. 문서 맨 앞으로 떨어지지 않는다.
+    expect(document.activeElement).toBe(within(panel).getByRole("radio", { name: "기본(1년)" }));
+
+    // 펼치는 행: 시작 금액
+    await user.click(rowToggle("시작 금액")!);
+    fireEvent.change(within(panel).getByRole("textbox", { name: /시작 금액/ }), {
+      target: { value: String(amount.default + amount.step) },
+    });
+    await user.click(within(panel).getByRole("button", { name: "시작 금액 기본값 복원" }));
+    expect(stateCondition().initialAmount).toBeUndefined();
+    expect(
+      (within(panel).getByRole("textbox", { name: /시작 금액/ }) as HTMLInputElement).value,
+    ).toBe(amount.default.toLocaleString("ko-KR"));
+    expect(document.activeElement).toBe(rowToggle("시작 금액"));
+
+    // 켜고 끄는 선택: 변동성 제한
+    await user.click(within(panel).getByRole("radio", { name: "씀" }));
+    await user.click(within(panel).getByRole("button", { name: "변동성 제한 기본값 복원" }));
+    expect(stateCondition().targetVolatility).toBeUndefined();
+    expect(document.activeElement).toBe(within(panel).getByRole("radio", { name: "쓰지 않음" }));
+  });
+
+  it("범위 전체와 같은 날짜를 골라 둔 채 입력을 망가뜨려도, 되돌리면 입력칸이 범위 전체로 다시 맞춰진다", async () => {
+    const { user } = await renderOpen();
+    const start = () => screen.getByLabelText("시작일") as HTMLInputElement;
+
+    // 고른 기간이 범위 전체와 같아지게 한다. 사용자가 고른 기간이라 되돌리기가 있다.
+    fireEvent.focus(start());
+    fireEvent.change(start(), { target: { value: "2021-01-04" } });
+    fireEvent.change(start(), { target: { value: range.start } });
+    expect(stateCondition()).toMatchObject({ periodStart: range.start, periodEnd: range.end });
+
+    // 그 상태에서 시작일을 지운다. 되돌릴 기간이 지금과 같아 바깥 값은 그대로다.
+    fireEvent.focus(start());
+    fireEvent.change(start(), { target: { value: "" } });
+    expect(start().getAttribute("aria-invalid")).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "범위 전체로 되돌리기" }));
+
+    expect(stateCondition().periodStart).toBeUndefined();
+    expect(start().value).toBe(range.start);
+    expect(start().getAttribute("aria-invalid")).toBe("false");
+    expect(screen.queryByText(/저장하지 않았습니다/)).toBeNull();
   });
 
   it("입력 도중 반영된 날짜는 마지막 날짜가 무효가 되면 입력 전 기간으로 되돌린다", async () => {
@@ -320,13 +414,12 @@ describe("AnalysisConditionsPanel", () => {
     expect(text).toContain("세금 20bp");
     expect(text).toContain("SYN-COST-1");
     expect(text).toContain("임시값");
-    // 비용은 고칠 수단이 없다. 상세 안에는 단추가 없고, 도움말은 행 머리에 하나 있다.
+    // 비용은 고칠 수단이 없다. 하나뿐인 버튼은 값을 바꾸는 것이 아니라 도움말이다.
     expect(within(group).queryByRole("textbox")).toBeNull();
     expect(within(group).queryByRole("spinbutton")).toBeNull();
-    expect(within(group).queryByRole("button")).toBeNull();
-    expect(
-      within(panel).getByRole("button", { name: "비용 가정 도움말" }),
-    ).toBeTruthy();
+    const buttons = within(group).getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].getAttribute("aria-label")).toBe("비용 가정 도움말");
   });
 
   it("비용 가정 도움말에 마우스를 얹으면 어느 기준의 수치인지 말한다", async () => {
