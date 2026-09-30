@@ -686,10 +686,7 @@
   카드 사이는 행 간격 대신 여백으로 띄운다. 상장일 안내가 없을 때 빈 행에 간격이 한 번 더 붙지 않게 한다.
 */
 .cardRow {
-  --proceed-size: 150px;
   --card-gap: 12px;
-  /* 버튼의 드러남·모양·색과 카드 폭 변화가 모두 이 시간과 곡선을 쓴다. */
-  --proceed-motion: 620ms cubic-bezier(0.22, 1, 0.36, 1);
 
   display: grid;
   grid-template-areas:
@@ -714,287 +711,10 @@
   min-width: 0;
 }
 
-/*
-  버튼 칸의 폭이 곧 카드 폭을 정한다. 숨은 동안(0개)은 초승달이 설 만큼만 두어 두 카드가 넓게 서고, 하나를
-  고르면 절반쯤, 둘을 고르면 끝까지 버튼과 같은 속도로 넓어져 두 카드가 함께 줄어든다. 숨을 때는 거꾸로 칸이
-  줄며 카드 끝이 오른쪽으로 늘어나, 그 끝에 걸친 버튼이 오른쪽으로 밀려가며 흐려진다.
-*/
+/* 원이 놓이는 칸의 격자 자리와 높이. 원의 가운데가 두 카드 사이 틈과 같은 높이가 되게 반지름과 틈 절반만큼 올린다. */
 .proceed {
-  position: relative;
-  z-index: 1;
-  display: flex;
   grid-area: proceed;
-  flex-direction: column;
-  align-self: start;
-  align-items: flex-start;
-  width: 60px;
-  margin-top: calc(var(--proceed-size) / -2 - var(--card-gap) / 2);
-  margin-left: -18px;
-  transition: width var(--proceed-motion);
-}
-
-.proceed[data-stage='1'] {
-  width: 96px;
-}
-
-.proceed[data-stage='2'] {
-  width: calc(var(--proceed-size) - 18px);
-}
-
-/*
-  채움 색을 등록한다. 등록하지 않은 사용자 정의 속성은 바뀔 때 뚝 끊기는데, 등록한 색은 모양·드러남과 같은
-  속도로 옮겨 간다.
-*/
-@property --thorp-proceed-fill {
-  syntax: '<color>';
-  inherits: false;
-  initial-value: #2a2e2d;
-}
-
-/*
-  두 상태를 오간다.
-
-  넘어갈 수 없는 동안(0~1개)은 원의 앞쪽만 카드 테두리 위에 남는다. 원을 칼로 자르지 않고, 흐림 가림막을
-  왼쪽으로 당겨 앞쪽은 선명하고 뒤쪽은 배경에 스며드는 초승달로 둔다.
-
-  둘을 고르면 가림막이 오른쪽으로 쓸려 나가며 몸체가 배경에서 떠오른다. 같은 시간 동안 원은 앞으로 기운
-  물방울 모양이 되고 색이 채워진다. 다 떠오르면 흐림은 남지 않는다. 가림막의 흐린 구간이 원 폭 밖으로
-  완전히 빠져나가기 때문이다. 글자는 몸체가 거의 드러난 뒤에 따라 나온다.
-
-  가림막은 원 폭의 두 배 길이다. 앞 절반은 불투명, 그다음 원 폭의 30%에 걸쳐 투명해진다. 가림막을 얼마나
-  당기느냐(`mask-position`)만 바꾸므로 흐린 구간의 모양이 유지된 채 부드럽게 움직인다.
-*/
-.proceedButton {
-  --thorp-proceed-fill: var(--thorp-accent);
-
-  flex: none;
-
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-  width: var(--proceed-size);
-  height: var(--proceed-size);
-  padding: 0 0 0 26px;
-  border: 1.5px solid color-mix(in srgb, var(--thorp-accent) 70%, #000);
-  border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
-  background: var(--thorp-proceed-fill);
-  color: var(--thorp-action-foreground);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: none;
-  -webkit-mask-image: linear-gradient(90deg, #000 50%, transparent 65%);
-  mask-image: linear-gradient(90deg, #000 50%, transparent 65%);
-  -webkit-mask-size: calc(var(--proceed-size) * 2) 100%;
-  mask-size: calc(var(--proceed-size) * 2) 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: 0 0;
-  mask-position: 0 0;
-  transition:
-    -webkit-mask-position var(--proceed-motion),
-    mask-position var(--proceed-motion),
-    border-color var(--proceed-motion),
-    box-shadow var(--proceed-motion),
-    color var(--proceed-motion),
-    --thorp-proceed-fill var(--proceed-motion),
-    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.14s ease;
-}
-
-.proceedButton > * {
-  /* 아래 빛 번짐(::before)보다 위에 그린다. */
-  position: relative;
-  transition:
-    opacity 300ms ease 260ms,
-    transform var(--proceed-motion);
-}
-
-/*
-  숨은 단계의 빛 번짐이다. 왼쪽 위에 옅게 번진 빛이 평평한 조각을 둥근 면으로 보이게 한다. 다 드러나면
-  모양·색과 같은 속도로 사라져 단색 채움만 남는다.
-*/
-.proceedButton::before {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    circle at 26% 30%,
-    color-mix(in oklab, color-mix(in oklab, var(--thorp-accent) 45%, #fff) 16%, transparent) 0%,
-    transparent 58%
-  );
-  opacity: 0;
-  pointer-events: none;
-  content: '';
-  transition: opacity var(--proceed-motion);
-}
-
-.proceedButton[data-stage='0']::before {
-  opacity: 0.55;
-}
-
-.proceedButton[data-stage='1']::before {
-  opacity: 1;
-}
-
-.proceedStep {
-  font-size: var(--thorp-text-caption, 0.7rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  opacity: 0.8;
-}
-
-.proceedLabel {
-  font-size: 1.02rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-
-.proceedArrow {
-  margin-top: 6px;
-}
-
-.proceedButton:hover:not(:disabled) {
-  filter: brightness(1.06);
-  transform: translateX(6px);
-}
-
-.proceedButton:hover:not(:disabled) .proceedArrow {
-  transform: translateX(6px);
-}
-
-.proceedButton:focus-visible {
-  outline: var(--thorp-focus-outline);
-  outline-offset: 3px;
-}
-
-/*
-  아직 넘어갈 수 없다(0~1개). 글자는 보이지 않고 눌리지 않는다.
-
-  세 단계는 **한 색상 계열**에서 밝기와 채도만 오른다: 카드 면에 가까운 깊은 에메랄드(0개) → 중간 톤의
-  초록(1개) → 브랜드 초록(2개). 불이 점점 켜지는 흐름으로 읽히게 하려는 것이다. 회색이나 다른 색을 끼우면
-  초록 단추의 앞 단계가 아니라 다른 물건으로 보이고, sRGB에서 회색과 초록을 섞으면 탁한 올리브가 된다.
-  그래서 oklab에서 섞는다. 등록한 색의 전환도 같은 공간에서 보간된다.
-
-  윤곽선 대신 앞쪽(왼쪽) 가장자리에 가는 빛선을 둔다. 두꺼운 테두리는 숨어 있는 조각을 도리어 도드라지게
-  한다. 테두리는 색만 투명하게 두어 두께가 바뀌며 모양이 튀지 않게 한다. 흐림은 뒤쪽 짧은 구간에만 남겨
-  앞쪽은 또렷하다.
-
-  1개는 모든 것이 절반쯤 나아간 상태다. 가림막이 반쯤 걷혀 몸체가 밀려 나오고, 모양도 원과 물방울 사이다.
-*/
-.proceedButton:disabled {
-  border-color: transparent;
-  color: transparent;
-  cursor: default;
-}
-
-.proceedButton[data-stage='0'] {
-  --thorp-proceed-fill: color-mix(in oklab, var(--thorp-accent) 28%, var(--thorp-surface-raised, #1f2321));
-
-  border-radius: 50%;
-  box-shadow: inset 1.5px 0 0 color-mix(in oklab, var(--thorp-accent) 42%, transparent);
-  -webkit-mask-position: calc(var(--proceed-size) * -0.76) 0;
-  mask-position: calc(var(--proceed-size) * -0.76) 0;
-}
-
-.proceedButton[data-stage='1'] {
-  --thorp-proceed-fill: color-mix(in oklab, var(--thorp-accent) 58%, var(--thorp-surface-raised, #1f2321));
-
-  border-radius: 47% 53% 53% 47% / 50% 50% 50% 50%;
-  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--thorp-accent) 70%, #fff 10%);
-  -webkit-mask-position: calc(var(--proceed-size) * -0.42) 0;
-  mask-position: calc(var(--proceed-size) * -0.42) 0;
-}
-
-.proceedButton:disabled > .proceedStep,
-.proceedButton:disabled > .proceedLabel,
-.proceedButton:disabled > .proceedArrow {
-  opacity: 0;
-  transform: translateX(-12px);
-  transition-delay: 0s;
-}
-
-/*
-  모양은 곧게 바뀌지 않고 한 번 일렁인다. 떠오를 때는 가로로 늘었다가 반대로 기운 뒤 물방울로 자리 잡는다.
-  숨을 때는 오른쪽으로 밀려 나가며 한 번 출렁이고 원으로 돌아가 초승달 속으로 들어간다. 하나만 고른 단계로
-  오갈 때는 작게 한 번 밀려 나오듯 출렁인다. 단계가 바뀌면 애니메이션 이름이 바뀌어 처음부터 다시 돈다. 끝
-  모양은 각 단계의 정지 모양과 같아 멈출 때 튀지 않는다.
-*/
-.proceedButton[data-stage='2'] {
-  animation: proceed-emerge var(--proceed-motion);
-}
-
-.proceedButton[data-stage='1'] {
-  animation: proceed-nudge var(--proceed-motion);
-}
-
-.proceedButton[data-stage='0'] {
-  animation: proceed-recede var(--proceed-motion);
-}
-
-@keyframes proceed-nudge {
-  0% {
-    border-radius: 50%;
-    transform: none;
-  }
-
-  45% {
-    border-radius: 56% 44% 48% 52% / 46% 54% 46% 54%;
-    transform: translateX(8px) scale(1.04, 0.97);
-  }
-
-  100% {
-    border-radius: 47% 53% 53% 47% / 50% 50% 50% 50%;
-    transform: none;
-  }
-}
-
-@keyframes proceed-emerge {
-  0% {
-    border-radius: 50%;
-    transform: scale(0.92);
-  }
-
-  38% {
-    border-radius: 60% 40% 46% 54% / 44% 58% 42% 56%;
-    transform: scale(1.07, 0.94);
-  }
-
-  68% {
-    border-radius: 38% 62% 60% 40% / 56% 44% 56% 44%;
-    transform: scale(0.98, 1.03);
-  }
-
-  100% {
-    border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
-    transform: none;
-  }
-}
-
-@keyframes proceed-recede {
-  0% {
-    border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
-    transform: none;
-  }
-
-  40% {
-    border-radius: 36% 64% 58% 42% / 58% 42% 58% 42%;
-    transform: translateX(18px) scale(1.05, 0.95);
-  }
-
-  75% {
-    border-radius: 54% 46% 48% 52% / 46% 54% 46% 54%;
-    transform: translateX(8px) scale(0.97, 1.02);
-  }
-
-  100% {
-    border-radius: 50%;
-    transform: none;
-  }
+  margin-top: calc(var(--orb-size) / -2 - var(--card-gap) / 2);
 }
 
 /*
@@ -1004,7 +724,7 @@
 */
 .proceedStatus {
   position: absolute;
-  top: calc(var(--proceed-size) / 2 + var(--card-gap) / 2 + 26px);
+  top: calc(var(--orb-size) / 2 + var(--card-gap) / 2 + 26px);
   right: calc(100% + 4px);
   margin: 0;
   color: var(--thorp-muted);
@@ -1016,8 +736,6 @@
 /* 폭이 좁으면 단추를 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. */
 @media (max-width: 760px) {
   .cardRow {
-    --proceed-size: 118px;
-
     grid-template-areas:
       'timeline'
       'notice'
@@ -1026,18 +744,17 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .proceed {
+  /* 공용 칸 규칙(.dock[data-stage])보다 앞서도록 카드 줄 안에서 고른다. */
+  .cardRow .proceed,
+  .cardRow .proceed[data-stage='1'],
+  .cardRow .proceed[data-stage='2'] {
+    --orb-size: 118px;
+
     flex-direction: row-reverse;
     align-items: center;
     justify-self: end;
     width: auto;
     margin: -22px 0 0;
-  }
-
-  .proceed,
-  .proceed[data-stage='1'],
-  .proceed[data-stage='2'] {
-    width: auto;
   }
 
   .proceedStatus {
@@ -1307,21 +1024,6 @@
   .timeline [data-slot='common-bar'],
   .timeline [data-slot='timeline-start-date'] {
     transition: none;
-  }
-}
-
-/* 움직임 줄이기: 주 버튼이 떠오르지 않는다(첫 화면 주 버튼과 같다). */
-@media (prefers-reduced-motion: reduce) {
-  .proceed,
-  .proceedButton,
-  .proceedButton > * {
-    transition: none;
-    animation: none;
-  }
-
-  .proceedButton:hover:not(:disabled),
-  .proceedButton:hover:not(:disabled) .proceedArrow {
-    transform: none;
   }
 }
 

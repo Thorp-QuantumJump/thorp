@@ -1,8 +1,9 @@
-import { ArrowRight, ChartNoAxesCombined } from 'lucide-react'
+import { ChartNoAxesCombined } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'
 import { NotReadyNotice } from '@/components/common/NotReadyNotice'
+import { StepOrbButton, type StepOrbStage } from '@/components/common/StepOrbButton'
 import { AvailabilityTimeline } from '@/components/diagnosis/AvailabilityTimeline'
 import { InstrumentBrowser } from '@/components/diagnosis/InstrumentBrowser'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
@@ -168,10 +169,11 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
   const attribution = <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>
 
   /*
-    다음 단계로 넘어가는 단추다. 탐색 카드 오른쪽 테두리에 걸친 원으로, 왼쪽은 채워져 있고 오른쪽으로 갈수록
-    배경에 녹아 카드 밖 다음 단계로 넘어가는 모양이다. 조건을 채우지 못하면 눌리지 않되 사라지지 않고, 아래
-    한 줄이 몇 개를 골랐고 무엇을 더 해야 넘어갈 수 있는지를 말한다. 하나만 담으면 어떤 배분 전략도 같은
-    결과를 내므로 비교하려면 둘은 있어야 한다(FR-004).
+    다음 단계로 넘어가는 단추다. 탐색 카드 오른쪽 테두리에 걸친 원(StepOrbButton)으로, 조건을 채우지 못하면
+    눌리지 않되 사라지지 않고, 카드 안 한 줄이 몇 개를 골랐고 무엇을 더 해야 넘어갈 수 있는지를 말한다. 하나만
+    담으면 어떤 배분 전략도 같은 결과를 내므로 비교하려면 둘은 있어야 한다(FR-004).
+
+    이름은 다음 화면의 제목('전략 선택')과 같게 둔다. 단추가 말한 곳에 도착했다는 것이 제목으로 확인된다.
   */
   const proceedStatus =
     selectedCount === 0
@@ -179,33 +181,22 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
       : selectedCount < MINIMUM_SECTOR_COUNT
         ? `${selectedCount}개 선택됨 · ${MINIMUM_SECTOR_COUNT}개 이상 필요합니다.`
         : `${selectedCount}개 선택됨`
-  /*
-    버튼이 드러난 정도다. 0은 숨음, 1은 하나를 골라 절반쯤 밀려 나온 상태, 2는 넘어갈 수 있어 다 나온 상태다.
-    하나를 고르면 반만 나와, 하나를 더 골라야 열린다는 것이 움직임으로 읽힌다.
-  */
-  const proceedStage = Math.min(selectedCount, MINIMUM_SECTOR_COUNT)
+  // 0은 숨음, 1은 하나를 골라 절반쯤 밀려 나온 상태, 2는 넘어갈 수 있어 다 나온 상태다.
+  const proceedStage = Math.min(selectedCount, MINIMUM_SECTOR_COUNT) as StepOrbStage
   const proceedAction = (
-    <div className={styles.proceed} data-stage={proceedStage}>
-      <button
-        type="button"
-        className={styles.proceedButton}
-        data-stage={proceedStage}
-        onClick={proceed}
-        disabled={selectedCount < MINIMUM_SECTOR_COUNT}
-        aria-label="STEP 02 - 전략 고르기"
-      >
-        <span className={styles.proceedStep} aria-hidden="true">
-          STEP 02
-        </span>
-        <span className={styles.proceedLabel} aria-hidden="true">
-          전략 고르기
-        </span>
-        <ArrowRight className={styles.proceedArrow} size={16} strokeWidth={2.2} aria-hidden="true" />
-      </button>
+    <StepOrbButton
+      className={styles.proceed}
+      stage={proceedStage}
+      step="STEP 02"
+      label="전략 선택"
+      aria-label="STEP 02 - 전략 선택"
+      onClick={proceed}
+      disabled={selectedCount < MINIMUM_SECTOR_COUNT}
+    >
       <p className={styles.proceedStatus} aria-live="polite">
         {proceedStatus}
       </p>
-    </div>
+    </StepOrbButton>
   )
 
   return (

@@ -8,12 +8,19 @@ import {
   normalizeStrategyRegistryError,
 } from "@/api/strategyRegistry";
 import { NotReadyNotice } from "@/components/common/NotReadyNotice";
+import {
+  StepOrbButton,
+  type StepOrbStage,
+} from "@/components/common/StepOrbButton";
 import { InlineHelp } from "@/components/common/InlineHelp";
 import { SECTOR_SELECTION_PATH } from "@/components/result/prefillStrategySettings";
 import { buildSectorSelectionPath } from "@/marketflow/handoff";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
-import { ActionButtons } from "@/components/strategy/ActionButtons";
+import {
+  ActionButtons,
+  ANALYZE_REASON_ID,
+} from "@/components/strategy/ActionButtons";
 import { AnalysisConditionsPanel } from "@/components/strategy/AnalysisConditionsPanel";
 import {
   ANALYSIS_VERSIONS_UNAVAILABLE,
@@ -1232,6 +1239,20 @@ export function StrategySettingsPage({
           }
         : null;
 
+  /*
+    '분석하기' 원이 드러난 정도다. 전략을 고르기 전에는 숨고(0), 골랐지만 막혀 있으면 절반쯤 나오며(1), 누를 수
+    있으면 다 드러난다(2). 투자 대상 고르기의 다음 단계 단추와 같은 셈법이라, 하나를 더 해야 열린다는 것이
+    두 화면에서 같은 움직임으로 읽힌다. 보내는 중은 눌 수 없어도 다 드러난 채로 둔다 — 조건이 빠진 것이 아니다.
+  */
+  const analyzeBusy = submission.status === "sending";
+  const analyzeBlocked = analyzeBlocker !== null || analyzeBusy;
+  const analyzeStage: StepOrbStage =
+    !settings.selectedStrategy || selectedId === null
+      ? 0
+      : analyzeBlocker !== null
+        ? 1
+        : 2;
+
   return (
     <div className={styles.page}>
       <AppHeader />
@@ -1258,7 +1279,7 @@ export function StrategySettingsPage({
             <ArrowLeft size={15} aria-hidden="true" />
             섹터·비중 고르기
           </Link>
-          <p className={heading.eyebrow} aria-hidden="true">STEP 02 · STRATEGY</p>
+          <p className={heading.eyebrow} aria-hidden="true">STEP 02</p>
           <h1 id="strategy-settings-title" className={styles.title}>
             <em className={heading.emphasis}>전략</em> 선택
           </h1>
@@ -1573,23 +1594,39 @@ export function StrategySettingsPage({
                     />
                   ) : null}
 
-                  {/* 마지막 단계. 화면에서 실행 버튼이 나오는 자리는 여기 하나뿐이다. */}
+                  {/* 우회로와, 두 행동이 막힌 이유. '분석하기' 단추 자체는 아래 카드 밖 원이다. */}
                   <ActionButtons
-                    analyze={{
-                      disabled: analyzeBlocker !== null,
-                      reason: analyzeBlocker ?? undefined,
-                      busy: submission.status === "sending",
-                    }}
+                    analyzeReason={analyzeBlocker ?? undefined}
                     autoCompare={{
                       disabled: autoCompareBlocker !== null,
                       reason: autoCompareBlocker ?? undefined,
                     }}
-                    onAnalyze={() => {
-                      void handleAnalyze();
-                    }}
                     onAutoCompare={handleAutoCompare}
                   />
                 </div>
+
+                {/*
+                  마지막 걸음 '분석하기'. 카드 오른쪽 테두리에 걸친 원으로, 투자 대상 고르기의 STEP 02 단추와
+                  같은 모양·움직임이다. 화면에서 실행 단추가 나오는 자리는 여기 하나뿐이다. 막힌 이유는 카드
+                  아래 문장이 말하고 `aria-describedby`로 이어진다. `disabled` 대신 `aria-disabled`를 쓰는
+                  까닭은 ActionButtons와 같다(NFR-001). 보내는 중에는 이름이 바뀌고 다시 눌리지 않는다.
+                */}
+                <StepOrbButton
+                  className={styles.analyzeDock}
+                  stage={analyzeStage}
+                  step="STEP 03"
+                  label={analyzeBusy ? "보내는 중" : "분석하기"}
+                  aria-label={analyzeBusy ? "분석 요청을 보내는 중" : "분석하기"}
+                  aria-disabled={analyzeBlocked}
+                  aria-busy={analyzeBusy}
+                  aria-describedby={
+                    analyzeBlocker !== null ? ANALYZE_REASON_ID : undefined
+                  }
+                  data-action="analyze"
+                  onClick={() => {
+                    if (!analyzeBlocked) void handleAnalyze();
+                  }}
+                />
               </section>
             </div>
 
