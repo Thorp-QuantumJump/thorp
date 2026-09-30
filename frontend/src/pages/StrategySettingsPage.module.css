@@ -135,10 +135,33 @@
 
 /* 스크롤 막대를 따로 만들지 않는다. 전략이 다섯 남짓이라 그대로 늘어서는 편이 읽기 쉽다. */
 
+/*
+  오른쪽 단은 제목 줄, 카드, 그리고 카드 오른쪽 테두리에 걸친 '분석하기' 원으로 짜인다. 원의 가운데는 제목과
+  카드 사이 틈 높이다 — 투자 대상 고르기의 STEP 02 단추와 같은 짜임이다. 원이 드러난 만큼 카드가 좁아진다.
+*/
+.detail {
+  grid-template-areas:
+    'title .'
+    'body dock';
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0;
+}
+
+.detail .columnTitle {
+  grid-area: title;
+}
+
+.analyzeDock {
+  grid-area: dock;
+  margin-top: calc(var(--orb-size) / -2 - 5px);
+}
+
 .detailBody {
   display: grid;
+  grid-area: body;
   gap: 14px;
   align-content: start;
+  min-width: 0;
   padding: var(--thorp-pad-card, 18px);
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-card, 12px);
@@ -291,6 +314,28 @@
 
   .detailBody {
     padding: var(--thorp-pad-card, 16px);
+  }
+}
+
+/* 폭이 좁으면 원을 카드 아래 오른쪽으로 내린다. 카드 폭을 원 하나만큼 줄이기에는 자리가 없다. */
+@media (max-width: 760px) {
+  .detail {
+    grid-template-areas:
+      'title'
+      'body'
+      'dock';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 공용 칸 규칙(.dock[data-stage])보다 앞서도록 단 안에서 고른다. */
+  .detail .analyzeDock,
+  .detail .analyzeDock[data-stage='1'],
+  .detail .analyzeDock[data-stage='2'] {
+    --orb-size: 118px;
+
+    justify-self: end;
+    width: auto;
+    margin: -22px 0 0;
   }
 }
 

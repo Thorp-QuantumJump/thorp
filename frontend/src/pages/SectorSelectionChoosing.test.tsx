@@ -274,7 +274,7 @@ describe('투자 대상 고르기', () => {
     expect(screen.getByText(/3개월 일평균 거래대금/)).toBeTruthy()
     expect(cardExpanded()).toBe(true)
     // 넓혀도 다음 단계 단추는 카드 안에 그대로 있다.
-    expect(screen.getByRole('button', { name: 'STEP 02 - 전략 고르기' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'STEP 02 - 전략 선택' })).toBeTruthy()
     expect(expandButton().getAttribute('aria-label')).toBe('포함 종목 접기')
     // 다른 화면으로 보내지 않는다. 고르던 맥락이 끊기면 어디까지 봤는지 다시 찾아야 한다.
     expect(detailName()).toBe('KODEX 반도체')

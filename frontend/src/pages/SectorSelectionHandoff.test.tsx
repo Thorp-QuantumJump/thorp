@@ -112,7 +112,7 @@ async function add(user: User, ...codes: string[]) {
 }
 
 function proceedButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: 'STEP 02 - 전략 고르기' }) as HTMLButtonElement
+  return screen.getByRole('button', { name: 'STEP 02 - 전략 선택' }) as HTMLButtonElement
 }
 
 /** 왼쪽 목록에서 담긴 줄(`aria-pressed`)의 코드를 표시 순서대로 모은다. */
