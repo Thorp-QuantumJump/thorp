@@ -15,6 +15,11 @@ interface AxisChoiceFieldProps {
   help?: ReactNode;
   /** 값 아래에 한 줄 더. 이 값이 다른 것을 움직일 때 그 사실을 적는다. 없으면 그리지 않는다 */
   note?: ReactNode;
+  /**
+   * 설정 행(SettingRow) 안에 놓였는가. 참이면 이름 줄과 상자를 그리지 않는다 — 이름·단위·도움말은 행 머리가
+   * 보이고, 묶음은 `aria-label`로 같은 이름을 가진다.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -36,22 +41,29 @@ export function AxisChoiceField({
   onReset,
   help,
   note,
+  embedded = false,
 }: AxisChoiceFieldProps) {
   const groupName = useId();
   const choices = axis.choices ?? [];
 
   return (
-    <fieldset className={styles.field}>
-      <legend className={styles.header}>
-        <span className={styles.label}>
-          {axis.label}
-          {axis.unit ? (
-            <span className={styles.unit}>({axis.unit})</span>
-          ) : null}
-          {help}
-        </span>
-      </legend>
+    <fieldset
+      className={embedded ? `${styles.field} ${styles.embedded}` : styles.field}
+      aria-label={embedded ? axis.label : undefined}
+    >
+      {embedded ? null : (
+        <legend className={styles.header}>
+          <span className={styles.label}>
+            {axis.label}
+            {axis.unit ? (
+              <span className={styles.unit}>({axis.unit})</span>
+            ) : null}
+            {help}
+          </span>
+        </legend>
+      )}
 
+      {/* 후보와 기본값 복원이 한 줄이다. 복원은 늘 오른쪽 끝이다. */}
       <div className={styles.choices}>
         {choices.map((choice, index) => {
           const checked =
@@ -80,20 +92,17 @@ export function AxisChoiceField({
             </label>
           );
         })}
-      </div>
-
-      {note ? <p className={styles.hint}>{note}</p> : null}
-
-      <div>
         <button
           type="button"
-          className={styles.reset}
+          className={`${styles.reset} ${styles.resetEnd}`}
           aria-label={`${axis.label} 기본값 복원`}
           onClick={onReset}
         >
           기본값 복원
         </button>
       </div>
+
+      {note ? <p className={styles.hint}>{note}</p> : null}
     </fieldset>
   );
 }

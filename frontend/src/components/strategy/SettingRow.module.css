@@ -1,0 +1,149 @@
+/* 설정 묶음. 제목 한 줄 아래 행들이 가는 선으로 나뉘어 선다. 상자를 겹쳐 두르지 않는다. */
+.group {
+  display: grid;
+  gap: 6px;
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-height: 28px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.rows {
+  display: grid;
+  border-top: 1px solid var(--thorp-line);
+}
+
+/* 행 하나. 접힌 줄은 이름·값·화살표, 펼치면 그 아래에 편집 폼이 붙는다. */
+.row {
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.labelGroup {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 8.5rem;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.82rem);
+  font-weight: 600;
+}
+
+.unit {
+  margin-left: 4px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 400;
+}
+
+/* 값과 화살표가 하나의 단추다. 이름을 뺀 나머지 폭을 다 차지해 누를 자리가 넓다. */
+.toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: var(--thorp-radius-control, 8px);
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: color 0.14s ease;
+}
+
+.toggle:hover {
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+}
+
+.toggle:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--thorp-text-body, 0.88rem);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* 읽기 전용 값. 단추 값과 같은 자리에 서도록 화살표 폭만큼 오른쓱을 비운다. */
+.staticValue {
+  flex: 1 1 auto;
+  padding: 6px calc(16px + 8px + 2px) 6px 2px;
+  color: var(--thorp-foreground);
+}
+
+.chevron {
+  flex: none;
+  color: var(--thorp-accent-soft, var(--thorp-accent));
+  transition: transform 0.16s ease;
+}
+
+.toggle[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+.toggle[aria-expanded='true'] {
+  color: var(--thorp-foreground);
+}
+
+/* 펼친 편집 폼. 행 이름과 같은 왼쪽 선에서 시작한다. */
+.body {
+  display: grid;
+  gap: 10px;
+  padding: 2px 0 14px;
+}
+
+@media (max-width: 480px) {
+  .head {
+    flex-wrap: wrap;
+  }
+
+  .labelGroup {
+    min-width: 0;
+  }
+
+  .toggle,
+  .staticValue {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle,
+  .chevron {
+    transition: none;
+  }
+}

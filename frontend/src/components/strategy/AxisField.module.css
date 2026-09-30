@@ -10,6 +10,21 @@
 }
 
 /*
+  설정 행 안에 놓인 항목이다. 행이 이미 이름·값·선을 가지므로 상자를 한 번 더 두르지 않는다.
+  이름은 행 머리에 있고 폼에는 접근 가능 이름(`aria-label`)만 남는다.
+*/
+.embedded {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+/* 기본값 복원처럼 되돌리는 단추는 늘 조작 줄의 오른쪽 끝이다. 항목마다 자리가 다르면 매번 찾아야 한다. */
+.resetEnd {
+  margin-left: auto;
+}
+
+/*
   legend 를 상자 테두리에 걸치지 않고 상자 안에 둔다.
 
   브라우저는 fieldset 의 첫 legend 를 "rendered legend"로 삼아 위쪽 테두리를 끊고 그 틈에 그린다. float 이
