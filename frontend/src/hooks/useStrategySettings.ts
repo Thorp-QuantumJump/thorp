@@ -230,7 +230,7 @@ export function checkNumberInRange(
  */
 export type RestorableCondition = "initialAmount" | "period";
 
-/** 시작 금액을 가리키는 표시 이름. 요약 줄의 항목 이름과 같게 둔다. */
+/** 시작 금액을 가리키는 표시 이름. 분석 조건 행의 항목 이름과 같게 둔다. */
 const INITIAL_AMOUNT_LABEL = "시작 금액";
 
 function displayValue(value: unknown): string {

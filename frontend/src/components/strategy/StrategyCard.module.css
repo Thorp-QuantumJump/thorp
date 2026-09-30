@@ -48,7 +48,7 @@
 }
 
 .card:focus-visible {
-  outline: var(--thorp-focus-outline);
+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));
   outline-offset: var(--thorp-focus-offset-compact);
 }
 
@@ -85,7 +85,7 @@
 
 /*
   고른 뒤에 막힌 항목. 최소 평가 기간을 바꾸면 이런 상태가 된다. **고른 사실을 지우지 않는다** —
-  선택 표시를 거두면 사용자가 무엇을 골랐는지 잃고, 오른쪽 단이 무엇을 말하고 있는지도 흐려진다.
+  선택 표시를 거두면 사용자가 무엇을 골랐는지 잃고, 아래 상세 설정 카드가 무엇을 말하고 있는지도 흐려진다.
   막혔다는 것은 점선 테두리와 사유 문장이 맡는다.
 */
 .card[data-selected='true'][data-selectable='false'] {
@@ -98,12 +98,16 @@
   background: var(--thorp-accent);
 }
 
-/* 이름과 사유 번호가 한 줄이다. 번호가 설명 줄 수에 따라 오르내리지 않는다. */
+/*
+  이름과 사유 번호가 한 줄이다. 번호가 설명 줄 수에 따라 오르내리지 않는다. 카드가 좁아 둘이 한 줄에 서지 못하면
+  번호가 이름 아래로 내려간다. 이름을 낱말 가운데서 끊어 번호 자리를 만들지 않는다.
+*/
 .nameLine {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
+  gap: 2px 6px;
   min-width: 0;
 }
 
@@ -112,6 +116,8 @@
   font-size: var(--thorp-text-body, 0.88rem);
   font-weight: 700;
   line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .description {

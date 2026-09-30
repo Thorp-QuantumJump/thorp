@@ -1,5 +1,5 @@
 import { RotateCcw } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { InlineHelp } from "@/components/common/InlineHelp";
 import { TermHelp } from "@/components/learning/TermHelp";
 import {
@@ -106,6 +106,7 @@ function rowUnit(axis: AxisView): string | undefined {
  * 전부 펼쳐야 했다. 지금은 행이 이름과 지금 값을 늘 보이고, 후보가 몇 개뿐인 목록형 축은 행 오른쪽에서
  * 바로 고르며, 숫자와 긴 목록만 값을 눌러 편다(SC-005, 2026-09-30 개정). 되돌리기는 바꾼 행 이름 옆에만
  * 아이콘으로 나타나고, '모두 기본값 복원'은 축이 둘 이상이고 바꾼 값이 있을 때만 묶음 제목 옆에 선다.
+ * 그 단추는 누르면 사라지므로 초점을 묶음 제목으로 옮기고, 펼친 폼을 새로 그려 입력칸에 남은 글까지 지운다.
  *
  * <p><b>기본값이 편의용 출발점이라는 말(FR-004)과 자동 배분의 출력 비중 설명(FR-012)은 이 묶음이 아니라
  * 상세 설정 카드 머리에 둔다.</b> 분석 조건의 기본값에도 해당하는 말이고, 한쪽 열에만 두면 두 열의 행 선이
@@ -161,6 +162,17 @@ export function DetailSettingsPanel({
   const axes = applicableAxes(strategy, values);
   const anyModified = axes.some((axis) => isAxisModified(axis, values[axis.name]));
 
+  // '모두 기본값 복원'을 누를 때마다 올려 펼친 폼을 새로 그린다. 저장되지 않은 입력(범위 밖 숫자)은 값이
+  // 그대로라 새로 그리지 않으면 되돌려도 입력칸에 남는다.
+  const [resetGeneration, setResetGeneration] = useState(0);
+  const [focusTitle, setFocusTitle] = useState(false);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!focusTitle) return;
+    setFocusTitle(false);
+    titleRef.current?.focus();
+  }, [focusTitle]);
+
   const weightTotal =
     targetWeights === null
       ? null
@@ -174,12 +186,17 @@ export function DetailSettingsPanel({
   return (
     <SettingGroup
       title="전략 설정"
+      titleRef={titleRef}
       action={
         strategy.axes.length > 1 && anyModified ? (
           <button
             type="button"
             className={styles.resetAll}
-            onClick={onResetAll}
+            onClick={() => {
+              setResetGeneration((generation) => generation + 1);
+              onResetAll();
+              setFocusTitle(true);
+            }}
           >
             <RotateCcw size={12} strokeWidth={2.2} aria-hidden="true" />
             모두 기본값 복원
@@ -302,6 +319,7 @@ export function DetailSettingsPanel({
                 caption={caption}
                 modified={modified}
                 onReset={reset}
+                resetGeneration={resetGeneration}
                 value={describeAxisValue(axis, value)}
               >
                 {field}
@@ -329,6 +347,7 @@ export function DetailSettingsPanel({
               caption={endsRangeGroup && rangeLine ? rangeLine : undefined}
               modified={modified}
               onReset={reset}
+              resetGeneration={resetGeneration}
               value={describeAxisValue(axis, value)}
             >
               <AxisNumberField

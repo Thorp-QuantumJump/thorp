@@ -111,6 +111,9 @@ function rangeChoices({ min, max, step }: { min: number; max: number; step: numb
 const RANGE_UNAVAILABLE =
   "평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.";
 
+/** 범위가 없어 기간이 아직 정해지지 않았을 때의 값. 고장이 아니라 정해지기 전이다. */
+const PERIOD_UNSET = "정해지지 않음";
+
 function toNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (
@@ -385,6 +388,16 @@ export function AnalysisConditionsPanel({
       ? `평가 가능 범위 ${range.start} ~ ${range.end}`
       : undefined;
 
+  // 범위가 없으면 기간을 고칠 수 없다. 펼칠 폼이 없으니 읽기 전용 행으로 두고 까닭을 행 아래에 늘 보인다(FR-003).
+  const periodUnavailableCaption = range ? undefined : (
+    <>
+      <span className={styles.captionLine}>{rangeUnavailableMessage}</span>
+      {caseConstraint ? (
+        <span className={styles.captionLine}>{caseConstraint.note}</span>
+      ) : null}
+    </>
+  );
+
   const costRates =
     cost !== "loading" && cost ? (
       <span className={styles.rates}>
@@ -400,23 +413,31 @@ export function AnalysisConditionsPanel({
       <SettingRow
         label="분석 기간"
         help={range ? rangeReason : undefined}
-        value={period ? `${period.start} ~ ${period.end}` : UNAVAILABLE}
-        caption={periodCaption}
+        value={
+          period
+            ? `${period.start} ~ ${period.end}`
+            : range
+              ? UNAVAILABLE
+              : PERIOD_UNSET
+        }
+        caption={range ? periodCaption : periodUnavailableCaption}
         modified={periodChosen}
         onReset={() => onReset("period")}
         resetLabel="범위 전체로 되돌리기"
       >
-        <PeriodField
-          range={range}
-          rangeUnavailableMessage={rangeUnavailableMessage}
-          period={period}
-          periodChosen={periodChosen}
-          caseConstraint={caseConstraint}
-          onChange={(next) =>
-            onChange({ periodStart: next.start, periodEnd: next.end })
-          }
-          onReset={() => onReset("period")}
-        />
+        {range ? (
+          <PeriodField
+            range={range}
+            rangeUnavailableMessage={rangeUnavailableMessage}
+            period={period}
+            periodChosen={periodChosen}
+            caseConstraint={caseConstraint}
+            onChange={(next) =>
+              onChange({ periodStart: next.start, periodEnd: next.end })
+            }
+            onReset={() => onReset("period")}
+          />
+        ) : null}
       </SettingRow>
 
       <SettingRow

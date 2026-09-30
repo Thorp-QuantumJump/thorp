@@ -5,6 +5,9 @@
 
   왼쪽으로 18px 물러서 카드 테두리에 걸친다. 카드 안쪽 여백 정도라 카드 내용을 가리지 않는다. 격자 자리와
   위아래 여백은 쓰는 화면이 정한다.
+
+  칸 자체는 포인터를 받지 않는다. 칸은 원을 두르는 네모라, 받으면 보이지 않는 칸 모서리가 옆 카드 끝의 클릭을
+  가로챈다. 다 드러난 원만 받는다(아래 .orb).
 */
 .dock {
   --orb-size: 150px;
@@ -16,6 +19,7 @@
   display: flex;
   flex-direction: column;
   align-self: start;
+  pointer-events: none;
   align-items: flex-start;
   width: 60px;
   margin-left: -18px;
@@ -44,8 +48,8 @@
   단추. 모양은 원이라 누를 수 있는 자리도 원이고(모서리를 눌러도 반응하지 않는다), 초점 테두리도 원을 따라
   그려진다. 보이는 원은 안쪽 장식 요소(.fill)가 그린다.
 
-  넘어갈 수 없는 동안(0~1)은 눌러도 아무 일이 없으므로 포인터를 받지 않는다 — 원 칸이 카드 모서리에 걸쳐 있어,
-  받으면 흐려져 보이지도 않는 원이 카드 모서리 클릭을 가로챈다. 키보드 초점은 그대로 받는다.
+  넘어갈 수 없는 동안(0~1)은 눌러도 아무 일이 없으므로 칸을 따라 포인터를 받지 않는다. 원이 카드 모서리에 걸쳐
+  있어, 받으면 흐려져 보이지도 않는 원이 카드 모서리 클릭을 가로챈다. 키보드 초점은 그대로 받는다.
 */
 .orb {
   position: relative;
@@ -72,9 +76,8 @@
     filter 0.14s ease;
 }
 
-.orb[data-stage='0'],
-.orb[data-stage='1'] {
-  pointer-events: none;
+.orb[data-stage='2'] {
+  pointer-events: auto;
 }
 
 .orb[aria-busy='true'] {

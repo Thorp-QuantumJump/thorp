@@ -6,6 +6,7 @@ import {
   useState,
   type ComponentPropsWithoutRef,
   type ReactNode,
+  type Ref,
 } from "react";
 import styles from "./SettingRow.module.css";
 
@@ -17,6 +18,8 @@ interface SettingGroupProps {
   children: ReactNode;
   /** 행 목록 아래에 늘 보이는 것(규칙 위반 안내) */
   footer?: ReactNode;
+  /** 제목. 묶음 전체를 되돌린 뒤 초점을 받을 자리로 쓴다 */
+  titleRef?: Ref<HTMLHeadingElement>;
 }
 
 /**
@@ -25,13 +28,22 @@ interface SettingGroupProps {
  * <p>묶음 자체는 접히지 않는다. 항목마다 지금 값을 한 줄로 보이고, 고칠 것이 많은 항목만 그 자리에서
  * 펼치므로 묶음을 통째로 여닫는 단추가 있으면 여는 자리가 두 겹이 된다. 영역 이름은 보이는 제목을 그대로
  * 가리켜(`aria-labelledby`) 보이는 이름과 읽히는 이름이 갈리지 않게 한다.
+ *
+ * <p>제목은 탭 순서에 들지 않지만 초점을 받을 수 있다. 제목 옆 행동('모두 기본값 복원')이 누른 뒤 사라지면
+ * 초점을 이어받을 자리가 있어야 문서 맨 앞으로 떨어지지 않는다(NFR-001).
  */
-export function SettingGroup({ title, action, children, footer }: SettingGroupProps) {
+export function SettingGroup({
+  title,
+  action,
+  children,
+  footer,
+  titleRef,
+}: SettingGroupProps) {
   const headingId = useId();
   return (
     <section className={styles.group} aria-labelledby={headingId}>
       <div className={styles.groupHead}>
-        <h3 id={headingId} className={styles.groupTitle}>
+        <h3 ref={titleRef} id={headingId} className={styles.groupTitle} tabIndex={-1}>
           {title}
         </h3>
         {action}
@@ -124,6 +136,10 @@ interface SettingRowProps {
   onReset?: () => void;
   /** 되돌리는 아이콘의 이름. 기본은 '{항목} 기본값 복원'이다 */
   resetLabel?: string;
+  /**
+   * 묶음 전체를 되돌린 횟수. 바뀌면 펼친 폼을 새로 그려 입력 중이던 글을 지운다. 행은 펼친 채 둔다
+   */
+  resetGeneration?: number;
 }
 
 /** 되돌린 뒤 초점을 받을 자리. 펼침 단추, 고른 선택지, 첫 선택지, 행 자신 차례로 찾는다. */
@@ -161,6 +177,7 @@ export function SettingRow({
   modified = false,
   onReset,
   resetLabel,
+  resetGeneration = 0,
 }: SettingRowProps) {
   const [open, setOpen] = useState(false);
   // 되돌릴 때마다 올려 펼친 폼을 새로 그린다. 입력칸이 바깥 값과 같은 값을 받으면 스스로 맞추지 못한다.
@@ -169,6 +186,7 @@ export function SettingRow({
   const rowRef = useRef<HTMLDivElement>(null);
   const bodyId = useId();
   const labelId = useId();
+  const unitId = useId();
   const valueId = useId();
   const editable = control === undefined && children !== undefined && children !== null;
 
@@ -195,7 +213,11 @@ export function SettingRow({
           <span id={labelId} className={styles.label}>
             {label}
           </span>
-          {unit ? <span className={styles.unit}>({unit})</span> : null}
+          {unit ? (
+            <span id={unitId} className={styles.unit}>
+              ({unit})
+            </span>
+          ) : null}
           {help}
           {onReset && modified ? (
             <button
@@ -220,7 +242,9 @@ export function SettingRow({
             type="button"
             className={styles.toggle}
             data-slot="setting-toggle"
-            aria-labelledby={`${labelId} ${valueId}`}
+            aria-labelledby={
+              unit ? `${labelId} ${unitId} ${valueId}` : `${labelId} ${valueId}`
+            }
             aria-expanded={open}
             aria-controls={open ? bodyId : undefined}
             onClick={() => setOpen((current) => !current)}
@@ -241,7 +265,7 @@ export function SettingRow({
       </div>
       {caption ? <div className={styles.caption}>{caption}</div> : null}
       {editable && open ? (
-        <div key={bodyKey} id={bodyId} className={styles.body}>
+        <div key={`${resetGeneration}-${bodyKey}`} id={bodyId} className={styles.body}>
           {children}
         </div>
       ) : null}

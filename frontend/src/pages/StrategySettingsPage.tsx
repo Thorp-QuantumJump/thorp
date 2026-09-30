@@ -756,7 +756,7 @@ export function StrategySettingsPage({
   /**
    * 요청에 실을 시작 금액. **화면에 보이는 값과 보내는 값이 같은 자리에서 나온다(T092).**
    *
-   * 사용자가 바꾸지 않았으면 등록표의 기본값이다. 요약 줄과 요청 조립이 이 값 하나를 함께 읽어,
+   * 사용자가 바꾸지 않았으면 등록표의 기본값이다. 분석 조건 행과 요청 조립이 이 값 하나를 함께 읽어,
    * 한쪽만 바뀌어 보이는 금액과 보내는 금액이 갈라지는 일이 없게 한다. B10(T067)이 상태에 값을
    * 채우면 그 값이 여기로 온다.
    */
@@ -767,7 +767,7 @@ export function StrategySettingsPage({
         registry.analysisConditions.initialAmount.default);
 
   /**
-   * 분석 기간(FR-009, T067). **요약 줄·패널·요청이 이 값 하나를 함께 읽는다.**
+   * 분석 기간(FR-009, T067). **분석 조건 행·요청이 이 값 하나를 함께 읽는다.**
    *
    * <p>사용자가 고르지 않았으면 평가 가능 범위 전체다. 골랐으면 그 기간이다. 범위가 나중에 바뀌어(다른
    * 워밍업, 다른 전략) 고른 기간이 범위를 벗어나도 <b>잘라 맞추지 않는다.</b> 막고 되돌릴 길을 보인다.
@@ -1068,7 +1068,7 @@ export function StrategySettingsPage({
     )
       return;
 
-    // 값을 만들지 않는다. 시작 금액은 요약 줄에 보인 값을 그대로 싣는다.
+    // 값을 만들지 않는다. 시작 금액은 그 행에 보인 값을 그대로 싣는다.
     //
     // **조립도 실패를 알리는 길 안에 둔다.** 조립은 금액·비중이 계약 모양으로 옮겨지지 않으면 예외를
     // 던지는데, 앞서는 이것이 `try` 밖이라 거부된 프로미스로 버려졌다. 버튼을 눌러도 진행 표시도
@@ -1415,7 +1415,11 @@ export function StrategySettingsPage({
                     제목은 '상세 설정'으로 고정이다(2026-09-30). 제목이 전략마다 바뀌면 이 카드가 무엇을 하는
                     자리인지가 이름에 묻힌다. 고른 전략의 이름은 제목 옆에 두고, 설명은 바로 위 고른 카드가 이미
                     보이므로 되풀이하지 않는다. 제목을 카드 안에 두어 카드 줄과 이 카드 사이 틈이 비고, 분석하기
-                    원이 그 틈에 걸친다. 머리 오른쪽은 원 옆에 놓이는 막힘 문장의 자리로 비워 둔다.
+                    원이 그 틈에 걸친다.
+
+                    머리 오른쪽 끝에는 '분석하기'가 막힌 이유를 둔다. 원이 카드 오른쪽 위 모서리에 걸쳐 있어 바로
+                    그 왼쪽이다. 원이 `aria-describedby`로 이 문장을 가리키므로 초점을 받은 원이 까닭을 함께
+                    읽힌다. 스스로 알리지는 않는다: 같은 문장을 카드 안 안내가 이미 알린다.
                   */}
                   <div className={styles.detailHead}>
                     <h2 id="selected-strategy-title" className={styles.detailTitle}>
@@ -1426,6 +1430,9 @@ export function StrategySettingsPage({
                         {settings.selectedStrategy.name}
                       </strong>
                     ) : null}
+                    <p id={ANALYZE_REASON_ID} className={styles.detailReason}>
+                      {analyzeBlocker ?? ""}
+                    </p>
                   </div>
 
                   {/*
@@ -1623,10 +1630,11 @@ export function StrategySettingsPage({
                 마지막 걸음 '분석하기'. 전략 카드 줄과 상세 설정 카드 사이 틈에 걸친 원으로, 투자 대상 고르기의
                 STEP 02 단추와 같은 자리·모양·움직임이다. 화면에서 실행 단추가 나오는 자리는 여기 하나뿐이다.
 
-                막힌 이유는 원 바로 왼쪽(상세 설정 카드 머리 줄)에 한 문장으로 두고 `aria-describedby`로 잇는다 — 원에서
-                멀리 떨어진 카드 아래에 두면 절반만 나온 원을 본 사용자가 이유를 찾아 내려가야 한다. `disabled` 대신
-                `aria-disabled`를 쓰는 까닭은 ActionButtons와 같다(NFR-001). 보내는 중에는 이름이 바뀌고 다시 눌리지
-                않으며, 원은 다 드러난 채 글자를 보인다.
+                막힌 이유는 원 바로 왼쪽(상세 설정 카드 머리 줄)에 한 문장으로 두고 `aria-describedby`로 잇는다. 원에서
+                멀리 떨어진 카드 아래에 두면 절반만 나온 원을 본 사용자가 이유를 찾아 내려가야 한다. 원이 카드 아래로
+                내려가는 좁은 화면에서는 원 칸 안의 사본이 대신 보인다. 사본은 보조기술에 숨긴다: 원이 가리키는
+                문장은 머리 쪽 하나다. `disabled` 대신 `aria-disabled`를 쓰는 까닭은 ActionButtons와 같다(NFR-001).
+                보내는 중에는 이름이 바뀌고 다시 눌리지 않으며, 원은 다 드러난 채 글자를 보인다.
               */}
               <StepOrbButton
                 className={styles.analyzeDock}
@@ -1644,12 +1652,7 @@ export function StrategySettingsPage({
                   if (!analyzeBlocked) void handleAnalyze();
                 }}
               >
-                {/* 늘 그려 두어 문장이 바뀔 때 보조기술이 읽는다. 막히지 않았으면 비어 있다. */}
-                <p
-                  id={ANALYZE_REASON_ID}
-                  className={styles.analyzeStatus}
-                  aria-live="polite"
-                >
+                <p className={styles.analyzeStatus} aria-hidden="true">
                   {analyzeBlocker ?? ""}
                 </p>
               </StepOrbButton>

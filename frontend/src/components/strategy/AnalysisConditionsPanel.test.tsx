@@ -157,7 +157,9 @@ describe("AnalysisConditionsPanel", () => {
     expect(summary).toContain(`${range.start} ~ ${range.end}`);
     expect(summary).toContain(amount.default.toLocaleString("ko-KR"));
     expect(summary).toContain("섹터 3개");
-    expect(summary).toContain("쓰지 않음");
+    expect(
+      (within(panel).getByRole("radio", { name: "쓰지 않음" }) as HTMLInputElement).checked,
+    ).toBe(true);
     expect(summary).toContain("SYN-COST-1");
   });
 
