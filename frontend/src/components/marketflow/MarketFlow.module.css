@@ -131,6 +131,11 @@
   두 칸, 한 칸으로 접힌다. 개수가 적으면 남는 폭을 나눠 갖는다.
 */
 :global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+/* 지표가 하나여도 두 지표 분야와 같은 반쪽 폭을 쓰고 오른쪽 칸을 비워 둔다.
+   두 칸의 최소 폭(240px)을 확보할 수 없으면 한 칸으로 돌아간다. */
+:global(:root:not([data-design='classic'])) .indicatorList:has(> .indicator:only-child) {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, max(240px, calc((100% - 12px) / 2))), 1fr));
+}
 :global(:root:not([data-design='classic'])) .indicator {
   display: flex;
   flex-direction: column;
