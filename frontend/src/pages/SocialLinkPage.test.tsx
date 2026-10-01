@@ -162,6 +162,29 @@ describe('SocialLinkPage', () => {
     ).toBeTruthy()
   })
 
+  it('번호가 겹쳐 온 연결은 기존 계정 이메일을 보여 주지 않고 가입할 때 쓴 이메일로 보냈다고만 알린다', async () => {
+    const user = userEvent.setup()
+    socialMocks.getPendingSocial.mockResolvedValue({
+      ...linkPending,
+      linkReason: 'PHONE',
+      linkTargetMaskedEmail: null,
+      linkMethods: ['PASSWORD', 'EMAIL_CODE'],
+    })
+    renderSocialRoutes('/auth/social/link')
+
+    expect(
+      await screen.findByRole('heading', { name: '이 번호로 가입된 계정이 있어요.' }),
+    ).toBeTruthy()
+    expect(screen.queryByText('기존 계정')).toBeNull()
+    expect(screen.queryByText(/\*\*\*@/)).toBeNull()
+    expect(screen.queryByRole('heading', { name: '이미 연결된 소셜 계정으로 확인' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '인증번호 받기' }))
+    expect(
+      await screen.findByText('가입할 때 쓴 이메일로 인증번호를 보냈습니다. 3분 안에 입력해 주세요.'),
+    ).toBeTruthy()
+  })
+
   it('다른 소셜 계정 확인이 실패하고 돌아오면 그 사실을 알린다', async () => {
     renderSocialRoutes('/auth/social/link?social=error')
 

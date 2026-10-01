@@ -153,7 +153,9 @@ function LinkOptions({ pending }: { pending: PendingSocialView }) {
       await sendSocialVerificationCode()
       setCodeSent(true)
       setStatus({
-        message: `${pending.linkTargetMaskedEmail ?? '기존 계정 이메일'}로 인증번호를 보냈습니다. 3분 안에 입력해 주세요.`,
+        message: pending.linkTargetMaskedEmail
+          ? `${pending.linkTargetMaskedEmail}로 인증번호를 보냈습니다. 3분 안에 입력해 주세요.`
+          : '가입할 때 쓴 이메일로 인증번호를 보냈습니다. 3분 안에 입력해 주세요.',
         tone: 'success',
       })
       codeRef.current?.focus()
@@ -195,10 +197,16 @@ function LinkOptions({ pending }: { pending: PendingSocialView }) {
 
   return (
     <div className={styles.options}>
-      <p className={styles.target}>
-        <span>기존 계정</span>
-        <strong>{pending.linkTargetMaskedEmail}</strong>
-      </p>
+      {/*
+        번호가 겹쳐 온 연결이면 서버가 그 계정의 이메일을 주지 않는다(spec 014 FR-024). 요청한 사람이 그 번호의 주인인지 아직
+        모르므로, 남의 번호로 그 계정의 이메일 일부를 알아내지 못하게 한다. 인증번호는 서버가 그 계정 이메일로 보낸다.
+      */}
+      {pending.linkTargetMaskedEmail ? (
+        <p className={styles.target}>
+          <span>기존 계정</span>
+          <strong>{pending.linkTargetMaskedEmail}</strong>
+        </p>
+      ) : null}
       <p className={styles.explain}>
         {providerName} 계정({pending.email})을 이 계정에 연결합니다. 아래 방법 중 하나로 이 계정의
         주인인지 확인해 주세요.
@@ -244,7 +252,11 @@ function LinkOptions({ pending }: { pending: PendingSocialView }) {
       {methods.includes('EMAIL_CODE') ? (
         <section className={styles.method} aria-labelledby="link-code">
           <h3 id="link-code">기존 계정 이메일로 확인</h3>
-          <p>비밀번호가 기억나지 않으면 기존 계정 이메일로 인증번호를 받아 확인할 수 있습니다.</p>
+          <p>
+            {pending.linkTargetMaskedEmail
+              ? '비밀번호가 기억나지 않으면 기존 계정 이메일로 인증번호를 받아 확인할 수 있습니다.'
+              : '비밀번호가 기억나지 않으면 그 계정에 가입할 때 쓴 이메일로 인증번호를 받아 확인할 수 있습니다.'}
+          </p>
           <form className={pageStyles.form} onSubmit={handleCode} noValidate>
             <AuthField
               ref={codeRef}

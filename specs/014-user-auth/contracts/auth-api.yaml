@@ -643,10 +643,14 @@ components:
           enum: [EMAIL, PHONE, null]
         linkTargetMaskedEmail:
           type: [string, 'null']
-          description: stage=LINK일 때 연결 대상 계정 이메일을 가린 값
+          description: >-
+            stage=LINK이고 linkReason=EMAIL일 때만 연결 대상 계정 이메일을 가린 값. linkReason=PHONE이면 null이다 —
+            요청한 사람이 그 번호의 주인임이 확인되지 않았으므로 그 계정의 이메일 일부를 알려 주지 않는다.
         linkMethods:
           type: array
-          description: stage=LINK일 때 대상 계정에 쓸 수 있는 소유 확인 방법. 그 밖의 stage는 빈 배열
+          description: >-
+            stage=LINK일 때 대상 계정에 쓸 수 있는 소유 확인 방법. 그 밖의 stage는 빈 배열. linkReason=PHONE이면 언제나
+            [PASSWORD, EMAIL_CODE]다 — 연결된 소셜 제공자와 비밀번호 유무를 드러내지 않는다.
           items:
             type: string
             enum: [PASSWORD, EMAIL_CODE, VERIFIED_EMAIL, SOCIAL_KAKAO, SOCIAL_GOOGLE, SOCIAL_NAVER]

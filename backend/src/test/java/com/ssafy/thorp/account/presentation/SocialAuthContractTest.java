@@ -128,10 +128,10 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
         JsonNode pending = data(send(get("/auth/social/pending")), 200);
         assertThat(pending.get("stage").asText()).isEqualTo("LINK");
         assertThat(pending.get("linkReason").asText()).isEqualTo("PHONE");
-        assertThat(pending.get("linkTargetMaskedEmail").asText())
-                .isEqualTo("s***@example.com")
-                .doesNotContain("phone-owner");
-        assertThat(pending.get("linkMethods").toString()).contains("PASSWORD", "EMAIL_CODE");
+        // 번호의 주인임이 확인되지 않았으므로 그 계정의 이메일(가린 것 포함)과 연결 제공자를 알려 주지 않는다.
+        assertThat(pending.get("linkTargetMaskedEmail").isNull()).isTrue();
+        assertThat(pending.get("linkMethods").toString())
+                .isEqualTo("[\"PASSWORD\",\"EMAIL_CODE\"]");
 
         MvcResult wrong =
                 sendWithCsrf(
