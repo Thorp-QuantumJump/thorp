@@ -96,7 +96,7 @@ common: 모든 계층에서 참조 가능
 - **동일 버전 키(`DedupKeyCalculator`)는 소수·날짜를 맵에 넣기 전에 문자열로 정규화한다.** 직렬화 설정에 표기를 맡기면 그 설정이 바뀐 날 모든 키가 조용히 바뀌고 진행 중이던 재사용 판정이 어긋난다. 메시지 ObjectMapper를 빌려 쓸 수 없다(infrastructure에 있다). 키에 **실효 워밍업 거래일 수**를 반드시 넣는다 — 빠지면 공통 워밍업이 다른 두 실행이 한 키로 묶인다
 - **요청 워밍업이 전략 요구값보다 작으면 `max()`로 올리지 말고 422로 거절한다**(R-15). 올려서 통과시키면 비교 묶음 안 실행들의 `effectiveStart`가 어긋난 채 지나가고, 나란히 놓고 본 숫자가 사실은 다른 구간의 값이 된다
 - **요청자 확인은 상세뿐 아니라 하위 리소스에도 적용한다.** 상세만 막고 시계열·거래·보유를 열어 두면 식별자만 알면 남의 결과를 읽을 수 있다 — 로그인을 요구하는 경로와 요구하지 않는 경로가 섞이면 그 틈이 곧 우회로다
-- **요청자 식별은 `CurrentRequester` 한 곳이다.** spec 014 로그인이 세션에 넣어 둔 주체(`authentication.getName()` = `users.id`)를 읽고, 그 형태가 아니면 로그인으로 보지 않는다. 백테스트 경로는 `SecurityConfig`에서 `permitAll`이라 익명 요청도 컨트롤러까지 오므로 **인증 요구는 이 클래스가 한다** — `requireRequesterId`가 던지는 401은 `GlobalExceptionHandler`를 거쳐 `SecurityConfig` 진입점과 같은 봉투가 된다. 소유자를 기록만 하는 경로(007 미리보기)는 `findRequesterId`로 없어도 진행한다. 남의 요청은 403이 아니라 404로 숨긴다(R-12)
+- **요청자 식별은 `CurrentRequester` 한 곳이다.** spec 014 로그인이 세션에 넣어 둔 주체(`authentication.getName()` = `users.id`)를 읽고, 그 형태가 아니면 로그인으로 보지 않는다. **인증 종류도 본다** — 로그인은 언제나 `UsernamePasswordAuthenticationToken`을 넣으므로 다른 종류는 받지 않는다. 소셜 로그인 필터가 잠깐 넣는 `OAuth2AuthenticationToken`의 이름은 제공자 사용자 식별자이고 카카오는 숫자라, 이름만 보면 남의 `users.id`로 읽힌다(`AuthenticatedPrincipal`·`LearningAdminAccess`도 같은 규칙). 백테스트 경로는 `SecurityConfig`에서 `permitAll`이라 익명 요청도 컨트롤러까지 오므로 **인증 요구는 이 클래스가 한다** — `requireRequesterId`가 던지는 401은 `GlobalExceptionHandler`를 거쳐 `SecurityConfig` 진입점과 같은 봉투가 된다. 소유자를 기록만 하는 경로(007 미리보기)는 `findRequesterId`로 없어도 진행한다. 남의 요청은 403이 아니라 404로 숨긴다(R-12)
 - **시장 자료 메타데이터(대응표·자료 버전·상장일·거래일 달력)는 `MarketMetadataPort`로만 읽는다.** 원본은 spec 001 소유이고 구현은 001 적재 전까지 픽스처다(`FixtureMarketMetadataAdapter`, 워커 픽스처와 같은 세 종목·평일 달력). 가격은 이 포트로 읽지 않는다 — 가격을 읽는 것은 워커다
 - 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다
 - **취소는 요청 단위다**(`BacktestCancelService`, R-04). 이 요청에 `cancelled_at`을 남기고, 같은 실행의 마지막 활성 요청일 때만 실행을 멈춘다 —
@@ -160,6 +160,7 @@ common: 모든 계층에서 참조 가능
 - DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다
 
 - **내 기록(`myrecord`)은 계산 결과를 복제하지 않고 `backtest_request`·`param_search`·`regime_search_log`를 가리킨다. 삭제는 `my_record.deleted_at`만 바꾼다.** 상태(완료·실패·진행 중)는 컬럼이 아니라 읽을 때 원본을 조인해 파생하고(`MyRecordViewQuery`), 목록 응답에 수익률·하락 폭·비용을 싣지 않는다(원칙 III). 항목 생성은 004·007 접수 이벤트(`BacktestRequestAccepted`·`ParamSearchAccepted`)를 `MyRecordRegistrar`가 듣는 방식이라 접수 서비스가 006을 부르지 않는다 — 방향은 `myrecord → paramsearch` 하나다(ArchUnit 규칙 11). 탐색 묶음 저장 상한은 `SaveSlotGuard` 포트로 접수 직전에 판정하고 409 `RECORD_LIMIT_REACHED`다. 시간 기반 자동 삭제 배치를 만들지 않는다(spec 006 PD-13)
+- **소셜 로그인(spec 014)은 `account/infrastructure/oauth`에 있다.** 제공자 차이는 `SocialProviderAdapter` 구현 하나에서 끝나고 판정은 `SocialLoginService`가 한다. 자격 증명은 `thorp.auth.social.*`(환경 변수)이며 client id·secret이 둘 다 있는 제공자만 켜진다 — `spring.security.oauth2.client.*`를 쓰지 않는다(값이 비면 기동 실패). 콜백 성공 처리기는 판정마다 세션 인증을 직접 정한다: 로그인이면 이메일 로그인과 같은 `startSession`, 그 밖은 `dropAuthentication`. 필터가 먼저 저장한 OAuth2 인증을 남기면 `.authenticated()` 경로가 가입 대기 사용자를 통과시킨다. 가입·연결 대기 상태는 세션 속성(`PendingSocialLogin`)이고 제공자 token은 저장하지 않는다
 
 ## 도메인 용어
 

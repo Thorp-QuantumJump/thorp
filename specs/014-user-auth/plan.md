@@ -28,7 +28,21 @@ spec 2026-10-01 개정으로 카카오·구글·네이버 소셜 로그인(US6·
 열지 않는다. 확장은 기존 세션·CSRF·오류 envelope·복귀 위치 규칙을 그대로 쓰고, 새 작업은 tasks.md의
 T061 이후로 추적한다. 설계는 아래 [Social login design](#social-login-design) 절에 있다.
 
-- 상태: 계획 완료, 구현 전
+- 상태(2026-10-01): BE·FE 구현과 자동 검증 완료(T061~T095, T097, T098). 실제 카카오·구글·네이버 계정으로
+  지나는 흐름(T096)은 개발자 앱 자격 증명이 없어 남아 있다. 결과는 [verification/social.md](verification/social.md).
+- 구현에서 계획과 달라진 점:
+  - 제공자 등록은 `spring.security.oauth2.client.*`가 아니라 `thorp.auth.social.*` 설정과 제공자별
+    `SocialProviderAdapter`(등록 정보·응답 해석·재동의 파라미터)로 했다. 앞의 설정은 값이 비면 기동이 실패하고 등록이
+    없으면 저장소 빈이 생기지 않아, 자격 증명 없는 개발 PC·CI에서 `oauth2Login()`을 붙일 수 없다.
+  - redirect URI는 `{baseUrl}` 대신 `THORP_PUBLIC_BASE_URL`로 만든다(analyze G2).
+  - `common`이 도메인을 참조하지 못하는 규칙(ArchUnit) 때문에 `SecurityConfig`는 `HttpSecurityContributor`를 받아 적용만 하고
+    소셜 설정은 `account`가 넘긴다.
+  - 연결을 거절하는 `POST /auth/social/link/decline`을 더했다. 번호가 겹쳐 온 연결은 가입 단계로 돌아가야 한다는 US7
+    시나리오 4를 계획 단계 API로는 만족할 수 없었다.
+  - 숫자 제공자 식별자가 `users.id`로 읽히지 않도록 로그인 주체 판정 세 곳(`AuthenticatedPrincipal`·`CurrentRequester`·
+    `LearningAdminAccess`)이 `UsernamePasswordAuthenticationToken`만 받게 했다.
+  - FE는 가입·연결 결과로 곧바로 로그인 상태를 정하는 `completeSignIn`을 인증 Provider에 더했다. `recheck`는 확인 중
+    상태를 거쳐 인증 화면 가드가 복귀 위치 대신 기본 화면으로 보낸다.
 - 작업 브랜치: `feat/Oauth_create` 하나에서 진행하고 커밋을 작업 묶음(공통 기반 → 카카오 → 구글 → 네이버 →
   FE → 검증)으로 나눈다. constitution "작업 묶음" 절의 묶음 크기 조건(같은 계층, 한 번에 읽을 수 있는 범위)을
   지키기 위해 MR은 BE 묶음(C2~C5)과 FE 묶음(C6, 검증 C7 포함) 둘로 나눈다. BE MR을 먼저 병합하고 FE MR은 그 뒤
