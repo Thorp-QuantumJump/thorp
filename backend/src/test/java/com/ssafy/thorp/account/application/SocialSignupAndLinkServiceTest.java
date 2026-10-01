@@ -330,6 +330,28 @@ class SocialSignupAndLinkServiceTest {
     }
 
     @Test
+    @DisplayName("번호가 겹쳐 온 연결을 거절하면 가입 단계로 돌아가 다른 번호로 가입할 수 있다")
+    void declinePhoneLinkReturnsToSignup() {
+        store.save(linkPending(LinkReason.PHONE, false));
+
+        assertThat(linkService.decline()).isTrue();
+
+        assertThat(store.current().stage()).isEqualTo(Stage.SIGNUP);
+        assertThat(store.current().linkTargetUserId()).isNull();
+        verify(socialAccounts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("이메일이 겹쳐 온 연결을 거절하면 대기 상태를 지운다")
+    void declineEmailLinkClearsPending() {
+        store.save(linkPending(LinkReason.EMAIL, false));
+
+        assertThat(linkService.decline()).isFalse();
+
+        assertThat(store.current()).isNull();
+    }
+
+    @Test
     @DisplayName("연결 단계가 아닌 대기 상태로 연결하면 단계 불일치다")
     void linkOutsideLinkStageIsMismatch() {
         store.save(signupPending());

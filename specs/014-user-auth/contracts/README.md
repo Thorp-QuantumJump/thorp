@@ -56,6 +56,7 @@
 | `POST /api/auth/social/pending/email-verifications/confirm` | `POST /auth/social/pending/email-verifications/confirm` | 계획 |
 | `POST /api/auth/social/signup` | `POST /auth/social/signup` | 계획 |
 | `POST /api/auth/social/link` | `POST /auth/social/link` | 계획 |
+| `POST /api/auth/social/link/decline` | `POST /auth/social/link/decline` | 계획 |
 
 - `provider`는 `kakao`, `google`, `naver`다.
 - 시작 주소의 선택 쿼리: `reprompt=true`(이메일 재동의), `intent=link`(대기 중인 연결을 이미 연결된 소셜 계정으로 확인).

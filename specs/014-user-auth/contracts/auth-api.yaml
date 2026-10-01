@@ -388,6 +388,28 @@ paths:
           $ref: '#/components/responses/SocialConflict'
         '500':
           $ref: '#/components/responses/InternalError'
+  /auth/social/link/decline:
+    post:
+      operationId: declineSocialLink
+      summary: 기존 계정에 연결하지 않기
+      description: >-
+        stage=LINK에서만 쓴다. 휴대폰 번호가 겹쳐 온 연결(linkReason=PHONE)이면 대기 상태가 SIGNUP으로
+        돌아가 다른 번호로 가입을 이어 간다. 이메일이 겹쳐 온 연결이면 대기 상태가 사라진다. 아무것도
+        연결하거나 만들지 않는다(US7 시나리오 3·4). 결과는 getPendingSocialLogin으로 본다.
+      x-implementation-status: planned
+      security:
+        - csrfToken: []
+      responses:
+        '204':
+          description: 처리됨
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '404':
+          $ref: '#/components/responses/SocialPendingNotFound'
+        '409':
+          $ref: '#/components/responses/SocialConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /auth/social/link:
     post:
       operationId: confirmSocialLink

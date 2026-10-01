@@ -223,6 +223,29 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("번호가 겹쳐 온 연결을 거절하면 가입 단계로 돌아가 다른 번호로 가입한다")
+    void declinePhoneLinkThenSignupWithAnotherNumber() throws Exception {
+        saveUser(PREFIX + "decline-owner@example.com", "01099100007", "password123");
+        String email = PREFIX + "decline@example.com";
+        loginWithKakao(kakaoUser(KAKAO_ID, email, true, "카카오닉"));
+        sendWithCsrf(json(post("/auth/social/signup"), signupBody("새회원", "01099100007")));
+
+        assertThat(sendWithCsrf(post("/auth/social/link/decline")).getResponse().getStatus())
+                .isEqualTo(204);
+        assertThat(data(send(get("/auth/social/pending")), 200).get("stage").asText())
+                .isEqualTo("SIGNUP");
+
+        JsonNode user =
+                data(
+                        sendWithCsrf(
+                                json(
+                                        post("/auth/social/signup"),
+                                        signupBody("새회원", "01099100008"))),
+                        201);
+        assertThat(user.get("email").asText()).isEqualTo(email);
+    }
+
+    @Test
     @DisplayName("대기 상태를 취소하면 204이고 이후 조회는 404 SOCIAL_PENDING_NOT_FOUND다")
     void cancelPending() throws Exception {
         loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "cancel@example.com", true, "카카오닉"));
