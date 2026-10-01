@@ -87,7 +87,6 @@ Security 필터와 PostgreSQL 세션을 그대로 지난다. 남은 위험은 �
 | 버려진 확인 기록이 쌓임 | 하루 지난 행을 한 시간마다 정리(`SocialVerificationSweeper`) | 단위 테스트 |
 
 아직 남은 것:
-- 번호로 기존 계정의 가린 이메일·연결 제공자가 보이는 것은 spec US7이 정한 동작이라 그대로다.
 - 실제 카카오·구글·네이버 계정 흐름(T096)은 자격 증명이 있어야 한다.
 - 상한 수치는 별도 보안 작업에서 정책으로 확정할 임시값이다. 대상 계정 잠금은 남이 일부러 걸 수 있다 — 그 경우 주인이 잃는 것은
   한 시간 동안의 새 소셜 연결이며 로그인은 그대로다.
@@ -114,3 +113,13 @@ advisory lock), 계정 단위 상한과 대기 상태 상한이 따로 커밋돼
 한 트랜잭션에서 잠그고 모두 통과한 뒤 저장), 이메일 시간당 고정 상한이 남에 의한 가입 차단이 되던 문제(늘어나는 간격으로 교체), 고아 Javadoc·창
 계산 중복. 잠근 뒤 `refresh`는 `backend/CLAUDE.md` 규칙이라 유지했다. 회귀 테스트: `undecidableCodeRequestsDoNotConsumeTargetAttempts`,
 `targetSendLockKeepsExistingCode`, `parallelResendsSendOnce`.
+
+### 번호로 계정 정보가 드러나던 문제(2026-10-01, 사용자 요청으로 spec 개정)
+
+휴대폰 번호가 겹쳐 연결 확인으로 온 경우, 그 기존 계정에 대해 아무것도 알려 주지 않게 했다. 대기 상태 응답의 `linkTargetMaskedEmail`은
+`null`, `linkMethods`는 언제나 `[PASSWORD, EMAIL_CODE]`다. 화면 표시만 막지 않고 **응답 차이로 새는 길도 막았다** — 번호의 주인이
+정지·탈퇴했거나 같은 제공자가 이미 연결돼 있어도 가입 응답은 똑같이 `SOCIAL_LINK_REQUIRED`이고, 인증번호 발송은 똑같이 204(쓸 수 없는
+계정에는 메일을 보내지 않음), 확인은 틀린 비밀번호·번호와 같은 거절이다. 같은 제공자 충돌은 주인이 소유를 확인한 뒤에만 알린다.
+확인: `duplicatePhoneResponseDoesNotRevealOwnerState`, `inactivePhoneTargetAnswersLikeWrongPassword`,
+`phoneMatchViewRevealsNothingAboutTarget`, `phoneMatchInactiveTargetSendsNothingButAnswersTheSame`, 계약 테스트, FE 연결 화면 테스트.
+남은 것: 번호가 어떤 계정에 등록돼 있다는 사실 자체는 이메일 가입의 기존 `DUPLICATE_PHONE`처럼 드러난다.

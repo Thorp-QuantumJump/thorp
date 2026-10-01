@@ -354,6 +354,39 @@ class PendingSocialLoginServiceTest {
     }
 
     @Test
+    @DisplayName("번호로 찾은 계정은 가린 이메일·연결 제공자·비밀번호 유무를 보여 주지 않고 확인 방법이 늘 같다")
+    void phoneMatchViewRevealsNothingAboutTarget() {
+        store.save(signupPending().toLink(42L, LinkReason.PHONE));
+        when(socialAccounts.findByUserId(42L))
+                .thenReturn(List.of(linked(42L, SocialProvider.GOOGLE, "g-1")));
+        for (com.ssafy.thorp.account.domain.model.User owner :
+                List.of(
+                        activeUser(42L, "owner@example.com"),
+                        user(42L, "owner@example.com", UserStatus.ACTIVE, null),
+                        user(42L, "owner@example.com", UserStatus.SUSPENDED, "h"))) {
+            when(users.findById(42L)).thenReturn(Optional.of(owner));
+
+            PendingSocialView view = service.view();
+
+            assertThat(view.linkTargetMaskedEmail()).isNull();
+            assertThat(view.linkMethods()).containsExactly("PASSWORD", "EMAIL_CODE");
+        }
+    }
+
+    @Test
+    @DisplayName("번호로 찾은 계정이 정지 상태면 번호는 기록하되 메일은 보내지 않고 응답은 똑같이 성공이다")
+    void phoneMatchInactiveTargetSendsNothingButAnswersTheSame() {
+        store.save(signupPending().toLink(42L, LinkReason.PHONE));
+        when(users.findById(42L))
+                .thenReturn(Optional.of(user(42L, "owner@example.com", UserStatus.SUSPENDED, "h")));
+
+        service.sendCode();
+
+        verify(mailSender, never()).sendVerificationCode(anyString(), anyString());
+        assertThat(verifications.get(store.current().verificationId()).getCodesSent()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("비밀번호가 없는 대상 계정에는 비밀번호 확인을 내놓지 않는다")
     void passwordlessTargetHasNoPasswordMethod() {
         store.save(signupPending().toLink(42L, LinkReason.EMAIL));

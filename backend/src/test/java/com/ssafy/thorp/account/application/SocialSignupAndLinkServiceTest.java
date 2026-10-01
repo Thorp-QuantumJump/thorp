@@ -176,34 +176,47 @@ class SocialSignupAndLinkServiceTest {
     }
 
     @Test
-    @DisplayName("번호의 주인에게 같은 제공자의 다른 계정이 있으면 연결을 권하지 않는다")
-    void duplicatePhoneWithSameProviderIsConflict() {
-        store.save(signupPending());
-        when(users.findByPhoneNumber(PHONE))
-                .thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
+    @DisplayName("번호의 주인이 정지됐거나 같은 제공자가 이미 있어도 응답은 똑같이 연결 확인이다 — 계정 상태를 드러내지 않는다")
+    void duplicatePhoneResponseDoesNotRevealOwnerState() {
         when(socialAccounts.findByUserId(42L))
                 .thenReturn(List.of(linked(42L, SocialProvider.KAKAO, "kakao-other")));
+        for (User owner :
+                List.of(
+                        activeUser(42L, "owner@example.com"),
+                        user(42L, "owner@example.com", UserStatus.SUSPENDED, "h"),
+                        user(42L, "owner@example.com", UserStatus.WITHDRAWN, null))) {
+            store.save(signupPending());
+            when(users.findByPhoneNumber(PHONE)).thenReturn(Optional.of(owner));
 
-        assertThatThrownBy(
-                        () ->
-                                signupService.signup(
-                                        new SocialSignupCommand("새회원", PHONE), request, response))
-                .satisfies(code(ErrorCode.SOCIAL_PROVIDER_ALREADY_LINKED));
+            assertThatThrownBy(
+                            () ->
+                                    signupService.signup(
+                                            new SocialSignupCommand("새회원", PHONE),
+                                            request,
+                                            response))
+                    .satisfies(code(ErrorCode.SOCIAL_LINK_REQUIRED));
+            assertThat(store.current().stage()).isEqualTo(Stage.LINK);
+        }
         verify(users, never()).save(any());
     }
 
     @Test
-    @DisplayName("번호의 주인이 정지 상태면 그 사실을 드러내지 않는 일반 거절이다")
-    void duplicatePhoneOfInactiveOwnerIsRejected() {
-        store.save(signupPending());
-        when(users.findByPhoneNumber(PHONE))
-                .thenReturn(Optional.of(user(42L, "o@example.com", UserStatus.SUSPENDED, "h")));
+    @DisplayName("번호로 찾은 계정이 정지 상태면 맞는 비밀번호도 틀린 비밀번호와 같은 거절이다")
+    void inactivePhoneTargetAnswersLikeWrongPassword() {
+        store.save(linkPending(LinkReason.PHONE, false));
+        when(users.findById(42L))
+                .thenReturn(Optional.of(user(42L, EMAIL, UserStatus.SUSPENDED, "h:secret123")));
 
         assertThatThrownBy(
                         () ->
-                                signupService.signup(
-                                        new SocialSignupCommand("새회원", PHONE), request, response))
-                .satisfies(code(ErrorCode.SOCIAL_SIGNUP_REJECTED));
+                                linkService.link(
+                                        new SocialLinkCommand(Method.PASSWORD, "secret123", null),
+                                        request,
+                                        response))
+                .satisfies(code(ErrorCode.INVALID_CREDENTIALS));
+        // 대기 상태도 그대로다. 정지 계정이라고 대기 상태를 버리면 그것이 다른 응답이 된다.
+        assertThat(store.current()).isNotNull();
+        verify(socialAccounts, never()).save(any());
     }
 
     @Test

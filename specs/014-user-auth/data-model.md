@@ -232,7 +232,7 @@ any ──10분 경과 / 취소 / 새 소셜 로그인 시작(intent=link 제외
 | SocialLinkInput | `method`, `password?`, `verificationCode?` | `method`에 맞는 값만 필수 |
 
 `email`은 대기 상태의 주인인 사용자 자신의 제공자 이메일이라 가리지 않는다. 연결 대상 계정 이메일은
-`a***@example.com`처럼 가린다.
+`a***@example.com`처럼 가린다. 휴대폰 번호가 겹친 연결(`linkReason=PHONE`)은 가린 이메일도 주지 않고(`null`) `linkMethods`는 언제나 `PASSWORD`·`EMAIL_CODE`다.
 
 ### Frontend state (social)
 

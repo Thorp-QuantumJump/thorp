@@ -11,7 +11,6 @@ import com.ssafy.thorp.account.domain.model.PendingSocialLogin.LinkReason;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialAccount;
 import com.ssafy.thorp.account.domain.model.User;
-import com.ssafy.thorp.account.domain.model.UserStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
@@ -79,13 +78,9 @@ public class SocialSignupService {
 
         Optional<User> phoneOwner = userRepository.findByPhoneNumber(command.phoneNumber());
         if (phoneOwner.isPresent()) {
+            // 번호의 주인이 어떤 계정이든 응답은 같다. 계정 상태(정지·탈퇴)나 같은 제공자 연결 여부에 따라 응답이 갈리면, 남의 번호를
+            // 넣는 것만으로 그 사실을 알아낼 수 있다. 쓸 수 없는 계정이거나 같은 제공자가 이미 있으면 소유 확인 뒤에야 드러난다.
             User owner = phoneOwner.get();
-            if (owner.getStatus() != UserStatus.ACTIVE) {
-                throw new BusinessException(ErrorCode.SOCIAL_SIGNUP_REJECTED);
-            }
-            if (socialLoginService.hasProvider(owner.getId(), pending.provider())) {
-                throw new BusinessException(ErrorCode.SOCIAL_PROVIDER_ALREADY_LINKED);
-            }
             store.save(pending.toLink(owner.getId(), LinkReason.PHONE));
             throw new BusinessException(ErrorCode.SOCIAL_LINK_REQUIRED);
         }

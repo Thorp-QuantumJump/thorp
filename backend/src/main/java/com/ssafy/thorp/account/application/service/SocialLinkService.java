@@ -70,25 +70,34 @@ public class SocialLinkService {
     public AuthenticatedUserResult link(
             SocialLinkCommand command, HttpServletRequest request, HttpServletResponse response) {
         PendingSocialLogin pending = access.require(Stage.LINK);
-        User target = activeTarget(pending);
+        // 휴대폰 번호로 찾은 계정은 쓸 수 없어도 여기서 거절하지 않는다. 확인을 똑같이 거친 뒤 "틀렸다"로 끝낸다 — 상태가 다른 응답으로
+        // 갈리면 남의 번호로 그 계정의 상태를 알아낼 수 있다.
+        boolean phoneMatch = pending.linkReason() == LinkReason.PHONE;
+        User target = phoneMatch ? usablePhoneTarget(pending).orElse(null) : activeTarget(pending);
 
         switch (command.method()) {
             case PASSWORD -> {
                 // 비밀번호도 남의 계정에 들어가는 열쇠다. 대조 전에 시도를 세고, 상한을 넘으면 대기 상태를 버린다.
                 access.reservePasswordAttempt(pending);
                 // 소셜 전용 계정(비밀번호 없음)도 틀린 비밀번호와 같은 거절이다. 화면은 이 방법을 보여 주지 않지만 요청을 직접 보내도 차이가 없어야 한다.
-                if (!target.hasPassword()
+                if (target == null
+                        || !target.hasPassword()
                         || command.password() == null
                         || !passwordEncoder.matches(command.password(), target.getPasswordHash())) {
                     log.warn(
                             "Social link rejected: reason=PASSWORD_MISMATCH, userId={}",
-                            target.getId());
+                            pending.linkTargetUserId());
                     throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
                 }
             }
-            case EMAIL_CODE ->
-                    access.verifyCode(
-                            pending, CodeTarget.LINK_TARGET_EMAIL, command.verificationCode());
+            case EMAIL_CODE -> {
+                access.verifyCode(
+                        pending, CodeTarget.LINK_TARGET_EMAIL, command.verificationCode());
+                // 쓸 수 없는 계정에는 메일을 보내지 않았으니 맞힐 수 없지만, 만에 하나 맞혀도 틀린 번호와 같게 끝낸다.
+                if (target == null) {
+                    throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_INVALID);
+                }
+            }
             case VERIFIED_EMAIL -> {
                 // 휴대폰 번호로 찾은 계정에는 성립하지 않는다 — 제공자 이메일과 그 계정 이메일은 다르다(FR-024).
                 if (pending.linkReason() != LinkReason.EMAIL
@@ -140,6 +149,13 @@ public class SocialLinkService {
                 "Social account linked: userId={}, provider={}",
                 target.getId(),
                 pending.provider());
+    }
+
+    /** 휴대폰 번호로 찾은 연결 대상 계정 중 쓸 수 있는 것. 없거나 쓸 수 없으면 비어 있다 — 호출하는 쪽이 응답을 갈라서는 안 된다. */
+    public java.util.Optional<User> usablePhoneTarget(PendingSocialLogin pending) {
+        return userRepository
+                .findById(pending.linkTargetUserId())
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE);
     }
 
     /** 연결 대상 계정. 그 사이에 정지·탈퇴됐으면 상태를 드러내지 않는 일반 거절이다(spec Edge Cases). */

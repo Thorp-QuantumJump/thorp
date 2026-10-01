@@ -7,6 +7,7 @@ import com.ssafy.thorp.account.application.repository.SocialAccountRepository;
 import com.ssafy.thorp.account.application.result.PendingSocialView;
 import com.ssafy.thorp.account.application.result.SocialLoginOutcome;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
+import com.ssafy.thorp.account.domain.model.PendingSocialLogin.LinkReason;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialAccount;
 import com.ssafy.thorp.account.domain.model.SocialProvider;
@@ -28,6 +29,9 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class PendingSocialLoginService {
+
+    /** 휴대폰 번호로 찾은 계정의 확인 방법. 계정마다 달라지면 그 차이가 정보가 되므로 늘 같다. */
+    private static final List<String> PHONE_MATCH_METHODS = List.of("PASSWORD", "EMAIL_CODE");
 
     private final PendingSocialLoginAccess access;
     private final PendingSocialLoginStore store;
@@ -74,6 +78,20 @@ public class PendingSocialLoginService {
                     pending.expiresAt());
         }
 
+        if (pending.linkReason() == LinkReason.PHONE) {
+            // 휴대폰 번호로 찾은 계정이면 그 계정에 대해 아무것도 알려 주지 않고, 읽지도 않는다. 요청한 사람은 그 번호의 주인임이 확인되지
+            // 않았다 — 남의 번호를 넣는 것만으로 이메일 일부·도메인·연결된 제공자·비밀번호 유무·계정 상태를 알아낼 수 있으면 안 된다.
+            // 확인 방법은 고정이고, 인증번호는 서버가 그 계정 이메일로 보내므로 주소를 보여 주지 않아도 주인은 확인할 수 있다.
+            return new PendingSocialView(
+                    pending.provider().registrationId(),
+                    pending.stage().name(),
+                    pending.email(),
+                    pending.providerNickname(),
+                    pending.linkReason().name(),
+                    null,
+                    PHONE_MATCH_METHODS,
+                    pending.expiresAt());
+        }
         User target = socialLinkService.activeTarget(pending);
         return new PendingSocialView(
                 pending.provider().registrationId(),
@@ -106,7 +124,7 @@ public class PendingSocialLoginService {
                 target = CodeTarget.PROVIDER_EMAIL;
             }
             case LINK -> {
-                address = socialLinkService.activeTarget(pending).getEmail();
+                address = linkTargetAddress(pending);
                 target = CodeTarget.LINK_TARGET_EMAIL;
             }
             default -> throw new BusinessException(ErrorCode.SOCIAL_PENDING_STAGE_MISMATCH);
@@ -115,7 +133,11 @@ public class PendingSocialLoginService {
         // 받는 사람이 요청한 사람과 다를 수 있다(연결 대상 계정 이메일). 간격·횟수 상한은 확인 기록이 잠근 행 위에서 판정한다.
         String code = VerificationCodes.next();
         access.issueCode(pending, passwordEncoder.encode(code), target);
-        mailSender.sendVerificationCode(address, code);
+        // 번호로 찾은 계정이 쓸 수 없으면 번호만 기록하고 메일은 보내지 않는다. 응답은 똑같이 성공이다 — 보낼 수 없다고 알리면 그 계정
+        // 상태가 드러난다. 받은 사람이 없으니 그 번호로는 아무도 확인하지 못한다.
+        if (address != null) {
+            mailSender.sendVerificationCode(address, code);
+        }
     }
 
     /**
@@ -135,6 +157,17 @@ public class PendingSocialLoginService {
                     throw new BusinessException(ErrorCode.SOCIAL_PROVIDER_ALREADY_LINKED);
             default -> view();
         };
+    }
+
+    /**
+     * 연결 대상 계정 이메일. 휴대폰 번호로 찾은 계정이 쓸 수 없으면 {@code null}이다 — 그 사실을 응답으로 드러내지 않는다. 이메일로 찾은 계정은 요청한
+     * 사람이 그 이메일의 주인이라 상태를 알려도 되고, 쓸 수 없으면 일반 거절이다.
+     */
+    private String linkTargetAddress(PendingSocialLogin pending) {
+        if (pending.linkReason() != LinkReason.PHONE) {
+            return socialLinkService.activeTarget(pending).getEmail();
+        }
+        return socialLinkService.usablePhoneTarget(pending).map(User::getEmail).orElse(null);
     }
 
     /** 화면에 보여 줄 소유 확인 방법. 대상 계정에 실제로 쓸 수 있는 것만 담는다. */
