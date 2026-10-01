@@ -260,6 +260,17 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
             를 지나 다음 단계로 넘어가는 자리로 읽힌다.
           */}
           <div className={styles.cardRow}>
+            {/*
+              지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+              비교 가능 기간 바로 위에 같은 폭으로 지수를 가로로 펼친다.
+            */}
+            <section className={styles.marketStrip} aria-labelledby="market-now-title">
+              <h2 id="market-now-title">
+                <ChartNoAxesCombined size={14} aria-hidden="true" />
+                지금 국내 시장
+              </h2>
+              <MarketNow />
+            </section>
             <AvailabilityTimeline
               className={`${styles.timeline} ${styles.rowTimeline}`}
               timeline={timeline}
@@ -302,17 +313,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
             </p>
           ) : null}
 
-          {/*
-            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-            탐색 카드 바로 아래에 지수를 가로로 펼친다. 카드 곁에 따로 두면 다음 단계 단추 뒤로 밀려 잘 읽히지 않았다.
-          */}
-          <section className={styles.marketStrip} aria-labelledby="market-now-title">
-            <h2 id="market-now-title">
-              <ChartNoAxesCombined size={14} aria-hidden="true" />
-              지금 국내 시장
-            </h2>
-            <MarketNow />
-          </section>
+
         </section>
 
         {/*
