@@ -12,6 +12,11 @@ public interface SocialAccountRepository {
 
     List<SocialAccount> findByUserId(Long userId);
 
+    /** 그 계정에 이 제공자의 소셜 계정이 이미 연결돼 있는가. 한 계정은 제공자마다 하나만 가진다(FR-021). */
+    default boolean existsByUserIdAndProvider(Long userId, SocialProvider provider) {
+        return findByUserId(userId).stream().anyMatch(account -> account.getProvider() == provider);
+    }
+
     /**
      * 연결을 저장한다.
      *

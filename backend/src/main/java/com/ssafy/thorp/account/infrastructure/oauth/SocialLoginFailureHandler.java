@@ -1,5 +1,6 @@
 package com.ssafy.thorp.account.infrastructure.oauth;
 
+import com.ssafy.thorp.account.application.port.PublicSiteUrl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -23,6 +24,12 @@ public class SocialLoginFailureHandler implements AuthenticationFailureHandler {
 
     static final String ACCESS_DENIED = "access_denied";
 
+    private final PublicSiteUrl publicSiteUrl;
+
+    public SocialLoginFailureHandler(PublicSiteUrl publicSiteUrl) {
+        this.publicSiteUrl = publicSiteUrl;
+    }
+
     @Override
     public void onAuthenticationFailure(
             HttpServletRequest request,
@@ -40,6 +47,7 @@ public class SocialLoginFailureHandler implements AuthenticationFailureHandler {
         }
         String result = cancelled ? "cancelled" : "error";
         response.sendRedirect(
-                (linkIntent ? "/auth/social/link?social=" : "/login?social=") + result);
+                publicSiteUrl.of(
+                        (linkIntent ? "/auth/social/link?social=" : "/login?social=") + result));
     }
 }

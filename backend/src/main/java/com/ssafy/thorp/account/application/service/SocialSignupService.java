@@ -73,7 +73,7 @@ public class SocialSignupService {
 
         // 추가 정보를 입력하는 사이에 같은 이메일로 누가 가입했을 수 있다. 판정을 다시 돌려 연결 확인으로 보낸다.
         if (userRepository.existsByEmail(pending.email())) {
-            SocialLoginOutcome outcome = socialLoginService.advance(pending, false);
+            SocialLoginOutcome outcome = socialLoginService.advance(pending);
             throw new BusinessException(rejectionOf(outcome));
         }
 
@@ -86,7 +86,7 @@ public class SocialSignupService {
             if (socialLoginService.hasProvider(owner.getId(), pending.provider())) {
                 throw new BusinessException(ErrorCode.SOCIAL_PROVIDER_ALREADY_LINKED);
             }
-            store.save(pending.toLink(owner.getId(), LinkReason.PHONE, false));
+            store.save(pending.toLink(owner.getId(), LinkReason.PHONE));
             throw new BusinessException(ErrorCode.SOCIAL_LINK_REQUIRED);
         }
 
@@ -101,6 +101,7 @@ public class SocialSignupService {
                         pending.providerUserId(),
                         clock.instant()));
         store.clear();
+        access.discardVerification(pending);
         return authenticationService.startSession(user, request, response);
     }
 

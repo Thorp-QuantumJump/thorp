@@ -7,7 +7,6 @@ import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.EmailVerification;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,11 +17,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class EmailVerificationService {
 
-    /** 인증번호는 6자리. */
-    private static final int CODE_BOUND = 1_000_000;
-
-    private static final String CODE_FORMAT = "%06d";
-
     /** 인증번호 유효시간. */
     private static final Duration CODE_TTL = Duration.ofMinutes(3);
 
@@ -31,8 +25,6 @@ public class EmailVerificationService {
     private final PasswordEncoder passwordEncoder;
     private final VerificationMailSender verificationMailSender;
     private final TransactionTemplate transactionTemplate;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     public EmailVerificationService(
             EmailVerificationRepository emailVerificationRepository,
@@ -70,7 +62,7 @@ public class EmailVerificationService {
 
         emailVerificationRepository.deleteByEmail(email);
 
-        String verificationCode = String.format(CODE_FORMAT, secureRandom.nextInt(CODE_BOUND));
+        String verificationCode = VerificationCodes.next();
 
         String verificationCodeHash = passwordEncoder.encode(verificationCode);
 

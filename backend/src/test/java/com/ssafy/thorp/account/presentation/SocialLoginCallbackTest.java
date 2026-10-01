@@ -33,7 +33,7 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
                                 .param("code", "it-code")
                                 .param("state", state));
 
-        assertThat(callback.getResponse().getRedirectedUrl()).isEqualTo("/auth/social/complete");
+        assertThat(pathOf(callback)).isEqualTo("/auth/social/complete");
         assertThat(cookies.get("THORP_SESSION").getValue()).isNotEqualTo(anonymousSession);
         MvcResult me = send(get("/auth/me"));
         assertThat(me.getResponse().getStatus()).isEqualTo(200);
@@ -97,7 +97,7 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
                                 .param("error", "access_denied")
                                 .param("state", state));
 
-        assertThat(callback.getResponse().getRedirectedUrl()).isEqualTo("/login?social=cancelled");
+        assertThat(pathOf(callback)).isEqualTo("/login?social=cancelled");
     }
 
     @Test
@@ -112,7 +112,7 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
                                 .param("code", "it-code")
                                 .param("state", "forged-state"));
 
-        assertThat(callback.getResponse().getRedirectedUrl()).isEqualTo("/login?social=error");
+        assertThat(pathOf(callback)).isEqualTo("/login?social=error");
         assertThat(send(get("/auth/me")).getResponse().getStatus()).isEqualTo(401);
     }
 
@@ -126,7 +126,7 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
         MvcResult replay =
                 send(get("/auth/oauth2/callback/kakao").param("code", "c2").param("state", state));
 
-        assertThat(replay.getResponse().getRedirectedUrl()).isEqualTo("/login?social=error");
+        assertThat(pathOf(replay)).isEqualTo("/login?social=error");
     }
 
     @Test
@@ -166,7 +166,58 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
 
         MvcResult start = send(get("/auth/oauth2/authorization/kakao"));
 
-        assertThat(start.getResponse().getRedirectedUrl()).isEqualTo("/home");
+        assertThat(pathOf(start)).isEqualTo("/home");
+    }
+
+    @Test
+    @DisplayName("제공자를 다녀오는 사이 다른 탭에서 로그인했으면 콜백은 그 로그인을 지우지 않고 /home으로 보낸다")
+    void callbackIntoSignedInSessionKeepsLogin() throws Exception {
+        User member = saveUser(PREFIX + "tab@example.com", "01099000005", "password123");
+        String state = startKakao("");
+        // 다른 탭: 같은 브라우저(쿠키)로 이메일 로그인.
+        MvcResult login =
+                sendWithCsrf(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                                        "/auth/sessions")
+                                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"email\":\""
+                                                + PREFIX
+                                                + "tab@example.com\",\"password\":\"password123\"}"));
+        assertThat(login.getResponse().getStatus()).isEqualTo(200);
+        NEXT_USER.putAll(kakaoUser(KAKAO_ID, PREFIX + "other@example.com", true, "닉네임"));
+
+        MvcResult callback =
+                send(
+                        get("/auth/oauth2/callback/kakao")
+                                .param("code", "it-code")
+                                .param("state", state));
+
+        assertThat(pathOf(callback)).isEqualTo("/home");
+        MvcResult me = send(get("/auth/me"));
+        assertThat(me.getResponse().getStatus()).isEqualTo(200);
+        assertThat(me.getResponse().getContentAsString()).contains("\"userId\":" + member.getId());
+        assertThat(send(get("/auth/social/pending")).getResponse().getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    @DisplayName("이메일로 로그인하면 같은 브라우저에 남은 소셜 연결 대기 상태가 사라진다")
+    void emailLoginDropsLeftoverPendingLink() throws Exception {
+        saveUser(PREFIX + "left@example.com", "01099000006", "password123");
+        saveUser(PREFIX + "next@example.com", "01099000007", "password123");
+        assertThat(loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "left@example.com", true, "닉네임")))
+                .isEqualTo("/auth/social/link");
+
+        sendWithCsrf(
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                                "/auth/sessions")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(
+                                "{\"email\":\""
+                                        + PREFIX
+                                        + "next@example.com\",\"password\":\"password123\"}"));
+
+        assertThat(send(get("/auth/social/pending")).getResponse().getStatus()).isEqualTo(404);
     }
 
     @Test

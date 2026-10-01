@@ -37,6 +37,12 @@ public class SocialClientRegistrations
             if (!client.configured()) {
                 continue;
             }
+            if (!properties.hasPublicBaseUrl()) {
+                throw new IllegalStateException(
+                        "thorp.auth.social.public-base-url(THORP_PUBLIC_BASE_URL)이 비어 있습니다. "
+                                + adapter.provider().registrationId()
+                                + " 로그인을 켜려면 서비스 주소를 넣어야 합니다.");
+            }
             adapters.put(adapter.provider(), adapter);
             registrations.put(
                     adapter.provider(),

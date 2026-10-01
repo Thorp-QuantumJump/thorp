@@ -1,9 +1,9 @@
 package com.ssafy.thorp.account.application;
 
+import com.ssafy.thorp.common.security.SessionUser;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
 /**
@@ -24,15 +24,10 @@ public final class AuthenticatedPrincipal {
     private AuthenticatedPrincipal() {}
 
     public static Optional<Long> userId(Authentication authentication) {
-        if (!(authentication instanceof UsernamePasswordAuthenticationToken)
-                || !authentication.isAuthenticated()) {
-            return Optional.empty();
+        Optional<Long> userId = SessionUser.idOf(authentication);
+        if (userId.isEmpty() && authentication != null && authentication.isAuthenticated()) {
+            log.debug("Unusable authentication principal in session");
         }
-        try {
-            return Optional.of(Long.valueOf(authentication.getName()));
-        } catch (NumberFormatException e) {
-            log.warn("Unusable authentication principal in session");
-            return Optional.empty();
-        }
+        return userId;
     }
 }

@@ -24,11 +24,13 @@ import com.ssafy.thorp.account.application.service.PendingSocialLoginAccess;
 import com.ssafy.thorp.account.application.service.PendingSocialLoginService;
 import com.ssafy.thorp.account.application.service.SocialLinkService;
 import com.ssafy.thorp.account.application.service.SocialLoginService;
+import com.ssafy.thorp.account.application.service.SocialVerificationGuard;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
-import com.ssafy.thorp.account.domain.model.PendingSocialLogin.CodeTarget;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.LinkReason;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialProvider;
+import com.ssafy.thorp.account.domain.model.SocialVerification;
+import com.ssafy.thorp.account.domain.model.SocialVerification.CodeTarget;
 import com.ssafy.thorp.account.domain.model.UserStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
@@ -55,12 +57,16 @@ class PendingSocialLoginServiceTest {
     private final SocialAccountRepository socialAccounts = mock(SocialAccountRepository.class);
     private final VerificationMailSender mailSender = mock(VerificationMailSender.class);
     private final PasswordEncoder encoder = new PrefixPasswordEncoder();
+    private final InMemorySocialVerificationRepository verifications =
+            new InMemorySocialVerificationRepository();
 
     private PendingSocialLoginService service;
 
     @BeforeEach
     void setUp() {
-        PendingSocialLoginAccess access = new PendingSocialLoginAccess(store, encoder, clock);
+        PendingSocialLoginAccess access =
+                new PendingSocialLoginAccess(
+                        store, new SocialVerificationGuard(verifications, clock), encoder, clock);
         SocialLinkService linkService =
                 new SocialLinkService(
                         access,
@@ -86,6 +92,7 @@ class PendingSocialLoginServiceTest {
                         clock);
         when(users.findByEmail(any())).thenReturn(Optional.empty());
         when(socialAccounts.findByUserId(any())).thenReturn(List.of());
+        when(socialAccounts.existsByUserIdAndProvider(any(), any())).thenCallRealMethod();
     }
 
     @Test
@@ -123,8 +130,9 @@ class PendingSocialLoginServiceTest {
         String code = sendAndCapture(EMAIL);
 
         assertThat(code).matches("\\d{6}");
-        assertThat(store.current().codeTarget()).isEqualTo(CodeTarget.PROVIDER_EMAIL);
-        assertThat(store.current().codeExpiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(3)));
+        SocialVerification verification = verifications.get(store.current().verificationId());
+        assertThat(verification.getCodeTarget()).isEqualTo(CodeTarget.PROVIDER_EMAIL);
+        assertThat(verification.getCodeExpiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(3)));
     }
 
     @Test
@@ -132,6 +140,7 @@ class PendingSocialLoginServiceTest {
     void resendInvalidatesPreviousCode() {
         store.save(verificationPending());
         String first = sendAndCapture(EMAIL);
+        clock.advance(SocialVerification.RESEND_INTERVAL);
         String second = sendAndCapture(EMAIL);
         if (first.equals(second)) {
             return; // 같은 번호가 두 번 나올 확률(백만분의 일)이면 이 단언은 의미가 없다.
@@ -189,6 +198,59 @@ class PendingSocialLoginServiceTest {
     }
 
     @Test
+    @DisplayName("다시 받기 간격 안에 또 보내면 거절하고 메일을 보내지 않는다")
+    void resendWithinIntervalIsRejected() {
+        store.save(verificationPending());
+        sendAndCapture(EMAIL);
+
+        assertThatThrownBy(() -> service.sendCode())
+                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON));
+        verify(mailSender, org.mockito.Mockito.times(1))
+                .sendVerificationCode(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("보낼 수 있는 횟수를 넘으면 대기 상태를 버린다")
+    void sendLimitDropsPending() {
+        store.save(verificationPending());
+        for (int i = 0; i < SocialVerification.MAX_CODES_SENT; i++) {
+            service.sendCode();
+            clock.advance(SocialVerification.RESEND_INTERVAL);
+        }
+
+        assertThatThrownBy(() -> service.sendCode())
+                .satisfies(code(ErrorCode.SOCIAL_VERIFICATION_LIMIT));
+        assertThat(store.current()).isNull();
+    }
+
+    @Test
+    @DisplayName("제공자 이메일 번호도 상한만큼 틀리면 지워져 맞는 번호로 확인할 수 없다")
+    void providerEmailCodeAttemptsAreCapped() {
+        store.save(verificationPending());
+        String code = sendAndCapture(EMAIL);
+        String wrong = code.equals("000000") ? "111111" : "000000";
+        for (int i = 0; i < SocialVerification.MAX_CODE_ATTEMPTS; i++) {
+            assertThatThrownBy(() -> service.confirmProviderEmail(wrong))
+                    .satisfies(code(ErrorCode.EMAIL_VERIFICATION_INVALID));
+        }
+
+        assertThatThrownBy(() -> service.confirmProviderEmail(code))
+                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+        assertThat(store.current().emailVerified()).isFalse();
+    }
+
+    @Test
+    @DisplayName("단계를 바꿔도 발송 횟수는 이어서 센다")
+    void stageChangeKeepsSendCount() {
+        PendingSocialLogin pending = verificationPending();
+        store.save(pending);
+        sendAndCapture(EMAIL);
+
+        assertThat(pending.toSignup().verificationId()).isEqualTo(pending.verificationId());
+        assertThat(verifications.get(pending.verificationId()).getCodesSent()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("가입 단계에서는 인증번호를 보낼 수 없다")
     void signupStageCannotSendCode() {
         store.save(signupPending());
@@ -201,18 +263,19 @@ class PendingSocialLoginServiceTest {
     @Test
     @DisplayName("연결 단계의 인증번호는 제공자 이메일이 아니라 연결 대상 계정 이메일로 간다")
     void linkStageCodeGoesToTargetEmail() {
-        store.save(signupPending().toLink(42L, LinkReason.PHONE, false));
+        store.save(signupPending().toLink(42L, LinkReason.PHONE));
         when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
 
         sendAndCapture("owner@example.com");
 
-        assertThat(store.current().codeTarget()).isEqualTo(CodeTarget.LINK_TARGET_EMAIL);
+        assertThat(verifications.get(store.current().verificationId()).getCodeTarget())
+                .isEqualTo(CodeTarget.LINK_TARGET_EMAIL);
     }
 
     @Test
     @DisplayName("연결 화면은 대상 이메일을 가리고 쓸 수 있는 확인 방법만 보여 준다")
     void linkViewMasksEmailAndListsUsableMethods() {
-        store.save(signupPending().toLink(42L, LinkReason.EMAIL, false));
+        store.save(signupPending().toLink(42L, LinkReason.EMAIL));
         when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
         when(socialAccounts.findByUserId(42L))
                 .thenReturn(
@@ -230,7 +293,7 @@ class PendingSocialLoginServiceTest {
     @Test
     @DisplayName("비밀번호가 없는 대상 계정에는 비밀번호 확인을 내놓지 않는다")
     void passwordlessTargetHasNoPasswordMethod() {
-        store.save(signupPending().toLink(42L, LinkReason.EMAIL, false));
+        store.save(signupPending().toLink(42L, LinkReason.EMAIL));
         when(users.findById(42L))
                 .thenReturn(Optional.of(user(42L, "owner@example.com", UserStatus.ACTIVE, null)));
 
@@ -240,7 +303,7 @@ class PendingSocialLoginServiceTest {
     @Test
     @DisplayName("연결 대상 계정이 그 사이 정지되면 일반 거절이고 대기 상태를 지운다")
     void inactiveTargetIsRejected() {
-        store.save(signupPending().toLink(42L, LinkReason.EMAIL, false));
+        store.save(signupPending().toLink(42L, LinkReason.EMAIL));
         when(users.findById(42L))
                 .thenReturn(Optional.of(user(42L, "owner@example.com", UserStatus.SUSPENDED, "h")));
 
