@@ -340,9 +340,9 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 
 ## Phase 11: Google (BE)
 
-- [ ] T078 [P] [US6] Add failing extractor tests for Google `sub`, `email`, `email_verified` true/false, and `name` in `backend/src/test/java/com/ssafy/thorp/account/infrastructure/oauth/GoogleProfileExtractorTest.java`
-- [ ] T079 [US6] Register Google (OIDC, scopes `openid email profile`) from environment variables in `backend/src/main/resources/application.yml` and implement `GoogleProfileExtractor` to satisfy T078
-- [ ] T080 [US6] Add the Google `reprompt` parameter (`prompt=consent`) to the request resolver with a test
+- [X] T078 [P] [US6] Add failing extractor tests for Google `sub`, `email`, `email_verified` true/false, and `name` in `backend/src/test/java/com/ssafy/thorp/account/infrastructure/oauth/GoogleProfileExtractorTest.java`
+- [X] T079 [US6] Register Google (OIDC, scopes `openid email profile`) from environment variables in `backend/src/main/resources/application.yml` and implement `GoogleProfileExtractor` to satisfy T078
+- [X] T080 [US6] Add the Google `reprompt` parameter (`prompt=consent`) to the request resolver with a test
 
 ## Phase 12: Naver (BE)
 
