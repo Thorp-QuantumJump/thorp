@@ -802,13 +802,6 @@
   text-align: right;
 }
 
-/* 폭이 줄면 과거 시장과 뉴스를 위아래로 둔다. */
-@media (max-width: 1180px) {
-  .context {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 900px) {
   /* 담긴 종목 칸까지 셋을 나란히 둘 폭이 없다. 넓힌 카드도 두 칸으로 접는다. */
   .browserCard[data-expanded='true'] [data-slot='body'] {
@@ -1061,13 +1054,4 @@
   .marketStrip {
     grid-template-columns: 1fr;
   }
-}
-
-/* 투자 대상 아래 한 줄: 지금과 비슷했던 과거 시장(넓게)과 시장 흐름 뉴스. 높이는 둘 중 긴 쪽에 맞춘다. */
-.context {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
-  align-items: stretch;
-  gap: var(--thorp-flow-gap, 22px);
-  margin-top: var(--thorp-flow-gap, 22px);
 }

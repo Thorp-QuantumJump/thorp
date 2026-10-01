@@ -21,8 +21,6 @@ import { MINIMUM_SECTOR_COUNT } from '@/hooks/useSectorSelection'
 import { appendCaseToPath } from '@/marketflow/handoff'
 import type { SectorSummary } from '@/types/sector'
 import heading from '@/components/common/PageHeading.module.css'
-import { SimilarPastMarket } from '@/components/diagnosis/SimilarPastMarket'
-import { SectorNews } from '@/components/diagnosis/SectorNews'
 import { MarketNow } from '@/components/diagnosis/MarketNow'
 import styles from './SectorSelectionPage.module.css'
 
@@ -329,15 +327,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
         />
       </div>
 
-      {/*
-        투자 대상 아래 한 줄에 둘을 나란히 둔다. 왼쪽은 Thorp의 핵심 흐름(002 FR-018) — 고른 섹터를 지금과
-        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 뉴스(FR-019)로 기본 '전체', 섹터별로
-        좁혀 볼 수 있다. 둘 다 받지 못해도 투자 대상 고르기는 막히지 않는다.
-      */}
-      <div className={styles.context}>
-        <SimilarPastMarket caseId={caseId} />
-        <SectorNews />
-      </div>
+
     </>
   )
 }
