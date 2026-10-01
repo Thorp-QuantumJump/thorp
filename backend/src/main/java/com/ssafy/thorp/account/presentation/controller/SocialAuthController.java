@@ -128,6 +128,13 @@ public class SocialAuthController {
                 .body(ApiResponse.ok(AuthenticatedUserResponse.from(result)));
     }
 
+    /** 연결하지 않기. 번호가 겹쳐 온 연결이면 가입 단계로 돌아가고, 이메일이 겹쳐 온 연결이면 대기 상태가 사라진다. 결과는 대기 상태 조회로 본다. */
+    @PostMapping("/social/link/decline")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void declineLink() {
+        linkService.decline();
+    }
+
     @PostMapping("/social/link")
     public ResponseEntity<ApiResponse<AuthenticatedUserResponse>> link(
             @Valid @RequestBody SocialLinkRequest request,

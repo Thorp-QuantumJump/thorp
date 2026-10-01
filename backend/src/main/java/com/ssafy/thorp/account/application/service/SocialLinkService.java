@@ -94,6 +94,24 @@ public class SocialLinkService {
         return authenticationService.startSession(target, request, response);
     }
 
+    /**
+     * 연결하지 않기로 했다(US7 시나리오 3·4).
+     *
+     * <p>휴대폰 번호가 겹쳐 온 연결이면 가입 단계로 돌아가 다른 번호로 가입을 이어 갈 수 있다. 이메일이 겹쳐 온 연결이면 그 이메일로는 새 계정을 만들 수 없으므로
+     * 대기 상태를 지운다. 어느 쪽이든 아무것도 연결하거나 만들지 않는다.
+     *
+     * @return 가입 단계로 돌아갔으면 {@code true}
+     */
+    public boolean decline() {
+        PendingSocialLogin pending = access.require(Stage.LINK);
+        if (pending.linkReason() == LinkReason.PHONE) {
+            store.save(pending.toSignup());
+            return true;
+        }
+        store.clear();
+        return false;
+    }
+
     /** 대기 중인 소셜 계정을 대상 계정에 붙이고 대기 상태를 지운다. 소유 확인은 호출하는 쪽이 마쳤어야 한다. */
     @Transactional
     public void attach(PendingSocialLogin pending, User target) {
