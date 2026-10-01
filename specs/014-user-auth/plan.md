@@ -41,6 +41,12 @@ T061 이후로 추적한다. 설계는 아래 [Social login design](#social-logi
     시나리오 4를 계획 단계 API로는 만족할 수 없었다.
   - 숫자 제공자 식별자가 `users.id`로 읽히지 않도록 로그인 주체 판정 세 곳(`AuthenticatedPrincipal`·`CurrentRequester`·
     `LearningAdminAccess`)이 `UsernamePasswordAuthenticationToken`만 받게 했다.
+  - 2026-10-01 코드·보안 리뷰 반영: 소셜 경로의 인증번호·비밀번호 시도와 발송에 상한을 두고(번호 하나 5회 대조, 대기
+    상태당 발송 5회·간격 30초, 비밀번호 5회 — 별도 보안 작업 전 임시값), 그 횟수는 세션이 아니라 `social_pending_verifications`
+    행 잠금 아래에서 대조 전에 센다. 세션 속성으로 세면 병렬 요청이 같은 사본을 읽어 상한을 넘는다. 연결 처리에서 바깥 트랜잭션을 빼
+    연결 풀 교착을 없앴다. 콜백 redirect는 `THORP_PUBLIC_BASE_URL` 기준 절대 주소로 보내고(로컬 Vite에서 백엔드 포트로 떨어지던 문제),
+    제공자가 켜졌는데 그 값이 비면 기동을 멈춘다. 이미 로그인한 세션의 콜백은 로그인을 지우지 않고 `/home`으로 보낸다. 이메일
+    로그인은 같은 브라우저에 남은 소셜 대기 상태를 버린다(공용 PC). 로그인 주체 판정은 `common/security/SessionUser` 하나로 모았다.
   - FE는 가입·연결 결과로 곧바로 로그인 상태를 정하는 `completeSignIn`을 인증 Provider에 더했다. `recheck`는 확인 중
     상태를 거쳐 인증 화면 가드가 복귀 위치 대신 기본 화면으로 보낸다.
 - 작업 브랜치: `feat/Oauth_create` 하나에서 진행하고 커밋을 작업 묶음(공통 기반 → 카카오 → 구글 → 네이버 →

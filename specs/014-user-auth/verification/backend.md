@@ -59,3 +59,13 @@ $env:THORP_REQUIRE_DOCKER = 'true'
 skip 4건은 외부 실서비스 키나 성능 환경을 요구하는 `AssistantLiveTest`·`MarketLiveApiTest`·`NewsPerformanceIT`이고
 소셜·인증 suite에는 skip이 없다. 소셜 suite별 수와 확인 내용은 [social.md](social.md)에 있다. 마이그레이션
 `V20261001120000__social_accounts.sql`은 `FlywayMigrationTest`(빈 DB 적용)와 `ddl-auto=validate` 컨텍스트에서 확인됐다.
+
+### 2026-10-01 코드·보안 리뷰 반영 뒤 재실행
+
+| 항목 | 결과 |
+|---|---|
+| 전체 테스트 | 2,317 tests, failures 0, errors 0, skipped 4(위와 같은 외부 실서비스·성능 suite) |
+| Gradle build | PASS (`10m 7s`) |
+
+추가된 확인: 병렬 인증번호 대입 상한(PostgreSQL 행 잠금), 다시 받기 429, 로그인 세션 콜백 보호, 이메일 로그인 시 소셜 대기 상태 제거,
+`V20261001150000__social_pending_verifications.sql` 적용. 상세는 [social.md](social.md)의 리뷰 반영 절.
