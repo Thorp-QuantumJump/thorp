@@ -594,7 +594,11 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                         "verification_code_hash",
                         "expires_at",
                         "verified_at",
-                        "created_at");
+                        "created_at",
+                        // V20261001180000: 대조·발송 상한(spec 014 남은 위험 보완).
+                        "attempts",
+                        "sends_in_window",
+                        "send_window_started_at");
     }
 
     @Test

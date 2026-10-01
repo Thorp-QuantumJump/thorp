@@ -55,6 +55,10 @@ function fieldFromApiError(error: ApiClientError, fallback: AuthFieldName): Auth
     EMAIL_VERIFICATION_NOT_FOUND: 'verificationCode',
     EMAIL_VERIFICATION_INVALID: 'verificationCode',
     EMAIL_VERIFICATION_EXPIRED: 'verificationCode',
+    // 대조·발송 상한(spec 014, 2026-10-01). 번호를 다 틀렸으면 번호 칸, 너무 자주 받으면 이메일 칸에 안내한다.
+    EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED: 'verificationCode',
+    EMAIL_VERIFICATION_RESEND_TOO_SOON: 'email',
+    EMAIL_VERIFICATION_SEND_LIMIT: 'email',
   }
 
   return (error.code && mapped[error.code]) || fieldFromMessage(error.message) || fallback
@@ -301,7 +305,11 @@ export function SignupPage() {
     } catch (error) {
       if (!isCurrentRequest('confirm', request.id)) return
       const normalizedError = normalizeApiError(error)
-      if (normalizedError.code === 'EMAIL_VERIFICATION_EXPIRED') {
+      // 다 틀린 번호는 만료된 번호처럼 더 쓸 수 없다. 새 번호를 받는 처음 단계로 돌린다.
+      if (
+        normalizedError.code === 'EMAIL_VERIFICATION_EXPIRED' ||
+        normalizedError.code === 'EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED'
+      ) {
         setRequestedEmail(null)
         setVerificationCode('')
       }

@@ -31,6 +31,12 @@ paths:
           $ref: '#/components/responses/EmailVerificationRequestRejected'
         '403':
           $ref: '#/components/responses/InvalidCsrf'
+        '429':
+          description: 다시 받기 간격(30초) 안이거나 한 시간에 같은 주소로 5통을 넘었다(임시값)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '500':
           $ref: '#/components/responses/InternalError'
   /accounts/email-verifications/confirm:
@@ -584,6 +590,8 @@ components:
             - EMAIL_VERIFICATION_NOT_FOUND
             - EMAIL_VERIFICATION_INVALID
             - EMAIL_VERIFICATION_EXPIRED
+            - EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED
+            - EMAIL_VERIFICATION_SEND_LIMIT
             - INVALID_CREDENTIALS
             - AUTHENTICATION_REQUIRED
             - CSRF_TOKEN_INVALID
@@ -779,6 +787,13 @@ components:
                 error:
                   code: EMAIL_VERIFICATION_INVALID
                   message: 인증번호를 다시 확인해 주세요.
+            attemptsExceeded:
+              value:
+                success: false
+                data: null
+                error:
+                  code: EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED
+                  message: 인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요.
             expired:
               value:
                 success: false
