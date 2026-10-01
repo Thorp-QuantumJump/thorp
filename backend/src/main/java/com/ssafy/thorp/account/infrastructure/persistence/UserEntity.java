@@ -15,7 +15,8 @@ public class UserEntity {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, unique = false, length = 255)
+    // 소셜로만 가입한 계정은 비밀번호가 없다(spec 014 FR-023).
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
     @Column(name = "nickname", nullable = false, length = 100)

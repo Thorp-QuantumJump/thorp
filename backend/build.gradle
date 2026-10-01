@@ -37,6 +37,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.session:spring-session-jdbc'
+    // 카카오·구글·네이버 소셜 로그인(spec 014 US6·US7). 인증 결과는 기존 서버 세션에 넣고 제공자 token은 저장하지 않는다(research D10).
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.kafka:spring-kafka' // 설치만. Job 전달은 RabbitMQ(starter-amqp)
     implementation 'org.springframework.boot:spring-boot-starter-amqp'

@@ -26,6 +26,16 @@ public enum ErrorCode {
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
     CSRF_TOKEN_INVALID(HttpStatus.FORBIDDEN, "요청 확인 정보가 만료되었습니다. 다시 시도해 주세요."),
 
+    // spec 014 소셜 로그인(2026-10-01). 비밀번호·인증번호 오류는 위 코드를 그대로 쓴다 — 화면이 같은 안내로 분기한다.
+    SOCIAL_PENDING_NOT_FOUND(HttpStatus.NOT_FOUND, "소셜 로그인 시간이 지났습니다. 처음부터 다시 시도해 주세요."),
+    SOCIAL_PENDING_STAGE_MISMATCH(HttpStatus.CONFLICT, "지금 단계에서는 할 수 없는 요청입니다. 화면을 새로고침해 주세요."),
+    // 겹친 계정이 정지·탈퇴 상태여도 그 사실을 드러내지 않는 일반 거절이다(spec Edge Cases).
+    SOCIAL_SIGNUP_REJECTED(HttpStatus.BAD_REQUEST, "지금은 이 정보로 가입할 수 없습니다. 다른 방법으로 로그인해 주세요."),
+    SOCIAL_LINK_REQUIRED(HttpStatus.CONFLICT, "이 번호로 가입된 계정이 있습니다. 계정 연결을 확인해 주세요."),
+    SOCIAL_PROVIDER_ALREADY_LINKED(HttpStatus.CONFLICT, "이 계정은 이미 같은 제공자의 다른 계정과 연결되어 있습니다."),
+    SOCIAL_ACCOUNT_ALREADY_LINKED(HttpStatus.CONFLICT, "이 소셜 계정은 다른 Thorp 계정에 연결되어 있습니다."),
+    SOCIAL_PROVIDER_NOT_ENABLED(HttpStatus.NOT_FOUND, "지금은 이 방법으로 로그인할 수 없습니다."),
+
     // spec 004 백테스트 실행. 계약은 specs/004-backtest-execution/contracts/rest-api.md "오류 코드 추가분".
     RULES_NOT_REGISTERED(
             HttpStatus.UNPROCESSABLE_ENTITY, "아직 계산 규칙이 정해지지 않은 전략입니다. 다른 전략을 선택해 주세요."),

@@ -75,6 +75,20 @@ public class User {
                 null);
     }
 
+    /**
+     * 소셜 계정으로 가입한다(spec 014 FR-023). 비밀번호는 없다.
+     *
+     * <p>이메일은 제공자가 확인했거나 Thorp 인증번호로 확인한 값이라 이메일 가입과 같이 바로 활성 상태다.
+     */
+    public static User registerSocial(String email, String nickname, String phoneNumber) {
+        return register(email, null, nickname, phoneNumber);
+    }
+
+    /** 이메일·비밀번호로 로그인할 수 있는 계정인가. 소셜로만 가입한 계정은 {@code false}다. */
+    public boolean hasPassword() {
+        return passwordHash != null && !passwordHash.isEmpty();
+    }
+
     public Long getId() {
         return id;
     }
