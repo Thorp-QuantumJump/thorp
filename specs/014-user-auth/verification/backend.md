@@ -74,7 +74,7 @@ skip 4건은 외부 실서비스 키나 성능 환경을 요구하는 `Assistant
 
 | 항목 | 결과 |
 |---|---|
-| 전체 테스트 | 2,332 tests, failures 0, errors 0, skipped 4(외부 실서비스·성능 suite) |
+| 전체 테스트 | 2,334 tests, failures 0, errors 0, skipped 4(외부 실서비스·성능 suite) |
 | Gradle build | PASS (`28m 44s`, Testcontainers PostgreSQL) |
 
 추가된 확인: 대상 계정 단위 누적 제한, 이메일 가입 인증번호 대조 상한·동시 재발송 1통, 버려진 확인 기록 정리, 마이그레이션
