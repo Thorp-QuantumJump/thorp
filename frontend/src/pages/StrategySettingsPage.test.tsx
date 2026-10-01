@@ -457,10 +457,35 @@ function descriptionOf(card: HTMLElement): string {
 }
 
 
+/**
+ * 분석 기간을 '최대 범위 선택'으로 정해 둔 채 시작한다. 2026-10-01부터 기간은 저절로 정해지지 않아, 정하지 않으면
+ * '분석하기'가 막힌다. 이 파일의 검사 대부분은 요청 조립과 막힘 판정을 보며 기간을 고르는 일은 보지 않으므로 그
+ * 한 단계를 미리 해 둔다. 정하지 않은 상태의 동작은 그것을 보는 검사가 이 값을 지우고 따로 확인한다.
+ */
+function storeFullRangePeriod() {
+  window.sessionStorage.setItem(
+    STRATEGY_SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      version: 1,
+      registryVersion: registryFixture.registryVersion,
+      universeSize: null,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: {
+        minEvaluationYears: 1,
+        scenario: "FULL_PERIOD",
+        periodFull: true,
+      },
+      invalidValues: [],
+    }),
+  );
+}
+
 beforeEach(() => {
   apiMocks.fetchSectorCatalog.mockResolvedValue(loadedCatalog);
   apiMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture);
   storeSelection();
+  storeFullRangePeriod();
 });
 
 afterEach(() => {
@@ -777,6 +802,29 @@ describe("StrategySettingsPage", () => {
     }
   });
 
+  it("고른 카드를 다시 누르면 선택을 내려놓고, 카드는 그 전략의 평가 가능 범위를 설명으로 싣는다", async () => {
+    const user = userEvent.setup();
+    const { support } = makeSupport();
+    renderPage(support);
+
+    const card = await findCardNamed(selectableStrategy.name);
+    // 범위는 카드에 마우스를 올리면 뜨는 말풍선이고, 보조기술에는 카드의 설명으로 읽힌다(2026-10-01).
+    await waitFor(() => {
+      const describedBy = card.getAttribute("aria-describedby") ?? "";
+      const text = describedBy
+        .split(" ")
+        .map((id) => document.getElementById(id)?.textContent ?? "")
+        .join(" ");
+      expect(text).toContain(`평가 가능 범위 ${windowFixture.start} ~ ${windowFixture.end}`);
+    });
+
+    await user.click(card);
+    expect((await findCardNamed(selectableStrategy.name)).getAttribute("aria-checked")).toBe("true");
+    await user.click(await findCardNamed(selectableStrategy.name));
+    expect((await findCardNamed(selectableStrategy.name)).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText("위에서 전략을 고르면 여기에 전략 설정이 나타납니다.")).toBeTruthy();
+  });
+
   it("상세 설정 카드는 제목이 고정이고, 두 열 위에 기본값 안내와 자동 배분 설명을 둔다", async () => {
     const user = userEvent.setup();
     const { support } = makeSupport();
@@ -841,7 +889,7 @@ describe("StrategySettingsPage", () => {
     const { support } = makeSupport();
     renderPage(support);
 
-    const back = await screen.findByRole("link", { name: /섹터·비중 고르기/ });
+    const back = await screen.findByRole("link", { name: /투자 대상 고르기/ });
     expect(back.getAttribute("href")).toBe("/diagnosis/sectors");
     expect(
       back.compareDocumentPosition(
@@ -1177,7 +1225,7 @@ describe("StrategySettingsPage", () => {
         valuesByStrategy: {
           [selectableStrategy.strategyId]: { [numberAxis.name]: 999 },
         },
-        analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD" },
+        analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD", periodFull: true },
         invalidValues: [],
       }),
     );
@@ -1263,6 +1311,7 @@ describe("StrategySettingsPage", () => {
         analysisCondition: {
           minEvaluationYears: notAChoice,
           scenario: "FULL_PERIOD",
+          periodFull: true,
         },
         invalidValues: [],
       }),
@@ -1393,6 +1442,7 @@ describe("StrategySettingsPage", () => {
           minEvaluationYears:
             registryFixture.analysisConditions.minEvaluationYears.default,
           scenario: "FULL_PERIOD",
+          periodFull: true,
           initialAmount: outOfRange,
         },
         invalidValues: [],
@@ -1529,7 +1579,7 @@ describe("StrategySettingsPage", () => {
         valuesByStrategy: {
           [selectableStrategy.strategyId]: { [numberAxis.name]: 9_999 },
         },
-        analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD" },
+        analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD", periodFull: true },
         invalidValues: [],
       }),
     );
@@ -1691,7 +1741,7 @@ describe("StrategySettingsPage", () => {
           universeSize: 3,
           selectedStrategyId: unselectableStrategy.strategyId,
           valuesByStrategy: {},
-          analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD" },
+          analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD", periodFull: true },
           invalidValues: [],
         }),
       );
@@ -2203,7 +2253,7 @@ describe("StrategySettingsPage", () => {
           valuesByStrategy: {
             [selectableStrategy.strategyId]: { [warmupAxis.name]: 60 },
           },
-          analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD" },
+          analysisCondition: { minEvaluationYears: 1, scenario: "FULL_PERIOD", periodFull: true },
           invalidValues: [],
         }),
       );
@@ -2458,6 +2508,89 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     return panel;
   }
 
+  it("분석 기간은 저절로 정해지지 않고, 정하기 전에는 분석하기가 회색으로 막혀 무엇을 고를지 알린다", async () => {
+    // 2026-10-01. 사용자가 고르지 않은 기간(범위 전체)으로 분석이 나가지 않는다.
+    const user = userEvent.setup();
+    storeCondition({});
+    const { support, requests } = makeSupport();
+    renderPage(support);
+
+    await user.click(await findCardNamed(selectableStrategy.name));
+    const analyze = actionButton("분석하기");
+    await waitFor(() =>
+      expect(reasonOf(analyze)).toContain("분석 기간을 정해 주세요."),
+    );
+    expect(analyze.getAttribute("aria-disabled")).toBe("true");
+    // 남은 것이 기간 고르기뿐이라 원은 다 드러나되 회색이다.
+    expect(analyze.getAttribute("data-stage")).toBe("2");
+    expect(analyze.getAttribute("data-pending")).toBe("true");
+    const panel = screen.getByRole("region", { name: "분석 조건" });
+    expect(panel.textContent).toContain("정해지지 않음");
+
+    await user.click(analyze);
+    expect(requests).toHaveLength(0);
+  });
+
+  it("'최대 범위 선택'은 누르면 막히고 되돌리기 아이콘이 생기며, 되돌리면 누르기 직전 상태로 돌아간다", async () => {
+    const user = userEvent.setup();
+    storeCondition({ periodStart: "2021-01-04", periodEnd: "2023-12-28" });
+    const { support, requests } = makeSupport();
+    renderPage(support);
+
+    await user.click(await findCardNamed(selectableStrategy.name));
+    const panel = await openConditions(user);
+    const full = within(panel).getByRole("button", { name: "최대 범위 선택" });
+    // 날짜를 직접 고른 동안에는 열려 있고 되돌리기 아이콘은 없다.
+    expect((full as HTMLButtonElement).disabled).toBe(false);
+    expect(
+      within(panel).queryByRole("button", { name: "최대 범위 선택 되돌리기" }),
+    ).toBeNull();
+
+    await user.click(full);
+    expect((full as HTMLButtonElement).disabled).toBe(true);
+    expect(panel.textContent).toContain(
+      `${windowFixture.start} ~ ${windowFixture.end}`,
+    );
+    await user.click(
+      within(panel).getByRole("button", { name: "최대 범위 선택 되돌리기" }),
+    );
+
+    // 누르기 직전에 고른 날짜로 돌아가고, 그 기간으로 분석한다.
+    await waitFor(() =>
+      expect(panel.textContent).toContain("2021-01-04 ~ 2023-12-28"),
+    );
+    expect(
+      (within(panel).getByRole("button", { name: "최대 범위 선택" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+    await user.click(actionButton("분석하기"));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].conditions.start).toBe("2021-01-04");
+    expect(requests[0].conditions.end).toBe("2023-12-28");
+  });
+
+  it("정하지 않은 채 '최대 범위 선택'을 누르고 되돌리면 다시 정하지 않은 상태가 된다", async () => {
+    const user = userEvent.setup();
+    storeCondition({});
+    const { support } = makeSupport();
+    renderPage(support);
+
+    await user.click(await findCardNamed(selectableStrategy.name));
+    const panel = await openConditions(user);
+    await user.click(within(panel).getByRole("button", { name: "최대 범위 선택" }));
+    await waitFor(() =>
+      expect(actionButton("분석하기").getAttribute("aria-disabled")).toBe("false"),
+    );
+
+    await user.click(
+      within(panel).getByRole("button", { name: "최대 범위 선택 되돌리기" }),
+    );
+    await waitFor(() =>
+      expect(reasonOf(actionButton("분석하기"))).toContain("분석 기간을 정해 주세요."),
+    );
+    expect(panel.textContent).toContain("정해지지 않음");
+  });
+
   it("분석 조건에서 바꾼 기간과 금액이 그 행 값과 요청에 함께 실린다", async () => {
     const user = userEvent.setup();
     const { support, requests } = makeSupport();
@@ -2510,9 +2643,12 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
       ).toContain(versionsFixture.costProfileVersion),
     );
     const group = within(panel).getByRole("group", { name: "비용 가정" });
-    expect(group.textContent).toContain("수수료 1.5bp");
-    expect(group.textContent).toContain("세금 20bp");
     expect(group.textContent).toContain("임시값");
+    // 수치는 물음표 도움말 안에 있다(2026-10-01).
+    await user.hover(within(group).getByRole("button", { name: "비용 가정 도움말" }));
+    const help = await screen.findByRole("tooltip", { name: "비용 가정 도움말" });
+    expect(help.textContent).toContain("수수료 1.5bp");
+    expect(help.textContent).toContain("세금 20bp");
   });
 
   it("비용 조건을 확인할 수 없으면 패널이 그 사실을 말하고 분석하기가 막힌다", async () => {
@@ -2543,8 +2679,9 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     await user.click(await findCardNamed(selectableStrategy.name));
     const panel = await openConditions(user);
 
-    const range = `평가할 수 있는 범위는 ${windowFixture.start} ~ ${windowFixture.end}입니다.`;
-    expect(within(panel).getByText(range, { exact: false })).toBeTruthy();
+    // '최대 범위 선택'이면 행의 값이 곧 평가할 수 있는 범위다(2026-10-01).
+    const range = `${windowFixture.start} ~ ${windowFixture.end}`;
+    expect(panel.textContent).toContain(range);
     // 고른 적 없는 범위를 두고 "줄었다"고 말하지 않는다.
     expect(panel.textContent).not.toContain("줄었");
 
@@ -2643,7 +2780,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     expect(requests[0].conditions.end).toBe("2022-06-30");
   });
 
-  it("보관된 기간이 지금 범위를 벗어나면 잘라 맞추지 않고 막으며, 되돌리면 범위 전체로 보낸다", async () => {
+  it("보관된 기간이 지금 범위를 벗어나면 잘라 맞추지 않고 막으며, 최대 범위를 고르면 범위 전체로 보낸다", async () => {
     // FR-017. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다.
     const user = userEvent.setup();
     storeCondition({ periodStart: "2019-03-04", periodEnd: "2023-12-28" });
@@ -2666,7 +2803,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     expect(notice).toBeTruthy();
     await user.click(
       within(notice as HTMLElement).getByRole("button", {
-        name: "범위 전체로 되돌리기",
+        name: "최대 범위 선택",
       }),
     );
 
@@ -2696,12 +2833,9 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     await user.click(await findCardNamed(selectableStrategy.name));
     const panel = await openConditions(user);
 
-    expect(
-      within(panel).getByText(
-        `평가할 수 있는 범위는 ${windowFixture.start} ~ ${windowFixture.end}입니다.`,
-        { exact: false },
-      ),
-    ).toBeTruthy();
+    expect(panel.textContent).toContain(
+      `${windowFixture.start} ~ ${windowFixture.end}`,
+    );
     expect(
       within(panel).queryByRole("button", {
         name: "평가할 수 있는 범위 도움말",
@@ -2709,7 +2843,7 @@ describe("StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00
     ).toBeNull();
   });
 
-  it("고르지 않은 기간(범위 전체)은 화면이 최소 평가 기간으로 다시 판정하지 않는다", async () => {
+  it("'최대 범위 선택'의 기간(범위 전체)은 화면이 최소 평가 기간으로 다시 판정하지 않는다", async () => {
     // 범위 전체의 판정은 001 산식을 따르는 카드 판정이 맡는다. 달력 규약으로는 하루 모자라는 범위다.
     const user = userEvent.setup();
     const shortWindow = { start: "2023-06-01", end: "2024-05-31" };

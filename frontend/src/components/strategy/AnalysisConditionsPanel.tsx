@@ -1,4 +1,5 @@
-import { useId, useRef, useState, type ReactNode } from "react";
+import { RotateCcw } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { DateField } from "@/components/common/DateField";
 import { InlineHelp } from "@/components/common/InlineHelp";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
@@ -44,10 +45,19 @@ interface AnalysisConditionsPanelProps {
   range: AnalysisPeriod | null;
   /** `range`가 없을 때 그 까닭. 없으면 "아직 확인하지 못했다"는 일반 문장을 쓴다 */
   rangeUnavailableMessage?: string;
-  /** 지금 쓰이는 분석 기간. 사용자가 고르지 않았으면 `range`와 같다 */
+  /** 지금 쓰이는 분석 기간. '최대 범위 선택'이면 `range`와 같고, 아직 정하지 않았으면 `null`이다 */
   period: AnalysisPeriod | null;
-  /** 사용자가 기간을 직접 골랐는가. 참일 때만 '범위 전체로 되돌리기'를 보인다 */
-  periodChosen: boolean;
+  /** 분석 기간의 상태. 정하지 않았으면 `period`가 `null`이다 */
+  periodMode: PeriodMode;
+  /** '최대 범위 선택'. 평가 가능 범위 전체를 쓴다 */
+  onSelectFullRange: () => void;
+  /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다 */
+  onUndoFullRange: () => void;
+  /**
+   * 날짜 칸에 반영하지 않은 무효 날짜가 남아 있는지 알린다. 칸이 무효인 동안 '분석하기'를 막는 데 쓴다 — 막지
+   * 않으면 칸에는 고친 날짜가 보이는데 요청은 그 전 기간으로 나간다(2026-10-01)
+   */
+  onPeriodDraftInvalid?: (invalid: boolean) => void;
   /**
    * 011 사례 경로에서만 오는 추가 제약(011 진입 계약 §3). 주소에 `case`가 없으면 `null`이고 동작이
    * 지금과 같다. 있으면 시작일에 상한이, 종료일에 하한이 더 걸리고 고정 문구를 보인다
@@ -78,7 +88,7 @@ interface AnalysisConditionsPanelProps {
 export const COST_UNAVAILABLE =
   "비용 조건을 확인할 수 없습니다. 확인하기 전에는 분석을 시작할 수 없습니다.";
 /** 비용 수치가 어디서 온 값인지. 사용자가 고칠 수 있는 값이 아니라는 사실을 문구가 대신 말한다(FR-010). */
-const COST_BASIS = "2026년 한국 ETF 거래에 적용되는 기준과 같습니다.";
+const COST_BASIS = "2026년 한국 ETF 거래 적용 기준과 동일";
 
 export const COST_LOADING = "비용 조건을 확인하는 중입니다.";
 
@@ -111,7 +121,7 @@ function rangeChoices({ min, max, step }: { min: number; max: number; step: numb
 const RANGE_UNAVAILABLE =
   "평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.";
 
-/** 범위가 없어 기간이 아직 정해지지 않았을 때의 값. 고장이 아니라 정해지기 전이다. */
+/** 기간이 아직 정해지지 않았을 때의 값. 범위를 모르거나, 사용자가 아직 고르지 않았다. 고장이 아니라 정해지기 전이다. */
 const PERIOD_UNSET = "정해지지 않음";
 
 function toNumber(value: unknown): number | null {
@@ -130,15 +140,26 @@ function formatBps(value: number): string {
   return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}bp`;
 }
 
+/**
+ * 분석 기간이 지금 어느 상태인가(2026-10-01). `unset`은 아직 정하지 않음, `full`은 '최대 범위 선택'으로 평가 가능
+ * 범위 전체를 따름, `custom`은 사용자가 날짜를 직접 고름이다.
+ */
+export type PeriodMode = "unset" | "full" | "custom";
+
 interface PeriodFieldProps {
   range: AnalysisPeriod | null;
   rangeUnavailableMessage: string;
   period: AnalysisPeriod | null;
-  periodChosen: boolean;
+  periodMode: PeriodMode;
   caseConstraint: CasePeriodConstraint | null;
   onChange: (period: AnalysisPeriod) => void;
-  /** 범위 전체로 되돌린다. 단추는 행 끝의 되돌리기 아이콘이고, 입력 도중 무효가 되었을 때도 이 길을 쓴다 */
-  onReset: () => void;
+  /** '최대 범위 선택'. 평가 가능 범위 전체를 쓰고, 범위가 바뀌면 그 범위를 따른다 */
+  onSelectFull: () => void;
+  /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다. 단추 옆 되돌리기 아이콘이 부른다 */
+  onUndoFull: () => void;
+  /** 기간을 정하지 않은 상태로 되돌린다. 아무것도 정하지 않은 데서 시작한 입력이 무효가 되었을 때 쓴다 */
+  onClear: () => void;
+  onDraftInvalid?: (invalid: boolean) => void;
 }
 
 /** 사례 제약을 어겼는가. 어겼으면 고정 문구, 아니면 `null`이다(011 진입 계약 §3). */
@@ -169,10 +190,13 @@ function PeriodField({
   range,
   rangeUnavailableMessage,
   period,
-  periodChosen,
+  periodMode,
   caseConstraint,
   onChange,
-  onReset,
+  onSelectFull,
+  onUndoFull,
+  onClear,
+  onDraftInvalid,
 }: PeriodFieldProps) {
   const startId = useId();
   const endId = useId();
@@ -181,16 +205,16 @@ function PeriodField({
     period ?? { start: "", end: "" },
   );
   const [synced, setSynced] = useState(period);
-  /** 입력을 시작할 때의 기간과, 그것이 사용자가 고른 기간이었는지 */
+  /** 입력을 시작할 때의 기간과 그때의 상태. 입력이 무효가 되면 이리로 되돌린다 */
   const atEditStart = useRef<{
     period: AnalysisPeriod | null;
-    chosen: boolean;
+    mode: PeriodMode;
   }>({
     period,
-    chosen: periodChosen,
+    mode: periodMode,
   });
 
-  // 바깥에서 기간이 바뀌면(범위 전체로 되돌리기, 전략·워밍업이 바뀌어 범위가 달라짐) 입력칸을 맞춘다.
+  // 바깥에서 기간이 바뀌면('최대 범위 선택'과 그 되돌리기, 전략·워밍업이 바뀌어 범위가 달라짐) 입력칸을 맞춘다.
   if (period?.start !== synced?.start || period?.end !== synced?.end) {
     setSynced(period);
     setDraft(period ?? { start: "", end: "" });
@@ -205,15 +229,19 @@ function PeriodField({
 
   const draftIsCurrent =
     draft.start === period?.start && draft.end === period?.end;
+  // 아직 정하지 않았고 칸도 비어 있으면 고칠 것이 없다. 무엇을 정해야 하는지는 '분석하기'가 알린다.
+  const untouched = period === null && draft.start === "" && draft.end === "";
   const problem =
     range === null
       ? rangeUnavailableMessage
-      : draftIsCurrent &&
+      : untouched
+        ? null
+        : draftIsCurrent &&
           period !== null &&
           isWithin(period, range) &&
           checkCaseConstraint(period, caseConstraint) === null
-        ? null
-        : check(draft);
+          ? null
+          : check(draft);
 
   // 어느 칸이 문제인지 가른다. 순서가 뒤집힌 경우만 둘 다 문제다.
   const badDate = (date: string) =>
@@ -227,27 +255,32 @@ function PeriodField({
     problem !== null && range !== null && (badDate(draft.end) || reversed);
 
   const rememberEditStart = () => {
-    atEditStart.current = { period, chosen: periodChosen };
+    atEditStart.current = { period, mode: periodMode };
   };
 
   const update = (next: AnalysisPeriod) => {
     setDraft(next);
     if (range === null) return;
     if (check(next) !== null) {
+      // 되돌린 값이 바깥에서 돌아와도 입력칸의 글은 사용자가 친 그대로 둔다. 그래서 `synced`를 먼저 맞춘다.
       const before = atEditStart.current;
-      if (before.chosen && before.period) {
+      if (before.mode === "custom" && before.period) {
         if (
           before.period.start !== period?.start ||
           before.period.end !== period?.end
         ) {
-          // 되돌린 값이 바깥에서 돌아와도 입력칸의 글은 사용자가 친 그대로 둔다.
           setSynced(before.period);
           onChange(before.period);
         }
-      } else if (periodChosen) {
-        // 고르지 않은 상태에서 시작했으면 되돌릴 곳은 범위 전체다.
-        setSynced(range);
-        onReset();
+      } else if (before.mode === "full") {
+        if (periodMode !== "full") {
+          setSynced(range);
+          onSelectFull();
+        }
+      } else if (periodMode !== "unset") {
+        // 정하지 않은 상태에서 시작했으면 되돌릴 곳도 정하지 않은 상태다. 범위 전체로 대신 채우지 않는다.
+        setSynced(null);
+        onClear();
       }
       return;
     }
@@ -285,9 +318,13 @@ function PeriodField({
       ? draft.start
       : rangeEndMin;
 
-  const hint = range
-    ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.`
-    : rangeUnavailableMessage;
+  // 칸에 반영하지 않은 무효 날짜가 남았는지 알린다. 칸이 사라지면(행을 접음) 무효 날짜도 함께 사라진다. 칸이
+  // 저장된 기간 그대로인데 범위가 줄어 밖으로 밀려난 것은 여기서 알리지 않는다 — 화면이 그 사유를 따로 말한다.
+  const draftInvalid = problem !== null && range !== null && !draftIsCurrent;
+  useEffect(() => {
+    onDraftInvalid?.(draftInvalid);
+  }, [draftInvalid, onDraftInvalid]);
+  useEffect(() => () => onDraftInvalid?.(false), [onDraftInvalid]);
 
   return (
     <fieldset className={fieldStyles.field} aria-label="분석 기간">
@@ -324,15 +361,41 @@ function PeriodField({
           onFocus={rememberEditStart}
           onChange={(next) => update({ ...draft, end: next })}
         />
+        {/*
+          '최대 범위 선택'(2026-10-01). 예전에는 범위 전체가 저절로 기간이 되고 그 범위를 문장으로 적었는데, 사용자가
+          고르지 않은 기간으로 분석이 나갔다. 이제 범위는 단추가 품고, 누르면 범위 전체를 쓴다. 누른 뒤에는 다시 누를
+          일이 없어 막고, 누르기 직전 상태로 돌아가는 아이콘을 옆에 둔다. 날짜를 직접 고른 동안에는 단추가 열려 있다.
+        */}
+        <button
+          type="button"
+          className={fieldStyles.quickAddButton}
+          disabled={range === null || periodMode === "full"}
+          aria-pressed={periodMode === "full"}
+          title={range ? `${range.start} ~ ${range.end}` : undefined}
+          onClick={onSelectFull}
+        >
+          최대 범위 선택
+        </button>
+        {periodMode === "full" ? (
+          <button
+            type="button"
+            className={styles.undoFull}
+            aria-label="최대 범위 선택 되돌리기"
+            title="최대 범위 선택 되돌리기"
+            onClick={onUndoFull}
+          >
+            <RotateCcw size={12} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
       <p
         id={messageId}
         className={problem && range ? fieldStyles.problem : fieldStyles.hint}
         aria-live="polite"
       >
-        {problem && range
-          ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}`
-          : hint}
+        {/* 문제가 없으면 비워 둔다. 범위는 '최대 범위 선택' 단추가 품고, 행 아래 설명이 적는다. */}
+        {/* 무엇이 잘못됐는지만 짧게 적는다. 반영하지 않았다는 사실은 막힌 '분석하기'가 함께 말한다. */}
+        {problem && range ? problem : range ? "" : rangeUnavailableMessage}
       </p>
       {/* 사례 경로의 고정 문구다. 어겼을 때만이 아니라 늘 보인다 — 왜 좁아졌는지가 먼저다. */}
       {caseConstraint ? (
@@ -366,7 +429,10 @@ export function AnalysisConditionsPanel({
   range,
   rangeUnavailableMessage = RANGE_UNAVAILABLE,
   period,
-  periodChosen,
+  periodMode,
+  onSelectFullRange,
+  onUndoFullRange,
+  onPeriodDraftInvalid,
   caseConstraint = null,
   sectorCount,
   initialAmount,
@@ -382,12 +448,9 @@ export function AnalysisConditionsPanel({
   const volatility = conditions.targetVolatility;
   const years = conditions.minEvaluationYears;
 
-  // 사용자가 기간을 직접 골랐을 때만 범위를 한 줄로 덧붙인다. 고르지 않았으면 값이 곧 범위라 같은 말이 된다.
-  const periodCaption =
-    periodChosen && range
-      ? `평가 가능 범위 ${range.start} ~ ${range.end}`
-      : undefined;
-
+  // 평가 가능 범위는 행 아래에 적지 않는다(2026-10-01). 범위는 전략 카드에 마우스를 올리면 보이고, 날짜 칸 옆
+  // '최대 범위 선택'이 그 범위를 품는다.
+  //
   // 범위가 없으면 기간을 고칠 수 없다. 펼칠 폼이 없으니 읽기 전용 행으로 두고 까닭을 행 아래에 늘 보인다(FR-003).
   const periodUnavailableCaption = range ? undefined : (
     <>
@@ -413,29 +476,23 @@ export function AnalysisConditionsPanel({
       <SettingRow
         label="분석 기간"
         help={range ? rangeReason : undefined}
-        value={
-          period
-            ? `${period.start} ~ ${period.end}`
-            : range
-              ? UNAVAILABLE
-              : PERIOD_UNSET
-        }
-        caption={range ? periodCaption : periodUnavailableCaption}
-        modified={periodChosen}
-        onReset={() => onReset("period")}
-        resetLabel="범위 전체로 되돌리기"
+        value={period ? `${period.start} ~ ${period.end}` : PERIOD_UNSET}
+        caption={range ? undefined : periodUnavailableCaption}
       >
         {range ? (
           <PeriodField
             range={range}
             rangeUnavailableMessage={rangeUnavailableMessage}
             period={period}
-            periodChosen={periodChosen}
+            periodMode={periodMode}
             caseConstraint={caseConstraint}
             onChange={(next) =>
               onChange({ periodStart: next.start, periodEnd: next.end })
             }
-            onReset={() => onReset("period")}
+            onSelectFull={onSelectFullRange}
+            onUndoFull={onUndoFullRange}
+            onClear={() => onReset("period")}
+            onDraftInvalid={onPeriodDraftInvalid}
           />
         ) : null}
       </SettingRow>
@@ -458,6 +515,7 @@ export function AnalysisConditionsPanel({
           value={initialAmount}
           groupDigits
           roundToStep
+          rangeHint={false}
           quickAdd={buildAmountQuickAdds(
             amount.step,
             amount.max - amount.min,
@@ -560,7 +618,12 @@ export function AnalysisConditionsPanel({
           label="비용 가정"
           help={
             <InlineHelp label="비용 가정" on="hover">
-              {COST_BASIS}
+              {/*
+                비용 수치는 행 아래가 아니라 이 도움말 안, 기준 문장 다음 줄에 작게 둔다(2026-10-01). 행에는 버전과
+                임시 여부만 남아 읽기 전용 값이라는 것이 한눈에 보이고, 수치는 물음표 하나로 닿는다(FR-010).
+              */}
+              <span className={styles.costBasis}>{COST_BASIS}</span>
+              {costRates}
             </InlineHelp>
           }
           value={
@@ -582,15 +645,10 @@ export function AnalysisConditionsPanel({
               <span className={fieldStyles.problem} role="status">
                 {COST_UNAVAILABLE}
               </span>
-            ) : cost !== "loading" ? (
-              <>
-                {costRates}
-                {cost.provisional ? (
-                  <span className={styles.provisionalNote}>
-                    팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지 마세요.
-                  </span>
-                ) : null}
-              </>
+            ) : cost !== "loading" && cost.provisional ? (
+              <span className={styles.provisionalNote}>
+                팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지 마세요.
+              </span>
             ) : undefined
           }
         />
