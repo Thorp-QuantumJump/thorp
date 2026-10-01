@@ -595,6 +595,7 @@ components:
             - SOCIAL_ACCOUNT_ALREADY_LINKED
             - SOCIAL_PROVIDER_NOT_ENABLED
             - SOCIAL_VERIFICATION_LIMIT
+            - SOCIAL_LINK_TEMPORARILY_LOCKED
             - EMAIL_VERIFICATION_RESEND_TOO_SOON
             - INTERNAL_ERROR
         message:
@@ -956,7 +957,9 @@ components:
     SocialVerificationLimited:
       description: >-
         인증번호 다시 받기 간격 안이거나(대기 상태 유지), 확인 시도·발송 상한을 넘었다(대기 상태를 버림, 처음부터 다시).
-        번호 하나는 5번까지만 대조하고 대조 전에 센다. 수치는 별도 보안 작업 전까지의 임시값이다.
+        번호 하나는 5번까지만 대조하고 대조 전에 센다. 같은 기존 계정을 향한 대조는 대기 상태가 바뀌어도 한 시간에 10번,
+        그 계정 이메일로의 발송은 5통까지다(SOCIAL_LINK_TEMPORARILY_LOCKED, 대기 상태 유지, 그 계정의 로그인은 막지 않음).
+        수치는 별도 보안 작업 전까지의 임시값이다.
       content:
         application/json:
           schema:
@@ -969,6 +972,13 @@ components:
                 error:
                   code: EMAIL_VERIFICATION_RESEND_TOO_SOON
                   message: 인증번호를 방금 보냈습니다. 잠시 후 다시 받아 주세요.
+            targetLocked:
+              value:
+                success: false
+                data: null
+                error:
+                  code: SOCIAL_LINK_TEMPORARILY_LOCKED
+                  message: 이 계정에 대한 확인 시도가 많아 잠시 막았습니다. 1시간 뒤 다시 시도하거나 다른 방법으로 로그인해 주세요.
             limit:
               value:
                 success: false

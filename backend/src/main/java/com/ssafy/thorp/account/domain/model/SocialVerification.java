@@ -41,7 +41,9 @@ public class SocialVerification {
         NO_CODE,
         EXPIRED,
         RESEND_TOO_SOON,
-        LIMIT_REACHED
+        LIMIT_REACHED,
+        /** 대상 계정 단위 누적 상한({@link SocialLinkTarget})에 걸렸다. 대기 상태는 그대로 둔다. */
+        TARGET_LOCKED
     }
 
     /** 규칙을 어긴 시도. 저장소는 잠근 행의 변경을 커밋한 뒤 이 예외를 그대로 올린다. */

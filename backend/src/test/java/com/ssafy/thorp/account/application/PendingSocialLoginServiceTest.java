@@ -49,6 +49,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 /** 대기 상태의 만료·일회성·취소와 소셜 경로 인증번호 규칙(T064, FR-022·FR-025). */
 class PendingSocialLoginServiceTest {
 
+    private final InMemorySocialLinkTargetRepository targets =
+            new InMemorySocialLinkTargetRepository();
+
     private static final String EMAIL = "member@example.com";
 
     private final MutableClock clock = new MutableClock(NOW);
@@ -66,7 +69,10 @@ class PendingSocialLoginServiceTest {
     void setUp() {
         PendingSocialLoginAccess access =
                 new PendingSocialLoginAccess(
-                        store, new SocialVerificationGuard(verifications, clock), encoder, clock);
+                        store,
+                        new SocialVerificationGuard(verifications, targets, clock),
+                        encoder,
+                        clock);
         SocialLinkService linkService =
                 new SocialLinkService(
                         access,
@@ -237,6 +243,37 @@ class PendingSocialLoginServiceTest {
         assertThatThrownBy(() -> service.confirmProviderEmail(code))
                 .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
         assertThat(store.current().emailVerified()).isFalse();
+    }
+
+    @Test
+    @DisplayName("같은 계정 이메일로 가는 인증번호는 대기 상태가 바뀌어도 한 시간에 5통까지만 보낸다")
+    void targetEmailSendsAreCappedAcrossPendings() {
+        when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
+        for (int i = 0;
+                i < com.ssafy.thorp.account.domain.model.SocialLinkTarget.MAX_CODES_SENT;
+                i++) {
+            // 매번 새 제공자 로그인으로 온 새 대기 상태다. 대기 상태 단위 상한으로는 막히지 않는다.
+            store.save(signupPending().toLink(42L, LinkReason.PHONE));
+            service.sendCode();
+        }
+
+        store.save(signupPending().toLink(42L, LinkReason.PHONE));
+        assertThatThrownBy(() -> service.sendCode())
+                .satisfies(code(ErrorCode.SOCIAL_LINK_TEMPORARILY_LOCKED));
+        verify(
+                        mailSender,
+                        org.mockito.Mockito.times(
+                                com.ssafy.thorp.account.domain.model.SocialLinkTarget
+                                        .MAX_CODES_SENT))
+                .sendVerificationCode(eq("owner@example.com"), anyString());
+
+        // 창이 지나면 다시 보낼 수 있다.
+        clock.advance(com.ssafy.thorp.account.domain.model.SocialLinkTarget.WINDOW);
+        store.save(
+                PendingSocialLogin.start(
+                                SocialProvider.KAKAO, "kakao-1", EMAIL, true, null, clock.instant())
+                        .toLink(42L, LinkReason.PHONE));
+        service.sendCode();
     }
 
     @Test

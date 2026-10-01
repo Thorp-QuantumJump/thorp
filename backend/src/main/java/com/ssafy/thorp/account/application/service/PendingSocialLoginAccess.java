@@ -63,6 +63,10 @@ public class PendingSocialLoginAccess {
         guarded(
                 () -> {
                     guard.issue(pending.verificationId(), codeHash, target);
+                    // 그 계정 이메일로 가는 번호는 대상 계정 단위로도 센다. 제공자 로그인을 다시 해 새 대기 상태로 와도 같은 창에서 센다.
+                    if (target == CodeTarget.LINK_TARGET_EMAIL) {
+                        guard.reserveTargetSend(pending.linkTargetUserId());
+                    }
                     return null;
                 });
     }
@@ -74,6 +78,13 @@ public class PendingSocialLoginAccess {
      * 받아야 한다. 다른 주소로 보낸 번호는 없는 것으로 본다 — 제공자 이메일로 받은 번호로 연결 대상 계정의 소유를 확인할 수 없어야 한다.
      */
     public void verifyCode(PendingSocialLogin pending, CodeTarget target, String code) {
+        if (target == CodeTarget.LINK_TARGET_EMAIL) {
+            guarded(
+                    () -> {
+                        guard.reserveTargetAttempt(pending.linkTargetUserId());
+                        return null;
+                    });
+        }
         String hash = guarded(() -> guard.reserveCodeAttempt(pending.verificationId(), target));
         if (code == null || !passwordEncoder.matches(code, hash)) {
             throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_INVALID);
@@ -85,9 +96,15 @@ public class PendingSocialLoginAccess {
     public void reservePasswordAttempt(PendingSocialLogin pending) {
         guarded(
                 () -> {
+                    guard.reserveTargetAttempt(pending.linkTargetUserId());
                     guard.reservePasswordAttempt(pending.verificationId());
                     return null;
                 });
+    }
+
+    /** 연결 대상 계정의 주인임을 확인했다. 그 계정을 향한 실패 누적을 지운다. */
+    public void ownershipConfirmed(PendingSocialLogin pending) {
+        guard.clearTargetAttempts(pending.linkTargetUserId());
     }
 
     /** 가입·연결이 끝난 대기 상태의 확인 기록을 지운다. */
@@ -108,6 +125,7 @@ public class PendingSocialLoginAccess {
             case NO_CODE -> ErrorCode.EMAIL_VERIFICATION_NOT_FOUND;
             case EXPIRED -> ErrorCode.EMAIL_VERIFICATION_EXPIRED;
             case RESEND_TOO_SOON -> ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON;
+            case TARGET_LOCKED -> ErrorCode.SOCIAL_LINK_TEMPORARILY_LOCKED;
             case LIMIT_REACHED -> {
                 // 상한을 넘었으면 대기 상태를 버린다. 제공자 로그인부터 다시 해야 새 기록으로 시작한다.
                 store.clear();

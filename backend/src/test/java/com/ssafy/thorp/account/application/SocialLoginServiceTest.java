@@ -48,6 +48,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  */
 class SocialLoginServiceTest {
 
+    private final InMemorySocialLinkTargetRepository targets =
+            new InMemorySocialLinkTargetRepository();
+
     private static final String EMAIL = "member@example.com";
 
     private final SocialAccountRepository socialAccounts = mock(SocialAccountRepository.class);
@@ -63,7 +66,7 @@ class SocialLoginServiceTest {
                 new PendingSocialLoginAccess(
                         store,
                         new SocialVerificationGuard(
-                                new InMemorySocialVerificationRepository(), clock),
+                                new InMemorySocialVerificationRepository(), targets, clock),
                         mock(PasswordEncoder.class),
                         clock);
         SocialLinkService linkService =

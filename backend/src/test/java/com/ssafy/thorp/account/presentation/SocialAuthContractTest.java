@@ -296,7 +296,10 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
                 .as(counts.toString())
                 .isEqualTo(
                         com.ssafy.thorp.account.domain.model.SocialVerification.MAX_CODE_ATTEMPTS);
-        assertThat(counts.get("EMAIL_VERIFICATION_NOT_FOUND"))
+        // 나머지는 모두 대조 없이 거절이다. 번호를 다 썼거나(NOT_FOUND), 같은 계정을 향한 시도가 한 시간 상한을 넘었다(LOCKED).
+        assertThat(
+                        counts.getOrDefault("EMAIL_VERIFICATION_NOT_FOUND", 0)
+                                + counts.getOrDefault("SOCIAL_LINK_TEMPORARILY_LOCKED", 0))
                 .as(counts.toString())
                 .isEqualTo(
                         attempts
@@ -310,13 +313,68 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
                                 "{\"method\":\"EMAIL_CODE\",\"verificationCode\":\""
                                         + right
                                         + "\"}"));
-        assertThat(code(late)).isEqualTo("EMAIL_VERIFICATION_NOT_FOUND");
+        assertThat(code(late))
+                .isIn("EMAIL_VERIFICATION_NOT_FOUND", "SOCIAL_LINK_TEMPORARILY_LOCKED");
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "select count(*) from social_accounts where user_id = ?",
                                 Integer.class,
                                 owner.getId()))
                 .isZero();
+    }
+
+    @Test
+    @DisplayName("제공자 로그인을 다시 해 새 대기 상태로 와도 같은 계정을 향한 비밀번호 대입은 누적해 429로 막는다")
+    void targetLockSurvivesRestartedSocialLogin() throws Exception {
+        User owner = saveUser(PREFIX + "target-owner@example.com", "01099100010", "password123");
+        int perPending =
+                com.ssafy.thorp.account.domain.model.SocialVerification.MAX_PASSWORD_ATTEMPTS;
+        int restarts =
+                com.ssafy.thorp.account.domain.model.SocialLinkTarget.MAX_ATTEMPTS / perPending;
+
+        for (int restart = 0; restart < restarts; restart++) {
+            // 공격자가 자기 카카오로 처음부터 다시 로그인한다. 대기 상태와 그 확인 기록은 새것이다.
+            loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "attacker@example.com", true, "닉네임"));
+            sendWithCsrf(json(post("/auth/social/signup"), signupBody("새회원", "01099100010")));
+            for (int i = 0; i < perPending; i++) {
+                assertThat(
+                                code(
+                                        sendWithCsrf(
+                                                json(
+                                                        post("/auth/social/link"),
+                                                        "{\"method\":\"PASSWORD\",\"password\":\"wrong-"
+                                                                + i
+                                                                + "\"}"))))
+                        .isEqualTo("INVALID_CREDENTIALS");
+            }
+        }
+
+        loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "attacker@example.com", true, "닉네임"));
+        sendWithCsrf(json(post("/auth/social/signup"), signupBody("새회원", "01099100010")));
+        MvcResult locked =
+                sendWithCsrf(
+                        json(
+                                post("/auth/social/link"),
+                                "{\"method\":\"PASSWORD\",\"password\":\"password123\"}"));
+
+        assertThat(locked.getResponse().getStatus()).isEqualTo(429);
+        assertThat(code(locked)).isEqualTo("SOCIAL_LINK_TEMPORARILY_LOCKED");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select count(*) from social_accounts where user_id = ?",
+                                Integer.class,
+                                owner.getId()))
+                .isZero();
+        // 막힌 것은 소셜 연결뿐이다. 주인은 이메일로 그대로 로그인한다.
+        cookies.clear();
+        MvcResult ownerLogin =
+                sendWithCsrf(
+                        json(
+                                post("/auth/sessions"),
+                                "{\"email\":\""
+                                        + PREFIX
+                                        + "target-owner@example.com\",\"password\":\"password123\"}"));
+        assertThat(ownerLogin.getResponse().getStatus()).isEqualTo(200);
     }
 
     @Test

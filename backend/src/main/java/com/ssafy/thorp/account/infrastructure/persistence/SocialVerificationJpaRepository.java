@@ -22,6 +22,10 @@ public interface SocialVerificationJpaRepository
             nativeQuery = true)
     int insertIfAbsent(@Param("id") String id, @Param("now") Instant now);
 
+    @Modifying
+    @Query("delete from SocialVerificationEntity v where v.createdAt < :cutoff")
+    int deleteCreatedBefore(@Param("cutoff") Instant cutoff);
+
     /** 행을 잠근다. 같은 기록을 바꾸려는 요청은 여기서 줄을 선다. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from SocialVerificationEntity v where v.id = :id")
