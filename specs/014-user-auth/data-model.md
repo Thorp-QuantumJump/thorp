@@ -238,3 +238,20 @@ any ──10분 경과 / 취소 / 새 소셜 로그인 시작(intent=link 제외
 
 `AuthState`는 바꾸지 않는다. 소셜 화면은 `PendingSocialView`를 메모리에만 들고, 비밀번호·인증번호는 컴포넌트
 상태에서 제출 뒤 폐기한다. `returnTarget`은 기존 `sessionStorage` 규칙을 그대로 쓴다.
+
+### SocialVerification (신규 `social_pending_verifications`, 2026-10-01 리뷰 반영)
+
+대기 상태 하나의 인증번호와 시도 기록이다. `PendingSocialLogin.verificationId`(UUID)로 찾고 URL·응답에 나가지 않는다.
+`PendingSocialLogin`의 인증번호 필드(`codeHash`·`codeTarget`·`codeExpiresAt`)는 여기로 옮겼다.
+
+| Field | Type | 규칙 |
+|---|---|---|
+| id | String(36) | 대기 상태의 verificationId |
+| codeHash / codeTarget / codeExpiresAt | String? / Enum? / Instant? | 지금 번호. 다 쓰거나 맞히면 지운다 |
+| codeAttempts | int | 지금 번호의 대조 횟수. **대조 전에 센다.** 5회 |
+| codesSent / lastCodeSentAt | int / Instant? | 발송 5회, 간격 30초 |
+| passwordAttempts | int | 연결 단계 비밀번호 대조 5회 |
+| createdAt | Instant | 가입·연결이 끝나면 행을 지운다 |
+
+모든 변경은 행 잠금(`SELECT ... FOR UPDATE`) 아래에서 따로 연 트랜잭션으로 한다. 상한을 넘으면 대기 상태를 버린다.
+수치는 별도 보안 작업 전까지의 임시값이다.

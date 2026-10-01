@@ -319,6 +319,8 @@ paths:
           $ref: '#/components/responses/InvalidCsrf'
         '404':
           $ref: '#/components/responses/SocialPendingNotFound'
+        '429':
+          $ref: '#/components/responses/SocialVerificationLimited'
         '500':
           $ref: '#/components/responses/InternalError'
   /auth/social/pending/email-verifications/confirm:
@@ -352,6 +354,8 @@ paths:
           $ref: '#/components/responses/SocialPendingNotFound'
         '409':
           $ref: '#/components/responses/SocialConflict'
+        '429':
+          $ref: '#/components/responses/SocialVerificationLimited'
         '500':
           $ref: '#/components/responses/InternalError'
   /auth/social/signup:
@@ -446,6 +450,8 @@ paths:
           $ref: '#/components/responses/SocialPendingNotFound'
         '409':
           $ref: '#/components/responses/SocialConflict'
+        '429':
+          $ref: '#/components/responses/SocialVerificationLimited'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
@@ -588,6 +594,8 @@ components:
             - SOCIAL_PROVIDER_ALREADY_LINKED
             - SOCIAL_ACCOUNT_ALREADY_LINKED
             - SOCIAL_PROVIDER_NOT_ENABLED
+            - SOCIAL_VERIFICATION_LIMIT
+            - EMAIL_VERIFICATION_RESEND_TOO_SOON
             - INTERNAL_ERROR
         message:
           type: string
@@ -945,3 +953,26 @@ components:
                 error:
                   code: SOCIAL_SIGNUP_REJECTED
                   message: 지금은 이 정보로 가입할 수 없습니다. 다른 방법으로 로그인해 주세요.
+    SocialVerificationLimited:
+      description: >-
+        인증번호 다시 받기 간격 안이거나(대기 상태 유지), 확인 시도·발송 상한을 넘었다(대기 상태를 버림, 처음부터 다시).
+        번호 하나는 5번까지만 대조하고 대조 전에 센다. 수치는 별도 보안 작업 전까지의 임시값이다.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            resendTooSoon:
+              value:
+                success: false
+                data: null
+                error:
+                  code: EMAIL_VERIFICATION_RESEND_TOO_SOON
+                  message: 인증번호를 방금 보냈습니다. 잠시 후 다시 받아 주세요.
+            limit:
+              value:
+                success: false
+                data: null
+                error:
+                  code: SOCIAL_VERIFICATION_LIMIT
+                  message: 확인 시도 횟수를 넘었습니다. 소셜 로그인을 처음부터 다시 시도해 주세요.
