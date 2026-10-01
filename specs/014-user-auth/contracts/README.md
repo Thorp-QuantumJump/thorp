@@ -43,20 +43,23 @@
 - 네트워크 실패에는 서버 body가 없으므로 FE가 별도의 연결 오류로 처리한다.
 - 로그아웃 DELETE는 이미 비로그인인 경우에도 204로 idempotent하게 처리한다. 응답 자체를 받지 못한 경우에만 FE가 `logoutUnconfirmed`를 유지한다.
 
-## Social login (2026-10-01, 구현 전)
+## Social login (2026-10-01)
 
 | External API | Backend internal path | 상태 |
 |---|---|---|
-| `GET /api/auth/social/providers` | `GET /auth/social/providers` | 계획 |
-| `GET /api/auth/oauth2/authorization/{provider}` | `GET /auth/oauth2/authorization/{provider}` | 계획 (브라우저 전체 이동, Spring Security 처리) |
-| `GET /api/auth/oauth2/callback/{provider}` | `GET /auth/oauth2/callback/{provider}` | 계획 (제공자 redirect 대상, Spring Security 처리) |
-| `GET /api/auth/social/pending` | `GET /auth/social/pending` | 계획 |
-| `DELETE /api/auth/social/pending` | `DELETE /auth/social/pending` | 계획 |
-| `POST /api/auth/social/pending/email-verifications` | `POST /auth/social/pending/email-verifications` | 계획 |
-| `POST /api/auth/social/pending/email-verifications/confirm` | `POST /auth/social/pending/email-verifications/confirm` | 계획 |
-| `POST /api/auth/social/signup` | `POST /auth/social/signup` | 계획 |
-| `POST /api/auth/social/link` | `POST /auth/social/link` | 계획 |
-| `POST /api/auth/social/link/decline` | `POST /auth/social/link/decline` | 계획 |
+| `GET /api/auth/social/providers` | `GET /auth/social/providers` | 구현·자동 검증 |
+| `GET /api/auth/oauth2/authorization/{provider}` | `GET /auth/oauth2/authorization/{provider}` | 구현·자동 검증 (브라우저 전체 이동, Spring Security 처리) |
+| `GET /api/auth/oauth2/callback/{provider}` | `GET /auth/oauth2/callback/{provider}` | 구현·자동 검증 (제공자 redirect 대상, Spring Security 처리) |
+| `GET /api/auth/social/pending` | `GET /auth/social/pending` | 구현·자동 검증 |
+| `DELETE /api/auth/social/pending` | `DELETE /auth/social/pending` | 구현·자동 검증 |
+| `POST /api/auth/social/pending/email-verifications` | `POST /auth/social/pending/email-verifications` | 구현·자동 검증 |
+| `POST /api/auth/social/pending/email-verifications/confirm` | `POST /auth/social/pending/email-verifications/confirm` | 구현·자동 검증 |
+| `POST /api/auth/social/signup` | `POST /auth/social/signup` | 구현·자동 검증 |
+| `POST /api/auth/social/link` | `POST /auth/social/link` | 구현·자동 검증 |
+| `POST /api/auth/social/link/decline` | `POST /auth/social/link/decline` | 구현·자동 검증 |
+
+자동 검증은 [verification/social.md](../verification/social.md)에 있다. 실제 카카오·구글·네이버 계정으로
+지나는 흐름(quickstart 시나리오 F~H)은 개발자 앱 자격 증명이 준비된 뒤 확인한다.
 
 - `provider`는 `kakao`, `google`, `naver`다.
 - 시작 주소의 선택 쿼리: `reprompt=true`(이메일 재동의), `intent=link`(대기 중인 연결을 이미 연결된 소셜 계정으로 확인).

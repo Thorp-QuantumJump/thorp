@@ -366,11 +366,11 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 
 ## Phase 14: Social Verification
 
-- [ ] T093 [P] Run and record FE lint, tests, and build in `specs/014-user-auth/verification/frontend.md` under a 2026-10 social section
-- [ ] T094 [P] Run and record BE spotless and tests in `specs/014-user-auth/verification/backend.md` under a 2026-10 social section
-- [ ] T095 Validate the planned social operations against `contracts/auth-api.yaml` and switch them to `implemented` in the yaml and `contracts/README.md`
-- [ ] T096 Execute quickstart Scenarios F–H with real Kakao, Google, and Naver test accounts and record evidence for SC-012~SC-015 in `specs/014-user-auth/verification/social.md`
-- [ ] T097 Update the Social Login Extension status and deviations in `specs/014-user-auth/plan.md`
+- [X] T093 [P] Run and record FE lint, tests, and build in `specs/014-user-auth/verification/frontend.md` under a 2026-10 social section
+- [X] T094 [P] Run and record BE spotless and tests in `specs/014-user-auth/verification/backend.md` under a 2026-10 social section
+- [X] T095 Validate the planned social operations against `contracts/auth-api.yaml` and switch them to `implemented` in the yaml and `contracts/README.md`
+- [ ] T096 (보류: 제공자 자격 증명 없음, verification/social.md "남은 일") Execute quickstart Scenarios F–H with real Kakao, Google, and Naver test accounts and record evidence for SC-012~SC-015 in `specs/014-user-auth/verification/social.md`
+- [X] T097 Update the Social Login Extension status and deviations in `specs/014-user-auth/plan.md`
 
 ## Social Dependencies
 

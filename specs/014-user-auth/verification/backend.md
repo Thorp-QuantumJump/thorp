@@ -38,3 +38,24 @@ $env:THORP_REQUIRE_DOCKER = 'true'
 로그아웃 멱등성, 운영 Secure cookie, Spring Session 마이그레이션을 실제 PostgreSQL 위에서 검증한다.
 
 T057의 formatting과 PostgreSQL-backed test 검증은 통과했다.
+
+## 2026-10-01 소셜 로그인 확장
+
+**실행일**: 2026-10-01  
+**환경**: Java 21, Docker 29.6.2 PostgreSQL 16(Testcontainers)
+
+```powershell
+$env:THORP_REQUIRE_DOCKER = 'true'
+.\gradlew.bat spotlessCheck build
+```
+
+| 항목 | 결과 |
+|---|---|
+| Spotless check | PASS |
+| ArchUnit(`ArchitectureTest`) | PASS, 11 rules |
+| 전체 테스트 | 2,305 tests, failures 0, errors 0, skipped 4 |
+| Gradle build | PASS (`4m 3s`) |
+
+skip 4건은 외부 실서비스 키나 성능 환경을 요구하는 `AssistantLiveTest`·`MarketLiveApiTest`·`NewsPerformanceIT`이고
+소셜·인증 suite에는 skip이 없다. 소셜 suite별 수와 확인 내용은 [social.md](social.md)에 있다. 마이그레이션
+`V20261001120000__social_accounts.sql`은 `FlywayMigrationTest`(빈 DB 적용)와 `ddl-auto=validate` 컨텍스트에서 확인됐다.
