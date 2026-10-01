@@ -4,6 +4,7 @@ import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.learning.application.port.LearningAdminPolicy;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -43,7 +44,10 @@ public class LearningAdminAccess {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null
                 || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
+                || authentication instanceof AnonymousAuthenticationToken
+                // 로그인은 언제나 UsernamePasswordAuthenticationToken(이름 = users.id)을 넣는다. 다른 종류의 이름은 우리
+                // 식별자가 아니다 — 소셜 로그인 token의 이름은 제공자 사용자 식별자다(spec 014 analyze G1).
+                || !(authentication instanceof UsernamePasswordAuthenticationToken)) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
         try {

@@ -1,0 +1,176 @@
+package com.ssafy.thorp.account.application.service;
+
+import com.ssafy.thorp.account.application.port.PendingSocialLoginStore;
+import com.ssafy.thorp.account.application.port.SocialProviderCatalog;
+import com.ssafy.thorp.account.application.port.VerificationMailSender;
+import com.ssafy.thorp.account.application.repository.SocialAccountRepository;
+import com.ssafy.thorp.account.application.result.PendingSocialView;
+import com.ssafy.thorp.account.application.result.SocialLoginOutcome;
+import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
+import com.ssafy.thorp.account.domain.model.PendingSocialLogin.CodeTarget;
+import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
+import com.ssafy.thorp.account.domain.model.SocialAccount;
+import com.ssafy.thorp.account.domain.model.SocialProvider;
+import com.ssafy.thorp.account.domain.model.User;
+import com.ssafy.thorp.common.exception.BusinessException;
+import com.ssafy.thorp.common.exception.ErrorCode;
+import java.security.SecureRandom;
+import java.time.Clock;
+import java.util.ArrayList;
+import java.util.List;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+/**
+ * 대기 상태의 조회·취소와 소셜 경로의 인증번호(spec 014 FR-022, FR-024 (2)).
+ *
+ * <p>인증번호 규칙은 이메일 가입과 같다 — 6자리, 3분, 재발송하면 앞의 번호는 맞지 않는다(FR-004). 발송 주소는 FE가 아니라 대기 상태가 정한다. 그래야 남의
+ * 주소로 번호를 보내게 할 수 없다.
+ */
+@Service
+public class PendingSocialLoginService {
+
+    private static final int CODE_BOUND = 1_000_000;
+    private static final String CODE_FORMAT = "%06d";
+
+    private final PendingSocialLoginAccess access;
+    private final PendingSocialLoginStore store;
+    private final SocialLoginService socialLoginService;
+    private final SocialLinkService socialLinkService;
+    private final SocialAccountRepository socialAccountRepository;
+    private final SocialProviderCatalog providerCatalog;
+    private final PasswordEncoder passwordEncoder;
+    private final VerificationMailSender mailSender;
+    private final Clock clock;
+
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    public PendingSocialLoginService(
+            PendingSocialLoginAccess access,
+            PendingSocialLoginStore store,
+            SocialLoginService socialLoginService,
+            SocialLinkService socialLinkService,
+            SocialAccountRepository socialAccountRepository,
+            SocialProviderCatalog providerCatalog,
+            PasswordEncoder passwordEncoder,
+            VerificationMailSender mailSender,
+            Clock clock) {
+        this.access = access;
+        this.store = store;
+        this.socialLoginService = socialLoginService;
+        this.socialLinkService = socialLinkService;
+        this.socialAccountRepository = socialAccountRepository;
+        this.providerCatalog = providerCatalog;
+        this.passwordEncoder = passwordEncoder;
+        this.mailSender = mailSender;
+        this.clock = clock;
+    }
+
+    public PendingSocialView view() {
+        PendingSocialLogin pending = access.require();
+        if (pending.stage() != Stage.LINK) {
+            return new PendingSocialView(
+                    pending.provider().registrationId(),
+                    pending.stage().name(),
+                    pending.email(),
+                    pending.providerNickname(),
+                    null,
+                    null,
+                    List.of(),
+                    pending.expiresAt());
+        }
+
+        User target = socialLinkService.activeTarget(pending);
+        return new PendingSocialView(
+                pending.provider().registrationId(),
+                pending.stage().name(),
+                pending.email(),
+                pending.providerNickname(),
+                pending.linkReason().name(),
+                maskEmail(target.getEmail()),
+                linkMethods(pending, target),
+                pending.expiresAt());
+    }
+
+    /** 대기 상태를 버린다. 없어도 같은 결과다. */
+    public void cancel() {
+        store.clear();
+    }
+
+    /**
+     * 대기 상태가 정한 주소로 인증번호를 보낸다. 이메일 확인 단계면 제공자 이메일, 연결 단계면 연결 대상 계정 이메일이다.
+     *
+     * <p>세션에 새 번호를 먼저 적고 메일을 보낸다. 메일이 실패해도 앞의 번호는 이미 무효다 — 재발송 규칙과 같다.
+     */
+    public void sendCode() {
+        PendingSocialLogin pending = access.require();
+        String address;
+        CodeTarget target;
+        switch (pending.stage()) {
+            case EMAIL_VERIFICATION -> {
+                address = pending.email();
+                target = CodeTarget.PROVIDER_EMAIL;
+            }
+            case LINK -> {
+                address = socialLinkService.activeTarget(pending).getEmail();
+                target = CodeTarget.LINK_TARGET_EMAIL;
+            }
+            default -> throw new BusinessException(ErrorCode.SOCIAL_PENDING_STAGE_MISMATCH);
+        }
+
+        String code = String.format(CODE_FORMAT, secureRandom.nextInt(CODE_BOUND));
+        store.save(
+                pending.withCode(
+                        passwordEncoder.encode(code),
+                        target,
+                        clock.instant().plus(PendingSocialLogin.CODE_TTL)));
+        mailSender.sendVerificationCode(address, code);
+    }
+
+    /**
+     * 제공자 이메일을 인증번호로 확인하고 다음 단계를 정한다(FR-022). 확인이 끝나면 가입 또는 연결 확인으로 이어진다.
+     *
+     * <p>이 확인은 그 이메일의 소유 확인이기도 하다. 이메일이 기존 계정과 같으면 연결 단계에서 인증번호를 다시 받지 않는다(US7 시나리오 6).
+     */
+    public PendingSocialView confirmProviderEmail(String code) {
+        PendingSocialLogin pending = access.require(Stage.EMAIL_VERIFICATION);
+        access.verifyCode(pending, CodeTarget.PROVIDER_EMAIL, code);
+
+        SocialLoginOutcome outcome = socialLoginService.advance(pending.withEmailVerified(), true);
+        return switch (outcome.type()) {
+            case ACCOUNT_UNAVAILABLE ->
+                    throw new BusinessException(ErrorCode.SOCIAL_SIGNUP_REJECTED);
+            case PROVIDER_CONFLICT ->
+                    throw new BusinessException(ErrorCode.SOCIAL_PROVIDER_ALREADY_LINKED);
+            default -> view();
+        };
+    }
+
+    /** 화면에 보여 줄 소유 확인 방법. 대상 계정에 실제로 쓸 수 있는 것만 담는다. */
+    private List<String> linkMethods(PendingSocialLogin pending, User target) {
+        List<String> methods = new ArrayList<>();
+        if (pending.linkTargetEmailVerified()) {
+            methods.add("VERIFIED_EMAIL");
+        }
+        if (target.hasPassword()) {
+            methods.add("PASSWORD");
+        }
+        methods.add("EMAIL_CODE");
+        for (SocialAccount account : socialAccountRepository.findByUserId(target.getId())) {
+            SocialProvider provider = account.getProvider();
+            if (providerCatalog.isEnabled(provider)) {
+                methods.add("SOCIAL_" + provider.name());
+            }
+        }
+        return List.copyOf(methods);
+    }
+
+    /** {@code member@example.com} → {@code m***@example.com}. 연결 대상이 누구인지 짐작할 수 있을 만큼만 남긴다. */
+    static String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 0) {
+            return "***";
+        }
+        return email.charAt(0) + "***" + email.substring(at);
+    }
+}
