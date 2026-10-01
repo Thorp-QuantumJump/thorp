@@ -7,8 +7,9 @@ import {
   unselectableStrategy,
 } from '@/test/strategyRegistryFixtures'
 import type { StrategyView } from '@/types/strategyRegistry'
-import type { WarmupVerdict } from './cardNotices'
+import { collectSharedNotices, type WarmupVerdict } from './cardNotices'
 import { StrategyCardList, type RegistryViewState } from './StrategyCardList'
+import { StrategyNoticeList } from './StrategyNoticeList'
 
 /**
  * 카드는 응답만 보고 그린다(FR-001, FR-005, FR-018, quickstart 9).
@@ -32,6 +33,29 @@ function cardNamed(name: string): HTMLElement {
 /** 워밍업을 따지지 않는 검사에서 쓰는 판정. 아무 전략에나 통과를 준다. */
 const allOk = () => ({ state: 'ok' }) as WarmupVerdict
 
+type ListProps = Omit<Parameters<typeof StrategyCardList>[0], 'notices'>
+
+/**
+ * 화면처럼 카드 목록과 사유 목록을 같은 결과로 함께 그린다. 사유 문장은 화면 머리가 적고 카드는 번호와 `id`로
+ * 가리키므로(2026-10-01), 둘을 따로 그리면 카드의 설명이 가리킬 문장이 문서에 없다.
+ */
+function ListWithNotices(props: ListProps) {
+  const notices =
+    props.state.status === 'loaded'
+      ? collectSharedNotices(
+          props.state.registry.strategies,
+          props.state.registry.strategies.map((strategy) => props.judgeWarmup(strategy)),
+          'test',
+        )
+      : []
+  return (
+    <>
+      <StrategyNoticeList notices={notices} />
+      <StrategyCardList {...props} notices={notices} />
+    </>
+  )
+}
+
 function renderList(
   state: RegistryViewState,
   overrides: {
@@ -44,7 +68,7 @@ function renderList(
   const onSelect = overrides.onSelect ?? vi.fn()
   const onRetry = overrides.onRetry ?? vi.fn()
   const result = render(
-    <StrategyCardList
+    <ListWithNotices
       state={state}
       selectedStrategyId={overrides.selectedStrategyId ?? null}
       onSelect={onSelect}
@@ -55,7 +79,7 @@ function renderList(
   return { ...result, onSelect, onRetry }
 }
 
-/** 카드가 보조기술에 전하는 설명 전체. 사유 문장은 목록 아래 한 곳에 있고 카드는 `aria-describedby`로 가리킨다. */
+/** 카드가 보조기술에 전하는 설명 전체. 사유 문장은 카드 밖 한 곳에 있고 카드는 `aria-describedby`로 가리킨다. */
 function descriptionOf(card: HTMLElement): string {
   return (card.getAttribute('aria-describedby') ?? '')
     .split(' ')
@@ -64,7 +88,7 @@ function descriptionOf(card: HTMLElement): string {
     .join(' ')
 }
 
-/** 카드 줄 아래에 모아 적은 사유 목록의 항목들. */
+/** 카드 밖 한 곳에 모아 적은 사유 목록의 항목들. */
 function sharedItems(): HTMLElement[] {
   return screen.queryAllByRole('listitem')
 }
@@ -117,7 +141,7 @@ describe('StrategyCardList', () => {
     expect(onSelect).toHaveBeenCalledWith(selectableStrategy.strategyId)
 
     rerender(
-      <StrategyCardList
+      <ListWithNotices
         state={loaded}
         selectedStrategyId={selectableStrategy.strategyId}
         onSelect={onSelect}
@@ -138,7 +162,7 @@ describe('StrategyCardList', () => {
     // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 이유를 읽을 수 있다.
     expect(card.getAttribute('aria-disabled')).toBe('true')
     expect(card.getAttribute('aria-checked')).toBe('false')
-    // 사유는 카드 줄 아래 목록에 전략 이름과 함께 적히고, 카드는 번호와 설명 연결로 그 문장을 가리킨다.
+    // 사유는 카드 밖 목록에 전략 이름과 함께 적히고, 카드는 번호와 설명 연결로 그 문장을 가리킨다.
     expect(descriptionOf(card)).toContain(unselectableStrategy.unselectableReason)
     const item = sharedItems().find((node) =>
       node.textContent?.includes(unselectableStrategy.unselectableReason ?? '∅'),
@@ -205,7 +229,7 @@ describe('StrategyCardList', () => {
     expect(document.activeElement).not.toBe(screen.getByRole('button', { name: '다시 시도' }))
 
     rerender(
-      <StrategyCardList
+      <ListWithNotices
         state={{ status: 'failed', failureCount: 2, retrying: false }}
         selectedStrategyId={null}
         onSelect={vi.fn()}
@@ -221,7 +245,7 @@ describe('StrategyCardList', () => {
     const { rerender } = renderList({ status: 'failed', failureCount: 1, retrying: false })
 
     rerender(
-      <StrategyCardList
+      <ListWithNotices
         state={loaded}
         selectedStrategyId={null}
         onSelect={vi.fn()}
@@ -289,7 +313,7 @@ describe('StrategyCardList', () => {
     expect(descriptionOf(card)).toContain('고를 수 없는 이유를 확인하지 못했습니다.')
   })
 
-  it('사유는 카드마다 되풀이하지 않고 번호를 붙여 목록 아래에 한 번씩 적는다', () => {
+  it('사유는 카드마다 되풀이하지 않고 번호를 붙여 카드 밖 목록에 한 번씩 적는다', () => {
     const shared = '같은 사유 문장입니다.'
     renderList(loaded, {
       judgeWarmup: () => ({ state: 'blocked', message: shared }),

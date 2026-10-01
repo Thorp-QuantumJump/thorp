@@ -76,3 +76,39 @@ export function collectNotices(
   return notices;
 }
 
+
+/** 한 곳에 모아 적는 안내 한 줄. 같은 문장이 걸린 전략 이름을 처음 나온 차례로 모은다. */
+export type SharedNotice = SharedNoticeRef & { text: string; names: string[] };
+
+/**
+ * 카드마다 붙을 안내를 문장 단위로 모아 번호를 매긴다.
+ *
+ * <p>고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는다. 그 문장을 카드마다 되풀이하지 않고 한 번만
+ * 적으며, 어떤 문장이 겹치는지는 문장이 같은지만 본다 — 전략을 보고 정하지 않는다. 같은 문장이 막힘과 판정
+ * 불가로 함께 쓰였다면 막힘으로 적는다: 실제로 막힌 것을 중립으로 보이면 안 된다.
+ *
+ * <p>카드 목록과 화면 머리가 같은 결과를 나눠 쓴다. 카드는 번호와 `id`로 가리키고, 문장은 머리의 제목 아래에
+ * 한 번 적힌다. `idBase`는 한 화면 안에서 겹치지 않는 값(`useId`)이어야 한다.
+ */
+export function collectSharedNotices(
+  strategies: readonly StrategyView[],
+  verdicts: readonly WarmupVerdict[],
+  idBase: string,
+): SharedNotice[] {
+  const owners = new Map<string, { names: string[]; tone: NoticeTone }>();
+  strategies.forEach((strategy, index) => {
+    for (const notice of collectNotices(strategy, verdicts[index])) {
+      const entry = owners.get(notice.text) ?? { names: [], tone: notice.tone };
+      entry.names.push(strategy.name);
+      if (notice.tone === "blocking") entry.tone = "blocking";
+      owners.set(notice.text, entry);
+    }
+  });
+  return [...owners.entries()].map(([text, entry], index) => ({
+    id: `${idBase}-shared-${index}`,
+    number: index + 1,
+    tone: entry.tone,
+    text,
+    names: entry.names,
+  }));
+}

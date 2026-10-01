@@ -46,6 +46,45 @@ function renderField(initial: number | undefined) {
 }
 
 describe("AxisNumberField", () => {
+  it("범위 문장을 늘 적지 않는 칸은 초점이 있는 동안만 안내 말풍선으로 범위를 보인다", async () => {
+    const user = userEvent.setup();
+    render(
+      <AxisNumberField
+        label="합성 금액"
+        unit="원"
+        range={{ min: 1000000, max: 1000000000, step: 1000000 }}
+        defaultValue={10000000}
+        value={10000000}
+        groupDigits
+        rangeHint={false}
+        onChange={vi.fn()}
+      />,
+    );
+    const input = screen.getByRole("textbox", { name: /합성 금액/ });
+
+    // 초점이 없으면 범위 문장이 어디에도 없다.
+    expect(screen.queryByText(/허용 범위는/)).toBeNull();
+
+    await user.click(input);
+    const tooltip = screen.getByRole("tooltip");
+    // 금액은 칸과 같은 모양(쉼표)으로 적고, 보조기술에는 칸의 설명으로 읽힌다.
+    expect(tooltip.textContent).toBe(
+      "허용 범위는 1,000,000~1,000,000,000원, 1,000,000원 간격입니다.",
+    );
+    expect(input.getAttribute("aria-describedby")).toContain(tooltip.id);
+
+    // 간격에 맞지 않는 값을 넣으면 말풍선 대신 칸 아래 안내가 범위를 함께 말한다.
+    await user.clear(input);
+    await user.type(input, "1500000");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(screen.getByText(/간격에 맞지 않습니다/).textContent).toContain(
+      "허용 범위는 1,000,000~1,000,000,000원",
+    );
+
+    await user.tab();
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
   it("범위 밖 값은 허용 범위를 안내하고 반영하지 않으며 최솟값으로 잘라 넣지 않는다", async () => {
     const user = userEvent.setup();
     const { onChange, input } = renderField(20);

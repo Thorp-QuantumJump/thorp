@@ -42,12 +42,17 @@ export type AxisValues = Record<string, AxisValue>;
 /**
  * 분석 조건(data-model §9).
  *
- * <p><b>`periodStart`·`periodEnd`·`initialAmount`는 사용자가 바꿨을 때만 담는다.</b> 없으면 화면은 기간을
- * 001의 평가 가능 범위 전체로, 금액을 등록표 `default`로 쓴다(T067). 처음 값을 상태에 복사해 두지 않는
- * 까닭은 평가 가능 범위가 고른 전략과 워밍업에 따라 바뀌기 때문이다 — 복사해 두면 사용자가 고른 적 없는
- * 옛 범위가 "사용자가 바꾼 기간"처럼 남는다. 등록표 기본값도 같은 이유로 복사하지 않는다.
+ * <p><b>`periodStart`·`periodEnd`·`initialAmount`는 사용자가 바꿨을 때만 담는다.</b> 금액이 없으면 화면은
+ * 등록표 `default`를 쓴다(T067). 등록표 기본값을 상태에 복사해 두지 않는 까닭은 등록표가 바뀌면 사용자가 고른
+ * 적 없는 옛 값이 "사용자가 바꾼 값"처럼 남기 때문이다.
  *
- * <p>기간은 두 날짜가 늘 함께 있거나 함께 없다.
+ * <p><b>분석 기간은 세 상태다(2026-10-01).</b> 두 날짜가 있으면 사용자가 고른 기간이고, `periodFull`이 서 있으면
+ * '최대 범위 선택'을 눌러 평가 가능 범위 전체를 쓰는 상태이며, 둘 다 없으면 아직 정하지 않은 상태다. 정하지 않은
+ * 기간을 범위 전체로 대신 쓰지 않는다 — 사용자가 고르지 않은 기간으로 분석이 나간다. 범위 전체도 날짜로 복사해
+ * 두지 않는다: 평가 가능 범위는 고른 전략과 워밍업에 따라 바뀌므로, 복사하면 옛 범위가 "사용자가 고른 기간"처럼
+ * 남는다.
+ *
+ * <p>기간은 두 날짜가 늘 함께 있거나 함께 없고, 날짜와 `periodFull`은 함께 서지 않는다.
  */
 export type AnalysisCondition = {
   /** 등록표 `analysisConditions.minEvaluationYears` 후보 중 하나. `0`은 제한 없음이다(FR-011a) */
@@ -61,6 +66,8 @@ export type AnalysisCondition = {
   targetVolatility?: number;
   periodStart?: string;
   periodEnd?: string;
+  /** 평가 가능 범위 전체를 쓴다. 날짜와 함께 서지 않는다. 범위가 바뀌면 그 범위를 따른다 */
+  periodFull?: true;
   initialAmount?: number;
 };
 
@@ -225,8 +232,8 @@ export function checkNumberInRange(
  *
  * <p><b>분석 기간은 이 재검증이 범위를 판정하지 않는다.</b> 범위는 001의 평가 가능 범위이고 고른 전략과
  * 워밍업마다 달라서, 등록표를 받는 시점에는 알 수 없다. 여기서는 날짜로 읽히는지만 보고, 범위 밖인지는
- * 화면이 판정한 범위를 받을 때마다 본다(`StrategySettingsPage`). `period`를 복원하면 두 날짜를 함께 지워
- * 평가 가능 범위 전체로 돌아간다.
+ * 화면이 판정한 범위를 받을 때마다 본다(`StrategySettingsPage`). `period`를 복원하면 두 날짜와 `periodFull`을
+ * 함께 지워 기간을 정하지 않은 상태로 돌아간다.
  */
 export type RestorableCondition = "initialAmount" | "period";
 
@@ -338,6 +345,7 @@ export function readStoredStrategySettings(): StoredStrategySettings | null {
     analysisCondition.periodStart = condition.periodStart;
   if (typeof condition.periodEnd === "string")
     analysisCondition.periodEnd = condition.periodEnd;
+  if (condition.periodFull === true) analysisCondition.periodFull = true;
   if (typeof condition.initialAmount === "number") {
     analysisCondition.initialAmount = condition.initialAmount;
   }
@@ -667,7 +675,7 @@ export function reconcileStoredSettings(
   // --- 분석 기간 ---------------------------------------------------------------------------
   //
   // 날짜로 읽을 수 없거나, 한쪽만 있거나, 시작이 종료보다 늦으면 사용자가 고른 기간이 무엇이었는지
-  // 말할 수 없다. 둘 다 지우고 알린다 — 지우면 평가 가능 범위 전체가 쓰이므로 알리지 않으면 조용히
+  // 말할 수 없다. 둘 다 지우고 알린다 — 지우면 기간을 정하지 않은 상태가 되므로 알리지 않으면 조용히
   // 바뀐 것과 같다(FR-017). 되돌릴 값이 곧 지운 상태라 복원 버튼은 두지 않는다.
   const {
     initialAmount: storedAmount,
@@ -711,7 +719,7 @@ export function reconcileStoredSettings(
         storedValue: { periodStart: storedStart, periodEnd: storedEnd },
         reason: "PERIOD_UNREADABLE",
         message:
-          "저장된 분석 기간을 읽을 수 없어 지웠습니다. 평가 가능한 범위 전체로 시작합니다.",
+          "저장된 분석 기간을 읽을 수 없어 지웠습니다. 분석 기간을 다시 정해 주세요.",
         restorable: false,
       });
     }
@@ -763,7 +771,11 @@ export function reconcileStoredSettings(
     analysisCondition.targetVolatility = targetVolatility;
   if (initialAmount !== undefined)
     analysisCondition.initialAmount = initialAmount;
-  if (period !== null) Object.assign(analysisCondition, period);
+  // 날짜가 살아남았으면 그것이 사용자가 고른 기간이다. 함께 남은 `periodFull`은 편집된 저장소의 흔적이라 버린다.
+  if (period !== null) {
+    Object.assign(analysisCondition, period);
+    delete analysisCondition.periodFull;
+  }
 
   return {
     registryVersion: registry.registryVersion,
@@ -1103,8 +1115,24 @@ export function useStrategySettings(
               next.periodEnd = current.analysisCondition.periodEnd;
             }
           } else {
+            // 날짜를 직접 골랐으면 '최대 범위 선택' 상태가 아니다.
+            delete next.periodFull;
             // 새 기간을 받았으면 "읽을 수 없어 지웠다"는 옛 안내는 지금 기간과 어긋나는 말이 된다.
             invalidValues = withoutCondition(invalidValues, "period");
+          }
+        }
+        // '최대 범위 선택'은 날짜를 지우고 범위 전체를 따른다. `true`만 받는다 — 끄는 길은 날짜를 고르거나
+        // 기간을 지우는 것(`resetAnalysisCondition("period")`)이다.
+        if ("periodFull" in patch) {
+          if (patch.periodFull === true) {
+            delete next.periodStart;
+            delete next.periodEnd;
+            next.periodFull = true;
+            invalidValues = withoutCondition(invalidValues, "period");
+          } else if (current.analysisCondition.periodFull === true) {
+            next.periodFull = true;
+          } else {
+            delete next.periodFull;
           }
         }
         // 시작 금액도 보관값 재검증과 같은 잣대로 본다. 입력 경로와 복원 경로가 다른 잣대를 쓰면
@@ -1137,8 +1165,10 @@ export function useStrategySettings(
       // 고른 값이다 — 재검증이 비워 둔 상태와 달리 안내도 함께 지운다.
       const analysisCondition = { ...current.analysisCondition };
       if (name === "period") {
+        // 기간을 정하지 않은 상태로 되돌린다. 범위 전체가 아니다(2026-10-01).
         delete analysisCondition.periodStart;
         delete analysisCondition.periodEnd;
+        delete analysisCondition.periodFull;
       } else {
         delete analysisCondition[name];
       }

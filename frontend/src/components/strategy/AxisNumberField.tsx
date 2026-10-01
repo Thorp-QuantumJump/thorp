@@ -25,6 +25,12 @@ interface AxisNumberFieldProps {
   roundToStep?: boolean;
   /** 누르면 그만큼 더하는 단추들. 주지 않으면 그리지 않는다 */
   quickAdd?: readonly QuickAdd[];
+  /**
+   * 문제가 없을 때도 허용 범위 문장을 칸 아래에 늘 보인다. 기본값은 켜짐이다. 끄면 그 문장은 입력칸에 초점이
+   * 있는 동안만 칸 위 안내 말풍선으로 뜨고, 범위 밖·간격 밖 값을 넣었을 때는 칸 아래 안내가 범위를 함께
+   * 말한다(US2 시나리오 3). 빠른 더하기가 있어 범위를 늘 읽을 일이 적은 시작 금액이 끈다(2026-10-01)
+   */
+  rangeHint?: boolean;
 }
 
 /** 간격의 소수 자릿수. 반올림한 값에 부동소수 찌꺼기가 남지 않게 다시 자른다. */
@@ -79,8 +85,11 @@ export function AxisNumberField({
   groupDigits = false,
   roundToStep = false,
   quickAdd,
+  rangeHint = true,
 }: AxisNumberFieldProps) {
   const messageId = useId();
+  const tooltipId = useId();
+  const [focused, setFocused] = useState(false);
 
   /** 칸에 적을 모양. 쉼표는 보기 위한 것이고 `parseDraft`가 읽을 때 걷어 낸다. */
   const show = (next: number) =>
@@ -107,7 +116,8 @@ export function AxisNumberField({
   }
 
   const unitText = unit ?? "";
-  const rangeText = `허용 범위는 ${range.min}~${range.max}${unitText}, ${range.step}${unitText} 간격입니다.`;
+  // 금액처럼 자릿수가 큰 칸은 범위도 칸과 같은 모양(쉼표)으로 적는다. `1000000000`은 몇 자리인지 읽히지 않는다.
+  const rangeText = `허용 범위는 ${show(range.min)}~${show(range.max)}${unitText}, ${show(range.step)}${unitText} 간격입니다.`;
 
   const parsed = parseDraft(draft);
   const problem = ((): string | null => {
@@ -178,8 +188,10 @@ export function AxisNumberField({
     commit(snapToStep(next, range));
   };
 
-  // 설명 문단은 도움말로 내려 사라졌다. 남은 것은 범위·문제 안내 한 줄이다.
-  const describedBy = messageId;
+  // 설명 문단은 도움말로 내려 사라졌다. 남은 것은 범위·문제 안내 한 줄이다. 말풍선은 문제가 없을 때만 뜬다 —
+  // 문제 안내가 이미 범위를 말하므로 같은 문장을 두 번 띄우지 않는다.
+  const showTooltip = !rangeHint && focused && problem === null;
+  const describedBy = showTooltip ? `${messageId} ${tooltipId}` : messageId;
 
   return (
     <div className={styles.field}>
@@ -202,21 +214,32 @@ export function AxisNumberField({
             ))}
           </div>
         ) : null}
-        <input
-          className={styles.input}
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          value={draft}
-          aria-label={label}
-          aria-invalid={problem ? "true" : "false"}
-          aria-describedby={describedBy}
-          onFocus={() => {
-            valueAtEditStart.current = value;
-          }}
-          onChange={(event) => handleChange(event.target.value)}
-          onBlur={handleBlur}
-        />
+        <span className={styles.inputAnchor}>
+          <input
+            className={styles.input}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            value={draft}
+            aria-label={label}
+            aria-invalid={problem ? "true" : "false"}
+            aria-describedby={describedBy}
+            onFocus={() => {
+              valueAtEditStart.current = value;
+              setFocused(true);
+            }}
+            onChange={(event) => handleChange(event.target.value)}
+            onBlur={() => {
+              setFocused(false);
+              handleBlur();
+            }}
+          />
+          {showTooltip ? (
+            <span id={tooltipId} role="tooltip" className={styles.rangeTooltip}>
+              {rangeText}
+            </span>
+          ) : null}
+        </span>
       </div>
 
       {/* 자리를 늘 두고 글만 바꾼다. 안내가 생길 때 자리가 새로 붙으면 보조기술이 읽지 않을 수 있다. */}
@@ -225,7 +248,7 @@ export function AxisNumberField({
         className={problem ? styles.problem : styles.hint}
         aria-live="polite"
       >
-        {problem ?? rangeText}
+        {problem ?? (rangeHint ? rangeText : null)}
       </p>
     </div>
   );
