@@ -69,3 +69,13 @@ skip 4건은 외부 실서비스 키나 성능 환경을 요구하는 `Assistant
 
 추가된 확인: 병렬 인증번호 대입 상한(PostgreSQL 행 잠금), 다시 받기 429, 로그인 세션 콜백 보호, 이메일 로그인 시 소셜 대기 상태 제거,
 `V20261001150000__social_pending_verifications.sql` 적용. 상세는 [social.md](social.md)의 리뷰 반영 절.
+
+### 2026-10-01 남은 위험 보완 뒤 최종 실행
+
+| 항목 | 결과 |
+|---|---|
+| 전체 테스트 | 2,332 tests, failures 0, errors 0, skipped 4(외부 실서비스·성능 suite) |
+| Gradle build | PASS (`28m 44s`, Testcontainers PostgreSQL) |
+
+추가된 확인: 대상 계정 단위 누적 제한, 이메일 가입 인증번호 대조 상한·동시 재발송 1통, 버려진 확인 기록 정리, 마이그레이션
+`V20261001170000__social_link_targets.sql`·`V20261001180000__email_verification_attempts.sql` 적용.
