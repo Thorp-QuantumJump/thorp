@@ -454,6 +454,29 @@ class SocialSignupAndLinkServiceTest {
     }
 
     @Test
+    @DisplayName("번호가 없거나 만료돼 대조할 수 없는 요청은 계정 단위 시도를 먹지 않는다")
+    void undecidableCodeRequestsDoNotConsumeTargetAttempts() {
+        store.save(linkPending(LinkReason.PHONE, false));
+        when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
+
+        for (int i = 0;
+                i < com.ssafy.thorp.account.domain.model.SocialLinkTarget.MAX_ATTEMPTS + 2;
+                i++) {
+            assertThatThrownBy(
+                            () ->
+                                    linkService.link(
+                                            new SocialLinkCommand(
+                                                    Method.EMAIL_CODE, null, "123456"),
+                                            request,
+                                            response))
+                    .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+        }
+
+        com.ssafy.thorp.account.domain.model.SocialLinkTarget target = targets.get(42L);
+        assertThat(target == null ? 0 : target.getAttempts()).isZero();
+    }
+
+    @Test
     @DisplayName("주인이 확인하면 그 계정을 향한 실패 누적이 지워진다")
     void ownershipClearsTargetAttempts() {
         when(users.findById(42L))

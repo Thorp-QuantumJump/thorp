@@ -103,6 +103,51 @@ class EmailVerificationLimitTest extends SocialLoginIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("같은 주소로 재발송을 동시에 보내도 메일은 한 통만 나가고 나머지는 429다")
+    void parallelResendsSendOnce() throws Exception {
+        sendWithCsrf(
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                        "/auth/csrf"));
+        Cookie[] jar = cookies.values().toArray(Cookie[]::new);
+        String csrf = cookies.get("XSRF-TOKEN").getValue();
+        int requests = 6;
+        ExecutorService pool = Executors.newFixedThreadPool(requests);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Integer>> results = new ArrayList<>();
+        for (int i = 0; i < requests; i++) {
+            results.add(
+                    pool.submit(
+                            () -> {
+                                start.await();
+                                return mockMvc.perform(
+                                                request().cookie(jar).header("X-XSRF-TOKEN", csrf))
+                                        .andReturn()
+                                        .getResponse()
+                                        .getStatus();
+                            }));
+        }
+        start.countDown();
+        Map<Integer, Integer> statuses = new TreeMap<>();
+        for (Future<Integer> result : results) {
+            statuses.merge(result.get(30, TimeUnit.SECONDS), 1, Integer::sum);
+        }
+        pool.shutdown();
+
+        assertThat(statuses)
+                .as(statuses.toString())
+                .containsEntry(204, 1)
+                .containsEntry(429, requests - 1);
+        verify(mailSender, org.mockito.Mockito.times(1))
+                .sendVerificationCode(eq(EMAIL), org.mockito.ArgumentMatchers.anyString());
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select count(*) from email_verifications where email = ?",
+                                Integer.class,
+                                EMAIL))
+                .isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("맞는 번호는 상한 안에서 그대로 확인된다")
     void rightCodeStillVerifies() throws Exception {
         String right = requestCode();

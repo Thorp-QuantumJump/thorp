@@ -255,3 +255,19 @@ any ──10분 경과 / 취소 / 새 소셜 로그인 시작(intent=link 제외
 
 모든 변경은 행 잠금(`SELECT ... FOR UPDATE`) 아래에서 따로 연 트랜잭션으로 한다. 상한을 넘으면 대기 상태를 버린다.
 수치는 별도 보안 작업 전까지의 임시값이다.
+
+### SocialLinkTarget (신규 `social_link_targets`, 2026-10-01 남은 위험 보완)
+
+기존 계정 하나를 향한 연결 확인의 누적 기록이다. 대기 상태가 바뀌어도(제공자 로그인 재시작) 같은 창에서 센다.
+
+| Field | Type | 규칙 |
+|---|---|---|
+| userId | Long | `users.id` PK·FK |
+| windowStartedAt | Instant | 한 시간 창의 시작. 지나면 새 창 |
+| attempts | int | 그 계정을 향한 인증번호·비밀번호 대조 10회. 대조 전에 센다. 주인 확인 시 0 |
+| codesSent | int | 그 계정 이메일로의 발송 5통 |
+
+### EmailVerification 추가 필드(2026-10-01)
+
+`attempts`(대조 5회, 대조 전 계수), `sendsInWindow`·`sendWindowStartedAt`(한 시간 창, 재발송해도 이어서 셈). 재발송 간격은 30초에서 시작해 창 안에서 받을 때마다 두 배, 최대 10분이다 — 고정 상한을 두면 남이 그 주소로 몇 번 요청하는 것만으로 주인의 가입을 막을 수 있다. 같은 주소의 발급·대조는 PostgreSQL advisory lock으로 한 줄로 세운다(재발송이 행을 지우고 새로 넣으므로 행 잠금으로는 묶이지 않는다).
+버려진 소셜 확인 기록과 창이 지난 대상 계정 기록은 하루 뒤 정리한다.

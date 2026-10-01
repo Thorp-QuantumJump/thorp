@@ -277,6 +277,32 @@ class PendingSocialLoginServiceTest {
     }
 
     @Test
+    @DisplayName("계정 단위로 발송이 막혀도 이미 받은 번호는 그대로 쓸 수 있다")
+    void targetSendLockKeepsExistingCode() {
+        when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
+        PendingSocialLogin pending = signupPending().toLink(42L, LinkReason.PHONE);
+        store.save(pending);
+        sendAndCapture("owner@example.com");
+        SocialVerification before = verifications.get(pending.verificationId());
+        // 다른 대기 상태들이 이미 그 계정 이메일로 이번 창의 몫을 다 보냈다.
+        targets.save(
+                new com.ssafy.thorp.account.domain.model.SocialLinkTarget(
+                        42L,
+                        NOW,
+                        0,
+                        com.ssafy.thorp.account.domain.model.SocialLinkTarget.MAX_CODES_SENT));
+        clock.advance(SocialVerification.RESEND_INTERVAL);
+
+        assertThatThrownBy(() -> service.sendCode())
+                .satisfies(code(ErrorCode.SOCIAL_LINK_TEMPORARILY_LOCKED));
+
+        SocialVerification after = verifications.get(pending.verificationId());
+        assertThat(after.getCodeHash()).isEqualTo(before.getCodeHash());
+        assertThat(after.getCodesSent()).isEqualTo(before.getCodesSent());
+        assertThat(after.getLastCodeSentAt()).isEqualTo(before.getLastCodeSentAt());
+    }
+
+    @Test
     @DisplayName("단계를 바꿔도 발송 횟수는 이어서 센다")
     void stageChangeKeepsSendCount() {
         PendingSocialLogin pending = verificationPending();
