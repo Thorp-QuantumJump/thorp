@@ -12,7 +12,7 @@
 |---|---|---|
 | id | Long | DB 생성 PK |
 | email | String | 필수, 유효한 이메일, 고유 |
-| passwordHash | String | 필수, `PasswordEncoder` 결과만 저장 |
+| passwordHash | String? | 이메일 가입 계정은 필수, `PasswordEncoder` 결과만 저장. 2026-10-01부터 소셜로만 가입한 계정은 `NULL` |
 | nickname | String | 필수, 가입 요청 기준 2~20자 |
 | phoneNumber | String | 필수, `^01[016789]\d{7,8}$`, 고유 |
 | profileImageUrl | String? | 선택 |
@@ -169,3 +169,72 @@ logoutUnconfirmed ──network──> logoutUnconfirmed
 - 브라우저가 보유하는 session cookie는 JavaScript에서 읽을 수 없다.
 - CSRF token은 비밀 인증정보가 아니며 header 전송을 위해 cookie에서 읽되 session id와 분리한다.
 - 인증 실패 로그에 비밀번호, 인증번호, session id, 전체 cookie/header를 남기지 않는다.
+
+## Social login extension (2026-10-01)
+
+### SocialAccount (신규 `social_accounts`)
+
+| Field | Type | 규칙 |
+|---|---|---|
+| id | Long | DB 생성 PK |
+| userId | Long | `users.id` FK, 필수 |
+| provider | SocialProvider | `KAKAO`, `GOOGLE`, `NAVER` |
+| providerUserId | String | 제공자 사용자 고유 식별자(카카오 `id`, 구글 `sub`, 네이버 `response.id`), 필수 |
+| linkedAt | Instant | 연결 시각 |
+
+**Identity rule**: `(provider, providerUserId)`가 고유하다(소셜 계정 하나는 Thorp 계정 하나에만 연결).
+`(userId, provider)`가 고유하다(한 계정은 제공자마다 하나). 제공자 이메일은 저장하지 않는다. 계정 이메일은
+`users.email` 하나뿐이고 제공자 쪽 이메일이 바뀌어도 고치지 않는다.
+
+**Relationship**: UserAccount 1 : 0..3 SocialAccount.
+
+**Migration**: `V{yyyyMMddHHmmss}__social_accounts.sql`로 `social_accounts` 생성과
+`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`을 함께 둔다. 기존 행은 바뀌지 않는다.
+
+### PendingSocialLogin (세션 속성, 신규)
+
+| Field | Type | 규칙 |
+|---|---|---|
+| provider | SocialProvider | 필수 |
+| providerUserId | String | 필수 |
+| email | String | 제공자 이메일의 정규형, 필수(없으면 대기 상태를 만들지 않음) |
+| emailVerified | Boolean | 제공자가 확인했거나 Thorp 인증번호로 확인했으면 `true` |
+| providerNickname | String? | 2~20자 기준에 맞을 때만 추가 정보 화면에 미리 채움 |
+| stage | Enum | `EMAIL_VERIFICATION`, `SIGNUP`, `LINK` |
+| linkTargetUserId | Long? | stage=`LINK`일 때 대상 계정 |
+| linkReason | Enum? | `EMAIL`, `PHONE` |
+| linkTargetEmailVerified | Boolean | 같은 대기 상태에서 대상 계정 이메일을 인증번호로 확인했으면 `true` |
+| codeHash | String? | 소셜 경로 6자리 인증번호 hash |
+| codeTarget | Enum? | `PROVIDER_EMAIL`, `LINK_TARGET_EMAIL` |
+| codeExpiresAt | Instant? | 발급 후 3분 |
+| createdAt | Instant | 생성 시각, 10분 뒤 만료 |
+
+**Lifecycle**:
+
+```text
+callback ──email missing──> (없음, 거절 화면)
+callback ──provider conflict──> (없음, 이미 연결 안내)
+callback ──email unverified/unknown──> EMAIL_VERIFICATION ──code ok──> 재판정
+callback/재판정 ──email matches account──> LINK
+callback/재판정 ──no match──> SIGNUP ──phone matches account──> LINK(reason=PHONE)
+SIGNUP ──signup ok──> 삭제 + 로그인
+LINK ──ownership ok──> 삭제 + 연결 + 로그인
+any ──10분 경과 / 취소 / 새 소셜 로그인 시작──> 삭제
+```
+
+### API value objects (social)
+
+| Object | Fields | 비고 |
+|---|---|---|
+| SocialProviders | `providers: SocialProvider[]` | 자격 증명이 설정된 제공자만 |
+| PendingSocialView | `provider`, `stage`, `email`, `suggestedNickname?`, `linkReason?`, `linkTargetMaskedEmail?`, `linkMethods[]`, `expiresAt` | `linkMethods`: `PASSWORD`, `EMAIL_CODE`, `VERIFIED_EMAIL`, `SOCIAL_KAKAO`, `SOCIAL_GOOGLE`, `SOCIAL_NAVER` 중 대상 계정에 쓸 수 있는 것 |
+| SocialSignupInput | `nickname`, `phoneNumber` | 이메일·비밀번호 없음 |
+| SocialLinkInput | `method`, `password?`, `verificationCode?` | `method`에 맞는 값만 필수 |
+
+`email`은 대기 상태의 주인인 사용자 자신의 제공자 이메일이라 가리지 않는다. 연결 대상 계정 이메일은
+`a***@example.com`처럼 가린다.
+
+### Frontend state (social)
+
+`AuthState`는 바꾸지 않는다. 소셜 화면은 `PendingSocialView`를 메모리에만 들고, 비밀번호·인증번호는 컴포넌트
+상태에서 제출 뒤 폐기한다. `returnTarget`은 기존 `sessionStorage` 규칙을 그대로 쓴다.
