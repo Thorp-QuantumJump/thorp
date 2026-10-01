@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { fetchCaseWindow } from "@/api/regimeLink";
 import { fetchSectorCatalog, type SectorCatalogResult } from "@/api/sectors";
@@ -18,7 +18,10 @@ import { buildSectorSelectionPath } from "@/marketflow/handoff";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { ProvisionalBadge } from "@/components/paramsearch/ProvisionalBadge";
 import { ActionButtons } from "@/components/strategy/ActionButtons";
-import { AnalysisConditionsPanel } from "@/components/strategy/AnalysisConditionsPanel";
+import {
+  AnalysisConditionsPanel,
+  type PeriodMode,
+} from "@/components/strategy/AnalysisConditionsPanel";
 import {
   ANALYSIS_VERSIONS_UNAVAILABLE,
   EVALUATION_WINDOW_UNAVAILABLE,
@@ -52,11 +55,15 @@ import {
   RegistryChangedNotice,
   type RegistryReloadPhase,
 } from "@/components/strategy/RegistryChangedNotice";
-import type { WarmupVerdict } from "@/components/strategy/cardNotices";
+import {
+  collectSharedNotices,
+  type WarmupVerdict,
+} from "@/components/strategy/cardNotices";
 import {
   StrategyCardList,
   type RegistryViewState,
 } from "@/components/strategy/StrategyCardList";
+import { StrategyNoticeList } from "@/components/strategy/StrategyNoticeList";
 import { writeStoredSelection } from "@/diagnosis/selectionStorage";
 import {
   distributeEven,
@@ -108,6 +115,11 @@ const statusText: Record<BacktestRequestStatus, string> = {
 const REGISTRY_NOT_LOADED =
   "전략 설정을 불러오기 전에는 분석을 시작할 수 없습니다.";
 const SELECT_STRATEGY_FIRST = "전략 카드를 먼저 골라 주세요.";
+/** 분석 기간을 아직 정하지 않았다(2026-10-01). 범위 전체로 대신 채우지 않는다 */
+const PERIOD_NOT_CHOSEN =
+  "분석 기간을 정해 주세요. 날짜를 고르거나 '최대 범위 선택'을 누르면 됩니다.";
+/** 날짜 칸에 반영하지 않은 무효 날짜가 남았다. 칸에 보이는 날짜와 보낼 기간이 갈리므로 막는다(2026-10-01) */
+const PERIOD_DRAFT_INVALID = "분석 기간의 날짜를 다시 확인해 주세요.";
 const REASON_MISSING = "이 전략을 고를 수 없는 이유를 확인하지 못했습니다.";
 const INVALID_STORED_VALUES =
   "이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.";
@@ -123,7 +135,7 @@ const PARAMETER_REJECTED_GENERAL =
   "설정값이 허용 범위 밖이라 접수되지 않았습니다. 전략 설정과 분석 조건을 확인해 주세요.";
 /** 고른 기간이 지금 평가할 수 있는 범위 밖이다. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다 */
 function periodOutOfRangeMessage(range: AnalysisPeriod): string {
-  return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 범위 전체로 되돌려 주세요.`;
+  return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 '최대 범위 선택'을 눌러 주세요.`;
 }
 
 /** 고른 기간이 최소 평가 기간보다 짧다(FR-011a). 후보의 라벨은 등록표에서 그대로 온다 */
@@ -645,14 +657,12 @@ export function StrategySettingsPage({
    * <p><b>값을 만질 때 서버에 묻지 않는다.</b> 판정은 이미 받은 평가 기간으로 화면 안에서 한다 —
    * 값마다 서버를 오가면 늦게 온 응답이 이미 바뀐 값을 판정한다(research R7-1).
    */
-  const judgeWarmup = useCallback(
-    (strategy: StrategyView): WarmupVerdict => {
+  /** 카드 하나의 판정. 워밍업을 지금 계산할 수 없는 고른 카드는 `null`이다(아래 `judgeWarmup`이 `unknown`으로 읽는다) */
+  const judgeCard = useCallback(
+    (strategy: StrategyView) => {
       const selected = strategy.strategyId === selectedStrategyId;
-      // `unknown`은 고를 수 없다는 뜻이 아니다. 카드는 눌린 채 남고 복원하면 지금 설정으로 다시 판정한다.
-      if (selected && currentWarmup === null) {
-        return { state: "unknown", message: WARMUP_UNCOMPUTABLE };
-      }
-      const verdict = support.judgeWarmup({
+      if (selected && currentWarmup === null) return null;
+      return support.judgeWarmup({
         strategy,
         evaluationWindow,
         warmupTradingDays:
@@ -660,10 +670,7 @@ export function StrategySettingsPage({
             ? currentWarmup
             : strategy.warmupTradingDays,
         minEvaluationYears,
-      }).verdict;
-      // 'reduced'의 문장은 이제 아무도 그리지 않는다 — 카드는 고를 수 없는 사유만 적고, 왜 이 범위인지는
-      // 분석 조건의 '평가할 수 있는 범위' 옆 도움말이 말한다(`S15P21E205-406`).
-      return verdict;
+      });
     },
     [
       support,
@@ -673,6 +680,44 @@ export function StrategySettingsPage({
       currentWarmup,
     ],
   );
+
+  const judgeWarmup = useCallback(
+    (strategy: StrategyView): WarmupVerdict => {
+      const judgement = judgeCard(strategy);
+      // `unknown`은 고를 수 없다는 뜻이 아니다. 카드는 눌린 채 남고 복원하면 지금 설정으로 다시 판정한다.
+      if (judgement === null) {
+        return { state: "unknown", message: WARMUP_UNCOMPUTABLE };
+      }
+      // 'reduced'의 문장은 이제 아무도 그리지 않는다 — 카드는 고를 수 없는 사유만 적고, 왜 이 범위인지는
+      // 분석 조건의 '평가할 수 있는 범위' 옆 도움말이 말한다(`S15P21E205-406`).
+      return judgement.verdict;
+    },
+    [judgeCard],
+  );
+
+  /**
+   * 카드에 마우스를 올리면 보일 평가 가능 범위(2026-10-01). 분석 기간 행 아래에 늘 적던 문장을 카드로 옮겼다 —
+   * 범위는 전략마다 다르므로 견주는 자리에서 읽힌다. 판정과 같은 입력으로 구해 두 말이 갈리지 않는다.
+   */
+  const rangeOfCard = useCallback(
+    (strategy: StrategyView) => judgeCard(strategy)?.window ?? null,
+    [judgeCard],
+  );
+
+  /*
+    카드의 사유는 카드 밖 한 곳, 화면 머리의 제목 아래에 모아 적는다(FR-011, 2026-10-01). 카드 목록과 그 칸이 같은
+    결과를 나눠 써야 카드의 번호와 머리의 문장이 어긋나지 않는다.
+  */
+  const noticeIdBase = useId();
+  const cardNotices = useMemo(() => {
+    if (registryState.status !== "loaded") return [];
+    const { strategies } = registryState.registry;
+    return collectSharedNotices(
+      strategies,
+      strategies.map((strategy) => judgeWarmup(strategy)),
+      noticeIdBase,
+    );
+  }, [registryState, judgeWarmup, noticeIdBase]);
 
   // --- 다시 확인할 보관값 -------------------------------------------------------------------
   //
@@ -769,7 +814,8 @@ export function StrategySettingsPage({
   /**
    * 분석 기간(FR-009, T067). **분석 조건 행·요청이 이 값 하나를 함께 읽는다.**
    *
-   * <p>사용자가 고르지 않았으면 평가 가능 범위 전체다. 골랐으면 그 기간이다. 범위가 나중에 바뀌어(다른
+   * <p>날짜를 골랐으면 그 기간이고, '최대 범위 선택'이면 평가 가능 범위 전체다. 아직 정하지 않았으면 `null`이고
+   * 범위 전체로 대신 채우지 않는다(2026-10-01). 골랐으면 그 기간이다. 범위가 나중에 바뀌어(다른
    * 워밍업, 다른 전략) 고른 기간이 범위를 벗어나도 <b>잘라 맞추지 않는다.</b> 막고 되돌릴 길을 보인다.
    * 잘라 맞추면 사용자가 고르지 않은 기간으로 분석이 나간다(FR-017).
    */
@@ -830,7 +876,30 @@ export function StrategySettingsPage({
         : null,
     [periodStart, periodEnd],
   );
-  const period = chosenPeriod ?? evaluableRange;
+  const periodFull = settings.analysisCondition.periodFull === true;
+  const periodMode: PeriodMode =
+    chosenPeriod !== null ? "custom" : periodFull ? "full" : "unset";
+  const period = chosenPeriod ?? (periodFull ? evaluableRange : null);
+
+  /*
+    '최대 범위 선택'을 누르기 직전의 기간. 되돌리기 아이콘이 이리로 돌아간다 — 날짜를 골라 두었으면 그 날짜, 아니면
+    정하지 않은 상태다. 화면 안에서만 기억한다: 새로 고친 뒤에는 되돌릴 곳을 모르므로 정하지 않은 상태로 간다.
+  */
+  const periodBeforeFullRef = useRef<AnalysisPeriod | null>(null);
+  const selectFullRange = useCallback(() => {
+    periodBeforeFullRef.current = chosenPeriod;
+    settings.setAnalysisCondition({ periodFull: true });
+  }, [chosenPeriod, settings]);
+  const undoFullRange = useCallback(() => {
+    const before = periodBeforeFullRef.current;
+    periodBeforeFullRef.current = null;
+    if (before === null) settings.resetAnalysisCondition("period");
+    else
+      settings.setAnalysisCondition({
+        periodStart: before.start,
+        periodEnd: before.end,
+      });
+  }, [settings]);
 
   // 사례에서 들어왔고 아직 기간을 고르지 않았으면 사례 직후 구간을 포함하는 기간으로 미리 맞춘다(S15P21E205-450).
   // 한 사례에 한 번만 한다 — 사용자가 기간을 지우거나 바꾸면 그 선택을 다시 덮지 않는다.
@@ -841,6 +910,7 @@ export function StrategySettingsPage({
       baseCaseConstraint === null ||
       evaluableRange === null ||
       chosenPeriod !== null ||
+      periodFull ||
       prefilledCaseRef.current === caseId
     )
       return;
@@ -853,7 +923,7 @@ export function StrategySettingsPage({
     if (next === null) return;
     settings.setAnalysisCondition({ periodStart: next.start, periodEnd: next.end });
     setCasePeriodPrefilled(true);
-  }, [caseId, baseCaseConstraint, evaluableRange, chosenPeriod, minEvaluationYears, settings]);
+  }, [caseId, baseCaseConstraint, evaluableRange, chosenPeriod, periodFull, minEvaluationYears, settings]);
   const periodOutOfRange =
     chosenPeriod !== null &&
     evaluableRange !== null &&
@@ -942,6 +1012,7 @@ export function StrategySettingsPage({
     rulesVersion,
   ]);
 
+  const [periodDraftInvalid, setPeriodDraftInvalid] = useState(false);
   const analyzeBlocker = ((): string | null => {
     if (registry === null || !settings.ready) return REGISTRY_NOT_LOADED;
     const strategy = settings.selectedStrategy;
@@ -960,11 +1031,14 @@ export function StrategySettingsPage({
     if (verdict.state === "blocked" || verdict.state === "unknown")
       return verdict.message;
     if (!selectedJudgement.window) return EVALUATION_WINDOW_UNAVAILABLE;
+    if (periodDraftInvalid) return PERIOD_DRAFT_INVALID;
     if (periodOutOfRange)
       return periodOutOfRangeMessage(selectedJudgement.window);
     if (periodTooShort) return periodTooShortMessage(minEvaluationYearsLabel);
     // 011 사례 경로의 제약(진입 계약 §3). 사례가 없으면 `caseBlocker`가 늘 `null`이라 지금과 같다.
     if (caseBlocker !== null) return caseBlocker;
+    // 범위가 사례를 덮지 못하는 것처럼 고를 수 없는 사정이 먼저다. 그다음이 아직 고르지 않은 기간이다.
+    if (period === null) return PERIOD_NOT_CHOSEN;
     if (
       activeCaseConstraint !== null &&
       period !== null &&
@@ -1052,9 +1126,14 @@ export function StrategySettingsPage({
     selectedStrategyIdRef.current = settings.selectedStrategyId;
   }, [settings.selectedStrategyId]);
 
+  /*
+    고른 카드를 다시 누르면 선택을 내려놓는다(2026-10-01). 전략별로 바꿔 둔 값은 지우지 않아 다시 고르면 그대로
+    돌아온다(`clearSelection`). 내려놓을 길이 없으면 전략을 고르지 않은 처음 화면으로 돌아갈 수 없다.
+  */
   const handleSelect = useCallback(
     (strategyId: string) => {
-      settings.select(strategyId);
+      if (strategyId === settings.selectedStrategyId) settings.clearSelection();
+      else settings.select(strategyId);
       setSubmission({ status: "idle" });
     },
     [settings],
@@ -1241,17 +1320,25 @@ export function StrategySettingsPage({
   */
   const analyzeBusy = submission.status === "sending";
   const analyzeBlocked = analyzeBlocker !== null || analyzeBusy;
+  // 남은 것이 분석 기간을 고르는 일뿐이면 원은 다 드러나되 회색이고, 마우스를 올리면 무엇을 고를지 알린다
+  // (2026-10-01). 다른 막힘은 고칠 것이 있다는 뜻이라 지금처럼 절반만 나온다.
+  const analyzePending = analyzeBlocker === PERIOD_NOT_CHOSEN;
   const analyzeStage: StepOrbStage =
     !settings.selectedStrategy || selectedId === null
       ? 0
-      : analyzeBlocker !== null
+      : analyzeBlocker !== null && !analyzePending
         ? 1
         : 2;
 
   return (
     <div className={styles.page}>
       <AppHeader />
-      <main className={styles.main} aria-labelledby="strategy-settings-title">
+      <main
+        className={styles.main}
+        aria-labelledby="strategy-settings-title"
+        // 머리 오른쪽 안내가 원의 단계를 따라 카드 줄 끝에 맞춘다(.lead).
+        data-orb-stage={analyzeStage}
+      >
         <header className={styles.intro}>
           {/*
             앞 단계로 돌아가는 길이다. 행동 버튼 줄에 두지 않는다 — 이 화면의 주된 행동은 '분석하기'
@@ -1272,16 +1359,32 @@ export function StrategySettingsPage({
             }
           >
             <ArrowLeft size={15} aria-hidden="true" />
-            섹터·비중 고르기
+            투자 대상 고르기
           </Link>
-          <p className={heading.eyebrow} aria-hidden="true">STEP 02</p>
-          <h1 id="strategy-settings-title" className={styles.title}>
-            <em className={heading.emphasis}>전략</em> 선택
-          </h1>
-          <p className={styles.lead}>
-            고른 섹터로 어떤 전략을 돌려 볼지 고릅니다. 그대로 바로 분석할 수
-            있습니다.
-          </p>
+          {/*
+            투자 대상 고르기·배우기와 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다. 다만 두 칸을 위쪽에
+            맞추고, 카드의 사유 목록은 제목 아래에 둔다 — 사유가 늘어도 제목이 아래로 밀리지 않고, 카드 줄 바로 아래가
+            비어 고른 카드에서 상세 설정으로 곧장 이어진다.
+          */}
+          <div className={`${heading.hero} ${styles.introHero}`}>
+            <div className={styles.introMain}>
+              <div>
+                <p className={heading.eyebrow} aria-hidden="true">STEP 02</p>
+                <h1 id="strategy-settings-title" className={styles.title}>
+                  <em className={heading.emphasis}>전략</em> 선택
+                </h1>
+              </div>
+              {/* 카드가 서는 동안만 적는다. 앞 단계를 마치지 않았으면 가리킬 카드가 없다. */}
+              <StrategyNoticeList
+                notices={selection.status === "ready" ? cardNotices : []}
+              />
+            </div>
+            <p className={styles.lead}>
+              {/* 뜻이 나뉘는 자리에서 줄을 바꾼다. 줄마다 span 하나다. */}
+              <span>고른 섹터로 어떤 전략을 돌려 볼지 고릅니다.</span>
+              <span>그대로 바로 분석할 수 있습니다.</span>
+            </p>
+          </div>
         </header>
 
         {catalog === null ? (
@@ -1367,12 +1470,11 @@ export function StrategySettingsPage({
               <section
                 ref={strategyCardsRef}
                 className={styles.master}
-                aria-labelledby="strategy-cards-title"
+                // 눈에 보이는 소제목은 두지 않는다(2026-10-01). 카드 줄이 무엇인지는 화면 제목 '전략 선택'이 이미
+                // 말한다. 보조기술에는 같은 이름의 구역으로 알린다.
+                aria-label="전략"
                 tabIndex={-1}
               >
-                <h2 id="strategy-cards-title" className={styles.columnTitle}>
-                  전략
-                </h2>
 
                 {/*
                   평가 기간을 받지 못하면 카드마다 판정하지 못했다는 문장이 붙는다. 그 상태는 자료가 적재되는 중
@@ -1403,6 +1505,8 @@ export function StrategySettingsPage({
                   onSelect={handleSelect}
                   onRetry={reloadRegistry}
                   judgeWarmup={judgeWarmup}
+                  rangeOf={rangeOfCard}
+                  notices={cardNotices}
                 />
               </section>
 
@@ -1413,7 +1517,8 @@ export function StrategySettingsPage({
                 <div className={styles.detailBody}>
                   {/*
                     제목은 '상세 설정'으로 고정이다(2026-09-30). 제목이 전략마다 바뀌면 이 카드가 무엇을 하는
-                    자리인지가 이름에 묻힌다. 고른 전략의 이름은 제목 옆에 두고, 설명은 바로 위 고른 카드가 이미
+                    자리인지가 이름에 묻힌다. 고른 전략의 이름은 제목 앞에 강조색으로 두어 '동일 비중 상세 설정'으로
+                    읽히게 하고(2026-10-01), 설명은 바로 위 고른 카드가 이미
                     보이므로 되풀이하지 않는다. 제목을 카드 안에 두어 카드 줄과 이 카드 사이 틈이 비고, 분석하기
                     원이 그 틈에 걸친다.
 
@@ -1422,14 +1527,14 @@ export function StrategySettingsPage({
                     읽힌다. 스스로 알리지는 않는다: 같은 문장을 카드 안 안내가 이미 알린다.
                   */}
                   <div className={styles.detailHead}>
-                    <h2 id="selected-strategy-title" className={styles.detailTitle}>
-                      상세 설정
-                    </h2>
                     {settings.selectedStrategy ? (
                       <strong className={styles.detailStrategy}>
                         {settings.selectedStrategy.name}
                       </strong>
                     ) : null}
+                    <h2 id="selected-strategy-title" className={styles.detailTitle}>
+                      상세 설정
+                    </h2>
                     <p id={ANALYZE_REASON_ID} className={styles.detailReason}>
                       {analyzeBlocker ?? ""}
                     </p>
@@ -1443,8 +1548,8 @@ export function StrategySettingsPage({
                   {registry !== null && settings.ready ? (
                     <div className={styles.detailNotes}>
                       <p className={styles.detailNote}>
-                        처음 보이는 값은 등록표의 기본값입니다. 편의용 출발점이며
-                        최적값이나 투자 권고가 아닙니다.
+                        기본값은 편의용 출발점이며 최적값이나 투자 권고가
+                        아닙니다.
                       </p>
                       {settings.selectedStrategy?.targetWeightSource ===
                       "COMPUTED" ? (
@@ -1508,13 +1613,8 @@ export function StrategySettingsPage({
                               : periodTooShortMessage(minEvaluationYearsLabel)}
                           </p>
                           {chosenPeriod !== null ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                settings.resetAnalysisCondition("period")
-                              }
-                            >
-                              범위 전체로 되돌리기
+                            <button type="button" onClick={selectFullRange}>
+                              최대 범위 선택
                             </button>
                           ) : null}
                         </div>
@@ -1552,7 +1652,10 @@ export function StrategySettingsPage({
                           : RANGE_NEEDS_STRATEGY
                       }
                       period={period}
-                      periodChosen={chosenPeriod !== null}
+                      periodMode={periodMode}
+                      onSelectFullRange={selectFullRange}
+                      onUndoFullRange={undoFullRange}
+                      onPeriodDraftInvalid={setPeriodDraftInvalid}
                       caseConstraint={activeCaseConstraint}
                       initialAmount={initialAmount ?? undefined}
                       minEvaluationYears={minEvaluationYears}
@@ -1639,6 +1742,7 @@ export function StrategySettingsPage({
               <StepOrbButton
                 className={styles.analyzeDock}
                 stage={analyzeStage}
+                pendingHint={analyzePending ? PERIOD_NOT_CHOSEN : undefined}
                 step="STEP 03"
                 label={analyzeBusy ? "보내는 중" : "분석하기"}
                 aria-label={analyzeBusy ? "분석 요청을 보내는 중" : "분석하기"}
