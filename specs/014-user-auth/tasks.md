@@ -346,9 +346,9 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 
 ## Phase 12: Naver (BE)
 
-- [ ] T081 [P] [US6] Add failing extractor tests for Naver `response.id`, `response.email`, missing email, `nickname`, and `emailVerified=UNKNOWN` in `backend/src/test/java/com/ssafy/thorp/account/infrastructure/oauth/NaverProfileExtractorTest.java`
-- [ ] T082 [US6] Register the Naver provider (authorization, token, user-info URIs, `user-name-attribute=response`) from environment variables with `client-authentication-method: client_secret_post` in `backend/src/main/resources/application.yml` and implement `NaverProfileExtractor` to satisfy T081
-- [ ] T083 [US6] Add the Naver `reprompt` parameter (`auth_type=reprompt`) to the request resolver with a test, and confirm Naver always routes through `EMAIL_VERIFICATION`
+- [X] T081 [P] [US6] Add failing extractor tests for Naver `response.id`, `response.email`, missing email, `nickname`, and `emailVerified=UNKNOWN` in `backend/src/test/java/com/ssafy/thorp/account/infrastructure/oauth/NaverProfileExtractorTest.java`
+- [X] T082 [US6] Register the Naver provider (authorization, token, user-info URIs, `user-name-attribute=response`) from environment variables with `client-authentication-method: client_secret_post` in `backend/src/main/resources/application.yml` and implement `NaverProfileExtractor` to satisfy T081
+- [X] T083 [US6] Add the Naver `reprompt` parameter (`auth_type=reprompt`) to the request resolver with a test, and confirm Naver always routes through `EMAIL_VERIFICATION`
 
 **Checkpoint**: 세 제공자 모두 판정 서비스에 같은 `SocialProfile`을 넘긴다.
 
