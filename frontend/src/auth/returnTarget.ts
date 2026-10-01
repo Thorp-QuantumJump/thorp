@@ -10,7 +10,8 @@
 export const DEFAULT_RETURN_TARGET = '/diagnosis/sectors'
 
 const RETURN_TARGET_KEY = 'thorp.auth.returnTarget'
-const AUTH_PATHS = ['/login', '/signup']
+// `/auth/social`은 소셜 로그인 뒤 화면들이다(spec 014). 대기 상태에 묶인 화면이라 로그인 뒤 돌아갈 자리가 아니다.
+const AUTH_PATHS = ['/login', '/signup', '/auth/social']
 
 function isAuthPath(pathname: string): boolean {
   return AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))

@@ -89,6 +89,7 @@ async function openPage(state?: unknown) {
     logout: vi.fn(),
     recheck: vi.fn(),
     updateNickname: vi.fn(),
+    completeSignIn: vi.fn(),
   }
 
   const result = render(
@@ -305,6 +306,7 @@ describe('배우기 예시 진입과 덮어쓰기 확인', () => {
       logout: vi.fn(),
       recheck: vi.fn(),
       updateNickname: vi.fn(),
+      completeSignIn: vi.fn(),
     }
     apiMocks.fetchSectorCatalog.mockResolvedValue(loaded)
 

@@ -92,6 +92,7 @@ function renderLanding() {
     logout: vi.fn(),
     recheck: vi.fn(),
     updateNickname: vi.fn(),
+    completeSignIn: vi.fn(),
   }
   return renderWithRouter(
     <AuthContext.Provider value={authValue}>
