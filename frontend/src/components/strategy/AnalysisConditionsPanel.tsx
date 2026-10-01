@@ -51,6 +51,12 @@ interface AnalysisConditionsPanelProps {
   periodMode: PeriodMode;
   /** '최대 범위 선택'. 평가 가능 범위 전체를 쓴다 */
   onSelectFullRange: () => void;
+  /**
+   * '최대 범위 선택' 상태로 돌아간다. 단추를 누른 것이 아니라, 그 상태에서 시작한 날짜 입력이 무효로 끝나 되돌릴
+   * 때 쓴다. 되돌리기 아이콘이 기억하는 '누르기 직전 상태'를 건드리지 않는다 — 건드리면 입력 도중에 잠깐 반영된
+   * 중간 날짜가 그 자리를 차지한다
+   */
+  onRestoreFullRange: () => void;
   /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다 */
   onUndoFullRange: () => void;
   /**
@@ -155,6 +161,8 @@ interface PeriodFieldProps {
   onChange: (period: AnalysisPeriod) => void;
   /** '최대 범위 선택'. 평가 가능 범위 전체를 쓰고, 범위가 바뀌면 그 범위를 따른다 */
   onSelectFull: () => void;
+  /** '최대 범위 선택' 상태로 돌아간다. 그 상태에서 시작한 입력이 무효로 끝났을 때 쓴다(`onRestoreFullRange`) */
+  onRestoreFull: () => void;
   /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다. 단추 옆 되돌리기 아이콘이 부른다 */
   onUndoFull: () => void;
   /** 기간을 정하지 않은 상태로 되돌린다. 아무것도 정하지 않은 데서 시작한 입력이 무효가 되었을 때 쓴다 */
@@ -194,6 +202,7 @@ function PeriodField({
   caseConstraint,
   onChange,
   onSelectFull,
+  onRestoreFull,
   onUndoFull,
   onClear,
   onDraftInvalid,
@@ -275,7 +284,7 @@ function PeriodField({
       } else if (before.mode === "full") {
         if (periodMode !== "full") {
           setSynced(range);
-          onSelectFull();
+          onRestoreFull();
         }
       } else if (periodMode !== "unset") {
         // 정하지 않은 상태에서 시작했으면 되돌릴 곳도 정하지 않은 상태다. 범위 전체로 대신 채우지 않는다.
@@ -431,6 +440,7 @@ export function AnalysisConditionsPanel({
   period,
   periodMode,
   onSelectFullRange,
+  onRestoreFullRange,
   onUndoFullRange,
   onPeriodDraftInvalid,
   caseConstraint = null,
@@ -490,6 +500,7 @@ export function AnalysisConditionsPanel({
               onChange({ periodStart: next.start, periodEnd: next.end })
             }
             onSelectFull={onSelectFullRange}
+            onRestoreFull={onRestoreFullRange}
             onUndoFull={onUndoFullRange}
             onClear={() => onReset("period")}
             onDraftInvalid={onPeriodDraftInvalid}

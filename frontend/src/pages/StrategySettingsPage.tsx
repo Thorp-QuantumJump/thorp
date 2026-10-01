@@ -890,6 +890,11 @@ export function StrategySettingsPage({
     periodBeforeFullRef.current = chosenPeriod;
     settings.setAnalysisCondition({ periodFull: true });
   }, [chosenPeriod, settings]);
+  // 입력이 무효로 끝나 '최대 범위' 상태로 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다. 그 순간의 `chosenPeriod`는
+  // 입력 도중에 잠깐 반영된 중간 날짜라, 기억하면 되돌리기 아이콘이 사용자가 고른 적 없는 기간으로 간다.
+  const restoreFullRange = useCallback(() => {
+    settings.setAnalysisCondition({ periodFull: true });
+  }, [settings]);
   const undoFullRange = useCallback(() => {
     const before = periodBeforeFullRef.current;
     periodBeforeFullRef.current = null;
@@ -1654,6 +1659,7 @@ export function StrategySettingsPage({
                       period={period}
                       periodMode={periodMode}
                       onSelectFullRange={selectFullRange}
+                      onRestoreFullRange={restoreFullRange}
                       onUndoFullRange={undoFullRange}
                       onPeriodDraftInvalid={setPeriodDraftInvalid}
                       caseConstraint={activeCaseConstraint}
