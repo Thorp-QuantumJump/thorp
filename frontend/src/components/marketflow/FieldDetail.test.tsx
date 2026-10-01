@@ -24,6 +24,23 @@ function detailOf(referenceMonth: string | null): FieldDetailResult {
 }
 
 describe('FieldDetail', () => {
+  it('무역수지의 현재값과 그래프 관측값을 같은 단위로 축약한다', () => {
+    const detail = detailOf('2026-08')
+    detail.narrative = '수출 변화는 4.346167%입니다.'
+    detail.indicators = [{
+      indicatorId: 'trade_balance', name: '무역수지', unit: '미국 달러', value: 34_785_482_585,
+      path: [{ month: '2026-06', value: -34_785_482_585 }, { month: '2026-07', value: null }, { month: '2026-08', value: 34_785_482_585 }],
+      referenceMonth: '2026-08', releaseDate: null, source: '관세청', agency: '관세청', afterReferenceMonthRelease: null,
+    }]
+    renderDetail(detail)
+    expect(screen.getByText('수출 변화는 4.3%입니다.')).toBeTruthy()
+    expect(screen.getByRole('img', { name: '무역수지 3개월 선 그래프' }).textContent).not.toContain('34,785,482,585')
+    const path = screen.getByRole('list', { name: '무역수지 3개월 경로' })
+    expect(path.textContent).toContain('약 -347억 9천만 미국 달러')
+    expect(path.textContent).toContain('자료 없음')
+    expect(detail.indicators[0].value).toBe(34_785_482_585)
+  })
+
   it('역사 비교 표시는 서버가 준 안내가 있을 때만 달고, 원문을 함께 읽힌다 (009 FR-012)', () => {
     const notice = '최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.'
     const { unmount } = render(

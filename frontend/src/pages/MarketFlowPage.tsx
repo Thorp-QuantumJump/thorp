@@ -1,3 +1,5 @@
+import { SimilarPastMarket } from '@/components/diagnosis/SimilarPastMarket'
+import { SectorNews } from '@/components/diagnosis/SectorNews'
 import { Activity, RefreshCw } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useId, useState, type CSSProperties, type KeyboardEvent } from 'react'
@@ -142,6 +144,10 @@ export function MarketFlowPage() {
           </>
         )}
 
+        <div className={styles.context}>
+          <SimilarPastMarket caseId={null} />
+          <SectorNews />
+        </div>
       </main>
     </div>
   )

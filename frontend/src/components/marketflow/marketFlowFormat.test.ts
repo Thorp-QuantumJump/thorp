@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PathPoint } from '@/types/marketFlow'
-import { buildAxisDomain, formatObservation, recentDirection, sourceParts } from './marketFlowFormat'
+import { buildAxisDomain, formatNarrative, formatObservation, recentDirection, sourceParts } from './marketFlowFormat'
 
 /**
  * 실제 지표 값으로 검증한다. 꾸며낸 숫자로는 "환율이 평평해 보인다"는 문제가 재현되지 않는다.
@@ -130,5 +130,21 @@ describe('관측값 표기', () => {
     expect(formatObservation(3)).toBe('3')
     expect(formatObservation(-0.04)).toBe('0')
     expect(formatObservation(null)).toBe('자료 없음')
+  })
+})
+
+
+describe('시장 흐름 숫자 표시', () => {
+  it('서버 요약 문장의 소수만 첫째 자리로 줄인다', () => {
+    expect(formatNarrative('수출은 4.346167%, 환율은 1,351.256789원입니다.')).toBe('수출은 4.3%, 환율은 1,351.3원입니다.')
+    expect(formatNarrative(null)).toBeNull()
+  })
+  it('달러 금액은 천만 단위로 반올림하고 억 자리 올림과 부호를 보존한다', () => {
+    expect(formatObservation(34_785_482_585, '미국 달러')).toBe('약 347억 9천만')
+    expect(formatObservation(-34_785_482_585, '미국 달러')).toBe('약 -347억 9천만')
+    expect(formatObservation(199_999_999, '미국 달러')).toBe('약 2억')
+    expect(formatObservation(0, '미국 달러')).toBe('0')
+    expect(formatObservation(null, '미국 달러')).toBe('자료 없음')
+    expect(formatObservation(34_785_482_585, '원')).toBe('34,785,482,585')
   })
 })

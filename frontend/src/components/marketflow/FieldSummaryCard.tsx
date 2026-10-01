@@ -4,7 +4,7 @@ import { useId } from 'react'
 import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from '@/components/common/useHoverOpen'
 import type { FieldSummary } from '@/types/marketFlow'
 import { DataStateLine } from './DataStateNotice'
-import { stateLineLabels } from './marketFlowFormat'
+import { formatNarrative, stateLineLabels } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 interface FieldSummaryCardProps {
@@ -31,7 +31,7 @@ export function FieldSummaryCard({ field, selected = false, onOpen, listUpdatedA
   const tipId = useId()
   const labels = stateLineLabels(field.status, field.isExampleData)
   const { open, settle, schedule } = useHoverOpen()
-  const summaryText = field.narrative ?? '변화 요약 대신 자료 상태를 확인해 주세요.'
+  const summaryText = formatNarrative(field.narrative) ?? '변화 요약 대신 자료 상태를 확인해 주세요.'
   const stateLine = (
     <DataStateLine
       status={field.status}
