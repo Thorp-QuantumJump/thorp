@@ -13,7 +13,10 @@ public class EmailVerificationMapper {
                 emailVerification.getVerificationCodeHash(),
                 emailVerification.getExpiresAt(),
                 emailVerification.getVerifiedAt(),
-                emailVerification.getCreatedAt());
+                emailVerification.getCreatedAt(),
+                emailVerification.getAttempts(),
+                emailVerification.getSendsInWindow(),
+                emailVerification.getSendWindowStartedAt());
     }
 
     public static EmailVerification toDomain(EmailVerificationEntity entity) {
@@ -23,6 +26,9 @@ public class EmailVerificationMapper {
                 entity.getVerificationCodeHash(),
                 entity.getExpiresAt(),
                 entity.getVerifiedAt(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                entity.getAttempts(),
+                entity.getSendsInWindow(),
+                entity.getSendWindowStartedAt());
     }
 }

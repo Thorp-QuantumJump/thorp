@@ -159,6 +159,27 @@ describe('SignupPage', () => {
     await screen.findByText('new@example.com 인증 완료')
   })
 
+  it('인증번호를 다 틀리면 안내를 보여 주고 새 번호를 받는 단계로 돌아간다', async () => {
+    apiMocks.confirmEmailVerification.mockRejectedValue(
+      new ApiClientError('api', '인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요.', {
+        code: 'EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED',
+      }),
+    )
+    const user = userEvent.setup()
+    renderSignup()
+
+    await user.type(screen.getByLabelText('이메일'), 'new@example.com')
+    await user.click(screen.getByRole('button', { name: '인증번호 받기' }))
+    await user.type(await screen.findByLabelText('인증번호'), '000000')
+    await user.click(screen.getByRole('button', { name: '인증 확인' }))
+
+    expect(
+      (await screen.findAllByText('인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요.'))
+        .length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: '인증번호 받기' })).toBeTruthy()
+  })
+
   it('인증·가입 성공 후 정규화한 이메일만 로그인 화면으로 전달한다', async () => {
     const user = userEvent.setup()
     renderSignup()

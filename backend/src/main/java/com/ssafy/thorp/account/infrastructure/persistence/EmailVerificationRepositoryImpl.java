@@ -32,6 +32,13 @@ public class EmailVerificationRepositoryImpl implements EmailVerificationReposit
                 .map(EmailVerificationMapper::toDomain);
     }
 
+    @Override
+    public Optional<EmailVerification> findLatestByEmailForUpdate(String email) {
+        return emailVerificationJpaRepository
+                .findLatestForUpdate(email)
+                .map(EmailVerificationMapper::toDomain);
+    }
+
     /** 서비스 트랜잭션 밖에서 직접 호출돼도 동작하도록 이 메서드에도 트랜잭션 경계를 둔다. */
     @Override
     @Transactional

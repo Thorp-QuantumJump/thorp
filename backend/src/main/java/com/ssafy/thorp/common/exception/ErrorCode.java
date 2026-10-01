@@ -22,6 +22,11 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "인증 요청을 찾을 수 없습니다. 인증번호를 다시 요청해 주세요."),
     EMAIL_VERIFICATION_INVALID(HttpStatus.BAD_REQUEST, "인증번호를 다시 확인해 주세요."),
     EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다. 인증번호를 다시 요청해 주세요."),
+    // 2026-10-01 남은 위험 보완: 번호 하나를 대조할 수 있는 횟수와 같은 주소로의 발송 수에 상한을 둔다.
+    EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED(
+            HttpStatus.BAD_REQUEST, "인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요."),
+    EMAIL_VERIFICATION_SEND_LIMIT(
+            HttpStatus.TOO_MANY_REQUESTS, "인증번호를 너무 여러 번 요청했습니다. 1시간 뒤 다시 시도해 주세요."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
     CSRF_TOKEN_INVALID(HttpStatus.FORBIDDEN, "요청 확인 정보가 만료되었습니다. 다시 시도해 주세요."),

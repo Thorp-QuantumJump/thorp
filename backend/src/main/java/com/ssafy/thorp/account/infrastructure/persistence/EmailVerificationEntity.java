@@ -26,6 +26,15 @@ public class EmailVerificationEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "attempts", nullable = false)
+    private int attempts;
+
+    @Column(name = "sends_in_window", nullable = false)
+    private int sendsInWindow;
+
+    @Column(name = "send_window_started_at", nullable = false)
+    private Instant sendWindowStartedAt;
+
     protected EmailVerificationEntity() {}
 
     EmailVerificationEntity(
@@ -34,7 +43,13 @@ public class EmailVerificationEntity {
             String verificationCodeHash,
             Instant expiresAt,
             Instant verifiedAt,
-            Instant createdAt) {
+            Instant createdAt,
+            int attempts,
+            int sendsInWindow,
+            Instant sendWindowStartedAt) {
+        this.attempts = attempts;
+        this.sendsInWindow = sendsInWindow;
+        this.sendWindowStartedAt = sendWindowStartedAt;
         this.id = id;
         this.email = email;
         this.verificationCodeHash = verificationCodeHash;
@@ -47,6 +62,9 @@ public class EmailVerificationEntity {
     private void onCreate() {
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (sendWindowStartedAt == null) {
+            sendWindowStartedAt = createdAt;
         }
     }
 
@@ -72,5 +90,17 @@ public class EmailVerificationEntity {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public int getAttempts() {
+        return attempts;
+    }
+
+    public int getSendsInWindow() {
+        return sendsInWindow;
+    }
+
+    public Instant getSendWindowStartedAt() {
+        return sendWindowStartedAt;
     }
 }
