@@ -38,6 +38,10 @@ public enum ErrorCode {
     // 소셜 경로의 확인 시도·발송 상한(2026-10-01 code review). 대기 상태를 버렸으므로 처음부터 다시 해야 한다.
     SOCIAL_VERIFICATION_LIMIT(
             HttpStatus.TOO_MANY_REQUESTS, "확인 시도 횟수를 넘었습니다. 소셜 로그인을 처음부터 다시 시도해 주세요."),
+    // 같은 기존 계정을 향한 연결 확인이 한 시간 창의 상한을 넘었다. 그 계정의 로그인은 막지 않는다.
+    SOCIAL_LINK_TEMPORARILY_LOCKED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "이 계정에 대한 확인 시도가 많아 잠시 막았습니다. 1시간 뒤 다시 시도하거나 다른 방법으로 로그인해 주세요."),
     EMAIL_VERIFICATION_RESEND_TOO_SOON(
             HttpStatus.TOO_MANY_REQUESTS, "인증번호를 방금 보냈습니다. 잠시 후 다시 받아 주세요."),
 

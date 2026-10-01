@@ -98,6 +98,7 @@ public class SocialLinkService {
             }
         }
 
+        access.ownershipConfirmed(pending);
         attach(pending, target);
         return authenticationService.startSession(target, request, response);
     }

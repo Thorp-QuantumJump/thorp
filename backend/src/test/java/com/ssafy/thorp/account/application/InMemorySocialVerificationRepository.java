@@ -30,6 +30,13 @@ public class InMemorySocialVerificationRepository implements SocialVerificationR
         rows.remove(id);
     }
 
+    @Override
+    public int deleteCreatedBefore(Instant cutoff) {
+        int before = rows.size();
+        rows.values().removeIf(row -> row.getCreatedAt().isBefore(cutoff));
+        return before - rows.size();
+    }
+
     public SocialVerification get(String id) {
         return rows.get(id);
     }

@@ -45,4 +45,9 @@ public class SocialVerificationRepositoryImpl implements SocialVerificationRepos
     public void delete(String id) {
         jpaRepository.deleteById(id);
     }
+
+    @Override
+    public int deleteCreatedBefore(Instant cutoff) {
+        return jpaRepository.deleteCreatedBefore(cutoff);
+    }
 }

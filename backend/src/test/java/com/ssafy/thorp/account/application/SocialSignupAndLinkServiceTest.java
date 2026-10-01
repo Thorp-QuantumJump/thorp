@@ -53,6 +53,9 @@ import org.springframework.mock.web.MockHttpServletResponse;
  */
 class SocialSignupAndLinkServiceTest {
 
+    private final InMemorySocialLinkTargetRepository targets =
+            new InMemorySocialLinkTargetRepository();
+
     private static final String EMAIL = "member@example.com";
     private static final String PHONE = "01055556666";
 
@@ -75,7 +78,10 @@ class SocialSignupAndLinkServiceTest {
     void setUp() {
         access =
                 new PendingSocialLoginAccess(
-                        store, new SocialVerificationGuard(verifications, clock), encoder, clock);
+                        store,
+                        new SocialVerificationGuard(verifications, targets, clock),
+                        encoder,
+                        clock);
         linkService =
                 new SocialLinkService(
                         access,
@@ -408,6 +414,63 @@ class SocialSignupAndLinkServiceTest {
                                         response))
                 .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
         verify(socialAccounts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("제공자 로그인을 다시 해 새 대기 상태로 와도 같은 계정을 향한 시도는 이어서 세어 막는다")
+    void targetAttemptsAccumulateAcrossRestartedPendings() {
+        when(users.findById(42L))
+                .thenReturn(Optional.of(user(42L, EMAIL, UserStatus.ACTIVE, "h:secret123")));
+        int perPending = SocialVerification.MAX_PASSWORD_ATTEMPTS;
+        int restarts =
+                com.ssafy.thorp.account.domain.model.SocialLinkTarget.MAX_ATTEMPTS / perPending;
+
+        for (int restart = 0; restart < restarts; restart++) {
+            // 새 제공자 로그인 = 새 대기 상태(새 verificationId).
+            store.save(linkPending(LinkReason.PHONE, false));
+            for (int i = 0; i < perPending; i++) {
+                assertThatThrownBy(
+                                () ->
+                                        linkService.link(
+                                                new SocialLinkCommand(
+                                                        Method.PASSWORD, "wrong", null),
+                                                request,
+                                                response))
+                        .satisfies(code(ErrorCode.INVALID_CREDENTIALS));
+            }
+        }
+
+        store.save(linkPending(LinkReason.PHONE, false));
+        // 맞는 비밀번호여도 대조하지 않는다. 대기 상태는 남긴다 — 막힌 것은 이 계정으로의 연결뿐이다.
+        assertThatThrownBy(
+                        () ->
+                                linkService.link(
+                                        new SocialLinkCommand(Method.PASSWORD, "secret123", null),
+                                        request,
+                                        response))
+                .satisfies(code(ErrorCode.SOCIAL_LINK_TEMPORARILY_LOCKED));
+        assertThat(store.current()).isNotNull();
+        verify(socialAccounts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("주인이 확인하면 그 계정을 향한 실패 누적이 지워진다")
+    void ownershipClearsTargetAttempts() {
+        when(users.findById(42L))
+                .thenReturn(Optional.of(user(42L, EMAIL, UserStatus.ACTIVE, "h:secret123")));
+        store.save(linkPending(LinkReason.EMAIL, false));
+        assertThatThrownBy(
+                        () ->
+                                linkService.link(
+                                        new SocialLinkCommand(Method.PASSWORD, "wrong", null),
+                                        request,
+                                        response))
+                .satisfies(code(ErrorCode.INVALID_CREDENTIALS));
+
+        linkService.link(
+                new SocialLinkCommand(Method.PASSWORD, "secret123", null), request, response);
+
+        assertThat(targets.get(42L).getAttempts()).isZero();
     }
 
     @Test

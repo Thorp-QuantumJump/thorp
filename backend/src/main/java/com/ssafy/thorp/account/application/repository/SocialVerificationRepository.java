@@ -16,4 +16,7 @@ public interface SocialVerificationRepository {
     void save(SocialVerification verification);
 
     void delete(String id);
+
+    /** 끝나지 않고 버려진 대기 상태의 기록을 지운다. 지운 행 수를 돌려준다. */
+    int deleteCreatedBefore(java.time.Instant cutoff);
 }

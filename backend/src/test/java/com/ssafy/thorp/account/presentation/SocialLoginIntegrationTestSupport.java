@@ -77,6 +77,11 @@ abstract class SocialLoginIntegrationTestSupport extends IntegrationTestSupport 
                 "delete from social_accounts where user_id in"
                         + " (select id from users where email like ?)",
                 PREFIX + "%");
+        jdbcTemplate.update(
+                "delete from social_link_targets where user_id in"
+                        + " (select id from users where email like ?)",
+                PREFIX + "%");
+        jdbcTemplate.update("delete from social_pending_verifications");
         jdbcTemplate.update("delete from users where email like ?", PREFIX + "%");
         jdbcTemplate.update("delete from spring_session");
     }

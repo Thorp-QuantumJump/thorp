@@ -1,6 +1,8 @@
 package com.ssafy.thorp.account.application.service;
 
+import com.ssafy.thorp.account.application.repository.SocialLinkTargetRepository;
 import com.ssafy.thorp.account.application.repository.SocialVerificationRepository;
+import com.ssafy.thorp.account.domain.model.SocialLinkTarget;
 import com.ssafy.thorp.account.domain.model.SocialVerification;
 import com.ssafy.thorp.account.domain.model.SocialVerification.CodeTarget;
 import java.time.Clock;
@@ -20,10 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class SocialVerificationGuard {
 
     private final SocialVerificationRepository repository;
+    private final SocialLinkTargetRepository targets;
     private final Clock clock;
 
-    public SocialVerificationGuard(SocialVerificationRepository repository, Clock clock) {
+    public SocialVerificationGuard(
+            SocialVerificationRepository repository,
+            SocialLinkTargetRepository targets,
+            Clock clock) {
         this.repository = repository;
+        this.targets = targets;
         this.clock = clock;
     }
 
@@ -69,10 +76,41 @@ public class SocialVerificationGuard {
                 });
     }
 
+    /** 그 계정을 향한 인증번호·비밀번호 대조 한 번. 한 시간 창의 상한을 넘으면 막는다. 대조 전에 센다. */
+    @Transactional(
+            propagation = Propagation.REQUIRES_NEW,
+            noRollbackFor = SocialVerification.RejectedAttempt.class)
+    public void reserveTargetAttempt(Long userId) {
+        changeTarget(userId, target -> target.reserveAttempt(clock.instant()));
+    }
+
+    /** 그 계정 이메일로 인증번호를 한 번 보낸다. 한 시간 창의 상한을 넘으면 막는다. */
+    @Transactional(
+            propagation = Propagation.REQUIRES_NEW,
+            noRollbackFor = SocialVerification.RejectedAttempt.class)
+    public void reserveTargetSend(Long userId) {
+        changeTarget(userId, target -> target.reserveSend(clock.instant()));
+    }
+
+    /** 주인임을 확인했다. 그 계정을 향한 실패 누적을 지운다. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void clearTargetAttempts(Long userId) {
+        changeTarget(userId, SocialLinkTarget::clearAttempts);
+    }
+
     /** 가입·연결이 끝나 더 쓸 일이 없는 기록을 지운다. */
     @Transactional
     public void discard(String id) {
         repository.delete(id);
+    }
+
+    private void changeTarget(Long userId, java.util.function.Consumer<SocialLinkTarget> action) {
+        SocialLinkTarget target = targets.lockOrOpen(userId, clock.instant());
+        try {
+            action.accept(target);
+        } finally {
+            targets.save(target);
+        }
     }
 
     private <T> T change(String id, Function<SocialVerification, T> action) {
