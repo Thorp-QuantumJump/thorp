@@ -13,6 +13,7 @@ function renderHeader(status: AuthContextValue['status']) {
     logout: vi.fn(),
     recheck: vi.fn(),
     updateNickname: vi.fn(),
+    completeSignIn: vi.fn(),
   }
   return render(
     <MemoryRouter>

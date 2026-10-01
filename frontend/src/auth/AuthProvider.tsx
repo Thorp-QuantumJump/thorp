@@ -121,6 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [commitSnapshot])
 
+  const completeSignIn = useCallback(
+    (user: AuthenticatedUser) => {
+      // 진행 중인 현재 사용자 확인이 늦게 도착해 이 결과를 덮어쓰지 않게 한다(FR-006).
+      ++requestIdRef.current
+      currentUserAbortRef.current?.abort()
+      commitSnapshot({ status: 'authenticated', user })
+    },
+    [commitSnapshot],
+  )
+
   const logout = useCallback(async (signal?: AbortSignal) => {
     const requestId = ++requestIdRef.current
     currentUserAbortRef.current?.abort()
@@ -177,8 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [recheck])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ...snapshot, login, logout, recheck, updateNickname }),
-    [login, logout, recheck, snapshot, updateNickname],
+    () => ({ ...snapshot, login, logout, recheck, updateNickname, completeSignIn }),
+    [completeSignIn, login, logout, recheck, snapshot, updateNickname],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

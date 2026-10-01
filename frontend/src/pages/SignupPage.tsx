@@ -10,6 +10,7 @@ import {
 import { ApiClientError, normalizeApiError } from '@/api/client'
 import { AuthField } from '@/components/auth/AuthField'
 import { AuthStatus } from '@/components/auth/AuthStatus'
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import {
   clearSignupProgress,
   readSignupProgress,
@@ -722,6 +723,8 @@ export function SignupPage() {
               </div>
             )}
           </form>
+
+          <SocialLoginButtons dividerLabel="또는 소셜 계정으로 가입" disabled={isAnyPending} />
 
           <p className={styles.loginPrompt}>
             이미 계정이 있나요? <Link to="/login">로그인</Link>

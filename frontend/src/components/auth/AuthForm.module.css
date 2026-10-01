@@ -173,3 +173,12 @@
     min-height: 46px;
   }
 }
+
+/* 같은 모양의 링크(로그인 화면으로 등). 버튼과 달리 기본 표시가 인라인이라 가운데 맞춤을 따로 준다. */
+a.submitButton,
+a.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}

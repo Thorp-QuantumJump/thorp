@@ -25,6 +25,10 @@ describe('returnTarget', () => {
     '/login?next=/records',
     '/signup',
     '/signup/complete',
+    // 소셜 로그인 뒤 화면은 대기 상태에 묶여 있어 돌아갈 자리가 아니다(spec 014).
+    '/signup/social',
+    '/auth/social/link',
+    '/auth/social/complete',
   ])('외부·상대·인증 화면 복귀 위치 %s를 기본 화면으로 대체한다', (target) => {
     saveReturnTarget(target)
 

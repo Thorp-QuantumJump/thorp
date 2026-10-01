@@ -354,15 +354,15 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 
 ## Phase 13: Social Screens (FE)
 
-- [ ] T084 [P] [US6] Add social types, error codes, and API functions from `contracts/auth-api.yaml` in `frontend/src/types/auth.ts` and `frontend/src/api/socialAuth.ts`
-- [ ] T085 [P] [US6] Add failing tests for provider buttons (only enabled providers, full-page navigation, return target kept) and `/login?social=cancelled|error` notices in `frontend/src/components/auth/SocialLoginButtons.test.tsx` and `frontend/src/pages/LoginPage.test.tsx`
-- [ ] T086 [P] [US6] Add failing tests for `/auth/social/complete`, `/signup/social` (read-only email, prefilled nickname, `SOCIAL_LINK_REQUIRED` → link screen, duplicate submit), `/auth/social/verify-email`, and expired pending state in `frontend/src/pages/Social*.test.tsx`
-- [ ] T087 [P] [US7] Add failing tests for `/auth/social/link` (masked email, each method, wrong password/code, cancel), `/auth/social/email-required` (three actions, reprompt link), and `/auth/social/already-linked` in `frontend/src/pages/Social*.test.tsx`
-- [ ] T088 [US6] Implement `SocialLoginButtons` following each provider's brand guide and add it to `frontend/src/pages/LoginPage.tsx` and `frontend/src/pages/SignupPage.tsx` to satisfy T085
-- [ ] T089 [US6] Implement `SocialCompletePage`, `SocialSignupPage`, and `SocialVerifyEmailPage` in `frontend/src/pages/` to satisfy T086
-- [ ] T090 [US7] Implement `SocialLinkPage`, `SocialEmailRequiredPage`, and `SocialAlreadyLinkedPage` in `frontend/src/pages/` to satisfy T087
-- [ ] T091 Add `/auth/social` to the auth paths in `frontend/src/auth/returnTarget.ts`, register the social routes, apply `AuthEntryGuard` (authenticated → `/home`) to the social entry routes except `/auth/social/complete`, and refresh CSRF after social signup/link in `frontend/src/App.tsx` and `frontend/src/auth/AuthProvider.tsx`
-- [ ] T092 Check status announcements, focus on first invalid input, keyboard-only completion, and 360px layout for every social screen
+- [X] T084 [P] [US6] Add social types, error codes, and API functions from `contracts/auth-api.yaml` in `frontend/src/types/auth.ts` and `frontend/src/api/socialAuth.ts`
+- [X] T085 [P] [US6] Add failing tests for provider buttons (only enabled providers, full-page navigation, return target kept) and `/login?social=cancelled|error` notices in `frontend/src/components/auth/SocialLoginButtons.test.tsx` and `frontend/src/pages/LoginPage.test.tsx`
+- [X] T086 [P] [US6] Add failing tests for `/auth/social/complete`, `/signup/social` (read-only email, prefilled nickname, `SOCIAL_LINK_REQUIRED` → link screen, duplicate submit), `/auth/social/verify-email`, and expired pending state in `frontend/src/pages/Social*.test.tsx`
+- [X] T087 [P] [US7] Add failing tests for `/auth/social/link` (masked email, each method, wrong password/code, cancel), `/auth/social/email-required` (three actions, reprompt link), and `/auth/social/already-linked` in `frontend/src/pages/Social*.test.tsx`
+- [X] T088 [US6] Implement `SocialLoginButtons` following each provider's brand guide and add it to `frontend/src/pages/LoginPage.tsx` and `frontend/src/pages/SignupPage.tsx` to satisfy T085
+- [X] T089 [US6] Implement `SocialCompletePage`, `SocialSignupPage`, and `SocialVerifyEmailPage` in `frontend/src/pages/` to satisfy T086
+- [X] T090 [US7] Implement `SocialLinkPage`, `SocialEmailRequiredPage`, and `SocialAlreadyLinkedPage` in `frontend/src/pages/` to satisfy T087
+- [X] T091 Add `/auth/social` to the auth paths in `frontend/src/auth/returnTarget.ts`, register the social routes, apply `AuthEntryGuard` (authenticated → `/home`) to the social entry routes except `/auth/social/complete`, and refresh CSRF after social signup/link in `frontend/src/App.tsx` and `frontend/src/auth/AuthProvider.tsx`
+- [X] T092 Check status announcements, focus on first invalid input, keyboard-only completion, and 360px layout for every social screen
 
 ## Phase 14: Social Verification
 

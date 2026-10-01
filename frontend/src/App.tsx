@@ -52,6 +52,36 @@ const LoginPage = lazy(() =>
 )
 
 // 내 기록(spec 006). 로그인 사용자만 보는 목록이며 보호 경로 안에 둔다.
+const SocialCompletePage = lazy(() =>
+  import('@/pages/SocialCompletePage').then((module) => ({
+    default: module.SocialCompletePage,
+  })),
+)
+const SocialSignupPage = lazy(() =>
+  import('@/pages/SocialSignupPage').then((module) => ({
+    default: module.SocialSignupPage,
+  })),
+)
+const SocialVerifyEmailPage = lazy(() =>
+  import('@/pages/SocialVerifyEmailPage').then((module) => ({
+    default: module.SocialVerifyEmailPage,
+  })),
+)
+const SocialLinkPage = lazy(() =>
+  import('@/pages/SocialLinkPage').then((module) => ({
+    default: module.SocialLinkPage,
+  })),
+)
+const SocialEmailRequiredPage = lazy(() =>
+  import('@/pages/SocialEmailRequiredPage').then((module) => ({
+    default: module.SocialEmailRequiredPage,
+  })),
+)
+const SocialAlreadyLinkedPage = lazy(() =>
+  import('@/pages/SocialAlreadyLinkedPage').then((module) => ({
+    default: module.SocialAlreadyLinkedPage,
+  })),
+)
 const MyRecordsPage = lazy(() =>
   import('@/pages/MyRecordsPage').then((module) => ({
     default: module.MyRecordsPage,
@@ -211,6 +241,52 @@ function AnimatedRoutes() {
               element={
                 <AuthEntryGuard>
                   <LoginPage />
+                </AuthEntryGuard>
+              }
+            />
+            {/*
+              소셜 로그인 뒤 화면(spec 014 US6·US7). 완료 화면만 가드 밖이다 — 서버가 세션을 만든 뒤 오는 자리라
+              로그인 상태로 들어오는 것이 정상이고, 가드가 먼저 기본 화면으로 보내면 적어 둔 복귀 위치를 잃는다.
+              나머지는 가입·연결이 끝나 로그인 상태가 되는 순간 가드가 원래 자리로 보낸다.
+            */}
+            <Route path="/auth/social/complete" element={<SocialCompletePage />} />
+            <Route
+              path="/signup/social"
+              element={
+                <AuthEntryGuard>
+                  <SocialSignupPage />
+                </AuthEntryGuard>
+              }
+            />
+            <Route
+              path="/auth/social/verify-email"
+              element={
+                <AuthEntryGuard>
+                  <SocialVerifyEmailPage />
+                </AuthEntryGuard>
+              }
+            />
+            <Route
+              path="/auth/social/link"
+              element={
+                <AuthEntryGuard>
+                  <SocialLinkPage />
+                </AuthEntryGuard>
+              }
+            />
+            <Route
+              path="/auth/social/email-required"
+              element={
+                <AuthEntryGuard>
+                  <SocialEmailRequiredPage />
+                </AuthEntryGuard>
+              }
+            />
+            <Route
+              path="/auth/social/already-linked"
+              element={
+                <AuthEntryGuard>
+                  <SocialAlreadyLinkedPage />
                 </AuthEntryGuard>
               }
             />

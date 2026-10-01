@@ -18,6 +18,7 @@ function renderPage(updateNickname: AuthContextValue['updateNickname'] = vi.fn()
         logout: vi.fn(),
         recheck: vi.fn(),
         updateNickname,
+        completeSignIn: vi.fn(),
       }}>
         <AccountProfilePage />
       </AuthContext.Provider>
