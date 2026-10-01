@@ -64,6 +64,8 @@
 - 인증번호 발송 대상은 대기 상태가 정한다(제공자 이메일 또는 연결 대상 계정 이메일). FE는 주소를 보내지 않는다.
 - 소셜 가입·연결 성공은 `POST /auth/sessions`와 같이 세션 ID를 교체하고 `AuthenticatedUser`를 돌려준다.
   FE는 성공 뒤 CSRF를 다시 준비한다.
-- 새 오류 코드: `SOCIAL_PENDING_NOT_FOUND`(404), `SOCIAL_LINK_REQUIRED`(409), `SOCIAL_PROVIDER_ALREADY_LINKED`(409),
+- 로컬 redirect 기준 주소는 `THORP_PUBLIC_BASE_URL`(기본 `http://localhost:5173`)이다. Vite proxy가 `Host`를 바꾸므로
+  요청 주소로 추정하지 않는다.
+- 새 오류 코드: `SOCIAL_PENDING_NOT_FOUND`(404), `SOCIAL_PENDING_STAGE_MISMATCH`(409), `SOCIAL_SIGNUP_REJECTED`(400), `SOCIAL_LINK_REQUIRED`(409), `SOCIAL_PROVIDER_ALREADY_LINKED`(409),
   `SOCIAL_ACCOUNT_ALREADY_LINKED`(409), `SOCIAL_PROVIDER_NOT_ENABLED`(404). 비밀번호·인증번호 오류는 기존 코드를 쓴다.
 - 기존 `POST /api/auth/sessions`는 비밀번호가 없는 계정에 `INVALID_CREDENTIALS`를 돌려준다. 요청·응답 형식은 같다.
