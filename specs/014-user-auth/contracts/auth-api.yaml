@@ -32,7 +32,9 @@ paths:
         '403':
           $ref: '#/components/responses/InvalidCsrf'
         '429':
-          description: 다시 받기 간격(30초) 안이거나 한 시간에 같은 주소로 5통을 넘었다(임시값)
+          description: >-
+            다시 받기 간격 안이다(EMAIL_VERIFICATION_RESEND_TOO_SOON). 간격은 30초에서 시작해 한 시간 안에 받을 때마다 두 배로
+            늘고 10분에서 멈춘다. 고정 상한이 없어 남이 요청해도 주인의 가입을 오래 막지 못한다(임시값).
           content:
             application/json:
               schema:
@@ -591,7 +593,6 @@ components:
             - EMAIL_VERIFICATION_INVALID
             - EMAIL_VERIFICATION_EXPIRED
             - EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED
-            - EMAIL_VERIFICATION_SEND_LIMIT
             - INVALID_CREDENTIALS
             - AUTHENTICATION_REQUIRED
             - CSRF_TOKEN_INVALID

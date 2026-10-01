@@ -55,10 +55,9 @@ function fieldFromApiError(error: ApiClientError, fallback: AuthFieldName): Auth
     EMAIL_VERIFICATION_NOT_FOUND: 'verificationCode',
     EMAIL_VERIFICATION_INVALID: 'verificationCode',
     EMAIL_VERIFICATION_EXPIRED: 'verificationCode',
-    // 대조·발송 상한(spec 014, 2026-10-01). 번호를 다 틀렸으면 번호 칸, 너무 자주 받으면 이메일 칸에 안내한다.
+    // 대조 상한·재발송 간격(spec 014, 2026-10-01). 번호를 다 틀렸으면 번호 칸, 너무 자주 받으면 이메일 칸에 안내한다.
     EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED: 'verificationCode',
     EMAIL_VERIFICATION_RESEND_TOO_SOON: 'email',
-    EMAIL_VERIFICATION_SEND_LIMIT: 'email',
   }
 
   return (error.code && mapped[error.code]) || fieldFromMessage(error.message) || fallback

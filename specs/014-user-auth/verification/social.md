@@ -78,9 +78,19 @@ Security 필터와 PostgreSQL 세션을 그대로 지난다. 남은 위험은 �
 | 번호로 계정의 가린 이메일·연결 제공자가 보임 | spec이 정한 동작 | 유지. 별도 보안 작업에서 다시 본다 | — |
 | 주체 판정·코드 생성·제공자 확인 중복 | 정리 | `SessionUser`, `VerificationCodes`, `existsByUserIdAndProvider` | 전체 테스트 |
 
-남은 위험: 공격자가 제공자 로그인을 처음부터 반복하면 대기 상태마다 새 기록으로 시작한다(번호당 5회 × 발송 5회). 대상 계정 단위
-누적 제한은 spec Dependencies의 별도 보안 작업에서 정한다. 이메일 가입 경로(`email_verifications`)의 기존 인증번호에도 대조 상한이
-없다 — 이번 변경 전부터 있던 문제라 같은 보안 작업으로 넘긴다.
+## 2026-10-01 남은 위험 보완
+
+| 남은 위험 | 조치 | 확인 |
+|---|---|---|
+| 제공자 로그인을 반복하면 대기 상태마다 새 기록 | `social_link_targets`: 같은 기존 계정을 향한 대조 10회·발송 5통을 한 시간 창으로 누적, 행 잠금 아래 대조 전 계수. 넘으면 429 `SOCIAL_LINK_TEMPORARILY_LOCKED`(그 계정 로그인은 막지 않음). 주인 확인 시 실패 누적 초기화 | `targetLockSurvivesRestartedSocialLogin`(실제 콜백 3번 반복 → 429, 주인 이메일 로그인 200), 단위 테스트 |
+| 이메일 가입 인증번호 대조 상한 없음(기존 문제) | `email_verifications`에 대조 수·발송 창. 번호 5회, 재발송 간격 30초→두 배씩 최대 10분(고정 상한 없음 — 남이 주인의 가입을 막지 못함). 주소 단위 advisory lock | `EmailVerificationLimitTest`: 12개 동시 오답 중 대조 정확히 5회, 이후 맞는 번호 거절, 동시 재발송 6개 중 메일 1통·나머지 429 |
+| 버려진 확인 기록이 쌓임 | 하루 지난 행을 한 시간마다 정리(`SocialVerificationSweeper`) | 단위 테스트 |
+
+아직 남은 것:
+- 번호로 기존 계정의 가린 이메일·연결 제공자가 보이는 것은 spec US7이 정한 동작이라 그대로다.
+- 실제 카카오·구글·네이버 계정 흐름(T096)은 자격 증명이 있어야 한다.
+- 상한 수치는 별도 보안 작업에서 정책으로 확정할 임시값이다. 대상 계정 잠금은 남이 일부러 걸 수 있다 — 그 경우 주인이 잃는 것은
+  한 시간 동안의 새 소셜 연결이며 로그인은 그대로다.
 
 ## 화면 증거 (2026-10-01)
 
@@ -96,3 +106,11 @@ headless 창 크기로 360px를 지정하면 Chrome의 최소 창 폭 때문에 
 
 캡처는 `evidence/social-*-mobile-360.png`, `evidence/social-*-desktop-1440.png`다. 확인 중 로그인·가입 화면의 "또는 간편
 로그인" 구분선이 제출 버튼에 붙어 있어 여백을 더했다.
+
+### 보완분 추가 리뷰(2026-10-01)
+
+`/code-review high 076b0e5f..HEAD` 9건 중 반영: 재발송이 잠근 행을 지워 동시 요청이 상한을 통과·"요청 없음"으로 실패하던 문제(주소 단위
+advisory lock), 계정 단위 상한과 대기 상태 상한이 따로 커밋돼 메일 없이 번호가 바뀌거나 대조할 수 없는 요청이 계정 시도를 먹던 문제(두 행을
+한 트랜잭션에서 잠그고 모두 통과한 뒤 저장), 이메일 시간당 고정 상한이 남에 의한 가입 차단이 되던 문제(늘어나는 간격으로 교체), 고아 Javadoc·창
+계산 중복. 잠근 뒤 `refresh`는 `backend/CLAUDE.md` 규칙이라 유지했다. 회귀 테스트: `undecidableCodeRequestsDoNotConsumeTargetAttempts`,
+`targetSendLockKeepsExistingCode`, `parallelResendsSendOnce`.

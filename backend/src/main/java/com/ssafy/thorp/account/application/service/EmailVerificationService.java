@@ -62,15 +62,12 @@ public class EmailVerificationService {
 
         Instant now = Instant.now();
 
-        // 직전 요청을 잠가 읽는다. 같은 주소로 동시에 들어온 재발송이 간격·횟수 판정을 함께 넘지 못하게 한다.
+        // 이 주소의 발급·대조를 한 줄로 세운다. 동시에 들어온 재발송이 간격 판정을 함께 넘지 못하게 한다.
+        emailVerificationRepository.lockEmail(email);
         EmailVerification previous =
-                emailVerificationRepository.findLatestByEmailForUpdate(email).orElse(null);
-        EmailVerification.SendRejection rejection = EmailVerification.checkResend(previous, now);
-        if (rejection == EmailVerification.SendRejection.TOO_SOON) {
+                emailVerificationRepository.findLatestByEmail(email).orElse(null);
+        if (EmailVerification.resendTooSoon(previous, now)) {
             throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON);
-        }
-        if (rejection == EmailVerification.SendRejection.LIMIT_REACHED) {
-            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_SEND_LIMIT);
         }
 
         emailVerificationRepository.deleteByEmail(email);
@@ -89,9 +86,8 @@ public class EmailVerificationService {
         return verificationCode;
     }
 
-    /** 인증번호가 일치하고 만료되지 않았을 때만 인증 완료로 기록한다. */
     /**
-     * 인증번호를 대조한다.
+     * 인증번호를 대조한다. 일치하고 만료되지 않았을 때만 인증 완료로 기록한다.
      *
      * <p>대조 수는 대조 전에 센다. 번호 하나를 {@link EmailVerification#MAX_ATTEMPTS}번까지만 대조하고, 넘으면 새로 받아야 한다. 최신
      * 요청을 잠가 읽으므로 같은 주소로 동시에 보내도 상한을 함께 넘지 못한다. 틀린 대조도 센 수가 남아야 하므로 {@link BusinessException}에서
@@ -100,9 +96,11 @@ public class EmailVerificationService {
     @Transactional(noRollbackFor = BusinessException.class)
     public void verifyCode(String email, String verificationCode) {
         String canonicalEmail = EmailNormalizer.normalize(email);
+        // 발급과 같은 잠금이다. 재발송이 행을 바꾸는 중이면 끝난 뒤의 최신 요청을 본다.
+        emailVerificationRepository.lockEmail(canonicalEmail);
         EmailVerification verification =
                 emailVerificationRepository
-                        .findLatestByEmailForUpdate(canonicalEmail)
+                        .findLatestByEmail(canonicalEmail)
                         .orElseThrow(
                                 () ->
                                         new BusinessException(
