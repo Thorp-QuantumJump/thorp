@@ -19,9 +19,19 @@ export function formatObservation(value: number | null, unit?: string): string {
   return text === '-0' ? '0' : text
 }
 
-/** 서버 요약의 문장은 유지하고 숫자의 표시 정밀도만 줄인다. */
+/**
+ * 서버 요약의 문장은 유지하고 숫자의 표시 정밀도만 줄인다. 달러 금액(무역수지)은 카드와 같이 억 단위로
+ * 줄인다 — 문장에는 "34785482585미국 달러"처럼 자릿수 구분 없이 온다.
+ */
 export function formatNarrative(text: string | null): string | null {
-  return text?.replace(/-?\d[\d,]*\.\d+/g, (value) => formatObservation(Number(value.replaceAll(',', '')))) ?? null
+  return (
+    text
+      ?.replace(/(-?\d[\d,]*(?:\.\d+)?)\s?(미국 달러|달러|USD)/g, (match: string, value: string, unit: string) => {
+        const amount = Number(value.replaceAll(',', ''))
+        return Math.abs(amount) >= 100_000_000 ? `${formatObservation(amount, unit)} ${unit}` : match
+      })
+      .replace(/-?\d[\d,]*\.\d+/g, (value) => formatObservation(Number(value.replaceAll(',', '')))) ?? null
+  )
 }
 
 export function formatUpdatedAt(value: string | null): string {
