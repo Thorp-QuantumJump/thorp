@@ -50,7 +50,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
         aria-label={`${indicator.name} 3개월 선 그래프`}
         aria-describedby={descriptionId}
       >
-        <title>{indicator.name}: {indicator.path.map((point) => `${point.month} ${formatObservation(point.value)}${point.value === null ? '' : ` ${indicator.unit}`}`).join(', ')}</title>
+        <title>{indicator.name}: {indicator.path.map((point) => `${point.month} ${formatObservation(point.value, indicator.unit)}${point.value === null ? '' : ` ${indicator.unit}`}`).join(', ')}</title>
         {chart.ticks.map((tick) => (
           <g key={tick} className={styles.chartGrid}>
             <line x1={plot.left} x2={plot.right} y1={chart.y(tick)} y2={chart.y(tick)} />
@@ -72,7 +72,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
           <g key={point.month}>
             <circle className={styles.chartPoint} data-month={point.month} cx={chart.x(index)} cy={chart.y(point.value)} r={3.5} />
             <text className={styles.chartValue} x={chart.x(index)} y={chart.y(point.value) - 14} textAnchor="middle">
-              {formatObservation(point.value)}
+              {formatObservation(point.value, indicator.unit)}
             </text>
           </g>
         ))}
@@ -85,7 +85,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) 
       <ol className={styles.srOnly} aria-label={`${indicator.name} 3개월 경로`}>
         {indicator.path.map((point, index) => (
           <li key={point.month}>
-            {['t-2', 't-1', 't'][index]} {point.month} {formatObservation(point.value)}{point.value === null ? '' : ` ${indicator.unit}`}
+            {['t-2', 't-1', 't'][index]} {point.month} {formatObservation(point.value, indicator.unit)}{point.value === null ? '' : ` ${indicator.unit}`}
           </li>
         ))}
       </ol>

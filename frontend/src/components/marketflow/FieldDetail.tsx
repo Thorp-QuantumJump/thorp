@@ -6,7 +6,7 @@ import type { FieldDetailResult } from '@/types/marketFlow'
 import { DataStateFacts } from './DataStateNotice'
 import { ThreeMonthChart } from './ThreeMonthChart'
 import { InlineHelp } from '@/components/common/InlineHelp'
-import { describeAxis, formatObservation, formatUpdatedAt, sourceParts } from './marketFlowFormat'
+import { describeAxis, formatNarrative, formatObservation, formatUpdatedAt, sourceParts } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
 /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */
@@ -51,7 +51,7 @@ export function FieldDetail({ detail, historyNotice }: {
           </p>
           <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />
         </div>
-        <p className={styles.detailNarrative}>{detail.narrative ?? '기준 시점과 자료 상태를 확인해 주세요.'}</p>
+        <p className={styles.detailNarrative}>{formatNarrative(detail.narrative) ?? '기준 시점과 자료 상태를 확인해 주세요.'}</p>
         {/*
           넘기는 값은 분야와 그 분야의 기준월뿐이며 섹터를 골랐어도 달라지지 않는다(FR-016). 무엇을 찾는지는 버튼 설명으로
           보조기기에만 읽히고, 찾을 수 없는 까닭(기준월 미정)만 화면에 남긴다 — 버튼이 왜 눌리지 않는지는 보여야 한다.
@@ -86,13 +86,13 @@ export function FieldDetail({ detail, historyNotice }: {
             <article className={styles.indicator} key={indicator.indicatorId}>
               <div className={styles.indicatorHeading}>
                 <h3>{indicator.name}</h3>
-                <strong className={styles.observation}>{formatObservation(indicator.value)}{indicator.value === null ? null : <small>{indicator.unit}</small>}</strong>
+                <strong className={styles.observation}>{formatObservation(indicator.value, indicator.unit)}{indicator.value === null ? null : <small>{indicator.unit}</small>}</strong>
               </div>
               <ThreeMonthChart indicator={indicator} />
               {indicator.afterReferenceMonthRelease ? (
                 <p className={styles.afterRelease}>
                   기준월 뒤 발표 · {indicator.afterReferenceMonthRelease.referenceMonth}{' '}
-                  {formatObservation(indicator.afterReferenceMonthRelease.value)} {indicator.afterReferenceMonthRelease.unit}
+                  {formatObservation(indicator.afterReferenceMonthRelease.value, indicator.afterReferenceMonthRelease.unit)} {indicator.afterReferenceMonthRelease.unit}
                   <span>3개월 경로에는 포함하지 않습니다.</span>
                 </p>
               ) : null}
