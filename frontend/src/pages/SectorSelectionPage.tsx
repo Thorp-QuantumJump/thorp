@@ -326,8 +326,6 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           onCancel={learningEntry.cancelOverwrite}
         />
       </div>
-
-
     </>
   )
 }
