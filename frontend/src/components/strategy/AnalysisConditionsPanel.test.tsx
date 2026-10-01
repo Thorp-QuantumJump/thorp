@@ -59,6 +59,8 @@ function Harness({
           beforeFull.current = chosen;
           settings.setAnalysisCondition({ periodFull: true });
         }}
+        // 화면처럼 무효 입력에서 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다.
+        onRestoreFullRange={() => settings.setAnalysisCondition({ periodFull: true })}
         onUndoFullRange={() => {
           const before = beforeFull.current;
           if (before === null) settings.resetAnalysisCondition("period");
@@ -397,6 +399,29 @@ describe("AnalysisConditionsPanel", () => {
     expect(stateCondition()).toMatchObject({ periodStart: "2021-01-04", periodEnd: range.end });
     expect(stateCondition().periodFull).toBeUndefined();
     expect(fullButton().disabled).toBe(false);
+  });
+
+  it("최대 범위에서 시작한 입력이 중간 날짜를 거쳐 무효로 끝나도, 되돌리기는 '최대 범위 선택' 직전 기간으로 간다", async () => {
+    const { user } = await renderOpen();
+    const start = screen.getByLabelText("시작일");
+    const end = screen.getByLabelText("종료일");
+
+    // 날짜를 직접 고른 뒤 '최대 범위 선택'을 누른다. 되돌릴 곳은 이 기간이다.
+    fireEvent.change(start, { target: { value: "2021-01-04" } });
+    await user.click(screen.getByRole("button", { name: "최대 범위 선택" }));
+    expect(stateCondition().periodFull).toBe(true);
+
+    // 최대 범위에서 종료일을 친다. 범위 안인 중간 날짜가 먼저 반영되었다가 범위 밖 날짜로 끝난다.
+    fireEvent.focus(end);
+    fireEvent.change(end, { target: { value: "2023-06-30" } });
+    fireEvent.change(end, { target: { value: "2025-06-30" } });
+    // 입력이 무효라 최대 범위로 돌아갔다.
+    expect(stateCondition().periodFull).toBe(true);
+    expect(stateCondition().periodStart).toBeUndefined();
+
+    // 되돌리면 입력 도중의 중간 날짜가 아니라 '최대 범위 선택'을 누르기 직전 기간이다.
+    await user.click(screen.getByRole("button", { name: "최대 범위 선택 되돌리기" }));
+    expect(stateCondition()).toMatchObject({ periodStart: "2021-01-04", periodEnd: range.end });
   });
 
   it.each([
