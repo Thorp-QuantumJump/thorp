@@ -1,11 +1,6 @@
-import { type KeyboardEvent, useEffect, useId, useRef } from 'react'
+import { type KeyboardEvent, useEffect, useRef } from 'react'
 import { RegistryUnavailableNotice } from './RegistryUnavailableNotice'
-import {
-  collectNotices,
-  type NoticeTone,
-  type SharedNoticeRef,
-  type WarmupVerdict,
-} from './cardNotices'
+import type { SharedNotice, SharedNoticeRef, WarmupVerdict } from './cardNotices'
 import { StrategyCard } from './StrategyCard'
 import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'
 import styles from './StrategyCardList.module.css'
@@ -47,6 +42,14 @@ interface StrategyCardListProps {
    * 동안에는 `unknown`을 돌려주어 그 사실이 화면에 남게 한다.
    */
   judgeWarmup: (strategy: StrategyView) => WarmupVerdict
+  /**
+   * 한 곳에 모아 적은 사유(`collectSharedNotices`). **문장은 이 목록이 그리지 않는다** — 화면 머리의 제목 아래에서
+   * `StrategyNoticeList`가 적고, 카드는 번호와 `id`로 그 문장을 가리킨다. 같은 결과를 두 자리에 넘겨야 번호와
+   * 문장이 어긋나지 않는다.
+   */
+  notices: readonly SharedNotice[]
+  /** 카드에 마우스를 올리면 보일 그 전략의 평가 가능 범위. 모르면 `null`이고, 주지 않으면 띄우지 않는다 */
+  rangeOf?: (strategy: StrategyView) => { start: string; end: string } | null
 }
 
 /**
@@ -85,12 +88,11 @@ const FOCUS_STEP: Record<string, number> = {
  * <p><b>고른 전략의 상세는 이 목록이 그리지 않는다.</b> 목록 사이에 상세를 끼워 넣으면 고를 때마다
  * 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 상세는 목록 아래 카드가 맡는다.
  *
- * <p><b>사유는 목록 아래 한 곳에 모아 적는다.</b> 고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는데,
+ * <p><b>사유는 카드 밖 한 곳에 모아 적는다.</b> 고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는데,
  * 그 문장을 카드마다 되풀이하면 무엇 때문에 막혔는지보다 경고가 많다는 인상만 남는다. 카드 한 장에만 걸린 사유도
- * 같은 자리에 모아, 사유가 있는 카드만 높아져 줄이 들쭉날쭉하지 않게 한다. 문장마다 번호를 붙이고 해당 전략
- * 이름을 앞에 두며, 카드는 이름 옆에 그 번호만 보인다. 보조기술에는 카드의 설명으로 그 문장이 그대로
- * 읽힌다(`aria-describedby`). 같은 문장은 한 번만 적고, 어떤 문장이 겹치는지는 문장이 같은지만 본다 — 전략을
- * 보고 정하지 않는다. 판정하지 못했을 뿐 고를 수 있는 사유는 경고색을 쓰지 않는다.
+ * 같은 자리에 모아, 사유가 있는 카드만 높아져 줄이 들쭉날쭉하지 않게 한다. 카드는 이름 옆에 번호만 보이고,
+ * 보조기술에는 카드의 설명으로 그 문장이 그대로 읽힌다(`aria-describedby`). 문장은 화면 머리의 제목 아래에
+ * 적힌다(`StrategyNoticeList`, 2026-10-01).
  */
 export function StrategyCardList({
   state,
@@ -98,10 +100,11 @@ export function StrategyCardList({
   onSelect,
   onRetry,
   judgeWarmup,
+  notices,
+  rangeOf,
 }: StrategyCardListProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const recoveredFromFailure = useRef(false)
-  const sharedIdBase = useId()
 
   useEffect(() => {
     if (state.status === 'failed') {
@@ -145,23 +148,8 @@ export function StrategyCardList({
   const strategies = state.registry.strategies
   const verdicts = strategies.map((strategy) => judgeWarmup(strategy))
 
-  // 문장마다 걸린 전략을 모은다. 순서는 처음 나온 차례다. 같은 문장이 막힘과 판정 불가로 함께 쓰였다면
-  // 막힘으로 적는다 — 실제로 막힌 것을 중립으로 보이면 안 된다.
-  const owners = new Map<string, { names: string[]; tone: NoticeTone }>()
-  strategies.forEach((strategy, index) => {
-    for (const notice of collectNotices(strategy, verdicts[index])) {
-      const entry = owners.get(notice.text) ?? { names: [], tone: notice.tone }
-      entry.names.push(strategy.name)
-      if (notice.tone === 'blocking') entry.tone = 'blocking'
-      owners.set(notice.text, entry)
-    }
-  })
-  const sharedList = [...owners.entries()]
   const shared = new Map<string, SharedNoticeRef>(
-    sharedList.map(([text, entry], index) => [
-      text,
-      { id: `${sharedIdBase}-shared-${index}`, number: index + 1, tone: entry.tone },
-    ]),
+    notices.map((notice) => [notice.text, notice]),
   )
 
   const selectedIndex = strategies.findIndex(
@@ -202,29 +190,10 @@ export function StrategyCardList({
             onSelect={() => onSelect(strategy.strategyId)}
             tabIndex={index === tabStopIndex ? 0 : -1}
             shared={shared}
+            range={rangeOf?.(strategy)}
           />
         ))}
       </div>
-
-      {sharedList.length > 0 ? (
-        <ol className={styles.shared}>
-          {sharedList.map(([text, entry], index) => (
-            <li key={text} className={styles.sharedItem}>
-              <span
-                className={styles.sharedNumber}
-                data-tone={entry.tone}
-                aria-hidden="true"
-              >
-                {index + 1}
-              </span>
-              <span>
-                <span className={styles.sharedNames}>{entry.names.join(' · ')}</span>{' '}
-                <span id={`${sharedIdBase}-shared-${index}`}>{text}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      ) : null}
     </div>
   )
 }

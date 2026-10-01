@@ -295,9 +295,10 @@ describe("003 분석 기간의 사례 제약 (011 진입 계약 §3)", () => {
     await user.clear(end);
     await user.type(end, "2012-05-04");
 
+    // 칸의 날짜를 반영하지 않았으니 '분석하기'가 그 사실을 말하며 막힌다(2026-10-01).
     await waitFor(() =>
       expect(document.body.textContent).toContain(
-        "이 기간은 저장하지 않았습니다",
+        "분석 기간의 날짜를 다시 확인해 주세요.",
       ),
     );
   });
@@ -330,7 +331,7 @@ describe("003 분석 기간의 사례 제약 (011 진입 계약 §3)", () => {
     // 사례를 떨구고 돌아가면 기간 제약이 말없이 풀린 채 다른 흐름으로 빠진다(진입 계약 §2).
     renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport());
 
-    const back = await screen.findByRole("link", { name: /섹터·비중 고르기/ });
+    const back = await screen.findByRole("link", { name: /투자 대상 고르기/ });
     const href = back.getAttribute("href") ?? "";
     expect(href.startsWith("/diagnosis/sectors?")).toBe(true);
     // 글자가 아니라 값으로 본다. 인코딩 규약이 달라도 들고 가는 사례는 같아야 한다.
