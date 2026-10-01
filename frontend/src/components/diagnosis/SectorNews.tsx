@@ -8,7 +8,7 @@ import type { NewsSector } from '@/types/marketNews'
 import styles from './SectorNews.module.css'
 
 /*
-  투자 대상 고르기의 뉴스 카드('지금과 비슷했던 과거 시장' 옆, 002 FR-019, 012 FR-001·FR-005). 기본은 '전체'로 최신 뉴스
+  시장 흐름의 뉴스 카드('지금과 비슷했던 과거 시장' 옆, 009 FR-019, 012 FR-001·FR-005). 기본은 '전체'로 최신 뉴스
   묶음을 보이고, 섹터를 고르면 그 섹터와 연결된 뉴스로 좁힌다.
 
   - 칩은 012의 섹터 목록(`GET /market-news/sectors`)으로 그린다. 투자 대상 섹터와 뉴스 전용 섹터가 함께 온다 — 뉴스는 투자 대상과
