@@ -5,7 +5,8 @@ info:
   description: >-
     014-user-auth의 외부 /api 계약이다. 2026-09-16 기준 7개 operation은
     Backend 내부 경로와 FE proxy 경로에서 구현·검증됐다. 2026-09-29에 회원정보
-    수정(닉네임 변경, PATCH /accounts/me)을 더했다.
+    수정(닉네임 변경, PATCH /accounts/me)을 더했다. 2026-10-01에 카카오·구글·네이버 소셜
+    로그인 operation을 계획 상태(x-implementation-status: planned)로 더했다.
 servers:
   - url: /api
 paths:
@@ -196,6 +197,234 @@ paths:
           $ref: '#/components/responses/InvalidCsrf'
         '500':
           $ref: '#/components/responses/InternalError'
+  /auth/social/providers:
+    get:
+      operationId: listSocialProviders
+      summary: 자격 증명이 설정된 소셜 제공자 목록
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: 켜진 제공자. 없으면 빈 배열
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialProvidersSuccessEnvelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/oauth2/authorization/{provider}:
+    get:
+      operationId: startSocialLogin
+      summary: 소셜 로그인 시작(브라우저 전체 이동)
+      description: >-
+        Spring Security가 state를 만들어 세션에 보관하고 제공자 인가 화면으로 302 이동시킨다.
+        새로 시작하면 남아 있던 가입 대기 상태를 지운다. 단 intent=link는 대기 중인 연결을
+        이미 연결된 소셜 계정으로 확인하는 용도라 대기 상태를 유지한다. 이미 로그인한 사용자는
+        /home으로 보낸다.
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/SocialProviderPath'
+        - name: reprompt
+          in: query
+          required: false
+          description: true면 이메일 제공 동의를 다시 묻는다(카카오 scope=account_email, 네이버 auth_type=reprompt, 구글 prompt=consent)
+          schema:
+            type: boolean
+        - name: intent
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [link]
+      responses:
+        '302':
+          description: 제공자 인가 화면으로 이동
+        '404':
+          $ref: '#/components/responses/SocialProviderNotEnabled'
+  /auth/oauth2/callback/{provider}:
+    get:
+      operationId: socialLoginCallback
+      summary: 제공자 redirect 대상
+      description: >-
+        JSON을 돌려주지 않는다. 판정 결과에 따라 FE 경로로 302 이동한다. 이동 주소에는 제공자 이름과
+        판정 종류만 싣고 code·state는 남기지 않는다. 판정과 이동 대상은 plan.md Outcome classification 표를 따른다.
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/SocialProviderPath'
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          description: access_denied면 사용자 취소로 처리한다
+          schema:
+            type: string
+      responses:
+        '302':
+          description: >-
+            /auth/social/complete, /signup/social, /auth/social/verify-email, /auth/social/link,
+            /auth/social/email-required?provider=, /auth/social/already-linked?provider=,
+            /login?social=cancelled|error|unavailable 중 하나로 이동
+  /auth/social/pending:
+    get:
+      operationId: getPendingSocialLogin
+      summary: 현재 탭의 소셜 가입·연결 대기 상태 조회
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: 대기 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingSocialSuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/SocialPendingNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: cancelPendingSocialLogin
+      summary: 대기 상태 취소. 없어도 204
+      x-implementation-status: planned
+      security:
+        - csrfToken: []
+      responses:
+        '204':
+          description: 취소됨
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/social/pending/email-verifications:
+    post:
+      operationId: requestSocialEmailVerification
+      summary: 대기 상태가 정한 주소로 6자리 인증번호 발송
+      description: >-
+        stage=EMAIL_VERIFICATION이면 제공자 이메일로, stage=LINK이면 연결 대상 계정 이메일로 보낸다.
+        재발송하면 이전 번호는 무효다. 본문이 없다.
+      x-implementation-status: planned
+      security:
+        - csrfToken: []
+      responses:
+        '204':
+          description: 발송 요청 완료
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '404':
+          $ref: '#/components/responses/SocialPendingNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/social/pending/email-verifications/confirm:
+    post:
+      operationId: confirmSocialEmailVerification
+      summary: 제공자 이메일 인증번호 확인 후 재판정
+      description: >-
+        stage=EMAIL_VERIFICATION에서만 쓴다. 성공하면 판정을 다시 돌려 바뀐 대기 상태를 돌려준다.
+        연결 대상 계정 이메일의 인증번호는 POST /auth/social/link(method=EMAIL_CODE)로 확인한다.
+      x-implementation-status: planned
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocialVerificationCodeRequest'
+      responses:
+        '200':
+          description: 확인 완료. 다음 stage(SIGNUP 또는 LINK)의 대기 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingSocialSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/EmailVerificationConfirmRejected'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '404':
+          $ref: '#/components/responses/SocialPendingNotFound'
+        '409':
+          $ref: '#/components/responses/SocialConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/social/signup:
+    post:
+      operationId: socialSignup
+      summary: 소셜 신규 가입(추가 정보 제출) 후 로그인
+      x-implementation-status: planned
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocialSignupRequest'
+      responses:
+        '201':
+          description: 계정 생성·소셜 연결·세션 생성(세션 ID 교체)
+          headers:
+            Set-Cookie:
+              description: HttpOnly THORP_SESSION cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '404':
+          $ref: '#/components/responses/SocialPendingNotFound'
+        '409':
+          $ref: '#/components/responses/SocialConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/social/link:
+    post:
+      operationId: confirmSocialLink
+      summary: 기존 계정 소유 확인 후 소셜 계정 연결·로그인
+      x-implementation-status: planned
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocialLinkRequest'
+      responses:
+        '200':
+          description: 연결·세션 생성(세션 ID 교체)
+          headers:
+            Set-Cookie:
+              description: HttpOnly THORP_SESSION cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/EmailVerificationConfirmRejected'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/InvalidCsrf'
+        '404':
+          $ref: '#/components/responses/SocialPendingNotFound'
+        '409':
+          $ref: '#/components/responses/SocialConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     sessionCookie:
@@ -206,6 +435,13 @@ components:
       type: apiKey
       in: header
       name: X-XSRF-TOKEN
+  parameters:
+    SocialProviderPath:
+      name: provider
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/SocialProviderId'
   schemas:
     EmailVerificationRequest:
       type: object
@@ -322,9 +558,117 @@ components:
             - INVALID_CREDENTIALS
             - AUTHENTICATION_REQUIRED
             - CSRF_TOKEN_INVALID
+            - SOCIAL_PENDING_NOT_FOUND
+            - SOCIAL_LINK_REQUIRED
+            - SOCIAL_PROVIDER_ALREADY_LINKED
+            - SOCIAL_ACCOUNT_ALREADY_LINKED
+            - SOCIAL_PROVIDER_NOT_ENABLED
             - INTERNAL_ERROR
         message:
           type: string
+    SocialProviderId:
+      type: string
+      enum: [kakao, google, naver]
+    SocialProviders:
+      type: object
+      additionalProperties: false
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialProviderId'
+    PendingSocialLogin:
+      type: object
+      additionalProperties: false
+      required: [provider, stage, email, linkMethods, expiresAt]
+      properties:
+        provider:
+          $ref: '#/components/schemas/SocialProviderId'
+        stage:
+          type: string
+          enum: [EMAIL_VERIFICATION, SIGNUP, LINK]
+        email:
+          type: string
+          format: email
+          description: 제공자 이메일의 정규형. 사용자 자신의 값이라 가리지 않는다
+        suggestedNickname:
+          type: [string, 'null']
+          description: 제공자 닉네임이 2~20자일 때만
+        linkReason:
+          type: [string, 'null']
+          enum: [EMAIL, PHONE, null]
+        linkTargetMaskedEmail:
+          type: [string, 'null']
+          description: stage=LINK일 때 연결 대상 계정 이메일을 가린 값
+        linkMethods:
+          type: array
+          description: stage=LINK일 때 대상 계정에 쓸 수 있는 소유 확인 방법. 그 밖의 stage는 빈 배열
+          items:
+            type: string
+            enum: [PASSWORD, EMAIL_CODE, VERIFIED_EMAIL, SOCIAL_KAKAO, SOCIAL_GOOGLE, SOCIAL_NAVER]
+        expiresAt:
+          type: string
+          format: date-time
+    SocialVerificationCodeRequest:
+      type: object
+      additionalProperties: false
+      required: [verificationCode]
+      properties:
+        verificationCode:
+          type: string
+          pattern: '^\d{6}$'
+    SocialSignupRequest:
+      type: object
+      additionalProperties: false
+      required: [nickname, phoneNumber]
+      properties:
+        nickname:
+          type: string
+          minLength: 2
+          maxLength: 20
+        phoneNumber:
+          type: string
+          pattern: '^01[016789]\d{7,8}$'
+    SocialLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [method]
+      properties:
+        method:
+          type: string
+          enum: [PASSWORD, EMAIL_CODE, VERIFIED_EMAIL]
+          description: 다른 소셜 계정으로의 확인은 startSocialLogin(intent=link)으로 한다
+        password:
+          type: string
+          writeOnly: true
+          description: method=PASSWORD일 때 필수
+        verificationCode:
+          type: string
+          pattern: '^\d{6}$'
+          description: method=EMAIL_CODE일 때 필수
+    SocialProvidersSuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          const: true
+        data:
+          $ref: '#/components/schemas/SocialProviders'
+        error:
+          type: 'null'
+    PendingSocialSuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          const: true
+        data:
+          $ref: '#/components/schemas/PendingSocialLogin'
+        error:
+          type: 'null'
     SignupSuccessEnvelope:
       type: object
       additionalProperties: false
@@ -496,3 +840,55 @@ components:
             error:
               code: INTERNAL_ERROR
               message: 서버 내부 오류가 발생했습니다.
+    SocialPendingNotFound:
+      description: 가입·연결 대기 상태가 없거나 만료됐거나 이미 사용됨
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: SOCIAL_PENDING_NOT_FOUND
+              message: 소셜 로그인 시간이 지났습니다. 처음부터 다시 시도해 주세요.
+    SocialConflict:
+      description: 기존 계정과 겹쳐 가입·연결을 진행할 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            linkRequired:
+              value:
+                success: false
+                data: null
+                error:
+                  code: SOCIAL_LINK_REQUIRED
+                  message: 이 번호로 가입된 계정이 있습니다. 계정 연결을 확인해 주세요.
+            providerAlreadyLinked:
+              value:
+                success: false
+                data: null
+                error:
+                  code: SOCIAL_PROVIDER_ALREADY_LINKED
+                  message: 이 계정은 이미 다른 카카오 계정과 연결되어 있습니다.
+            accountAlreadyLinked:
+              value:
+                success: false
+                data: null
+                error:
+                  code: SOCIAL_ACCOUNT_ALREADY_LINKED
+                  message: 이 소셜 계정은 다른 Thorp 계정에 연결되어 있습니다.
+    SocialProviderNotEnabled:
+      description: 지원하지 않거나 자격 증명이 설정되지 않은 제공자
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            data: null
+            error:
+              code: SOCIAL_PROVIDER_NOT_ENABLED
+              message: 지금은 이 방법으로 로그인할 수 없습니다.
