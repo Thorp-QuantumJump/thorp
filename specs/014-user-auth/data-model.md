@@ -219,7 +219,7 @@ callback/재판정 ──email matches account──> LINK
 callback/재판정 ──no match──> SIGNUP ──phone matches account──> LINK(reason=PHONE)
 SIGNUP ──signup ok──> 삭제 + 로그인
 LINK ──ownership ok──> 삭제 + 연결 + 로그인
-any ──10분 경과 / 취소 / 새 소셜 로그인 시작──> 삭제
+any ──10분 경과 / 취소 / 새 소셜 로그인 시작(intent=link 제외)──> 삭제
 ```
 
 ### API value objects (social)

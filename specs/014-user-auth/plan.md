@@ -30,7 +30,9 @@ T061 이후로 추적한다. 설계는 아래 [Social login design](#social-logi
 
 - 상태: 계획 완료, 구현 전
 - 작업 브랜치: `feat/Oauth_create` 하나에서 진행하고 커밋을 작업 묶음(공통 기반 → 카카오 → 구글 → 네이버 →
-  FE → 검증)으로 나눈다.
+  FE → 검증)으로 나눈다. constitution "작업 묶음" 절의 묶음 크기 조건(같은 계층, 한 번에 읽을 수 있는 범위)을
+  지키기 위해 MR은 BE 묶음(C2~C5)과 FE 묶음(C6, 검증 C7 포함) 둘로 나눈다. BE MR을 먼저 병합하고 FE MR은 그 뒤
+  커밋만 담는다(2026-10-01 analyze C1).
 - 이메일 범위에 주는 영향: `users.password_hash` nullable 전환, 비밀번호 없는 계정의 이메일 로그인 거절,
   로그인·회원가입 화면의 소셜 버튼. 기존 operation의 요청·응답 형식은 바뀌지 않는다.
 
@@ -192,7 +194,10 @@ backend/
 - 외부 경로는 기존 규칙대로 `/api`를 붙인다. 시작은 `GET /api/auth/oauth2/authorization/{provider}`, 콜백은
   `GET /api/auth/oauth2/callback/{provider}`이며 proxy가 `/api`를 떼어 내부 `/auth/oauth2/...`로 받는다.
   `redirect-uri`는 `{baseUrl}/api/auth/oauth2/callback/{registrationId}`로 두고, proxy 뒤에서 `baseUrl`이
-  외부 주소가 되도록 `server.forward-headers-strategy=framework`와 nginx `X-Forwarded-*` 헤더를 확인한다.
+  외부 주소가 되도록 `server.forward-headers-strategy=framework`를 켠다. 운영 nginx는 이미 `Host`와
+  `X-Forwarded-Proto`를 넘긴다. 로컬 Vite proxy는 `changeOrigin: true`라 `Host`가 `localhost:8080`으로 바뀌므로
+  `{baseUrl}`에 기대지 않고, redirect 기준 주소를 환경 변수 `THORP_PUBLIC_BASE_URL`(로컬 기본
+  `http://localhost:5173`)로 명시한다. redirect-uri는 `${THORP_PUBLIC_BASE_URL}/api/auth/oauth2/callback/{registrationId}`다.
 - 이메일 재동의(FR-022 거절 화면의 "다시 동의")는 시작 주소에 `?reprompt=true`를 붙이고, 사용자 정의
   `OAuth2AuthorizationRequestResolver`가 제공자별 파라미터로 바꾼다. 카카오는 `scope=account_email` 추가 동의,
   네이버는 `auth_type=reprompt`, 구글은 `prompt=consent`다.
@@ -208,10 +213,15 @@ backend/
 콜백 성공 처리기는 `SocialLoginService.resolve(SocialProfile)`의 판정에 따라 세션을 만들거나 가입 대기 상태를
 세션에 저장하고, 민감하지 않은 FE 경로로만 redirect한다. 인가 코드는 redirect 대상에 남지 않는다.
 
+`oauth2Login` 필터는 성공 처리기를 부르기 전에 `OAuth2AuthenticationToken`을 `SecurityContext`와 세션에 저장한다.
+`/my-records/**`처럼 `.authenticated()`만 보는 경로가 이 token을 통과시키지 않도록, 성공 처리기는 판정마다 세션의
+인증을 직접 정한다. `LOGGED_IN`이면 `AuthenticatedPrincipal` 기반 인증으로 바꿔 저장하고, 그 밖의 판정은 빈
+`SecurityContext`를 저장해 OAuth2 token을 지운다(2026-10-01 analyze G1).
+
 | 판정 | 조건 | 서버 동작 | FE 이동 |
 |---|---|---|---|
 | `LOGGED_IN` | `(provider, providerUserId)`가 연결됨, 계정 `ACTIVE` | 세션 ID 교체 후 인증 저장, `lastLoginAt` 갱신 | `/auth/social/complete` |
-| `ACCOUNT_UNAVAILABLE` | 연결됐지만 계정이 `ACTIVE`가 아님 | 인증하지 않음 | `/login?social=unavailable` |
+| `ACCOUNT_UNAVAILABLE` | 연결됐거나 이메일로 겹친 계정이 `ACTIVE`가 아님 | 인증하지 않음, 대기 상태 만들지 않음 | `/login?social=error` (계정 상태를 드러내지 않음) |
 | `EMAIL_MISSING` | 제공자 이메일 없음 | 대기 상태 만들지 않음 | `/auth/social/email-required?provider={p}` |
 | `EMAIL_VERIFICATION` | 이메일 확인 여부 `FALSE`·`UNKNOWN` | 대기 상태(stage=`EMAIL_VERIFICATION`) | `/auth/social/verify-email` |
 | `PROVIDER_CONFLICT` | 이메일로 찾은 계정에 같은 제공자의 다른 계정이 연결됨 | 대기 상태 만들지 않음 | `/auth/social/already-linked?provider={p}` |
@@ -224,7 +234,8 @@ backend/
 ### Pending social state
 
 - `PendingSocialLogin`은 Spring Session JDBC 세션 속성 하나로 보관한다(별도 테이블 없음). 생성 10분 뒤 만료되고,
-  가입 완료·연결 완료·취소·새 소셜 로그인 시작 중 하나가 일어나면 바로 지운다(FR-025).
+  가입 완료·연결 완료·취소·새 소셜 로그인 시작 중 하나가 일어나면 바로 지운다(FR-025). 단 `intent=link`로 시작한
+  소셜 로그인은 대기 중인 연결을 확인하는 용도라 대기 상태를 지우지 않는다.
 - 속성은 직렬화 가능한 record이며 제공자 token을 담지 않는다. 대기 중에는 익명 세션 그대로이고, 가입·연결이 끝나
   인증을 저장할 때 기존 `ChangeSessionIdAuthenticationStrategy`로 세션 ID를 교체한다(FR-018).
 - 소셜 경로의 인증번호(FR-022 제공자 이메일 확인, FR-024 기존 계정 이메일 확인)는 기존 `email_verifications`를
@@ -241,7 +252,8 @@ backend/
 - 휴대폰 번호가 다른 계정에서 쓰이면 계정을 만들지 않는다. 대기 상태를 stage=`LINK`, 대상 계정=번호 소유 계정,
   `linkReason=PHONE`으로 바꾸고 409 `SOCIAL_LINK_REQUIRED`를 돌려준다. 그 대상 계정에 같은 제공자의 다른 계정이
   연결돼 있으면 409 `SOCIAL_PROVIDER_ALREADY_LINKED`다. `linkReason=PHONE`이면 제공자 이메일 확인을 소유 확인으로
-  인정하지 않는다.
+  인정하지 않는다. 번호로 찾은 계정이 `ACTIVE`가 아니면 연결을 권하지 않고 400 `SOCIAL_SIGNUP_REJECTED`로
+  일반 실패를 돌려준다.
 - 연결 확인(`POST /auth/social/link`)은 `method`로 셋 중 하나를 받는다. `PASSWORD`(대상 계정 비밀번호),
   `EMAIL_CODE`(대상 계정 이메일로 보낸 인증번호), `VERIFIED_EMAIL`(대기 상태에 `linkTargetEmailVerified=TRUE`일
   때만). 이미 연결된 다른 소셜 계정으로 확인할 때는 `GET /api/auth/oauth2/authorization/{p}?intent=link`로 제공자
@@ -250,7 +262,11 @@ backend/
 - 비밀번호 오류는 기존 `INVALID_CREDENTIALS`, 인증번호 오류는 기존 `EMAIL_VERIFICATION_*` 코드를 그대로 쓴다.
 - `social_accounts`에는 `(provider, provider_user_id)`와 `(user_id, provider)` 두 고유 제약을 둔다. 동시 요청으로
   제약 위반이 나면 연결하지 않고 판정을 다시 돌린다.
+- 대기 상태의 단계와 맞지 않는 요청(이메일 확인 전 가입, `LINK`가 아닌 단계의 연결, `EMAIL_VERIFICATION`이 아닌
+  단계의 제공자 이메일 확인)은 409 `SOCIAL_PENDING_STAGE_MISMATCH`로 거절하고 대기 상태는 그대로 둔다.
 - 이메일 로그인(`POST /auth/sessions`)은 `password_hash`가 `NULL`인 계정을 `INVALID_CREDENTIALS`로 거절한다.
+  지금의 `BCryptPasswordEncoder`는 `NULL` hash에 `false`를 돌려주지만 경고 로그를 남기므로, 비교 전에 명시적으로
+  거절한다.
   이메일 가입은 이메일이 소셜 전용 계정과 같아도 기존 `DUPLICATE_EMAIL`이다.
 
 ### Frontend (social)
@@ -263,13 +279,15 @@ backend/
   `/auth/social/verify-email`, `/auth/social/link`, `/auth/social/email-required`, `/auth/social/already-linked`.
   대기 상태를 쓰는 화면은 진입 시 `GET /api/auth/social/pending`을 읽고, 404 `SOCIAL_PENDING_NOT_FOUND`면
   "처음부터 다시" 안내를 보여준다. 대기 상태 정보는 메모리에만 둔다.
-- `/login`은 `?social=cancelled|error|unavailable`을 읽어 상태 알림 영역에 안내를 띄운 뒤 쿼리를 지운다.
+- `/login`은 `?social=cancelled|error`를 읽어 상태 알림 영역에 안내를 띄운 뒤 쿼리를 지운다.
+- `returnTarget`의 인증 경로 목록에 `/auth/social`을 더해 소셜 화면이 복귀 위치로 저장되지 않게 한다.
 - 인증 Provider의 상태 모델은 바꾸지 않는다. 소셜 로그인 완료는 `/auth/social/complete`에서 `/auth/me`
   재확인으로 `authenticated`가 된다.
 
 ### Social error codes
 
-`SOCIAL_PENDING_NOT_FOUND`(404, 대기 상태 없음·만료·이미 사용), `SOCIAL_LINK_REQUIRED`(409),
+`SOCIAL_PENDING_NOT_FOUND`(404, 대기 상태 없음·만료·이미 사용), `SOCIAL_PENDING_STAGE_MISMATCH`(409),
+`SOCIAL_SIGNUP_REJECTED`(400, 겹친 계정을 쓸 수 없음), `SOCIAL_LINK_REQUIRED`(409),
 `SOCIAL_PROVIDER_ALREADY_LINKED`(409), `SOCIAL_ACCOUNT_ALREADY_LINKED`(409, 그 소셜 계정이 다른 Thorp 계정에
 연결됨), `SOCIAL_PROVIDER_NOT_ENABLED`(404). 나머지는 기존 코드를 재사용한다.
 

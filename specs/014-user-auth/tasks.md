@@ -318,16 +318,17 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 - [ ] T062 [P] Add `social_accounts` with `(provider, provider_user_id)` and `(user_id, provider)` unique constraints and drop NOT NULL on `users.password_hash` in `backend/src/main/resources/db/migration/V{yyyyMMddHHmmss}__social_accounts.sql`
 - [ ] T063 [P] [US6] Add failing tests for the seven outcomes (`LOGGED_IN`, `ACCOUNT_UNAVAILABLE`, `EMAIL_MISSING`, `EMAIL_VERIFICATION`, `PROVIDER_CONFLICT`, `LINK_REQUIRED`, `SIGNUP_REQUIRED`) in `backend/src/test/java/com/ssafy/thorp/account/application/SocialLoginServiceTest.java`
 - [ ] T064 [P] [US6] Add failing tests for pending state expiry (10 min), single use, cancel, restart, and social verification codes (6 digits, 3 min, resend invalidates previous) in `backend/src/test/java/com/ssafy/thorp/account/application/PendingSocialLoginServiceTest.java`
-- [ ] T065 [P] [US7] Add failing tests for social signup and link rules: one transaction, phone match → `SOCIAL_LINK_REQUIRED` with `linkReason=PHONE`, `PASSWORD`/`EMAIL_CODE`/`VERIFIED_EMAIL` methods, `VERIFIED_EMAIL` rejected for `PHONE`, same-provider conflict, unique-constraint race in `backend/src/test/java/com/ssafy/thorp/account/application/SocialSignupAndLinkServiceTest.java`
+- [ ] T065 [P] [US7] Add failing tests for social signup and link rules: one transaction, stage mismatch → `SOCIAL_PENDING_STAGE_MISMATCH`, overlapping account not `ACTIVE` → `ACCOUNT_UNAVAILABLE` / `SOCIAL_SIGNUP_REJECTED`, phone match → `SOCIAL_LINK_REQUIRED` with `linkReason=PHONE`, `PASSWORD`/`EMAIL_CODE`/`VERIFIED_EMAIL` methods, `VERIFIED_EMAIL` rejected for `PHONE`, same-provider conflict, unique-constraint race in `backend/src/test/java/com/ssafy/thorp/account/application/SocialSignupAndLinkServiceTest.java`
 - [ ] T066 [P] Add failing contract tests for the social operations, error codes, CSRF, and session-id rotation on signup/link success in `backend/src/test/java/com/ssafy/thorp/account/presentation/SocialAuthContractTest.java`
-- [ ] T067 [P] Add a failing test that a password-less account gets `INVALID_CREDENTIALS` from `POST /auth/sessions` in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`
+- [ ] T067 [P] Add a regression test that a password-less account gets `INVALID_CREDENTIALS` from `POST /auth/sessions` without calling the password encoder in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`
+- [ ] T098 [P] Add failing tests for the callback handlers: `access_denied` → `/login?social=cancelled`, provider error or `state` mismatch → `/login?social=error`, no `code`/`state` in any redirect, and every non-`LOGGED_IN` outcome leaving the session unauthenticated so `/my-records/**` and `/auth/me` answer 401, in `backend/src/test/java/com/ssafy/thorp/account/presentation/SocialLoginCallbackTest.java`
 - [ ] T068 Add `SocialProvider`, `SocialAccount`, its repository port, JPA entity, mapper, and nullable `passwordHash` in `backend/src/main/java/com/ssafy/thorp/account/domain/model/`, `backend/src/main/java/com/ssafy/thorp/account/application/repository/`, and `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/` after T062
 - [ ] T069 Add `SocialProfile`, the `SocialProfileExtractor` port, and `SocialLoginService.resolve` to satisfy T063 in `backend/src/main/java/com/ssafy/thorp/account/application/`
 - [ ] T070 Add the session-backed `PendingSocialLogin` store and social verification codes reusing `VerificationMailSender` to satisfy T064 in `backend/src/main/java/com/ssafy/thorp/account/application/service/PendingSocialLoginService.java` and `backend/src/main/java/com/ssafy/thorp/account/infrastructure/session/`
 - [ ] T071 Add `SocialSignupService` and `SocialLinkService` to satisfy T065 in `backend/src/main/java/com/ssafy/thorp/account/application/service/`
 - [ ] T072 Add social error codes and `SocialAuthController` (`providers`, `pending` GET/DELETE, pending email verifications, `signup`, `link`) to satisfy T066 in `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` and `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SocialAuthController.java`
-- [ ] T073 Wire `oauth2Login()` with `/auth/oauth2/authorization` and `/auth/oauth2/callback/*` base URIs, outcome success handler, cancel/error failure handler, non-persisting authorized-client repository, `reprompt`/`intent=link` request resolver, and forward-header settings in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` and `backend/src/main/java/com/ssafy/thorp/account/infrastructure/oauth/`
-- [ ] T074 Reject password-less accounts in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` to satisfy T067
+- [ ] T073 Wire `oauth2Login()` (success handler replaces the stored `OAuth2AuthenticationToken` with the `AuthenticatedPrincipal` authentication on `LOGGED_IN` and saves an empty context otherwise, to satisfy T098) with `/auth/oauth2/authorization` and `/auth/oauth2/callback/*` base URIs, outcome success handler, cancel/error failure handler, non-persisting authorized-client repository, `reprompt`/`intent=link` request resolver, and `server.forward-headers-strategy=framework` plus `THORP_PUBLIC_BASE_URL`-based redirect URIs in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/java/com/ssafy/thorp/account/infrastructure/oauth/`
+- [ ] T074 Reject password-less accounts before the password comparison (no encoder warning log) in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` to satisfy T067
 
 **Checkpoint**: 가짜 `SocialProfile`로 모든 판정·가입·연결이 테스트에서 동작한다. 실제 제공자는 아직 없다.
 
@@ -346,7 +347,7 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 ## Phase 12: Naver (BE)
 
 - [ ] T081 [P] [US6] Add failing extractor tests for Naver `response.id`, `response.email`, missing email, `nickname`, and `emailVerified=UNKNOWN` in `backend/src/test/java/com/ssafy/thorp/account/infrastructure/oauth/NaverProfileExtractorTest.java`
-- [ ] T082 [US6] Register the Naver provider (authorization, token, user-info URIs, `user-name-attribute=response`) from environment variables in `backend/src/main/resources/application.yml` and implement `NaverProfileExtractor` to satisfy T081
+- [ ] T082 [US6] Register the Naver provider (authorization, token, user-info URIs, `user-name-attribute=response`) from environment variables with `client-authentication-method: client_secret_post` in `backend/src/main/resources/application.yml` and implement `NaverProfileExtractor` to satisfy T081
 - [ ] T083 [US6] Add the Naver `reprompt` parameter (`auth_type=reprompt`) to the request resolver with a test, and confirm Naver always routes through `EMAIL_VERIFICATION`
 
 **Checkpoint**: 세 제공자 모두 판정 서비스에 같은 `SocialProfile`을 넘긴다.
@@ -354,13 +355,13 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 ## Phase 13: Social Screens (FE)
 
 - [ ] T084 [P] [US6] Add social types, error codes, and API functions from `contracts/auth-api.yaml` in `frontend/src/types/auth.ts` and `frontend/src/api/socialAuth.ts`
-- [ ] T085 [P] [US6] Add failing tests for provider buttons (only enabled providers, full-page navigation, return target kept) and `/login?social=cancelled|error|unavailable` notices in `frontend/src/components/auth/SocialLoginButtons.test.tsx` and `frontend/src/pages/LoginPage.test.tsx`
+- [ ] T085 [P] [US6] Add failing tests for provider buttons (only enabled providers, full-page navigation, return target kept) and `/login?social=cancelled|error` notices in `frontend/src/components/auth/SocialLoginButtons.test.tsx` and `frontend/src/pages/LoginPage.test.tsx`
 - [ ] T086 [P] [US6] Add failing tests for `/auth/social/complete`, `/signup/social` (read-only email, prefilled nickname, `SOCIAL_LINK_REQUIRED` → link screen, duplicate submit), `/auth/social/verify-email`, and expired pending state in `frontend/src/pages/Social*.test.tsx`
 - [ ] T087 [P] [US7] Add failing tests for `/auth/social/link` (masked email, each method, wrong password/code, cancel), `/auth/social/email-required` (three actions, reprompt link), and `/auth/social/already-linked` in `frontend/src/pages/Social*.test.tsx`
 - [ ] T088 [US6] Implement `SocialLoginButtons` following each provider's brand guide and add it to `frontend/src/pages/LoginPage.tsx` and `frontend/src/pages/SignupPage.tsx` to satisfy T085
 - [ ] T089 [US6] Implement `SocialCompletePage`, `SocialSignupPage`, and `SocialVerifyEmailPage` in `frontend/src/pages/` to satisfy T086
 - [ ] T090 [US7] Implement `SocialLinkPage`, `SocialEmailRequiredPage`, and `SocialAlreadyLinkedPage` in `frontend/src/pages/` to satisfy T087
-- [ ] T091 Register the social routes, apply `AuthEntryGuard` (authenticated → `/home`) to the social entry routes except `/auth/social/complete`, and refresh CSRF after social signup/link in `frontend/src/App.tsx` and `frontend/src/auth/AuthProvider.tsx`
+- [ ] T091 Add `/auth/social` to the auth paths in `frontend/src/auth/returnTarget.ts`, register the social routes, apply `AuthEntryGuard` (authenticated → `/home`) to the social entry routes except `/auth/social/complete`, and refresh CSRF after social signup/link in `frontend/src/App.tsx` and `frontend/src/auth/AuthProvider.tsx`
 - [ ] T092 Check status announcements, focus on first invalid input, keyboard-only completion, and 360px layout for every social screen
 
 ## Phase 14: Social Verification
@@ -373,7 +374,7 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 
 ## Social Dependencies
 
-- T061·T062 → T068 → T069 → T070 → T071 → T072·T073. T074는 T067 뒤 언제든.
+- T061·T062 → T068 → T069 → T070 → T071 → T072·T073. T073은 T098을 만족해야 한다. T074는 T067 뒤 언제든.
 - Phase 10~12는 Phase 9가 끝난 뒤 서로 독립이다. 순서는 카카오 → 구글 → 네이버로 둔다.
 - Phase 13은 계약(T084)만 있으면 테스트를 먼저 쓸 수 있고, 화면 연결 확인은 Phase 9와 제공자 하나 이상이 끝난 뒤 한다.
 - T096은 세 제공자의 개발자 앱 등록과 자격 증명이 있어야 한다.
@@ -381,12 +382,13 @@ spec 2026-10-01 개정(US6·US7, FR-020~FR-026, SC-012~SC-015)의 작업이다. 
 ## Social Commit Units
 
 사용자 결정(2026-10-01)에 따라 소셜 확장은 브랜치 `feat/Oauth_create` 하나에서 하고, 아래 단위로 커밋을 나눈다.
-한 커밋 안에서 테스트와 구현을 함께 넣는다.
+한 커밋 안에서 테스트와 구현을 함께 넣는다. constitution "작업 묶음" 절의 크기 조건에 맞추려고 MR은 둘로 나눈다.
+**MR-BE**: C1~C5(문서와 BE). **MR-FE**: C6~C7(FE와 검증 기록). MR-BE를 먼저 병합한다.
 
 | Commit | 범위 | Tasks |
 |---|---|---|
 | C1 `docs(be)` | spec·plan·research·data-model·contracts·quickstart·tasks 동기화 | (문서) |
-| C2 `feat(be)` | 소셜 공통 기반 | T061–T074 |
+| C2 `feat(be)` | 소셜 공통 기반 | T061–T074, T098 |
 | C3 `feat(be)` | 카카오 | T075–T077 |
 | C4 `feat(be)` | 구글 | T078–T080 |
 | C5 `feat(be)` | 네이버 | T081–T083 |

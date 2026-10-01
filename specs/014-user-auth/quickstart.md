@@ -161,6 +161,8 @@ Task 완료는 constitution의 구현·테스트·리뷰·MR 병합·문서 수�
 ### Prerequisites
 
 - 카카오·구글·네이버 개발자 앱과 로컬 redirect URI `http://localhost:5173/api/auth/oauth2/callback/{kakao|google|naver}`
+- `THORP_PUBLIC_BASE_URL`(로컬 기본 `http://localhost:5173`, 운영은 서비스 도메인). redirect URI는 이 값으로 만든다.
+- 카카오는 [동의항목]에서 카카오계정(이메일)을 켠다. 필수 동의는 비즈 앱 전환이 필요할 수 있다.
 - 환경 변수 `KAKAO_CLIENT_ID`·`KAKAO_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`,
   `NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET`. 자격 증명이 없는 제공자는 버튼이 나타나지 않아야 한다.
 - 자동 테스트는 제공자 서버 대신 WireMock 또는 `MockMvc`의 `oauth2Login()` 지원으로 사용자 정보 응답을 흉내 낸다.
@@ -169,7 +171,7 @@ Task 완료는 constitution의 구현·테스트·리뷰·MR 병합·문서 수�
 
 1. 로그인 화면에서 각 제공자 버튼을 눌러 처음 쓰는 계정으로 로그인한다.
 2. `/signup/social`에서 이메일이 읽기 전용으로, 기준에 맞는 제공자 닉네임이 미리 채워졌는지 확인한다.
-3. 휴대폰 번호를 넣고 가입하면 로그인 상태로 원래 위치(없으면 `/home`)에 도착하는지 확인한다.
+3. 휴대폰 번호를 넣고 가입하면 로그인 상태로 원래 위치(없으면 기본 복귀 위치 `/diagnosis/sectors`)에 도착하는지 확인한다.
 4. 로그아웃 뒤 같은 소셜 계정으로 다시 로그인하면 추가 입력 없이 같은 사용자로 들어가는지 확인한다.
 5. 네이버는 가입 전에 이메일 인증번호 화면을 거치는지 확인한다.
 
