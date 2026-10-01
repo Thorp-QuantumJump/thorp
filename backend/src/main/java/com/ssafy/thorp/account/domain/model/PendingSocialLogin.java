@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * 제공자 로그인은 끝났지만 추가 정보 입력·이메일 확인·기존 계정 연결 확인을 기다리는 상태(spec 014 FR-025).
@@ -12,32 +13,32 @@ import java.util.Objects;
  * <p><b>서버 세션에만 둔다.</b> 식별자를 URL로 넘기지 않고, 제공자 token은 담지 않는다. 만든 지 {@link #TTL} 뒤에 만료되고, 가입·연결이 끝나거나
  * 취소되면 바로 지운다(research D12).
  *
- * <p>인증번호는 원문이 아니라 hash로만 담는다. 소셜 경로의 인증번호를 기존 {@code email_verifications}에 두지 않는 이유는 그 테이블이 "가입되지
- * 않은 이메일" 전용이기 때문이다 — 연결 확인은 이미 가입된 이메일로 보내야 한다.
+ * <p><b>인증번호와 시도 횟수는 여기 두지 않는다.</b> 세션은 동시에 들어온 요청이 같은 사본을 읽으므로, 오답 수를 세션에 세면 병렬 요청으로 상한을 넘길 수 있다.
+ * 그 값은 {@link #verificationId()}로 찾는 {@link SocialVerification}이 DB 행 잠금 아래에서 센다(2026-10-01 code
+ * review).
+ *
+ * @param emailCheckedByThorp 제공자가 아니라 같은 대기 상태의 Thorp 인증번호로 이메일을 확인했는가. 그 이메일의 소유 확인이 된다(FR-024
+ *     (2)). 대기 상태가 들고 다니므로 단계를 다시 판정해도 잃지 않는다.
  */
 public record PendingSocialLogin(
+        String verificationId,
         SocialProvider provider,
         String providerUserId,
         String email,
         boolean emailVerified,
+        boolean emailCheckedByThorp,
         String providerNickname,
         Stage stage,
         Long linkTargetUserId,
         LinkReason linkReason,
         boolean linkTargetEmailVerified,
-        String codeHash,
-        CodeTarget codeTarget,
-        Instant codeExpiresAt,
         Instant createdAt)
         implements Serializable {
 
-    @Serial private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 2L;
 
     /** 대기 상태의 수명(FR-025). */
     public static final Duration TTL = Duration.ofMinutes(10);
-
-    /** 소셜 경로 인증번호의 수명. 이메일 가입(FR-004)과 같다. */
-    public static final Duration CODE_TTL = Duration.ofMinutes(3);
 
     public enum Stage {
         /** 제공자가 이메일 확인 여부를 알려주지 않았거나 미확인이라고 알렸다. Thorp 인증번호로 확인해야 한다(FR-022). */
@@ -53,13 +54,8 @@ public record PendingSocialLogin(
         PHONE
     }
 
-    /** 인증번호를 보낸 주소. */
-    public enum CodeTarget {
-        PROVIDER_EMAIL,
-        LINK_TARGET_EMAIL
-    }
-
     public PendingSocialLogin {
+        Objects.requireNonNull(verificationId, "verificationId");
         Objects.requireNonNull(provider, "provider");
         Objects.requireNonNull(email, "email");
         Objects.requireNonNull(stage, "stage");
@@ -81,18 +77,17 @@ public record PendingSocialLogin(
             String providerNickname,
             Instant now) {
         return new PendingSocialLogin(
+                UUID.randomUUID().toString(),
                 provider,
                 providerUserId,
                 email,
                 emailVerified,
+                false,
                 providerNickname,
                 emailVerified ? Stage.SIGNUP : Stage.EMAIL_VERIFICATION,
                 null,
                 null,
                 false,
-                null,
-                null,
-                null,
                 now);
     }
 
@@ -106,78 +101,49 @@ public record PendingSocialLogin(
 
     /** 제공자 이메일을 Thorp 인증번호로 확인했다. 단계는 판정을 다시 돌려 정한다. */
     public PendingSocialLogin withEmailVerified() {
-        return new PendingSocialLogin(
-                provider,
-                providerUserId,
-                email,
-                true,
-                providerNickname,
-                Stage.SIGNUP,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                createdAt);
+        return copy(Stage.SIGNUP, null, null, false, true, true);
     }
 
     public PendingSocialLogin toSignup() {
-        return new PendingSocialLogin(
-                provider,
-                providerUserId,
-                email,
-                emailVerified,
-                providerNickname,
-                Stage.SIGNUP,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                createdAt);
+        return copy(Stage.SIGNUP, null, null, false, emailVerified, emailCheckedByThorp);
     }
 
     /**
      * 기존 계정 연결 확인 단계로 간다.
      *
-     * @param targetEmailVerified 같은 대기 상태에서 대상 계정 이메일을 인증번호로 이미 확인했는가. 이메일이 겹친 경우에만 의미가 있다 — 휴대폰
-     *     번호로 찾은 계정이면 제공자 이메일 확인을 소유 확인으로 인정하지 않는다(FR-024).
+     * <p>이메일이 겹친 연결이면 {@link #emailCheckedByThorp}를 소유 확인으로 인정한다. 휴대폰 번호로 찾은 계정이면 인정하지 않는다 — 제공자
+     * 이메일과 그 계정 이메일은 다르다(FR-024).
      */
-    public PendingSocialLogin toLink(
-            Long targetUserId, LinkReason reason, boolean targetEmailVerified) {
-        return new PendingSocialLogin(
-                provider,
-                providerUserId,
-                email,
-                emailVerified,
-                providerNickname,
+    public PendingSocialLogin toLink(Long targetUserId, LinkReason reason) {
+        return copy(
                 Stage.LINK,
                 targetUserId,
                 reason,
-                reason == LinkReason.EMAIL && targetEmailVerified,
-                null,
-                null,
-                null,
-                createdAt);
+                reason == LinkReason.EMAIL && emailCheckedByThorp,
+                emailVerified,
+                emailCheckedByThorp);
     }
 
-    /** 새 인증번호를 단다. 앞서 보낸 번호는 더 이상 맞지 않는다. */
-    public PendingSocialLogin withCode(String hash, CodeTarget target, Instant codeExpiresAt) {
+    private PendingSocialLogin copy(
+            Stage nextStage,
+            Long targetUserId,
+            LinkReason reason,
+            boolean targetEmailVerified,
+            boolean nextEmailVerified,
+            boolean nextEmailCheckedByThorp) {
+        // 확인 기록(verificationId)은 단계를 바꿔도 같다. 단계를 오가며 발송·시도 상한을 초기화하지 못하게 한다.
         return new PendingSocialLogin(
+                verificationId,
                 provider,
                 providerUserId,
                 email,
-                emailVerified,
+                nextEmailVerified,
+                nextEmailCheckedByThorp,
                 providerNickname,
-                stage,
-                linkTargetUserId,
-                linkReason,
-                linkTargetEmailVerified,
-                Objects.requireNonNull(hash, "hash"),
-                Objects.requireNonNull(target, "target"),
-                Objects.requireNonNull(codeExpiresAt, "codeExpiresAt"),
+                nextStage,
+                targetUserId,
+                reason,
+                targetEmailVerified,
                 createdAt);
     }
 }

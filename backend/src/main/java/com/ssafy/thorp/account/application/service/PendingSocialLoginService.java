@@ -7,14 +7,13 @@ import com.ssafy.thorp.account.application.repository.SocialAccountRepository;
 import com.ssafy.thorp.account.application.result.PendingSocialView;
 import com.ssafy.thorp.account.application.result.SocialLoginOutcome;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
-import com.ssafy.thorp.account.domain.model.PendingSocialLogin.CodeTarget;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialAccount;
 import com.ssafy.thorp.account.domain.model.SocialProvider;
+import com.ssafy.thorp.account.domain.model.SocialVerification.CodeTarget;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +29,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class PendingSocialLoginService {
 
-    private static final int CODE_BOUND = 1_000_000;
-    private static final String CODE_FORMAT = "%06d";
-
     private final PendingSocialLoginAccess access;
     private final PendingSocialLoginStore store;
     private final SocialLoginService socialLoginService;
@@ -42,8 +38,6 @@ public class PendingSocialLoginService {
     private final PasswordEncoder passwordEncoder;
     private final VerificationMailSender mailSender;
     private final Clock clock;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     public PendingSocialLoginService(
             PendingSocialLoginAccess access,
@@ -118,12 +112,9 @@ public class PendingSocialLoginService {
             default -> throw new BusinessException(ErrorCode.SOCIAL_PENDING_STAGE_MISMATCH);
         }
 
-        String code = String.format(CODE_FORMAT, secureRandom.nextInt(CODE_BOUND));
-        store.save(
-                pending.withCode(
-                        passwordEncoder.encode(code),
-                        target,
-                        clock.instant().plus(PendingSocialLogin.CODE_TTL)));
+        // 받는 사람이 요청한 사람과 다를 수 있다(연결 대상 계정 이메일). 간격·횟수 상한은 확인 기록이 잠근 행 위에서 판정한다.
+        String code = VerificationCodes.next();
+        access.issueCode(pending, passwordEncoder.encode(code), target);
         mailSender.sendVerificationCode(address, code);
     }
 
@@ -136,7 +127,7 @@ public class PendingSocialLoginService {
         PendingSocialLogin pending = access.require(Stage.EMAIL_VERIFICATION);
         access.verifyCode(pending, CodeTarget.PROVIDER_EMAIL, code);
 
-        SocialLoginOutcome outcome = socialLoginService.advance(pending.withEmailVerified(), true);
+        SocialLoginOutcome outcome = socialLoginService.advance(pending.withEmailVerified());
         return switch (outcome.type()) {
             case ACCOUNT_UNAVAILABLE ->
                     throw new BusinessException(ErrorCode.SOCIAL_SIGNUP_REJECTED);

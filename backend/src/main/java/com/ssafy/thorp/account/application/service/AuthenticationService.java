@@ -3,6 +3,7 @@ package com.ssafy.thorp.account.application.service;
 import com.ssafy.thorp.account.application.AuthenticatedPrincipal;
 import com.ssafy.thorp.account.application.EmailNormalizer;
 import com.ssafy.thorp.account.application.command.LoginCommand;
+import com.ssafy.thorp.account.application.port.PendingSocialLoginStore;
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;
 import com.ssafy.thorp.account.domain.model.User;
@@ -54,6 +55,7 @@ public class AuthenticationService {
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
     private final CsrfTokenRepository csrfTokenRepository;
+    private final PendingSocialLoginStore pendingSocialLoginStore;
     private final Clock clock;
 
     /** 세션 무효화와 {@code SecurityContext} 비우기. 세션이 없으면 아무 일도 하지 않으므로 로그아웃의 멱등성이 여기서 나온다. */
@@ -73,12 +75,14 @@ public class AuthenticationService {
             SecurityContextRepository securityContextRepository,
             SessionAuthenticationStrategy sessionAuthenticationStrategy,
             CsrfTokenRepository csrfTokenRepository,
+            PendingSocialLoginStore pendingSocialLoginStore,
             Clock clock) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.securityContextRepository = securityContextRepository;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
         this.csrfTokenRepository = csrfTokenRepository;
+        this.pendingSocialLoginStore = pendingSocialLoginStore;
         this.clock = clock;
         this.absentAccountPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
@@ -103,6 +107,10 @@ public class AuthenticationService {
     public AuthenticatedUserResult startSession(
             User user, HttpServletRequest request, HttpServletResponse response) {
         userRepository.updateLastLoginAt(user.getId(), clock.instant());
+
+        // 같은 브라우저에 남아 있던 소셜 가입·연결 대기 상태는 이제 아무의 것도 아니다. 남겨 두면 공용 PC에서 다음 사람이 그 연결 화면에
+        // 자기 비밀번호를 넣어 앞사람의 소셜 계정을 자기 계정에 붙일 수 있다(2026-10-01 security review).
+        pendingSocialLoginStore.clear();
 
         Authentication authentication =
                 UsernamePasswordAuthenticationToken.authenticated(

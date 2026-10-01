@@ -6,10 +6,10 @@ import com.ssafy.thorp.account.application.repository.SocialAccountRepository;
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
-import com.ssafy.thorp.account.domain.model.PendingSocialLogin.CodeTarget;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.LinkReason;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialAccount;
+import com.ssafy.thorp.account.domain.model.SocialVerification.CodeTarget;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.account.domain.model.UserStatus;
 import com.ssafy.thorp.common.exception.BusinessException;
@@ -60,7 +60,13 @@ public class SocialLinkService {
         this.clock = clock;
     }
 
-    @Transactional
+    /**
+     * 소유를 확인하고 연결한 뒤 로그인시킨다.
+     *
+     * <p><b>바깥 트랜잭션을 열지 않는다.</b> 시도 기록은 {@link SocialVerificationGuard}가 따로 연 트랜잭션에서 센다. 바깥 트랜잭션이
+     * DB 연결을 쥔 채 두 번째 연결을 기다리면, 동시 요청이 연결 풀 크기를 넘는 순간 모두가 서로를 기다리며 멈춘다(병렬 대입 통합 테스트가 잡았다). 연결 저장과
+     * 세션 시작은 각자 짧은 트랜잭션이다 — 연결은 됐는데 세션 시작이 실패하면 사용자는 그 소셜 계정으로 다시 로그인하면 된다.
+     */
     public AuthenticatedUserResult link(
             SocialLinkCommand command, HttpServletRequest request, HttpServletResponse response) {
         PendingSocialLogin pending = access.require(Stage.LINK);
@@ -68,6 +74,8 @@ public class SocialLinkService {
 
         switch (command.method()) {
             case PASSWORD -> {
+                // 비밀번호도 남의 계정에 들어가는 열쇠다. 대조 전에 시도를 세고, 상한을 넘으면 대기 상태를 버린다.
+                access.reservePasswordAttempt(pending);
                 // 소셜 전용 계정(비밀번호 없음)도 틀린 비밀번호와 같은 거절이다. 화면은 이 방법을 보여 주지 않지만 요청을 직접 보내도 차이가 없어야 한다.
                 if (!target.hasPassword()
                         || command.password() == null
@@ -115,10 +123,7 @@ public class SocialLinkService {
     /** 대기 중인 소셜 계정을 대상 계정에 붙이고 대기 상태를 지운다. 소유 확인은 호출하는 쪽이 마쳤어야 한다. */
     @Transactional
     public void attach(PendingSocialLogin pending, User target) {
-        boolean sameProviderLinked =
-                socialAccountRepository.findByUserId(target.getId()).stream()
-                        .anyMatch(account -> account.getProvider() == pending.provider());
-        if (sameProviderLinked) {
+        if (socialAccountRepository.existsByUserIdAndProvider(target.getId(), pending.provider())) {
             store.clear();
             throw new BusinessException(ErrorCode.SOCIAL_PROVIDER_ALREADY_LINKED);
         }
@@ -129,6 +134,7 @@ public class SocialLinkService {
                         pending.providerUserId(),
                         clock.instant()));
         store.clear();
+        access.discardVerification(pending);
         log.info(
                 "Social account linked: userId={}, provider={}",
                 target.getId(),

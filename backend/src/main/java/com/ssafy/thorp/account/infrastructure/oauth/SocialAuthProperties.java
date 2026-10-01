@@ -19,13 +19,20 @@ public record SocialAuthProperties(
         String publicBaseUrl, Client kakao, Client google, Client naver) {
 
     public SocialAuthProperties {
+        // 비어 있으면 비워 둔다. 로컬 기본값은 application.yml이 준다. 운영에서 값을 빠뜨렸는데 로컬 주소로 메워 버리면 제공자가 모든 로그인을
+        // redirect_uri 불일치로 거부하는데도 기동은 조용히 성공한다 — 제공자가 켜진 채 비어 있으면 SocialClientRegistrations가 기동을
+        // 멈춘다.
         publicBaseUrl =
                 publicBaseUrl == null || publicBaseUrl.isBlank()
-                        ? "http://localhost:5173"
+                        ? ""
                         : stripTrailingSlash(publicBaseUrl.strip());
         kakao = kakao == null ? Client.NONE : kakao;
         google = google == null ? Client.NONE : google;
         naver = naver == null ? Client.NONE : naver;
+    }
+
+    public boolean hasPublicBaseUrl() {
+        return !publicBaseUrl.isEmpty();
     }
 
     /** 제공자에게 등록할 redirect URI. 외부 경로라서 {@code /api}가 붙는다. */

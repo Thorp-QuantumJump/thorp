@@ -3,6 +3,7 @@ package com.ssafy.thorp.account.presentation.controller;
 import com.ssafy.thorp.account.application.AuthenticatedPrincipal;
 import com.ssafy.thorp.account.application.command.SocialLinkCommand;
 import com.ssafy.thorp.account.application.command.SocialSignupCommand;
+import com.ssafy.thorp.account.application.port.PublicSiteUrl;
 import com.ssafy.thorp.account.application.port.SocialProviderCatalog;
 import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;
 import com.ssafy.thorp.account.application.service.PendingSocialLoginService;
@@ -48,16 +49,19 @@ public class SocialAuthController {
     private final PendingSocialLoginService pendingService;
     private final SocialSignupService signupService;
     private final SocialLinkService linkService;
+    private final PublicSiteUrl publicSiteUrl;
 
     public SocialAuthController(
             SocialProviderCatalog providerCatalog,
             PendingSocialLoginService pendingService,
             SocialSignupService signupService,
-            SocialLinkService linkService) {
+            SocialLinkService linkService,
+            PublicSiteUrl publicSiteUrl) {
         this.providerCatalog = providerCatalog;
         this.pendingService = pendingService;
         this.signupService = signupService;
         this.linkService = linkService;
+        this.publicSiteUrl = publicSiteUrl;
     }
 
     @GetMapping("/social/providers")
@@ -82,7 +86,7 @@ public class SocialAuthController {
             HttpServletResponse response)
             throws IOException {
         if (AuthenticatedPrincipal.userId(authentication).isPresent()) {
-            response.sendRedirect("/home");
+            response.sendRedirect(publicSiteUrl.of("/home"));
             return;
         }
         throw new BusinessException(ErrorCode.SOCIAL_PROVIDER_NOT_ENABLED);

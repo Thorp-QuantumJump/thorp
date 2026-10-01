@@ -47,7 +47,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 @TestPropertySource(
         properties = {
-            "thorp.auth.social.public-base-url=http://localhost:5173",
+            "thorp.auth.social.public-base-url="
+                    + SocialLoginIntegrationTestSupport.PUBLIC_BASE_URL,
             "thorp.auth.social.kakao.client-id=it-kakao-id",
             "thorp.auth.social.kakao.client-secret=it-kakao-secret"
         })
@@ -120,7 +121,19 @@ abstract class SocialLoginIntegrationTestSupport extends IntegrationTestSupport 
                                 .param("code", "it-authorization-code")
                                 .param("state", state));
         assertThat(callback.getResponse().getStatus()).isEqualTo(302);
-        return callback.getResponse().getRedirectedUrl();
+        return pathOf(callback);
+    }
+
+    static final String PUBLIC_BASE_URL = "http://localhost:5173";
+
+    /**
+     * 서버가 FE 화면으로 보낸 주소에서 서비스 주소를 뗀 경로. 서버는 서비스 주소 기준 절대 주소로 보내야 한다 — 상대 경로면 Tomcat이 요청 Host로 절대
+     * 주소를 만들어 로컬에서 백엔드 포트로 떨어진다.
+     */
+    static String pathOf(MvcResult result) {
+        String location = result.getResponse().getRedirectedUrl();
+        assertThat(location).startsWith(PUBLIC_BASE_URL + "/");
+        return location.substring(PUBLIC_BASE_URL.length());
     }
 
     /** 시작 요청을 보내고 제공자 인가 주소의 state를 돌려준다. */

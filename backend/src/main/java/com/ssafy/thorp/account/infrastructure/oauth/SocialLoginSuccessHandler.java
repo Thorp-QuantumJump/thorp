@@ -1,6 +1,7 @@
 package com.ssafy.thorp.account.infrastructure.oauth;
 
 import com.ssafy.thorp.account.application.command.SocialProfile;
+import com.ssafy.thorp.account.application.port.PublicSiteUrl;
 import com.ssafy.thorp.account.application.result.SocialLoginOutcome;
 import com.ssafy.thorp.account.application.service.AuthenticationService;
 import com.ssafy.thorp.account.application.service.SocialLoginService;
@@ -34,13 +35,17 @@ public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final SocialLoginService socialLoginService;
     private final AuthenticationService authenticationService;
 
+    private final PublicSiteUrl publicSiteUrl;
+
     public SocialLoginSuccessHandler(
             SocialClientRegistrations registrations,
             SocialLoginService socialLoginService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            PublicSiteUrl publicSiteUrl) {
         this.registrations = registrations;
         this.socialLoginService = socialLoginService;
         this.authenticationService = authenticationService;
+        this.publicSiteUrl = publicSiteUrl;
     }
 
     @Override
@@ -56,7 +61,8 @@ public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
             authenticationService.dropAuthentication(request, response);
             target = linkIntent ? "/auth/social/link?social=error" : "/login?social=error";
         }
-        response.sendRedirect(target);
+        // 서비스 주소 기준 절대 주소로 보낸다. 상대 경로면 Tomcat이 요청 Host로 절대 주소를 만들어 로컬에서 백엔드 포트로 떨어진다.
+        response.sendRedirect(publicSiteUrl.of(target));
     }
 
     private String handle(

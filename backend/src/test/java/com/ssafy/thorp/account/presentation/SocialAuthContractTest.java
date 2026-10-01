@@ -246,6 +246,100 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("같은 세션으로 틀린 번호를 동시에 보내도 번호 하나는 5번까지만 대조하고, 그 뒤엔 맞는 번호도 받지 않는다")
+    void parallelCodeGuessesAreCappedUnderRowLock() throws Exception {
+        User owner = saveUser(PREFIX + "race-owner@example.com", "01099100009", "password123");
+        loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "race@example.com", true, "카카오닉"));
+        sendWithCsrf(json(post("/auth/social/signup"), signupBody("새회원", "01099100009")));
+        sendWithCsrf(post("/auth/social/pending/email-verifications"));
+        ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
+        verify(mailSender)
+                .sendVerificationCode(eq(PREFIX + "race-owner@example.com"), sent.capture());
+        String right = sent.getValue();
+        String wrong = other(right);
+
+        // 쿠키 상자를 건드리지 않고 같은 쿠키·CSRF 헤더로 동시에 보낸다. 세션 속성으로 세면 모두 '0번 틀림'을 읽어 상한을 넘는다.
+        jakarta.servlet.http.Cookie[] jar =
+                cookies.values().toArray(jakarta.servlet.http.Cookie[]::new);
+        String csrf = cookies.get("XSRF-TOKEN").getValue();
+        int attempts = 20;
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(attempts);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.List<java.util.concurrent.Future<String>> results = new java.util.ArrayList<>();
+        for (int i = 0; i < attempts; i++) {
+            results.add(
+                    pool.submit(
+                            () -> {
+                                start.await();
+                                MvcResult result =
+                                        mockMvc.perform(
+                                                        json(
+                                                                        post("/auth/social/link"),
+                                                                        "{\"method\":\"EMAIL_CODE\",\"verificationCode\":\""
+                                                                                + wrong
+                                                                                + "\"}")
+                                                                .cookie(jar)
+                                                                .header("X-XSRF-TOKEN", csrf))
+                                                .andReturn();
+                                return code(result);
+                            }));
+        }
+        start.countDown();
+        java.util.Map<String, Integer> counts = new java.util.TreeMap<>();
+        for (java.util.concurrent.Future<String> result : results) {
+            counts.merge(result.get(30, java.util.concurrent.TimeUnit.SECONDS), 1, Integer::sum);
+        }
+        pool.shutdown();
+
+        assertThat(counts.get("EMAIL_VERIFICATION_INVALID"))
+                .as(counts.toString())
+                .isEqualTo(
+                        com.ssafy.thorp.account.domain.model.SocialVerification.MAX_CODE_ATTEMPTS);
+        assertThat(counts.get("EMAIL_VERIFICATION_NOT_FOUND"))
+                .as(counts.toString())
+                .isEqualTo(
+                        attempts
+                                - com.ssafy.thorp.account.domain.model.SocialVerification
+                                        .MAX_CODE_ATTEMPTS);
+
+        MvcResult late =
+                sendWithCsrf(
+                        json(
+                                post("/auth/social/link"),
+                                "{\"method\":\"EMAIL_CODE\",\"verificationCode\":\""
+                                        + right
+                                        + "\"}"));
+        assertThat(code(late)).isEqualTo("EMAIL_VERIFICATION_NOT_FOUND");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select count(*) from social_accounts where user_id = ?",
+                                Integer.class,
+                                owner.getId()))
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("다시 받기 간격 안에 또 요청하면 429 EMAIL_VERIFICATION_RESEND_TOO_SOON이고 메일을 보내지 않는다")
+    void resendTooSoonIsRejected() throws Exception {
+        loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "resend@example.com", false, "카카오닉"));
+        assertThat(
+                        sendWithCsrf(post("/auth/social/pending/email-verifications"))
+                                .getResponse()
+                                .getStatus())
+                .isEqualTo(204);
+
+        MvcResult again = sendWithCsrf(post("/auth/social/pending/email-verifications"));
+
+        assertThat(again.getResponse().getStatus()).isEqualTo(429);
+        assertThat(code(again)).isEqualTo("EMAIL_VERIFICATION_RESEND_TOO_SOON");
+        verify(mailSender, org.mockito.Mockito.times(1))
+                .sendVerificationCode(
+                        eq(PREFIX + "resend@example.com"),
+                        org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
     @DisplayName("대기 상태를 취소하면 204이고 이후 조회는 404 SOCIAL_PENDING_NOT_FOUND다")
     void cancelPending() throws Exception {
         loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "cancel@example.com", true, "카카오닉"));

@@ -111,17 +111,17 @@ public class SocialLoginService {
             store.save(pending);
             return SocialLoginOutcome.of(Type.EMAIL_VERIFICATION, profile.provider());
         }
-        return advance(pending, false);
+        return advance(pending);
     }
 
     /**
      * 확인된 이메일로 다음 단계를 정해 대기 상태에 저장한다.
      *
-     * @param emailCheckedByThorp 같은 대기 상태에서 그 이메일을 Thorp 인증번호로 확인했는가. 그 이메일이 기존 계정 이메일과 같으면 소유 확인을
-     *     마친 것으로 본다(FR-024 (2)).
+     * <p>같은 대기 상태에서 그 이메일을 Thorp 인증번호로 확인했으면({@link PendingSocialLogin#emailCheckedByThorp()}) 기존
+     * 계정 이메일과 같을 때 소유 확인을 마친 것으로 본다(FR-024 (2)). 그 사실은 대기 상태가 들고 다니므로 가입 중 경합으로 다시 판정해도 잃지 않는다.
      */
     @Transactional(readOnly = true)
-    public SocialLoginOutcome advance(PendingSocialLogin pending, boolean emailCheckedByThorp) {
+    public SocialLoginOutcome advance(PendingSocialLogin pending) {
         Optional<User> owner = userRepository.findByEmail(pending.email());
         if (owner.isEmpty()) {
             store.save(pending.toSignup());
@@ -137,13 +137,12 @@ public class SocialLoginService {
             store.clear();
             return SocialLoginOutcome.of(Type.PROVIDER_CONFLICT, pending.provider());
         }
-        store.save(pending.toLink(user.getId(), LinkReason.EMAIL, emailCheckedByThorp));
+        store.save(pending.toLink(user.getId(), LinkReason.EMAIL));
         return SocialLoginOutcome.of(Type.LINK_REQUIRED, pending.provider());
     }
 
     public boolean hasProvider(Long userId, SocialProvider provider) {
-        return socialAccountRepository.findByUserId(userId).stream()
-                .anyMatch(account -> account.getProvider() == provider);
+        return socialAccountRepository.existsByUserIdAndProvider(userId, provider);
     }
 
     /**

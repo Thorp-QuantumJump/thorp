@@ -2,10 +2,8 @@ package com.ssafy.thorp.backtest.presentation.support;
 
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.common.security.SessionUser;
 import java.util.Optional;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -31,20 +29,7 @@ public class CurrentRequester {
      * 경로는 없다고 막을 근거가 없다.
      */
     public Optional<Long> findRequesterId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken
-                // 로그인은 언제나 UsernamePasswordAuthenticationToken(이름 = users.id)을 넣는다. 다른 종류의 이름은 우리
-                // 식별자가 아니다 — 소셜 로그인 token의 이름은 제공자 사용자 식별자다(spec 014 analyze G1).
-                || !(authentication instanceof UsernamePasswordAuthenticationToken)) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Long.valueOf(authentication.getName()));
-        } catch (NumberFormatException e) {
-            return Optional.empty();
-        }
+        return SessionUser.idOf(SecurityContextHolder.getContext().getAuthentication());
     }
 
     public long requireRequesterId() {

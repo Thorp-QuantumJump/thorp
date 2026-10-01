@@ -35,6 +35,11 @@ public enum ErrorCode {
     SOCIAL_PROVIDER_ALREADY_LINKED(HttpStatus.CONFLICT, "이 계정은 이미 같은 제공자의 다른 계정과 연결되어 있습니다."),
     SOCIAL_ACCOUNT_ALREADY_LINKED(HttpStatus.CONFLICT, "이 소셜 계정은 다른 Thorp 계정에 연결되어 있습니다."),
     SOCIAL_PROVIDER_NOT_ENABLED(HttpStatus.NOT_FOUND, "지금은 이 방법으로 로그인할 수 없습니다."),
+    // 소셜 경로의 확인 시도·발송 상한(2026-10-01 code review). 대기 상태를 버렸으므로 처음부터 다시 해야 한다.
+    SOCIAL_VERIFICATION_LIMIT(
+            HttpStatus.TOO_MANY_REQUESTS, "확인 시도 횟수를 넘었습니다. 소셜 로그인을 처음부터 다시 시도해 주세요."),
+    EMAIL_VERIFICATION_RESEND_TOO_SOON(
+            HttpStatus.TOO_MANY_REQUESTS, "인증번호를 방금 보냈습니다. 잠시 후 다시 받아 주세요."),
 
     // spec 004 백테스트 실행. 계약은 specs/004-backtest-execution/contracts/rest-api.md "오류 코드 추가분".
     RULES_NOT_REGISTERED(

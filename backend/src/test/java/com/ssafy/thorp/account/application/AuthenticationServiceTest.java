@@ -81,6 +81,7 @@ class AuthenticationServiceTest {
                         securityContextRepository,
                         sessionAuthenticationStrategy,
                         csrfTokenRepository,
+                        new InMemoryPendingSocialLoginStore(),
                         Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -300,6 +301,35 @@ class AuthenticationServiceTest {
                 .extracting(error -> ((BusinessException) error).getErrorCode())
                 .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);
         verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("로그인하면 같은 브라우저에 남은 소셜 가입·연결 대기 상태를 버린다(공용 PC)")
+    void loginDropsLeftoverPendingSocialState() {
+        InMemoryPendingSocialLoginStore store = new InMemoryPendingSocialLoginStore();
+        store.save(
+                com.ssafy.thorp.account.domain.model.PendingSocialLogin.start(
+                        com.ssafy.thorp.account.domain.model.SocialProvider.KAKAO,
+                        "kakao-1",
+                        "someone@example.com",
+                        true,
+                        null,
+                        NOW));
+        AuthenticationService service =
+                new AuthenticationService(
+                        userRepository,
+                        passwordEncoder,
+                        securityContextRepository,
+                        sessionAuthenticationStrategy,
+                        csrfTokenRepository,
+                        store,
+                        Clock.fixed(NOW, ZoneOffset.UTC));
+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.of(activeUser(42L)));
+        when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
+
+        service.login(new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD), request, response);
+
+        assertThat(store.current()).isNull();
     }
 
     private void verifyNothingWasAuthenticated() {

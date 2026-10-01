@@ -1,8 +1,10 @@
 package com.ssafy.thorp.account.infrastructure.oauth;
 
+import com.ssafy.thorp.account.application.port.PublicSiteUrl;
 import com.ssafy.thorp.common.config.HttpSecurityContributor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,20 +28,26 @@ public class SocialLoginSecurityContributor implements HttpSecurityContributor {
     private final SocialAuthorizationRequestResolver authorizationRequestResolver;
     private final SocialLoginSuccessHandler successHandler;
     private final SocialLoginFailureHandler failureHandler;
+    private final PublicSiteUrl publicSiteUrl;
 
     public SocialLoginSecurityContributor(
             SocialClientRegistrations registrations,
             SocialAuthorizationRequestResolver authorizationRequestResolver,
             SocialLoginSuccessHandler successHandler,
-            SocialLoginFailureHandler failureHandler) {
+            SocialLoginFailureHandler failureHandler,
+            PublicSiteUrl publicSiteUrl) {
         this.registrations = registrations;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
+        this.publicSiteUrl = publicSiteUrl;
     }
 
     @Override
     public void contribute(HttpSecurity http) throws Exception {
+        // 이미 로그인한 세션의 콜백은 소셜 로그인 필터에 닿기 전에 끊는다(SignedInCallbackFilter).
+        http.addFilterBefore(
+                new SignedInCallbackFilter(publicSiteUrl), OAuth2LoginAuthenticationFilter.class);
         http.oauth2Login(
                 oauth ->
                         oauth.clientRegistrationRepository(registrations)

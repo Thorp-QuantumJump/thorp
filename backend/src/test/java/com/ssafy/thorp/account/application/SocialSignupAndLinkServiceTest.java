@@ -26,16 +26,17 @@ import com.ssafy.thorp.account.application.service.PendingSocialLoginAccess;
 import com.ssafy.thorp.account.application.service.SocialLinkService;
 import com.ssafy.thorp.account.application.service.SocialLoginService;
 import com.ssafy.thorp.account.application.service.SocialSignupService;
+import com.ssafy.thorp.account.application.service.SocialVerificationGuard;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
-import com.ssafy.thorp.account.domain.model.PendingSocialLogin.CodeTarget;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.LinkReason;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialProvider;
+import com.ssafy.thorp.account.domain.model.SocialVerification;
+import com.ssafy.thorp.account.domain.model.SocialVerification.CodeTarget;
 import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.account.domain.model.UserStatus;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -66,10 +67,15 @@ class SocialSignupAndLinkServiceTest {
 
     private SocialSignupService signupService;
     private SocialLinkService linkService;
+    private PendingSocialLoginAccess access;
+    private final InMemorySocialVerificationRepository verifications =
+            new InMemorySocialVerificationRepository();
 
     @BeforeEach
     void setUp() {
-        PendingSocialLoginAccess access = new PendingSocialLoginAccess(store, encoder, clock);
+        access =
+                new PendingSocialLoginAccess(
+                        store, new SocialVerificationGuard(verifications, clock), encoder, clock);
         linkService =
                 new SocialLinkService(
                         access,
@@ -93,6 +99,7 @@ class SocialSignupAndLinkServiceTest {
         when(users.findByEmail(any())).thenReturn(Optional.empty());
         when(users.findByPhoneNumber(any())).thenReturn(Optional.empty());
         when(socialAccounts.findByUserId(any())).thenReturn(List.of());
+        when(socialAccounts.existsByUserIdAndProvider(any(), any())).thenCallRealMethod();
         when(users.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0), 100L));
         when(authenticationService.startSession(any(User.class), any(), any()))
                 .thenAnswer(
@@ -248,12 +255,9 @@ class SocialSignupAndLinkServiceTest {
     @Test
     @DisplayName("기존 계정 이메일로 보낸 인증번호로 확인하면 연결한다")
     void linkWithTargetEmailCode() {
-        store.save(
-                linkPending(LinkReason.PHONE, false)
-                        .withCode(
-                                "h:654321",
-                                CodeTarget.LINK_TARGET_EMAIL,
-                                NOW.plus(Duration.ofMinutes(3))));
+        PendingSocialLogin pending = linkPending(LinkReason.PHONE, false);
+        store.save(pending);
+        access.issueCode(pending, "h:654321", CodeTarget.LINK_TARGET_EMAIL);
         when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
 
         linkService.link(
@@ -265,12 +269,9 @@ class SocialSignupAndLinkServiceTest {
     @Test
     @DisplayName("제공자 이메일로 받은 번호로는 연결 대상 계정의 소유를 확인할 수 없다")
     void providerEmailCodeCannotProveTargetOwnership() {
-        store.save(
-                linkPending(LinkReason.PHONE, false)
-                        .withCode(
-                                "h:654321",
-                                CodeTarget.PROVIDER_EMAIL,
-                                NOW.plus(Duration.ofMinutes(3))));
+        PendingSocialLogin pending = linkPending(LinkReason.PHONE, false);
+        store.save(pending);
+        access.issueCode(pending, "h:654321", CodeTarget.PROVIDER_EMAIL);
         when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
 
         assertThatThrownBy(
@@ -352,6 +353,78 @@ class SocialSignupAndLinkServiceTest {
     }
 
     @Test
+    @DisplayName("비밀번호를 상한만큼 틀리면 대기 상태를 버려 더 대입하지 못하게 한다")
+    void passwordAttemptsAreCapped() {
+        store.save(linkPending(LinkReason.PHONE, false));
+        when(users.findById(42L))
+                .thenReturn(Optional.of(user(42L, EMAIL, UserStatus.ACTIVE, "h:secret123")));
+
+        for (int i = 0; i < SocialVerification.MAX_PASSWORD_ATTEMPTS; i++) {
+            assertThatThrownBy(
+                            () ->
+                                    linkService.link(
+                                            new SocialLinkCommand(Method.PASSWORD, "wrong", null),
+                                            request,
+                                            response))
+                    .satisfies(code(ErrorCode.INVALID_CREDENTIALS));
+        }
+
+        // 상한 다음 시도는 맞는 비밀번호여도 대조하지 않는다.
+        assertThatThrownBy(
+                        () ->
+                                linkService.link(
+                                        new SocialLinkCommand(Method.PASSWORD, "secret123", null),
+                                        request,
+                                        response))
+                .satisfies(code(ErrorCode.SOCIAL_VERIFICATION_LIMIT));
+        assertThat(store.current()).isNull();
+        verify(socialAccounts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("연결 단계의 인증번호는 상한만큼 틀리면 지워져 맞는 번호로도 확인할 수 없다")
+    void codeAttemptsAreCapped() {
+        PendingSocialLogin pending = linkPending(LinkReason.PHONE, false);
+        store.save(pending);
+        access.issueCode(pending, "h:654321", CodeTarget.LINK_TARGET_EMAIL);
+        when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, "owner@example.com")));
+
+        for (int i = 0; i < SocialVerification.MAX_CODE_ATTEMPTS; i++) {
+            assertThatThrownBy(
+                            () ->
+                                    linkService.link(
+                                            new SocialLinkCommand(
+                                                    Method.EMAIL_CODE, null, "000000"),
+                                            request,
+                                            response))
+                    .satisfies(code(ErrorCode.EMAIL_VERIFICATION_INVALID));
+        }
+
+        assertThatThrownBy(
+                        () ->
+                                linkService.link(
+                                        new SocialLinkCommand(Method.EMAIL_CODE, null, "654321"),
+                                        request,
+                                        response))
+                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+        verify(socialAccounts, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("연결을 마치면 확인 기록을 지운다")
+    void completedLinkDiscardsVerification() {
+        PendingSocialLogin pending = linkPending(LinkReason.EMAIL, false);
+        store.save(pending);
+        when(users.findById(42L))
+                .thenReturn(Optional.of(user(42L, EMAIL, UserStatus.ACTIVE, "h:secret123")));
+
+        linkService.link(
+                new SocialLinkCommand(Method.PASSWORD, "secret123", null), request, response);
+
+        assertThat(verifications.get(pending.verificationId())).isNull();
+    }
+
+    @Test
     @DisplayName("연결 단계가 아닌 대기 상태로 연결하면 단계 불일치다")
     void linkOutsideLinkStageIsMismatch() {
         store.save(signupPending());
@@ -370,7 +443,10 @@ class SocialSignupAndLinkServiceTest {
     }
 
     private static PendingSocialLogin linkPending(LinkReason reason, boolean emailVerified) {
-        return signupPending().toLink(42L, reason, emailVerified);
+        // 같은 대기 상태에서 Thorp 인증번호로 이메일을 확인했으면 이메일이 겹친 연결의 소유 확인이 된다.
+        PendingSocialLogin base =
+                emailVerified ? signupPending().withEmailVerified() : signupPending();
+        return base.toLink(42L, reason);
     }
 
     private static User withId(User user, Long id) {

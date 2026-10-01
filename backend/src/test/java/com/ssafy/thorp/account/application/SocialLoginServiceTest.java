@@ -23,6 +23,7 @@ import com.ssafy.thorp.account.application.service.AuthenticationService;
 import com.ssafy.thorp.account.application.service.PendingSocialLoginAccess;
 import com.ssafy.thorp.account.application.service.SocialLinkService;
 import com.ssafy.thorp.account.application.service.SocialLoginService;
+import com.ssafy.thorp.account.application.service.SocialVerificationGuard;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.LinkReason;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
@@ -59,7 +60,12 @@ class SocialLoginServiceTest {
     @BeforeEach
     void setUp() {
         PendingSocialLoginAccess access =
-                new PendingSocialLoginAccess(store, mock(PasswordEncoder.class), clock);
+                new PendingSocialLoginAccess(
+                        store,
+                        new SocialVerificationGuard(
+                                new InMemorySocialVerificationRepository(), clock),
+                        mock(PasswordEncoder.class),
+                        clock);
         SocialLinkService linkService =
                 new SocialLinkService(
                         access,
@@ -73,6 +79,7 @@ class SocialLoginServiceTest {
         when(socialAccounts.findByProviderAndProviderUserId(any(), any()))
                 .thenReturn(Optional.empty());
         when(socialAccounts.findByUserId(any())).thenReturn(List.of());
+        when(socialAccounts.existsByUserIdAndProvider(any(), any())).thenCallRealMethod();
         when(users.findByEmail(any())).thenReturn(Optional.empty());
         when(users.findById(any())).thenReturn(Optional.empty());
     }
@@ -226,7 +233,7 @@ class SocialLoginServiceTest {
     void linkIntentWithTargetsSocialAccountCompletesLink() {
         store.save(
                 PendingSocialLogin.start(SocialProvider.KAKAO, "kakao-new", EMAIL, true, null, NOW)
-                        .toLink(42L, LinkReason.EMAIL, false));
+                        .toLink(42L, LinkReason.EMAIL));
         when(users.findById(42L)).thenReturn(Optional.of(activeUser(42L, EMAIL)));
         when(socialAccounts.findByProviderAndProviderUserId(
                         SocialProvider.GOOGLE, PROVIDER_USER_ID))
@@ -254,7 +261,7 @@ class SocialLoginServiceTest {
     void linkIntentWithOtherAccountsSocialFails() {
         store.save(
                 PendingSocialLogin.start(SocialProvider.KAKAO, "kakao-new", EMAIL, true, null, NOW)
-                        .toLink(42L, LinkReason.EMAIL, false));
+                        .toLink(42L, LinkReason.EMAIL));
         when(socialAccounts.findByProviderAndProviderUserId(
                         SocialProvider.GOOGLE, PROVIDER_USER_ID))
                 .thenReturn(Optional.of(linked(77L, SocialProvider.GOOGLE, PROVIDER_USER_ID)));
