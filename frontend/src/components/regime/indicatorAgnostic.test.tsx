@@ -12,7 +12,9 @@ function walk(directory: string): string[] {
 /** 010 운영 파일을 손 목록 없이 모은다. */
 const sources = walk('src').filter((path) =>
   !/\.test\.tsx?$|^src\/test\//.test(path) &&
-  (/^src\/components\/regime\//.test(path) || /^(src\/(api|types)\/regime\.ts|src\/hooks\/useRegimeSearch\.ts|src\/pages\/RegimeSearchPage\.tsx)$/.test(path)),
+  (/^src\/components\/regime\//.test(path) || /^(src\/(api|types)\/regime\.ts|src\/hooks\/useRegimeSearch\.ts|src\/pages\/RegimeSearchPage\.tsx)$/.test(path) ||
+    // 시장 흐름 분야 상세 안에서 010 결과를 보이는 자리(009 FR-019)도 같은 경계를 따른다.
+    /^(src\/components\/marketflow\/(FieldPastCompare|CompositePast)\.tsx|src\/hooks\/usePastCases\.ts)$/.test(path)),
 )
 
 // 임시 등록표의 이름·ID. 검사는 화면의 도메인 상수 유입을 막는다.
@@ -29,6 +31,8 @@ describe('010 화면의 등록표 경계', () => {
     expect(sources).toContain('src/pages/RegimeSearchPage.tsx')
     expect(sources).toContain('src/components/regime/CaseDetail.tsx')
     expect(sources).toContain('src/api/regime.ts')
+    expect(sources).toContain('src/components/marketflow/FieldPastCompare.tsx')
+    expect(sources).toContain('src/components/marketflow/CompositePast.tsx')
     expect(sources.length).toBeGreaterThan(10)
   })
 

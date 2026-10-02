@@ -22,28 +22,16 @@
 .heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
 .heroAside p span { display: block; }
 .heroAside > span { color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
-/*
-  분야 구역 머리. 위 과거 사례·뉴스와 아래 분야 메뉴 사이에 서서 두 구역을 나눈다. 짜임(작은 제목·제목·오른쪽 안내)은
-  화면 머리와 같고 제목은 한 단계 작다. 작은 제목은 두 칸을 가로지르고, 새 디자인에서는 그 뒤로 오른쪽 끝으로 갈수록
-  옅어지는 선을 긋는다.
-*/
-.fieldSection { margin-top: 64px; }
-.sectionHead { display: grid; grid-template-columns: 1.2fr 1fr; gap: 0 40px; align-items: end; padding-bottom: 20px; }
-.sectionEyebrow { grid-column: 1 / -1; }
-.sectionHead h2 { margin: 6px 0 0; font: var(--thorp-title-weight, 600) clamp(1.35rem, 2vw, 1.65rem)/var(--thorp-title-leading, 1.18) var(--thorp-font-page, var(--thorp-font-body)); letter-spacing: var(--thorp-title-tracking, -.05em); word-break: keep-all; }
-.sectionHead h2 span { display: inline-block; color: var(--thorp-copy); white-space: nowrap; }
-:global(:root:not([data-design='classic'])) .sectionHead h2 span { color: inherit; }
-:global(:root:not([data-design='classic'])) .sectionHead .sectionEyebrow { display: flex; margin-bottom: 14px; }
-:global(:root:not([data-design='classic'])) .sectionHead .sectionEyebrow::after { flex: 1; height: 1px; background: linear-gradient(90deg, var(--thorp-line-strong), var(--thorp-line) 70%, transparent); content: ''; }
-.sectionLead { justify-self: end; max-width: 560px; margin: 0; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
-.sectionLead span { display: block; }
 /* 중간 폭에서 안내 문장이 접힐 때 끝 낱말 하나만 아랫줄로 떨어지지 않게 한다. */
-.heroAside p span, .sectionLead span { text-wrap: pretty; }
+.heroAside p span { text-wrap: pretty; }
 /* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
 .fieldRail { min-width: 0; }
-/* 분야 수만큼 같은 폭의 칸으로 나눈다. 좁아지면 네 칸, 두 칸으로 줄인다(아래 분기). */
-.fieldList { display: grid; grid-template-columns: repeat(var(--field-count, 7), minmax(0, 1fr)); gap: 8px; }
+/*
+  분야 수만큼 같은 폭의 칸으로 나누고, 끝의 'Thorp 종합 비교' 칸(009 FR-019)은 이름이 길어 조금 넓게 둔다.
+  좁아지면 네 칸, 두 칸으로 줄인다(아래 분기). 여덟 칸이라 어느 폭에서도 빈 칸 없이 채워진다.
+*/
+.fieldList { display: grid; grid-template-columns: repeat(var(--field-count, 7), minmax(0, 1fr)) minmax(0, 1.35fr); gap: 8px; }
 .detailPanel { min-width: 0; min-height: 490px; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }
 .detailPanel:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }
@@ -67,20 +55,16 @@
   .heroAside { justify-self: start; border: 0; padding: 0; max-width: 540px; }
   .heroAside > span { display: none; }
   .heroAside p { margin: 0; }
-  .fieldSection { margin-top: 44px; }
-  .sectionHead { grid-template-columns: 1fr; gap: 14px; padding-bottom: 18px; }
-  .sectionLead { justify-self: start; max-width: 540px; padding: 0; border: 0; }
 }
 @media (max-width: 420px) {
   .fieldList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sectionHead h2 { font-size: 1.4rem; }
   :global(:root:not([data-design='classic'])) .page { --thorp-content-gutter: 28px; }
   .main { width: calc(100% - 28px); }
   .hero h1 { font-size: 1.95rem; }
 }
 /* 아주 좁은 폭에서는 뒷부분 덩어리도 한 줄에 다 들어가지 않는다. 그때만 낱말 사이에서 끊는다. */
 @media (max-width: 360px) {
-  .hero h1 span, .sectionHead h2 span { white-space: normal; }
+  .hero h1 span { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
   .loadingTrack::after { animation: none; width: 100%; opacity: .5; }
@@ -99,13 +83,13 @@
 :global(:root:not([data-design='classic'])) .page { --thorp-content-width: 1400px; }
 :global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }
 /* 분야 메뉴는 카드로 묶지 않는다. 버튼 하나하나가 따로 고르는 메뉴로 읽혀야 한다. */
-:global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .fieldSection > .loadFailure {
+:global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 :global(:root:not([data-design='classic'])) .detailPanel { padding: 24px; }
-:global(:root:not([data-design='classic'])) .fieldSection > .loadFailure { padding: 24px; }
+:global(:root:not([data-design='classic'])) .main > .loadFailure { padding: 24px; }
 :global(:root:not([data-design='classic'])) .loadFailure button { border-radius: var(--thorp-radius-control); }
 :global(:root:not([data-design='classic'])) .loading { padding: 8px 0; }
 @media (max-width: 1100px) {
@@ -115,13 +99,5 @@
   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
 }
 
-/* 과거 사례·뉴스 두 카드. 화면 머리 바로 아래에 오므로 위 여백은 머리의 아래 여백이 맡는다(009 FR-019). */
-.context {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
-  align-items: stretch;
-  gap: var(--thorp-flow-gap, 22px);
-}
-@media (max-width: 1180px) {
-  .context { grid-template-columns: minmax(0, 1fr); }
-}
+/* 뉴스 카드. 투자 대상 고르기 하단으로 옮기기 전까지 분야 상세 아래에 둔다(012 FR-001). */
+.news { margin-top: var(--thorp-flow-gap, 22px); }
