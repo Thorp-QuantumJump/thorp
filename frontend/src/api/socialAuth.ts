@@ -1,3 +1,4 @@
+import { peekReturnTarget } from '@/auth/returnTarget'
 import {
   ApiClientError,
   apiClient,
@@ -122,11 +123,14 @@ export function socialLoginStartUrl(provider: SocialProviderId, options: StartOp
   const query = new URLSearchParams()
   if (options.reprompt) query.set('reprompt', 'true')
   if (options.intent) query.set('intent', options.intent)
+  // 서버가 콜백 뒤 바로 돌아갈 자리. 서버가 다시 검증하고, 없으면 기본 복귀 위치로 보낸다.
+  const returnTo = peekReturnTarget()
+  if (returnTo) query.set('returnTo', returnTo)
   const suffix = query.toString()
   return `${base}/auth/oauth2/authorization/${provider}${suffix ? `?${suffix}` : ''}`
 }
 
-/** 제공자 로그인 화면으로 떠난다. 돌아오는 곳은 서버가 정한다. */
+/** 제공자 로그인 화면으로 떠난다. 기존 계정 로그인이면 서버가 적어 둔 자리로, 그 밖은 판정에 맞는 안내 화면으로 보낸다. */
 export function startSocialLogin(provider: SocialProviderId, options: StartOptions = {}): void {
   window.location.assign(socialLoginStartUrl(provider, options))
 }

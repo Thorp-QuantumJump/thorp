@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   DEFAULT_RETURN_TARGET,
   consumeReturnTarget,
+  peekReturnTarget,
   saveReturnTarget,
 } from './returnTarget'
 
@@ -15,6 +16,15 @@ describe('returnTarget', () => {
 
     expect(consumeReturnTarget()).toBe('/records/analysis-42?view=trades#loss')
     expect(consumeReturnTarget()).toBe(DEFAULT_RETURN_TARGET)
+  })
+
+  it('읽기만 하는 조회는 값을 남기고, 없으면 null이다', () => {
+    expect(peekReturnTarget()).toBeNull()
+
+    saveReturnTarget('/records/analysis-42?view=trades#loss')
+
+    expect(peekReturnTarget()).toBe('/records/analysis-42?view=trades#loss')
+    expect(consumeReturnTarget()).toBe('/records/analysis-42?view=trades#loss')
   })
 
   it.each([
