@@ -81,10 +81,14 @@
 
 | 필드 | `RESULT` | 용어 종류 |
 |---|---|---|
-| 숫자 규칙 | `STRICT`: 자리표시자 밖 숫자 전부 거절 | `QUOTED`: 숫자 토큰이 그 part `factIds` 근거 `value` 중 하나에 부분 문자열로 있어야 함(research R3) |
+| 숫자 규칙 | `STRICT`: 자리표시자 밖 숫자 전부 거절(한글 수사는 허용) | `QUOTED`: 숫자 토큰과 한글 수사 + 수량 단위 토큰이 그 part `factIds` 근거 `value` 중 하나에 부분 문자열로 있어야 함(research R3, 계약 §2.4) |
 | 자리표시자 규칙 | `EXACT`: 자리표시자 집합 = `factIds` | `SUBSET`: 자리표시자 ⊆ `factIds`, `factIds` 비어 있지 않음 |
 | 고정 문장 | 015 `AnswerValidator`의 셋 | plan "답 검증"의 셋 |
 | URL·경로·통화 기호 | 거절 | 거절 |
+
+## 7a. EvidenceBundle (필드 추가)
+
+`EvidenceBundle(facts, tools, partialUntil, registryProvisional)`. `registryProvisional`은 용어 빌더가 `ParameterRegistryPort.provisional()`로 채우고, `RESULT`는 항상 false다. 서비스는 이 값이 true이고 쓰인 근거에 `REGISTRY`가 있으면 임시 내용 접두 문장을 붙인다(spec FR-009b).
 
 ## 8. AssistantAnswer (필드 추가)
 

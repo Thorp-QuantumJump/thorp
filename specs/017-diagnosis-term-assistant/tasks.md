@@ -82,7 +82,8 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 전각 숫자는 반각과 같게 본다
   - 자리표시자 없는 `ANSWERED` part(`factIds` 있음)는 통과, `factIds`가 비면 거절, 자리표시자 ⊄ `factIds`면 거절
   - URL·`₩`는 거절
-  - 용어 종류 고정 문장 셋이 계약 §1 표와 같음
+  - 한글 수사 + 수량 단위: 근거에 없는 "두 섹터"·"스무 거래일"은 거절, 근거 원문에 같은 표기가 있으면 통과, "첫째"·"한편"은 통과(계약 §2.4 판정표)
+  - 용어 종류 고정 문장 셋이 계약 §1 표와 같음(인사 예시는 "역변동성은 어떻게 비중을 정해?")
   - `STRICT`·`EXACT` 기존 사례는 그대로 통과
 - [ ] T012 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/ToolLoopTest.java`에 열거 인자를 더한다. 확인할 것:
   - 열거 밖 값, 낯선 인자 이름, 인자 없는 도구에 인자가 있으면 실행 0회 + "사용할 수 없음"
@@ -113,11 +114,12 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 이 묶음에서는 `backend/src/main/resources/assistant/prompts/term-ko.txt`를 계약 §2 규칙의 뼈대만 담은 틀로 만든다. 본문은 T034가 채운다.
   - `RESULT` 요청 본문이 이전과 바이트 단위로 같은지 `OpenAiChatCompletionsClientTest`로 고정한다.
 - [ ] T018 `AnswerValidator.render(draft, facts, policy)`를 구현한다(research R3·R4).
-  - 숫자 토큰 정규식과 단위 목록은 계약 §2.4 표 그대로다.
+  - 숫자 토큰 정규식과 단위 목록, 한글 수사 + 수량 단위 판정표는 계약 §2.4 표 그대로다.
   - 고정 문장은 정책이 갖는다.
   - 서비스가 종류로 정책을 고른다.
 - [ ] T019 응답 `…/assistant/presentation/response/AssistantAnswerResponse.java`에 `relatedArticles`와 `evidence[].source`를 더한다.
   - `AssistantAnswer`는 쓰인 근거에서 `articleId`를 중복 없이 처음 순서로 최대 3개 모은다.
+  - `EvidenceBundle`에 `registryProvisional`을 더하고(`RESULT`는 false), 서비스가 true이고 쓰인 근거에 `REGISTRY`가 있으면 검증 뒤 "이 설정 설명은 아직 확정 전의 임시 내용입니다. "를 붙인다(spec FR-009b). `AssistantControllerTest`에 사례를 더한다.
   - `docs/specs/assistant-api/examples/answer-*.json`에 `relatedArticles: []`·`source: null`을 넣는다.
   - `backend/src/main/resources/application-prod.yml`·`.env.example`·`infra/.env.prod.example`의 `THORP_ASSISTANT_ENABLED_SCOPES` 주석에 새 값 둘을 적는다.
   - `./gradlew spotlessApply build`를 통과시킨다.
@@ -145,6 +147,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 게시 용어 0개여도 오류가 아님
   - 등록표·섹터 목록·용어 색인 조회가 예외를 던지면 503이고 모델 포트 `verifyNoInteractions`
   - 근거 어디에도 `range`·`unit`·사용자 선택값 키가 없음
+  - 등록표 `provisional()`이 true면 `registryProvisional=true`
 - [ ] T032 [P] [US1] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/term/*ToolTest.java`.
   - `readArticle`:
     - 열거 집합이 요청 시점 게시 글
@@ -166,7 +169,10 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 근거 밖 지식 금지, 근거 문장 풀어 쓰기 허용, 숫자는 근거 표기 그대로
   - 고르기·성과 우열·최적값·미래·사용자 입력값 판단은 `OUT_OF_SCOPE`, 결과 값 질문도 `OUT_OF_SCOPE`
   - 동의어 맞추기는 근거가 있을 때만
-  - 두 원천이 다른 말을 하면 섞지 말고 각각 말하기
+  - 두 원천이 다른 말을 하면 섞지 말고 각각 말하되 출처를 근거 종류 이름("배우기 글에서는", "이 화면의 설정 설명에서는")으로 밝히기
+  - 기본값은 "처음 채워 둔 값"으로만 말하고 "추천값·적정값·무난한 값"으로 말하지 않기(spec FR-009a)
+  - 전략의 방식 차이는 답하고 성과 차이는 `OUT_OF_SCOPE`(spec FR-009)
+  - 수량은 근거의 숫자 표기 그대로 쓰고 한글 수사로 바꾸지 않기(spec FR-007(다))
   - 라벨(문단 번호 등)을 답에 쓰지 않기
   - 도구는 목록 id로만 부르기
   - `GREETING` 기준
