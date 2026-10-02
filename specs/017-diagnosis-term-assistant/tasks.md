@@ -34,6 +34,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
 | `docs/specs/assistant-api/examples/answer-*.json` | `relatedArticles`·`evidence[].source` 없음 | 015 IT가 필드 단위로 대조하므로 `relatedArticles: []`, `source: null`을 넣는다 | T019 |
 | `…/assistant/presentation/request/AssistantQuestionRequest.java:Context` | `publicToken`이 이름 있는 필드 | 진단 종류에서 `publicToken`이 있으면 400(`extra` 검사로 잡히지 않으므로 따로 본다) | T014 |
 | `…/assistant/application/result/EvidenceBundle.java` | `(facts, tools, partialUntil)` | `registryProvisional`을 더한다(spec FR-009b). `RESULT`는 false | T019·T033 |
+| `backend/src/main/java/com/ssafy/thorp/sector/application/result/SectorListResult.java:isSample` | 섹터 대응표가 예시 자료인지. 002 화면이 안내에 씀 | 용어 빌더가 읽어 `sectorSample`을 채운다. 바꾸지 않는다 | T033 |
 | `backend/src/main/java/com/ssafy/thorp/strategy/application/port/ParameterRegistryPort.java:provisional()` | 등록표 임시값 여부. 007·003 화면이 씀 | 용어 빌더가 읽어 `registryProvisional`을 채운다. 포트는 바꾸지 않는다 | T033 |
 | `backend/src/main/java/com/ssafy/thorp/learning/application/repository/PublishedTermRepository.java` | 하나씩 조회(`findPublished`)만 | `findAllPublished()`를 더한다(R8) | T030 |
 | `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java` 규칙 12 | `result`·`backtest`·`sector`·`strategy` → `assistant` 금지 | `learning`을 더한다 | T036 |
@@ -74,7 +75,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 켜지지 않은 종류는 404, `capabilities.scopes`는 켜진 것만 enum 순서로
   - `page:{kind}:{ip}` 분당 한도 초과는 429 `details.reason=PER_PAGE`
   - IP 분당·하루 한도는 `RESULT`와 함께 셈
-  - 응답 모양이 `docs/specs/assistant-api/examples/term-answer-insufficient.json`과 같음
+  - `SECTOR_SELECTION` 요청의 응답 모양이 `docs/specs/assistant-api/examples/term-answer-insufficient.json`과 같음(예시의 `page.kind`와 같은 종류로 대조)
   - 기존 `RESULT` 사례는 그대로 통과
 - [ ] T011 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/AnswerValidatorTest.java`에 `QUOTED`·`SUBSET` 정책 표를 더한다. 확인할 것:
   - 근거 "최대 40%까지"를 인용한 part의 "40%"는 통과, 같은 part의 "50%"는 거절
@@ -118,10 +119,11 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
 - [ ] T018 `AnswerValidator.render(draft, facts, policy)`를 구현한다(research R3·R4).
   - 숫자 토큰 정규식과 단위 목록, 한글 수사 + 수량 단위 판정표는 계약 §2.4 표 그대로다.
   - 고정 문장은 정책이 갖는다.
+  - `Rendered`에 `rejectedBy`(걸린 규칙 이름, 없으면 null)를 더하고, `AssistantQuestionService` 로그에 `draftStatus`·`status`·`rejectedBy`를 남긴다(spec FR-013). 걸린 문구·원문은 남기지 않는다. `AnswerValidatorTest`에 규칙별 `rejectedBy` 사례를 더한다.
   - 서비스가 종류로 정책을 고른다.
 - [ ] T019 응답 `…/assistant/presentation/response/AssistantAnswerResponse.java`에 `relatedArticles`와 `evidence[].source`를 더한다.
   - `AssistantAnswer`는 쓰인 근거에서 `articleId`를 중복 없이 처음 순서로 최대 3개 모은다.
-  - `EvidenceBundle`에 `registryProvisional`을 더하고(`RESULT`는 false), 서비스가 true이고 쓰인 근거에 `REGISTRY`가 있으면 검증 뒤 "이 설정 설명은 아직 확정 전의 임시 내용입니다. "를 붙인다(spec FR-009b). `AssistantControllerTest`에 사례를 더한다.
+  - `EvidenceBundle`에 `registryProvisional`·`sectorSample`을 더한다(`RESULT`는 둘 다 false). 서비스가 검증 뒤 접두를 붙인다. `registryProvisional`이고 쓰인 근거에 `REGISTRY`가 있으면 "이 설정 설명은 아직 확정 전의 임시 내용입니다. ", `sectorSample`이고 `SECTOR`가 있으면 "이 섹터 목록은 예시 대응표입니다. "를 붙이고, 순서는 등록표 → 섹터다(spec FR-009b). `AssistantControllerTest`에 사례를 더한다.
   - `docs/specs/assistant-api/examples/answer-*.json`에 `relatedArticles: []`·`source: null`을 넣는다.
   - `backend/src/main/resources/application-prod.yml`·`.env.example`·`infra/.env.prod.example`의 `THORP_ASSISTANT_ENABLED_SCOPES` 주석에 새 값 둘을 적는다.
   - `./gradlew spotlessApply build`를 통과시킨다.
@@ -142,6 +144,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - `LearningQueryService.listPublishedTerms()`를 더한다.
   - 테스트는 `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java`와 `learning/application/service/LearningQueryServiceTest.java`에 더한다: 초안·게시 취소 제외, 판 어긋남 제외, 정렬.
 - [ ] T031 [P] [US1] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/term/TermEvidenceBuilderTest.java`. 확인할 것:
+  - 두 종류의 처음 팩 맨 앞에 `읽을 수 있는 항목` 근거 1개가 있고, 게시 글 제목·활성 전략·설정 항목(전략 이름 포함)이 요청 시점 목록과 같음
   - 두 종류의 처음 팩이 계약 §2.1 표와 같음(용어마다 1개, `STRATEGY_SETTINGS`는 전략 설명, `SECTOR_SELECTION`은 섹터 목록 1개)
   - 라벨이 data-model §4 표와 같음
   - `source`가 맞음
@@ -149,7 +152,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 게시 용어 0개여도 오류가 아님
   - 등록표·섹터 목록·용어 색인 조회가 예외를 던지면 503이고 모델 포트 `verifyNoInteractions`
   - 근거 어디에도 `range`·`unit`·사용자 선택값 키가 없음
-  - 등록표 `provisional()`이 true면 `registryProvisional=true`
+  - 등록표 `provisional()`이 true면 `registryProvisional=true`, 섹터 목록 `isSample()`이 true면 `sectorSample=true`
 - [ ] T032 [P] [US1] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/term/*ToolTest.java`.
   - `readArticle`:
     - 열거 집합이 요청 시점 게시 글
@@ -187,7 +190,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 응답이 `examples/term-answer-answered.json` 모양
   - 초안 글 id로 `readArticle` 요청 시 실행 0회
   - 요청 사이 게시 취소가 다음 처음 팩에 반영됨(캐시 없음)
-  - 모델 포트에 간 직렬화 본문에 `publicToken`·`weightTenths`·`selected` 문자열 0회(SC-004)
+  - 모델 포트에 간 직렬화 본문에 `publicToken`·`weightTenths`·`weightsTouched`·`thorp.diagnosis.sectorSelection` 문자열 0회(SC-004. 뒤의 셋은 002 `selectionStorage.ts`의 저장소 키 이름)
   - `RESULT` IT(`AssistantResultIT`)는 불변
   - `./gradlew spotlessApply build`
 
@@ -254,7 +257,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 원문은 테스트 산출물에만 둔다.
   - 평가 시점의 게시 글·용어 목록을 남긴다(SC-001). SC-002 채점표는 항목마다 '위반 예·위반 아님 예' 쌍을 두고, 판정이 갈리면 위반으로 센다.
   - 금지 표현에 고르기 권유 어구를 더할지 여기서 판단하고, 더하면 `backend/src/main/resources/assistant/forbidden-phrases.txt`를 고친다.
-- [ ] T053 관문 판정. '전략 선택'이 SC-001~SC-004·SC-007을 충족하면 배포 설정 `THORP_ASSISTANT_ENABLED_SCOPES`에 `STRATEGY_SETTINGS`를 넣는다. 두 명 독립 채점(SC-002)을 마친 뒤다. '투자 대상 고르기'는 013 게시 뒤 T050~T052를 다시 돌려 판정한다. 미달이면 원인을 기록하고 플래그를 유지한다.
+- [ ] T053 관문 판정. 섹터·ETF·지수 이름을 외부 모델로 보내는 것이 원천 이용 조건에 걸리지 않는지 확인하고, 결과를 `docs/adr/0008-external-llm-via-gms.md`에 덧붙인다. 확인 전에는 '전략 선택'을 `readSectorList` 없이 켠다(spec Assumptions). '전략 선택'이 SC-001~SC-004·SC-007을 충족하면 배포 설정 `THORP_ASSISTANT_ENABLED_SCOPES`에 `STRATEGY_SETTINGS`를 넣는다. 두 명 독립 채점(SC-002)을 마친 뒤다. '투자 대상 고르기'는 013 게시 뒤 T050~T052를 다시 돌려 판정한다. 미달이면 원인을 기록하고 플래그를 유지한다.
 
 ---
 
