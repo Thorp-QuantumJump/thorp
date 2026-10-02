@@ -205,6 +205,7 @@ frontend/src/pages/SectorSelectionPage.tsx, StrategySettingsPage.tsx   # 맥락 
    - 좁은 화면 버튼 배치 확인
 5. **[BE] 용어 도우미 품질 표본·평가 문서**
    - 화면 종류별 표본 30개(`term-quality-cases.json`), 자동 검사, `evaluation-017.md`
+   - 화면 예시 질문 전부를 013 게시 콘텐츠 0개로 돌린 확인(SC-007)
    - '전략 선택' 관문 판정(등록표 기반)
 
 선후 관계는 다음과 같다.
