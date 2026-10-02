@@ -125,8 +125,9 @@ export function sourceParts(agency: string, source: string): string[] {
 }
 
 /** 세로축 범위 설명. 0을 뺀 축이면 범위를 밝힌다 — 밝히지 않으면 작은 변화가 큰 변화처럼 읽힌다. */
-export function describeAxis(indicator: IndicatorDisplay): string {
-  const values = indicator.path.flatMap(({ value }) => (value === null ? [] : [value]))
+export function describeAxis(indicator: IndicatorDisplay, extraValues: readonly number[] = []): string {
+  // 당시 경로·보통 범위를 겹치면 축이 그 값까지 넓어진다. 설명도 그 축을 말해야 한다(009 FR-019).
+  const values = [...indicator.path.flatMap(({ value }) => (value === null ? [] : [value])), ...extraValues]
   const axis = buildAxisDomain(values)
   return axis.includesZero
     ? '세로축이 0을 포함합니다.'

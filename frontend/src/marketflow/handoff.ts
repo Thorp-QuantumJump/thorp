@@ -45,6 +45,16 @@ export function buildRegimeSearchPath(handoff: SimilarPeriodHandoff | null): str
 }
 
 /**
+ * 종합 비교가 선택된 상태로 010 검색 화면을 여는 주소다(S15P21E205-450, 009 FR-018).
+ *
+ * 분야 검색은 `buildRegimeSearchPath`로 분야와 010 기준월을 실어 연다. 저장된 판(`?searchId=`)으로 열면 010 화면은
+ * 그것을 내 기록의 '다시 보기'로 다뤄 기록하지 않고 분야 선택도 비워 둔다(010 FR-032, 006 R17).
+ */
+export function buildCompositeSearchPath(): string {
+  return '/regime-search?mode=composite'
+}
+
+/**
  * 사례 식별자를 만든다. `{010 searchId}~{endMonth}`다(011 계약 §0).
  *
  * 010의 `searchId`가 곧 011이 말하는 `snapshotKey`다. **011은 그 키를 분해하지 않는다** — 조각의 뜻은
