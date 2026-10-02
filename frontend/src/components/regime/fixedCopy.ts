@@ -77,3 +77,38 @@ export const referenceLabel = '기준 미충족 참고 사례'
 /** 참고 사례를 열었을 때 붙는 안내 — 기준을 넘지 못했다는 사실만 말하고 등급을 매기지 않는다(FR-018·FR-021). */
 export const referenceNote = 'Thorp가 정한 유사성 기준을 넘지 못한, 가까운 순서의 참고 사례입니다.'
 
+
+/*
+  아래는 시장 흐름 분야 상세 안의 '지금과 비슷했던 과거' 줄과 종합 비교 목록이 쓴다(009 FR-019). 그 자리도 010 결과를
+  보이는 영역이라 같은 경계(FR-022 ②)를 따른다.
+*/
+
+/** 분야 검색의 유사성이 그 분야 지표만으로 잰 것임을 밝힌다(009 SC-006, 010 U01). 경제 전체가 같았다고 읽히지 않게 한다. */
+export const fieldOnlySimilarityNote = (fieldName: string) =>
+    `같은 지표의 3개월 경로를 달 순서대로 맞대어 잰 거리입니다. ${fieldName} 분야만의 유사성이며 경제 전체가 같았다는 뜻이 아닙니다.`
+
+/** 010이 비교한 기준월이 그래프의 대상월과 다를 때(009 FR-009). 맞는 달에만 당시 값을 겹친다는 사실을 함께 적는다. */
+export const overlayBaselineNote = (baselineMonth: string) =>
+    `과거 비교는 ${baselineMonth} 기준입니다. 그래프와 달이 맞는 자리에만 당시 값을 겹칩니다.`
+
+/** 보통 범위 띠가 무엇인지 밝힌다(009 FR-019, spec FR-028의 공통 척도). 좋고 나쁨의 기준으로 읽히지 않게 쓴다. */
+export const usualRangeNote = (window: string) =>
+    `${window} 자료의 중앙값 ± 산포입니다. 지금과 과거 사례를 같은 잣대로 재는 공통 척도이며, 좋고 나쁨의 기준이 아닙니다.`
+
+/** 분야 검색을 받지 못했을 때. 분야 지표는 막히지 않는다는 사실을 함께 알린다(009 FR-019, spec FR-034). */
+export const pastCasesLoadFailed = '과거 사례를 불러오지 못했습니다. 분야 지표는 그대로 볼 수 있습니다.'
+
+/** 종합 검색을 받지 못했을 때(spec FR-034). */
+export const compositeLoadFailed = '과거 사례를 불러오지 못했습니다.'
+
+/** 고른 사례의 지표별 당시 경로를 받는 동안(009 FR-019). */
+export const loadingPastPath = '당시 경로를 불러오는 중입니다.'
+
+/** 고른 사례의 지표별 당시 경로를 받지 못했을 때. 지금 경로는 그대로 보인다(009 FR-019, spec FR-034). */
+export const pastPathLoadFailed = '당시 경로를 불러오지 못했습니다.'
+
+/** 상세를 열 수 없는 사례를 골랐을 때(spec FR-029). 순위와 문장은 그대로 보인다. */
+export const pastPathUnavailable = '이 사례는 지표별 당시 경로를 볼 수 없습니다.'
+
+/** 종합 비교를 고른 상자의 머리 문장(009 FR-019, spec US3). 무엇을 볼 수 있는지만 말하고 결과를 서술하지 않는다. */
+export const compositeLead = '일곱 분야를 함께 견준 가까운 과거입니다. 분야 하나의 지표와 견주려면 분야 메뉴에서 고르세요.'
