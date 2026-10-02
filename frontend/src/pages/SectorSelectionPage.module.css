@@ -1022,13 +1022,13 @@
   }
 }
 
-/* 비교 가능 기간 위 '지금 국내 시장' 띠. 이름은 왼쪽, 지수 카드는 가로로 나란히 선다. */
+/* 비교 가능 기간 위 '지금 국내 시장' 띠. 제목과 출처는 왼쪽, 카드는 오른쪽 창에서 가로로 흐른다. */
 .marketStrip {
   grid-area: market;
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
+  align-items: center;
   gap: 12px 24px;
   margin-bottom: var(--card-gap);
   padding: var(--thorp-pad-card, 18px);

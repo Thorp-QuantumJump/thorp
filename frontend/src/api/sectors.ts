@@ -1,10 +1,16 @@
 import { ApiClientError, apiClient, normalizeApiError } from './client'
 import type { ApiEnvelope, ApiErrorCode, ServiceApiErrorCode } from '@/types/api'
-import type { EvaluationWindow, EvaluationWindowQuery, ExcludedRange } from '@/types/evaluationWindow'
+import type {
+  EvaluationWindow,
+  EvaluationWindowQuery,
+  ExcludedRange,
+} from '@/types/evaluationWindow'
 import type {
   HoldingsOverlap,
   InstrumentHolding,
   InstrumentProfile,
+  LatestPrice,
+  LatestPrices,
   PricePoint,
   PriceSeries,
   SectorCatalog,
@@ -194,7 +200,8 @@ export type InstrumentProfileResult =
       retryable: boolean
     }
 
-const UNREADABLE_PROFILE_MESSAGE = '대표 상품 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+const UNREADABLE_PROFILE_MESSAGE =
+  '대표 상품 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
 /**
  * 보유 종목 하나를 읽는다.
@@ -488,7 +495,8 @@ export async function fetchEvaluationWindow(
   // 계약상 목록 길이는 요청한 상한 + 1을 넘지 않는다. 넘으면 다른 요청의 응답을 읽고 있는 것이다.
   if (
     !window ||
-    (window.maxWarmupTradingDays !== null && window.maxWarmupTradingDays > query.maxWarmupTradingDays)
+    (window.maxWarmupTradingDays !== null &&
+      window.maxWarmupTradingDays > query.maxWarmupTradingDays)
   ) {
     throw new ApiClientError('unexpected', UNREADABLE_WINDOW_MESSAGE)
   }
@@ -623,4 +631,104 @@ export async function fetchPriceSeries(
   } catch (error) {
     return toSeriesFailure(normalizeApiError(error))
   }
+}
+
+export type LatestPricesResult =
+  | { status: 'loaded'; latest: LatestPrices }
+  /** 어느 섹터에도 가격이 없거나 대응표가 아직 없다(409). 다시 불러도 지금은 달라지지 않는다. */
+  | { status: 'notReady'; message: string }
+  | { status: 'failed'; kind: 'api' | 'network' | 'unexpected'; message: string }
+
+const UNREADABLE_LATEST_MESSAGE = '최근 가격을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+
+function isPositivePrice(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const price = Number(value)
+  return Number.isFinite(price) && price > 0
+}
+
+/** 직전 값은 날짜와 가격이 함께 비거나 함께 차야 한다. 한쪽만 있으면 계약 위반이다. */
+function readLatestPrice(value: unknown): LatestPrice | null {
+  if (!isRecord(value)) return null
+  if (typeof value.sectorCode !== 'string' || typeof value.instrumentId !== 'string') return null
+  if (typeof value.name !== 'string' || !isDate(value.date)) return null
+  if (!isPositivePrice(value.adjustedClose)) return null
+  if (typeof value.tradingSuspended !== 'boolean' || typeof value.priceCarriedForward !== 'boolean')
+    return null
+
+  const hasPrevious = value.previousDate !== null || value.previousAdjustedClose !== null
+  if (hasPrevious && !(isDate(value.previousDate) && isPositivePrice(value.previousAdjustedClose)))
+    return null
+
+  return {
+    sectorCode: value.sectorCode,
+    instrumentId: value.instrumentId,
+    name: value.name,
+    date: value.date,
+    adjustedClose: value.adjustedClose,
+    tradingSuspended: value.tradingSuspended,
+    priceCarriedForward: value.priceCarriedForward,
+    previousDate: hasPrevious ? (value.previousDate as string) : null,
+    previousAdjustedClose: hasPrevious ? (value.previousAdjustedClose as string) : null,
+  }
+}
+
+function readLatestPrices(value: unknown): LatestPrices | null {
+  if (!isRecord(value)) return null
+  if (typeof value.mapVersion !== 'string' || typeof value.datasetId !== 'string') return null
+  if (typeof value.dataDeadline !== 'string' || typeof value.isSample !== 'boolean') return null
+  if (!Array.isArray(value.prices) || !Array.isArray(value.missingSectorCodes)) return null
+  if (!value.missingSectorCodes.every((code) => typeof code === 'string')) return null
+
+  const prices: LatestPrice[] = []
+  for (const item of value.prices) {
+    const price = readLatestPrice(item)
+    if (!price) return null
+    prices.push(price)
+  }
+
+  return {
+    mapVersion: value.mapVersion,
+    datasetId: value.datasetId,
+    dataDeadline: value.dataDeadline,
+    isSample: value.isSample,
+    prices,
+    missingSectorCodes: value.missingSectorCodes as string[],
+  }
+}
+
+/**
+ * 섹터마다 대표 ETF의 최근 가격을 한 번에 받아 온다. '지금 국내 시장' 띠가 쓴다(002 FR-018).
+ *
+ * 가격 흐름 전체를 섹터 수만큼 받아 마지막 두 점만 쓰던 자리를 요청 한 번으로 줄인다. 등락률은 서버가 계산하지
+ * 않으므로 보는 쪽이 직전 값과 견준다.
+ */
+export async function fetchLatestPrices(signal?: AbortSignal): Promise<LatestPricesResult> {
+  try {
+    const response = await apiClient.get<ApiEnvelope<LatestPrices>>('/sectors/latest-prices', {
+      signal,
+    })
+    const body = response.data
+
+    if (!body.success) {
+      const error = new ApiClientError('api', body.error.message, { code: body.error.code })
+      return toLatestFailure(error)
+    }
+
+    const latest = readLatestPrices(body.data)
+    if (!latest) return { status: 'failed', kind: 'unexpected', message: UNREADABLE_LATEST_MESSAGE }
+    return { status: 'loaded', latest }
+  } catch (error) {
+    return toLatestFailure(normalizeApiError(error))
+  }
+}
+
+function toLatestFailure(error: ApiClientError): LatestPricesResult {
+  if (
+    error.kind === 'api' &&
+    (error.is('PRICE_SERIES_NOT_READY') || error.is('SECTOR_MAP_NOT_READY'))
+  ) {
+    return { status: 'notReady', message: error.message }
+  }
+  return { status: 'failed', kind: error.kind, message: error.message }
 }

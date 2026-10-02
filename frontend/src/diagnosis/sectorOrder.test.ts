@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { SectorClassification, SectorSummary } from '@/types/sector'
 import { KRX_SOURCE_ATTRIBUTION } from './attribution'
-import { compareSectorsForDisplay, sortSectorsForDisplay } from './sectorOrder'
+import {
+  compareSectorsForDisplay,
+  orderSectorsForMarketStrip,
+  sortSectorsForDisplay,
+} from './sectorOrder'
 
 function sector(
   code: string,
@@ -109,5 +113,30 @@ describe('섹터 표시 순서', () => {
 describe('출처 문구', () => {
   it('001이 내보내는 문구와 같은 값을 한 곳에 둔다', () => {
     expect(KRX_SOURCE_ATTRIBUTION).toBe('한국거래소 통계정보')
+  })
+})
+
+describe('orderSectorsForMarketStrip (002 FR-018)', () => {
+  it('반도체를 맨 앞에 두고 나머지는 받은 순서를 지킨다', () => {
+    const sectors = [
+      sector('CONSTRUCTION', '건설', 'INDUSTRY'),
+      sector('BANK', '은행', 'INDUSTRY'),
+      sector('SEMICONDUCTOR', '반도체', 'INDUSTRY'),
+    ]
+
+    expect(orderSectorsForMarketStrip(sectors).map((item) => item.code)).toEqual([
+      'SEMICONDUCTOR',
+      'CONSTRUCTION',
+      'BANK',
+    ])
+  })
+
+  it('반도체가 없으면 받은 순서 그대로다', () => {
+    const sectors = [sector('CONSTRUCTION', '건설', 'INDUSTRY'), sector('BANK', '은행', 'INDUSTRY')]
+
+    expect(orderSectorsForMarketStrip(sectors).map((item) => item.code)).toEqual([
+      'CONSTRUCTION',
+      'BANK',
+    ])
   })
 })
