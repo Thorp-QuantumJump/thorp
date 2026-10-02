@@ -28,38 +28,4 @@ public record AssistantSettings(
         int maxAnswerLength,
         int maxParts,
         int perPagePerIpPerMinute,
-        int termInitialFacts) {
-
-    /** 결과 화면만 쓰던 설정(015). 진단 화면 값은 계약 §4의 초안이다. */
-    public AssistantSettings(
-            Set<PageKind> enabledScopes,
-            int perIpPerMinute,
-            int perTokenPerMinute,
-            int perDay,
-            int maxQuestionLength,
-            Duration totalBudget,
-            Duration firstCallBudget,
-            Duration nextCallBudget,
-            int maxRounds,
-            int maxFacts,
-            int maxFactsPerRound,
-            int maxAnswerLength,
-            int maxParts) {
-        this(
-                enabledScopes,
-                perIpPerMinute,
-                perTokenPerMinute,
-                perDay,
-                maxQuestionLength,
-                totalBudget,
-                firstCallBudget,
-                nextCallBudget,
-                maxRounds,
-                maxFacts,
-                maxFactsPerRound,
-                maxAnswerLength,
-                maxParts,
-                5,
-                40);
-    }
-}
+        int termInitialFacts) {}

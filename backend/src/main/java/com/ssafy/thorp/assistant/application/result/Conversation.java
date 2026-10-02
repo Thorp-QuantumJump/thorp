@@ -10,11 +10,6 @@ import java.util.List;
  */
 public record Conversation(PageKind kind, String question, List<Exchange> exchanges) {
 
-    /** 결과 화면 대화(015). */
-    public Conversation(String question, List<Exchange> exchanges) {
-        this(PageKind.RESULT, question, exchanges);
-    }
-
     /** 도구 라운드 하나: 모델이 요청한 호출들과 서버가 돌려준 결과들. */
     public record Exchange(List<ToolCall> calls, List<ToolResult> results) {}
 }
