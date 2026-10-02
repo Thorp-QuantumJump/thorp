@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   STRATEGY_SETTINGS_STORAGE_KEY,
@@ -38,19 +39,37 @@ function Harness({
   costView?: CostAssumptionView | "loading" | null;
 }) {
   const settings = useStrategySettings(registryFixture, 3);
+  // 화면처럼 '최대 범위 선택'을 누르기 직전의 기간을 기억해 되돌리기에 쓴다.
+  const beforeFull = useRef<{ start: string; end: string } | null>(null);
   if (!settings.ready) return <p>준비 중</p>;
   const condition = settings.analysisCondition;
   const chosen =
     condition.periodStart !== undefined && condition.periodEnd !== undefined
       ? { start: condition.periodStart, end: condition.periodEnd }
       : null;
+  const full = condition.periodFull === true;
   return (
     <>
       <AnalysisConditionsPanel
         conditions={registryFixture.analysisConditions}
         range={range}
-        period={chosen ?? range}
-        periodChosen={chosen !== null}
+        period={chosen ?? (full ? range : null)}
+        periodMode={chosen !== null ? "custom" : full ? "full" : "unset"}
+        onSelectFullRange={() => {
+          beforeFull.current = chosen;
+          settings.setAnalysisCondition({ periodFull: true });
+        }}
+        // 화면처럼 무효 입력에서 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다.
+        onRestoreFullRange={() => settings.setAnalysisCondition({ periodFull: true })}
+        onUndoFullRange={() => {
+          const before = beforeFull.current;
+          if (before === null) settings.resetAnalysisCondition("period");
+          else
+            settings.setAnalysisCondition({
+              periodStart: before.start,
+              periodEnd: before.end,
+            });
+        }}
         sectorCount={3}
         initialAmount={condition.initialAmount ?? amount.default}
         minEvaluationYears={condition.minEvaluationYears}
@@ -121,8 +140,32 @@ async function renderOpen(costView?: CostAssumptionView | "loading" | null) {
   return { onChange, user, panel };
 }
 
+/**
+ * '최대 범위 선택'을 눌러 둔 채 시작한다. 2026-10-01부터 기간은 저절로 정해지지 않는데, 이 파일의 검사 대부분은
+ * 기간이 정해진 화면을 본다. 정하지 않은 상태는 그것을 보는 검사가 저장소를 비우고 따로 본다.
+ */
+function seedFullRange() {
+  window.sessionStorage.setItem(
+    STRATEGY_SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      version: 1,
+      registryVersion: registryFixture.registryVersion,
+      universeSize: 3,
+      selectedStrategyId: null,
+      valuesByStrategy: {},
+      analysisCondition: {
+        minEvaluationYears: 1,
+        scenario: "FULL_PERIOD",
+        periodFull: true,
+      },
+      invalidValues: [],
+    }),
+  );
+}
+
 beforeEach(() => {
   window.sessionStorage.clear();
+  seedFullRange();
 });
 
 afterEach(() => {
@@ -184,7 +227,7 @@ describe("AnalysisConditionsPanel", () => {
     const panel = await screen.findByRole("region", { name: "분석 조건" });
 
     // 바꾼 것이 없으면 되돌리기가 하나도 없다.
-    expect(within(panel).queryByRole("button", { name: /기본값 복원|범위 전체로/ })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /기본값 복원|되돌리기/ })).toBeNull();
 
     // 짧은 선택: 최소 평가 기간
     await user.click(within(panel).getByRole("radio", { name: "엄격(3년)" }));
@@ -214,27 +257,23 @@ describe("AnalysisConditionsPanel", () => {
     expect(document.activeElement).toBe(within(panel).getByRole("radio", { name: "쓰지 않음" }));
   });
 
-  it("범위 전체와 같은 날짜를 골라 둔 채 입력을 망가뜨려도, 되돌리면 입력칸이 범위 전체로 다시 맞춰진다", async () => {
-    const { user } = await renderOpen();
+  it("최대 범위에서 시작한 입력이 무효로 끝나면 최대 범위로 돌아가고 입력칸의 글은 그대로 둔다", async () => {
+    await renderOpen();
     const start = () => screen.getByLabelText("시작일") as HTMLInputElement;
 
-    // 고른 기간이 범위 전체와 같아지게 한다. 사용자가 고른 기간이라 되돌리기가 있다.
     fireEvent.focus(start());
     fireEvent.change(start(), { target: { value: "2021-01-04" } });
-    fireEvent.change(start(), { target: { value: range.start } });
-    expect(stateCondition()).toMatchObject({ periodStart: range.start, periodEnd: range.end });
+    expect(stateCondition()).toMatchObject({ periodStart: "2021-01-04", periodEnd: range.end });
+    expect(stateCondition().periodFull).toBeUndefined();
 
-    // 그 상태에서 시작일을 지운다. 되돌릴 기간이 지금과 같아 바깥 값은 그대로다.
-    fireEvent.focus(start());
     fireEvent.change(start(), { target: { value: "" } });
-    expect(start().getAttribute("aria-invalid")).toBe("true");
 
-    await user.click(screen.getByRole("button", { name: "범위 전체로 되돌리기" }));
-
+    expect(stateCondition().periodFull).toBe(true);
     expect(stateCondition().periodStart).toBeUndefined();
-    expect(start().value).toBe(range.start);
-    expect(start().getAttribute("aria-invalid")).toBe("false");
-    expect(screen.queryByText(/저장하지 않았습니다/)).toBeNull();
+    expect(storedCondition().periodFull).toBe(true);
+    // 사용자가 친 글은 지우지 않고 문제를 알린다.
+    expect(start().value).toBe("");
+    expect(start().getAttribute("aria-invalid")).toBe("true");
   });
 
   it("입력 도중 반영된 날짜는 마지막 날짜가 무효가 되면 입력 전 기간으로 되돌린다", async () => {
@@ -269,17 +308,25 @@ describe("AnalysisConditionsPanel", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
-  it("고르지 않은 상태에서 시작한 입력이 무효로 끝나면 범위 전체로 돌아간다", async () => {
+  it("정하지 않은 상태에서 시작한 입력이 무효로 끝나면 정하지 않은 상태로 돌아간다", async () => {
+    window.sessionStorage.clear();
     await renderOpen();
     const start = screen.getByLabelText("시작일") as HTMLInputElement;
+    const end = screen.getByLabelText("종료일") as HTMLInputElement;
+    // 기간이 저절로 채워지지 않는다.
+    expect(start.value).toBe("");
+    expect(end.value).toBe("");
+    expect(screen.queryByText(/저장하지 않았습니다/)).toBeNull();
 
     fireEvent.focus(start);
     fireEvent.change(start, { target: { value: "2021-01-04" } });
-    expect(stateCondition().periodStart).toBe("2021-01-04");
+    fireEvent.change(end, { target: { value: "2023-12-28" } });
+    expect(stateCondition()).toMatchObject({ periodStart: "2021-01-04", periodEnd: "2023-12-28" });
     fireEvent.change(start, { target: { value: "" } });
 
     expect(stateCondition().periodStart).toBeUndefined();
     expect(stateCondition().periodEnd).toBeUndefined();
+    expect(stateCondition().periodFull).toBeUndefined();
     expect(storedCondition().periodStart).toBeUndefined();
     expect(start.value).toBe("");
   });
@@ -303,7 +350,7 @@ describe("AnalysisConditionsPanel", () => {
     expect(start.value).toBe("2020-01-01");
     expect(
       screen.getByText(
-        /범위\(2020-01-02 ~ 2024-12-30\) 밖의 날짜는 고를 수 없습니다/,
+        /평가 가능 범위\(2020-01-02 ~ 2024-12-30\) 밖의 날짜입니다/,
       ),
     ).toBeTruthy();
 
@@ -327,24 +374,54 @@ describe("AnalysisConditionsPanel", () => {
     });
   });
 
-  it("고른 기간을 범위 전체로 되돌리면 두 날짜를 함께 지운다", async () => {
+  it("고른 기간에서 '최대 범위 선택'을 누르면 두 날짜를 지우고 범위 전체를 쓰며, 되돌리면 고른 기간으로 돌아간다", async () => {
     const { user } = await renderOpen();
+    const fullButton = () =>
+      screen.getByRole("button", { name: "최대 범위 선택" }) as HTMLButtonElement;
+    // 최대 범위로 시작했으므로 단추는 막혀 있고 되돌리기 아이콘이 있다.
+    expect(fullButton().disabled).toBe(true);
 
-    expect(
-      screen.queryByRole("button", { name: "범위 전체로 되돌리기" }),
-    ).toBeNull();
     fireEvent.change(screen.getByLabelText("시작일"), {
       target: { value: "2021-01-04" },
     });
-    await user.click(
-      screen.getByRole("button", { name: "범위 전체로 되돌리기" }),
-    );
+    // 날짜를 직접 고르면 단추가 다시 열리고 아이콘은 사라진다.
+    expect(fullButton().disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "최대 범위 선택 되돌리기" })).toBeNull();
 
+    await user.click(fullButton());
     expect(stateCondition().periodStart).toBeUndefined();
     expect(stateCondition().periodEnd).toBeUndefined();
-    expect((screen.getByLabelText("시작일") as HTMLInputElement).value).toBe(
-      range.start,
-    );
+    expect(stateCondition().periodFull).toBe(true);
+    expect((screen.getByLabelText("시작일") as HTMLInputElement).value).toBe(range.start);
+    expect(fullButton().disabled).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "최대 범위 선택 되돌리기" }));
+    expect(stateCondition()).toMatchObject({ periodStart: "2021-01-04", periodEnd: range.end });
+    expect(stateCondition().periodFull).toBeUndefined();
+    expect(fullButton().disabled).toBe(false);
+  });
+
+  it("최대 범위에서 시작한 입력이 중간 날짜를 거쳐 무효로 끝나도, 되돌리기는 '최대 범위 선택' 직전 기간으로 간다", async () => {
+    const { user } = await renderOpen();
+    const start = screen.getByLabelText("시작일");
+    const end = screen.getByLabelText("종료일");
+
+    // 날짜를 직접 고른 뒤 '최대 범위 선택'을 누른다. 되돌릴 곳은 이 기간이다.
+    fireEvent.change(start, { target: { value: "2021-01-04" } });
+    await user.click(screen.getByRole("button", { name: "최대 범위 선택" }));
+    expect(stateCondition().periodFull).toBe(true);
+
+    // 최대 범위에서 종료일을 친다. 범위 안인 중간 날짜가 먼저 반영되었다가 범위 밖 날짜로 끝난다.
+    fireEvent.focus(end);
+    fireEvent.change(end, { target: { value: "2023-06-30" } });
+    fireEvent.change(end, { target: { value: "2025-06-30" } });
+    // 입력이 무효라 최대 범위로 돌아갔다.
+    expect(stateCondition().periodFull).toBe(true);
+    expect(stateCondition().periodStart).toBeUndefined();
+
+    // 되돌리면 입력 도중의 중간 날짜가 아니라 '최대 범위 선택'을 누르기 직전 기간이다.
+    await user.click(screen.getByRole("button", { name: "최대 범위 선택 되돌리기" }));
+    expect(stateCondition()).toMatchObject({ periodStart: "2021-01-04", periodEnd: range.end });
   });
 
   it.each([
@@ -406,14 +483,20 @@ describe("AnalysisConditionsPanel", () => {
   });
 
   it("비용 수치·버전·임시 여부를 읽기 전용으로 함께 보인다", async () => {
+    const user = userEvent.setup();
     const { panel } = await renderOpen();
 
     const group = within(panel).getByRole("group", { name: "비용 가정" });
     const text = group.textContent ?? "";
-    expect(text).toContain("수수료 1.5bp");
-    expect(text).toContain("호가 차이 5bp");
-    expect(text).toContain("슬리피지 2.25bp");
-    expect(text).toContain("세금 20bp");
+    // 행에는 버전과 임시 여부만 서고, 수치는 물음표 도움말 안 기준 문장 아래에 있다(2026-10-01).
+    expect(text).not.toContain("수수료");
+    await user.hover(within(group).getByRole("button", { name: "비용 가정 도움말" }));
+    const help = (await screen.findByRole("tooltip", { name: "비용 가정 도움말" })).textContent ?? "";
+    expect(help).toContain("2026년 한국 ETF 거래 적용 기준과 동일");
+    expect(help).toContain("수수료 1.5bp");
+    expect(help).toContain("호가 차이 5bp");
+    expect(help).toContain("슬리피지 2.25bp");
+    expect(help).toContain("세금 20bp");
     expect(text).toContain("SYN-COST-1");
     expect(text).toContain("임시값");
     // 비용은 고칠 수단이 없다. 하나뿐인 버튼은 값을 바꾸는 것이 아니라 도움말이다.

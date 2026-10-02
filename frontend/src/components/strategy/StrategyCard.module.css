@@ -1,5 +1,6 @@
 /* 가로로 늘어선 전략 하나. 빠르게 견주는 자리라 이름과 한 줄 설명만 둔다. */
 .card {
+  position: relative;
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: start;
@@ -179,4 +180,36 @@
 .marker[data-tone='pending'] {
   border-color: var(--thorp-line-strong);
   color: var(--thorp-muted);
+}
+
+/*
+  이 전략으로 평가할 수 있는 범위. 마우스를 올리거나 초점이 오면 카드 위에 말풍선으로 뜬다(2026-10-01). 분석 기간
+  행 아래에 늘 적던 문장을 옮겼다 — 범위는 전략마다 다르므로 견주는 자리에서 읽히는 편이 낫다.
+*/
+.rangeTip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: min(320px, 80vw);
+  padding: 6px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 8px);
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.14s ease;
+  white-space: nowrap;
+}
+
+.card:hover > .rangeTip,
+.card:focus-visible > .rangeTip {
+  opacity: 1;
 }

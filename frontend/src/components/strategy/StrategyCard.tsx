@@ -23,6 +23,11 @@ interface StrategyCardProps {
    * 않으면(카드 하나만 쓰는 자리) 안내를 카드 안에 적는다
    */
   shared?: ReadonlyMap<string, SharedNoticeRef>;
+  /**
+   * 이 전략으로 평가할 수 있는 범위(기본 설정 기준). 주면 카드에 마우스를 올리거나 초점이 올 때 말풍선으로
+   * 보인다(2026-10-01). 아직 모르면 주지 않는다
+   */
+  range?: { start: string; end: string } | null;
 }
 
 /**
@@ -50,6 +55,7 @@ export function StrategyCard({
   onSelect,
   tabIndex,
   shared,
+  range,
 }: StrategyCardProps) {
   const all = collectNotices(strategy, warmup);
   // 목록 아래에 모은 안내는 카드 안에 번호만 두고, 문장은 그 한 곳에서 읽힌다.
@@ -67,9 +73,11 @@ export function StrategyCard({
       ? `strategy-card-notice-${strategy.strategyId}`
       : undefined;
   const descriptionId = `strategy-card-description-${strategy.strategyId}`;
+  const rangeId = range ? `strategy-card-range-${strategy.strategyId}` : undefined;
   const describedBy = [
     descriptionId,
     noticeId,
+    rangeId,
     ...sharedRefs.map((ref) => ref.id),
   ]
     .filter(Boolean)
@@ -93,7 +101,8 @@ export function StrategyCard({
       data-selectable={selectable ? "true" : "false"}
       data-warmup={warmup.state}
       onClick={() => {
-        if (selectable) onSelect();
+        // 고른 카드는 고를 수 없게 된 뒤에도 눌러 내려놓을 수 있어야 한다. 고르는 쪽만 막는다.
+        if (selectable || selected) onSelect();
       }}
     >
       <span className={styles.indicator} aria-hidden="true" />
@@ -127,6 +136,11 @@ export function StrategyCard({
           </span>
         )}
       </span>
+      {range ? (
+        <span id={rangeId} className={styles.rangeTip}>
+          평가 가능 범위 {range.start} ~ {range.end}
+        </span>
+      ) : null}
     </button>
   );
 }

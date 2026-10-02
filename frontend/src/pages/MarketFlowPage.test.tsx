@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { fetchMarketIndicatorsFor } from '@/api/market'
-import { fetchMarketNewsDigests } from '@/api/marketNews'
+import { fetchMarketNewsDigests, fetchNewsSectors } from '@/api/marketNews'
 import { fetchSectorCatalog } from '@/api/sectors'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import type { FieldSummary } from '@/types/marketFlow'
@@ -12,7 +12,9 @@ vi.mock('@/api/marketFlow', () => ({ fetchMarketFlowFields: vi.fn(), fetchMarket
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 vi.mock('@/api/sectors', () => ({ fetchSectorCatalog: vi.fn() }))
 vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))
-vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn() }))
+vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn(), fetchNewsSectors: vi.fn() }))
+
+vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn().mockResolvedValue({ byField: [] }), getRegimeSearch: vi.fn() }))
 
 const sectorCatalog = {
   status: 'loaded' as const,
@@ -50,6 +52,7 @@ describe('MarketFlowPage', () => {
       context: 'CURRENT', state: 'EMPTY', sectorId: null, from: null, to: null,
       lastUpdatedAt: null, stale: false, statusMessage: null, digests: [],
     })
+    vi.mocked(fetchNewsSectors).mockResolvedValue([])
     window.sessionStorage.clear()
   })
 
@@ -134,8 +137,17 @@ describe('MarketFlowPage', () => {
       expect(document.activeElement).toBe(buttons[2])
     })
   })
-  describe('전략 진단으로 옮긴 영역 (009 FR-016~FR-019, Session 2026-09-24)', () => {
-    it('섹터 좁혀 보기·국내 시장 참고 정보·뉴스·전략 비교 카드를 두지 않는다', async () => {
+  it('분야 자료가 실패해도 과거 사례와 뉴스 카드를 유지한다', async () => {
+    vi.mocked(fetchMarketFlowFields).mockRejectedValue(new Error('failed'))
+    renderWithRouter(<MarketFlowPage />)
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '지금과 비슷했던 과거 시장' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '뉴스' })).toBeTruthy()
+    expect(fetchMarketNewsDigests).toHaveBeenCalled()
+  })
+
+  describe('시장 흐름의 과거 사례와 뉴스', () => {
+    it('과거 사례와 뉴스를 보이고 투자 대상과 국내 시장 참고 정보는 옮기지 않는다', async () => {
       vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
       vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
       renderWithRouter(<MarketFlowPage />)
@@ -143,12 +155,13 @@ describe('MarketFlowPage', () => {
       for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()
       expect(screen.queryByRole('heading', { name: '섹터 좁혀 보기' })).toBeNull()
       expect(screen.queryByRole('heading', { name: '국내 시장 참고 정보' })).toBeNull()
-      expect(screen.queryByRole('heading', { name: '뉴스' })).toBeNull()
+      expect(screen.getByRole('heading', { name: '뉴스' })).toBeTruthy()
+      expect(screen.getByRole('heading', { name: '지금과 비슷했던 과거 시장' })).toBeTruthy()
       expect(screen.queryByRole('link', { name: /과거 사례 고르러 가기/ })).toBeNull()
-      // 시장 흐름은 섹터·시장 지수·뉴스 자료를 부르지 않는다.
+      // 뉴스만 독립적으로 조회한다.
       expect(fetchSectorCatalog).not.toHaveBeenCalled()
       expect(fetchMarketIndicatorsFor).not.toHaveBeenCalled()
-      expect(fetchMarketNewsDigests).not.toHaveBeenCalled()
+      expect(fetchMarketNewsDigests).toHaveBeenCalled()
     })
   })
 })

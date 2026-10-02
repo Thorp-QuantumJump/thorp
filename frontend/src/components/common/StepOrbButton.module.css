@@ -262,6 +262,14 @@
   animation: orb-recede var(--orb-motion);
 }
 
+/*
+  회색(대기)에서 초록으로 열릴 때도 출렁임이 다시 돈다. 대기도 단계는 2라 이름이 같으면 색만 바뀌고 움직임이
+  없으므로, 대기에는 같은 움직임을 다른 이름으로 준다. 열리는 순간 이름이 바뀌어 처음부터 다시 돈다.
+*/
+.orb[data-stage='2'][data-pending='true'] .fill {
+  animation: orb-emerge-pending var(--orb-motion);
+}
+
 @keyframes orb-nudge {
   0% {
     border-radius: 50%;
@@ -280,6 +288,29 @@
 }
 
 @keyframes orb-emerge {
+  0% {
+    border-radius: 50%;
+    transform: scale(0.92);
+  }
+
+  38% {
+    border-radius: 60% 40% 46% 54% / 44% 58% 42% 56%;
+    transform: scale(1.07, 0.94);
+  }
+
+  68% {
+    border-radius: 38% 62% 60% 40% / 56% 44% 56% 44%;
+    transform: scale(0.98, 1.03);
+  }
+
+  100% {
+    border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;
+    transform: none;
+  }
+}
+
+/* orb-emerge와 같은 움직임이다. 위 대기 규칙의 까닭 참고. */
+@keyframes orb-emerge-pending {
   0% {
     border-radius: 50%;
     transform: scale(0.92);
@@ -338,4 +369,47 @@
   .orb:hover:not(:disabled):not([aria-disabled='true']) .arrow {
     transform: none;
   }
+}
+
+/*
+  다 드러났지만 아직 누를 수 없는 원(2026-10-01). 남은 것이 사용자가 아직 고르지 않은 항목뿐일 때다. 위 세 단계와
+  달리 초록 계열에서 벗어난 회색으로 둔다 — 열리기 직전의 초록과 갈라야 "눌러도 아무 일이 없다"가 한눈에 읽힌다.
+  마우스를 올리거나 초점이 오면 무엇을 골라야 하는지 원 왼쪽 말풍선이 알린다. 그래서 이 상태만은 포인터를 받는다.
+*/
+.orb[data-pending='true'] {
+  color: var(--thorp-muted);
+  cursor: not-allowed;
+}
+
+.orb[data-pending='true'] .fill {
+  --thorp-orb-fill: color-mix(in oklab, var(--thorp-muted) 34%, var(--thorp-surface-raised, #1f2321));
+
+  border-color: color-mix(in oklab, var(--thorp-muted) 50%, transparent);
+}
+
+.pendingHint {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  z-index: 2;
+  width: max-content;
+  max-width: 260px;
+  padding: 7px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 8px);
+  background: var(--thorp-surface-raised, #1f2321);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.14s ease;
+  word-break: keep-all;
+}
+
+.orb[data-pending='true']:hover ~ .pendingHint,
+.orb[data-pending='true']:focus-visible ~ .pendingHint {
+  opacity: 1;
 }

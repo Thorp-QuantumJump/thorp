@@ -91,11 +91,11 @@ analysisConditions:
   minEvaluationYears:
     choices:
       - value: 0
-        label: 완화(제한 없음)
+        label: 제한 없음(완화)
       - value: 1
-        label: 기본(1년)
+        label: 1년(기본)
       - value: 3
-        label: 엄격(3년)
+        label: 3년(엄격)
     default: 1
     unit: 년
 
@@ -118,7 +118,7 @@ strategies:
         allowedRange:
           choices:
             - value: { mode: CALENDAR, unit: MONTH_END }
-              label: 월말
+              label: 월말(기본)
             - value: { mode: CALENDAR, unit: QUARTER_END }
               label: 분기말
             - value: { mode: TRADING_DAYS, days: 21 }
@@ -167,7 +167,7 @@ strategies:
         allowedRange:
           choices:
             - value: { mode: CALENDAR, unit: MONTH_END }
-              label: 월말
+              label: 월말(기본)
             - value: { mode: CALENDAR, unit: QUARTER_END }
               label: 분기말
             - value: { mode: TRADING_DAYS, days: 21 }
@@ -202,7 +202,7 @@ strategies:
         allowedRange:
           choices:
             - value: { mode: CALENDAR, unit: MONTH_END }
-              label: 월말
+              label: 월말(기본)
             - value: { mode: CALENDAR, unit: QUARTER_END }
               label: 분기말
             - value: { mode: TRADING_DAYS, days: 21 }
@@ -338,7 +338,7 @@ strategies:
         allowedRange:
           choices:
             - value: { mode: CALENDAR, unit: MONTH_END }
-              label: 월말
+              label: 월말(기본)
             - value: { mode: CALENDAR, unit: QUARTER_END }
               label: 분기말
             - value: { mode: TRADING_DAYS, days: 21 }
@@ -427,7 +427,7 @@ strategies:
         allowedRange:
           choices:
             - value: { mode: CALENDAR, unit: MONTH_END }
-              label: 월말
+              label: 월말(기본)
             - value: { mode: CALENDAR, unit: QUARTER_END }
               label: 분기말
             - value: { mode: TRADING_DAYS, days: 21 }

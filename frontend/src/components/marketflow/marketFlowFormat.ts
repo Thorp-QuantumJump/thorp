@@ -6,11 +6,32 @@ import type { FieldStatus, IndicatorDisplay } from '@/types/marketFlow'
  * 소수 첫째 자리까지 보인다(S15P21E205-447). 원천 값은 자릿수가 제각각이라(증가율 4.346167 등) 그대로 두면
  * 읽을 수 없다. 정밀 값은 응답에 그대로 남는다.
  */
-export function formatObservation(value: number | null): string {
+export function formatObservation(value: number | null, unit?: string): string {
   if (value === null) return '자료 없음'
+  if (unit && ['USD', '달러', '미국 달러'].includes(unit) && Math.abs(value) >= 100_000_000) {
+    const rounded = Math.round(Math.abs(value) / 10_000_000)
+    const hundredMillions = Math.floor(rounded / 10)
+    const remainder = rounded % 10
+    return `약 ${value < 0 ? '-' : ''}${hundredMillions.toLocaleString('ko-KR')}억${remainder ? ` ${remainder}천만` : ''}`
+  }
   const text = value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })
   // -0.04 처럼 0으로 반올림된 음수는 "-0"이 아니라 "0"이다.
   return text === '-0' ? '0' : text
+}
+
+/**
+ * 서버 요약의 문장은 유지하고 숫자의 표시 정밀도만 줄인다. 달러 금액(무역수지)은 카드와 같이 억 단위로
+ * 줄인다 — 문장에는 "34785482585미국 달러"처럼 자릿수 구분 없이 온다.
+ */
+export function formatNarrative(text: string | null): string | null {
+  return (
+    text
+      ?.replace(/(-?\d[\d,]*(?:\.\d+)?)\s?(미국 달러|달러|USD)/g, (match: string, value: string, unit: string) => {
+        const amount = Number(value.replaceAll(',', ''))
+        return Math.abs(amount) >= 100_000_000 ? `${formatObservation(amount, unit)} ${unit}` : match
+      })
+      .replace(/-?\d[\d,]*\.\d+/g, (value) => formatObservation(Number(value.replaceAll(',', '')))) ?? null
+  )
 }
 
 export function formatUpdatedAt(value: string | null): string {
@@ -109,7 +130,7 @@ export function describeAxis(indicator: IndicatorDisplay): string {
   const axis = buildAxisDomain(values)
   return axis.includesZero
     ? '세로축이 0을 포함합니다.'
-    : `세로축은 ${formatObservation(axis.domain[0])}~${formatObservation(axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
+    : `세로축은 ${formatObservation(axis.domain[0], indicator.unit)}~${formatObservation(axis.domain[1], indicator.unit)}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`
 }
 
 /** 분야 자료 공급 상태의 표 글자. */

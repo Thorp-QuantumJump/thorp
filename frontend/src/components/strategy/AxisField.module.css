@@ -30,6 +30,36 @@
   border-color: var(--thorp-warning);
 }
 
+/* 입력칸 위에 뜨는 허용 범위 말풍선의 기준 자리. 칸의 폭을 그대로 따른다. */
+.inputAnchor {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/*
+  허용 범위를 늘 적지 않는 칸(시작 금액)에서, 칸에 초점이 있는 동안만 칸 위 오른쪽 끝에 뜨는 안내. 아래 문제 안내
+  자리를 가리지 않도록 위로 띄우고, 포인터를 받지 않아 칸 위 요소의 클릭을 가로채지 않는다.
+*/
+.rangeTooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  width: max-content;
+  max-width: min(440px, 80vw);
+  padding: 7px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 8px);
+  background: var(--thorp-surface-raised, var(--thorp-surface));
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.5;
+  pointer-events: none;
+  word-break: keep-all;
+}
+
 .inputRow {
   display: flex;
   flex-wrap: wrap;
