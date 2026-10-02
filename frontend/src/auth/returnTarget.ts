@@ -54,6 +54,21 @@ export function saveReturnTarget(target: unknown): void {
   }
 }
 
+/**
+ * 저장된 위치를 지우지 않고 읽는다. 없으면 null.
+ *
+ * <p>소셜 로그인 시작 주소에 실어 보낼 때 쓴다(FR-011). 서버가 콜백 뒤 바로 그 자리로 보내므로 경유 화면이 필요 없다.
+ * 지우지 않는 이유는 가입이 필요한 경우 가입 뒤 복귀가 아직 이 값을 쓰기 때문이다.
+ */
+export function peekReturnTarget(): string | null {
+  try {
+    const target = window.sessionStorage.getItem(RETURN_TARGET_KEY)
+    return target === null ? null : normalizeReturnTarget(target)
+  } catch {
+    return null
+  }
+}
+
 /** 저장된 위치를 다시 검증하고 한 번만 사용한 뒤 즉시 제거한다. */
 export function consumeReturnTarget(): string {
   try {

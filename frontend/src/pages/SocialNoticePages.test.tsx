@@ -5,8 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '@/api/client'
 import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { AuthProvider } from '@/auth/AuthProvider'
-import { saveReturnTarget } from '@/auth/returnTarget'
-import { authenticatedUser } from '@/test/authFixtures'
 import { renderSocialRoutes } from '@/test/renderSocialRoutes'
 import { LoginPage } from './LoginPage'
 
@@ -72,23 +70,6 @@ describe('소셜 안내 화면', () => {
     for (const link of screen.getAllByRole('link', { name: '로그인 화면으로' })) {
       expect(link.getAttribute('href')).toBe('/login')
     }
-  })
-
-  it('완료 화면은 로그인을 확인한 뒤 소셜 로그인 전에 있던 자리로 한 번만 돌아간다', async () => {
-    saveReturnTarget('/records/searches')
-    authMocks.getCurrentUser.mockResolvedValue(authenticatedUser)
-    renderSocialRoutes('/auth/social/complete')
-
-    expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()
-    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBeNull()
-  })
-
-  it('완료 화면에서 로그인을 확인하지 못하면 로그인했다고 단정하지 않는다', async () => {
-    renderSocialRoutes('/auth/social/complete')
-
-    expect(
-      await screen.findByText('로그인을 확인하지 못했습니다. 다시 로그인해 주세요.'),
-    ).toBeTruthy()
   })
 
   it.each([

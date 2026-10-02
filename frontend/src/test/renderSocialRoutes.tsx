@@ -4,7 +4,6 @@ import { AuthEntryGuard } from '@/auth/AuthEntryGuard'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { DEFAULT_RETURN_TARGET } from '@/auth/returnTarget'
 import { SocialAlreadyLinkedPage } from '@/pages/SocialAlreadyLinkedPage'
-import { SocialCompletePage } from '@/pages/SocialCompletePage'
 import { SocialEmailRequiredPage } from '@/pages/SocialEmailRequiredPage'
 import { SocialLinkPage } from '@/pages/SocialLinkPage'
 import { SocialSignupPage } from '@/pages/SocialSignupPage'
@@ -20,7 +19,6 @@ export function renderSocialRoutes(initialEntry: string) {
     <MemoryRouter initialEntries={[initialEntry]}>
       <AuthProvider>
         <Routes>
-          <Route path="/auth/social/complete" element={<SocialCompletePage />} />
           <Route
             path="/signup/social"
             element={
