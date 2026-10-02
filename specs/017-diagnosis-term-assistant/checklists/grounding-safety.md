@@ -70,5 +70,5 @@
 - Add comments or findings inline
 - Link to relevant resources or documentation
 - Items are numbered sequentially for easy reference
-- 2026-10-02 spec 반영(작성자): CHK008·CHK011·CHK012 → FR-007, CHK022·CHK023·CHK024 → FR-008, CHK009 → Edge Cases(두 원천), CHK016 → FR-009a, CHK004 → FR-009b, CHK018 → FR-009. 체크 표시는 리뷰어가 판단한다. CHK003·CHK010·CHK014·CHK019·CHK020·CHK027~CHK029는 아직 반영하지 않았다.
+- 2026-10-02 spec 반영(작성자): CHK008·CHK011·CHK012 → FR-007, CHK022·CHK023·CHK024 → FR-008, CHK009 → Edge Cases(두 원천), CHK016 → FR-009a, CHK004 → FR-009b, CHK018 → FR-009. 체크 표시는 리뷰어가 판단한다. 2026-10-02 2차 반영(작성자): CHK003·CHK010·CHK014·CHK019·CHK020 → Edge Cases(CHK003은 Out of Scope도), CHK027 → SC-001, CHK028 → SC-002, CHK029 → Assumptions. 모든 항목에 대응 문장이 생겼다.
 - 이번 판의 범위는 근거·답변 안전 영역 하나다. API 계약 일관성·화면 UX·출시 관문 전반은 다루지 않았다(CHK027~CHK029는 안전 판정과 직접 얽힌 것만 넣었다).

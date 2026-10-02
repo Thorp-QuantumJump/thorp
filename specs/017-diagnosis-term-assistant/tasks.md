@@ -153,7 +153,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
     - 열거 집합이 요청 시점 게시 글
     - 블록마다 근거 1개, `hypothetical`·`example`·`sources` 없음
     - 처음 팩에 있는 용어 문장은 다시 싣지 않음
-    - 요청 사이 게시 취소되면 "사용할 수 없음: 게시되지 않은 글"
+    - 요청 사이 게시 취소되면 "사용할 수 없음: 게시되지 않은 글". 이미 처음 팩에 실린 그 글의 용어 설명은 그 요청 안에서 남음(spec Edge Cases)
   - `readStrategy`:
     - 설정 항목 근거 = description + 선택지 이름, 규칙 `detail`마다 1개
     - 활성 전략만 열거
@@ -234,6 +234,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 화면 종류마다 30개: 근거 있는 질문 20, 사이트에 없는 용어·초안 용어 5, 고르기·성과·입력값 판단 5
   - '전략 선택'은 013 게시 전이면 근거 있는 질문을 등록표 항목으로 채운다.
   - 화면 예시 질문 전부를 넣는다(SC-007).
+  - 경계 5개에 근거 제한 해제 요구를 1개 이상 넣고, '전략 선택'에는 화면 상태 값 질문(비용 가정 수치 등)을 1개 넣는다(spec Edge Cases).
   - 행: `kind`, `question`, `publishedContent`(none|seeded), `expectedStatus`, `expectedSourceTypes`, `forbiddenClaims`
 - [ ] T051 `backend/src/test/java/com/ssafy/thorp/assistant/AssistantTermQualityTest.java`(가짜 모델·기록된 초안 재생, CI). 확인할 것:
   - 상태 일치
@@ -245,6 +246,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 실제 모델(`ASSISTANT_LIVE_TEST=true`, `AssistantLiveTest` 방식)로 종류별 30개를 돌린다.
   - 기록: SC-001·SC-003·SC-005·SC-007, 등록표 버전, 게시 글·용어 수, 모델명, 날짜, 라운드 수, 토큰, 지연
   - 원문은 테스트 산출물에만 둔다.
+  - 평가 시점의 게시 글·용어 목록을 남긴다(SC-001). SC-002 채점표는 항목마다 '위반 예·위반 아님 예' 쌍을 두고, 판정이 갈리면 위반으로 센다.
   - 금지 표현에 고르기 권유 어구를 더할지 여기서 판단하고, 더하면 `backend/src/main/resources/assistant/forbidden-phrases.txt`를 고친다.
 - [ ] T053 관문 판정. '전략 선택'이 SC-001~SC-004·SC-007을 충족하면 배포 설정 `THORP_ASSISTANT_ENABLED_SCOPES`에 `STRATEGY_SETTINGS`를 넣는다. 두 명 독립 채점(SC-002)을 마친 뒤다. '투자 대상 고르기'는 013 게시 뒤 T050~T052를 다시 돌려 판정한다. 미달이면 원인을 기록하고 플래그를 유지한다.
 
