@@ -85,7 +85,7 @@ docker exec thorp-postgres psql -U "$(sed -n 's/^POSTGRES_USER=//p' .env.prod)" 
   "select mode, model_version, count(*) from regime_search_snapshot group by 1, 2 order by 1, 2"
 ```
 
-화면: 시장 흐름의 '비슷했던 때 보기'에서 **Thorp 종합 비교**를 연다.
+화면: 시장 흐름 분야 메뉴 끝의 **Thorp 종합 비교**를 연다(2026-10-02부터. 예전에는 '비슷했던 때 보기' 카드 안에 있었다).
 
 - 사례에 "○○ 흐름은 비슷했습니다/달랐습니다" 블록 문장이 보인다.
 - 사례 상세에 **경제 블록별 거리와 기여**(실물 경기·대외 거래·물가·금융 여건)가 보인다.
