@@ -23,7 +23,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
 |---|---|---|---|
 | `…/assistant/application/result/PageKind.java` | `RESULT` 하나 | `SECTOR_SELECTION`·`STRATEGY_SETTINGS`를 더한다 | T013 |
 | `…/assistant/application/service/AssistantQuestionService.java:ask` L81-90 | 토큰 필수, `publicResults.resolve`를 무조건 부름 | 종류별 `prepare`로 나누고 서비스는 순서만 갖는다 | T014 |
-| `…/assistant/application/port/EvidenceBuilder.java` | `supports`·`build`만 | `prepare(command): Prepared(context, limitKey, limit)`를 더한다. `ResultEvidenceBuilder`는 지금의 토큰 확인·`resolve`를 옮겨 받는다 | T014 |
+| `…/assistant/application/port/EvidenceBuilder.java` | `supports`·`build`만 | 바꾸지 않는다. 식별자 규칙은 `PageKind.requiresPublicToken()`이 갖고 서비스가 순서를 소유한다(plan "질문 흐름") | T014 |
 | `…/assistant/application/service/AssistantRateLimiter.java:admit(ip, publicToken)` | 키가 `token:` 고정 | `admit(ip, scopeKey, scopeLimit)`로 바꾸고, 사유 `PER_PAGE`를 더한다 | T015 |
 | `…/assistant/application/result/ToolSpec.java:dateArguments` | 날짜 인자 이름 목록 | `arguments: List<ToolArgument>`(DATE·ENUM)로 바꾼다. 015 도구 5개를 옮긴다 | T016 |
 | `…/assistant/application/service/ToolLoop.java:checkArguments` | 날짜 형식만 검사 | ENUM 값 소속을 검사하고, 인자 없는 도구를 받는다 | T016 |
@@ -68,7 +68,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
 
 **⚠️ CRITICAL**: 이 단계가 끝나기 전에는 묶음 3을 시작하지 않는다.
 
-- [ ] T010 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java`에 진단 종류 사례를 더한다. 확인할 것:
+- [x] T010 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java`에 진단 종류 사례를 더한다. 확인할 것:
   - `context:{kind:"STRATEGY_SETTINGS"}` 200
   - `context`에 `publicToken`이 있으면 400
   - `kind` 밖의 키가 있으면 400
@@ -77,7 +77,7 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - IP 분당·하루 한도는 `RESULT`와 함께 셈
   - `SECTOR_SELECTION` 요청의 응답 모양이 `docs/specs/assistant-api/examples/term-answer-insufficient.json`과 같음(예시의 `page.kind`와 같은 종류로 대조)
   - 기존 `RESULT` 사례는 그대로 통과
-- [ ] T011 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/AnswerValidatorTest.java`에 `QUOTED`·`SUBSET` 정책 표를 더한다. 확인할 것:
+- [x] T011 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/AnswerValidatorTest.java`에 `QUOTED`·`SUBSET` 정책 표를 더한다. 확인할 것:
   - 근거 "최대 40%까지"를 인용한 part의 "40%"는 통과, 같은 part의 "50%"는 거절
   - 근거 "20거래일"인데 답이 "20%"면 거절
   - 다른 part가 인용한 근거의 숫자를 빌려 쓰면 거절
@@ -88,40 +88,38 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - 한글 수사 + 수량 단위: 근거에 없는 "두 섹터"·"스무 거래일"은 거절, 근거 원문에 같은 표기가 있으면 통과, "첫째"·"한편"은 통과(계약 §2.4 판정표)
   - 용어 종류 고정 문장 셋이 계약 §1 표와 같음(인사 예시는 "역변동성은 어떻게 비중을 정해?")
   - `STRICT`·`EXACT` 기존 사례는 그대로 통과
-- [ ] T012 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/ToolLoopTest.java`에 열거 인자를 더한다. 확인할 것:
+- [x] T012 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/application/service/ToolLoopTest.java`에 열거 인자를 더한다. 확인할 것:
   - 열거 밖 값, 낯선 인자 이름, 인자 없는 도구에 인자가 있으면 실행 0회 + "사용할 수 없음"
   - 인자 없는 도구가 빈 인자로 실행됨
   - 열거 집합이 빈 도구는 목록에 없음
   - 기존 날짜 인자 사례는 그대로
-- [ ] T013 타입 `…/assistant/application/result/`:
+- [x] T013 타입 `…/assistant/application/result/`:
   - `PageKind`에 `SECTOR_SELECTION`·`STRATEGY_SETTINGS`
   - `EvidenceSource(type, articleId, articleTitle)`와 `EvidenceSourceType{TERM, ARTICLE, REGISTRY, SECTOR}`
   - `Evidence`에 `source` 추가(`withId`가 보존)
   - `ToolArgument(name, type, allowedValues)`·`ToolArgumentType{DATE, ENUM}`
   - `RelatedArticle(articleId, title)`
-  - `ValidationPolicy`(data-model §7)
-- [ ] T014 `…/assistant/application/port/EvidenceBuilder.java`에 `prepare(AskQuestionCommand): Prepared`를 더하고, `…/assistant/application/service/AssistantQuestionService.java:ask`를 종류별 갈래로 바꾼다.
-  - 순서: 플래그 → 종류 판정 → 종류 켜짐 → 질문 길이 → `builder.prepare`(식별자 검증) → `limiter.admit` → 데드라인 → `builder.build` → 루프 → 검증
-  - `ResultEvidenceBuilder.prepare`는 지금 서비스에 있는 토큰 필수 검사를 옮겨 받고, `resolve`는 `build` 첫머리로 옮긴다. 응답 코드 우선순위는 015와 같다.
-  - 진단 종류용 임시 `prepare`는 `publicToken` 금지만 하는 빈 빌더로 둔다(T031이 대체).
-  - `AskQuestionCommand`에 `publicToken` 존재 여부가 그대로 실린다.
-- [ ] T015 `…/assistant/application/service/AssistantRateLimiter.java`를 `admit(ip, scopeKey, scopeLimit, reason)`으로 바꾼다.
+  - `ValidationPolicy`(data-model §7). 구현은 `AnswerValidator.Policy`·`NumberRule`·`PlaceholderRule`·`Rejection`(고정 문장과 함께 검증기 안에 둔다)
+- [x] T014 `…/assistant/application/service/AssistantQuestionService.java:ask`를 종류별 갈래로 바꾼다.
+  - 순서: 플래그 → 종류 판정 → 종류 켜짐 → 다른 키 → 질문 길이 → 식별자 규칙(`PageKind.requiresPublicToken()`: 결과는 토큰 필수, 진단은 토큰 금지) → `limiter.admit`(몫 키는 종류별) → 데드라인 → (결과만) `resolve` → `builder.build` → 루프 → 검증 → 접두
+  - 진단 종류를 지원하는 빌더가 아직 없으면 빈 근거(`EvidenceBundle.empty()`)로 흘러 `INSUFFICIENT_EVIDENCE`가 된다. 임시 빌더는 두지 않는다(T033이 진짜 빌더를 더한다).
+- [x] T015 `…/assistant/application/service/AssistantRateLimiter.java`를 `admit(ip, scopeKey, scopeLimit, reason)`으로 바꾼다.
   - `…/assistant/infrastructure/config/AssistantProperties.java`·`…/application/port/AssistantSettings.java`에 `perPagePerIpPerMinute`(5)와 `termInitialFacts`(40)를 더한다.
   - `backend/src/main/resources/application.yml`의 `thorp.assistant.limits.*`에 기본값을 둔다.
   - `// ponytail:` 주석은 유지한다.
-- [ ] T016 `ToolSpec`을 `arguments: List<ToolArgument>`로 바꾸고 `…/assistant/application/service/tools/*Tool.java` 다섯 개의 `spec()`을 DATE 인자로 옮긴다. 이어서:
+- [x] T016 `ToolSpec`을 `arguments: List<ToolArgument>`로 바꾸고 `…/assistant/application/service/tools/*Tool.java` 다섯 개의 `spec()`을 DATE 인자로 옮긴다. 이어서:
   - `ToolLoop.checkArguments`: ENUM 소속 검사, 무인자 도구
   - `OpenAiChatCompletionsClient.toolDefinition`: `enum` 배열, 무인자면 `properties:{}`·`required:[]`, strict 유지
   - `OpenAiChatCompletionsClientTest`에 enum·무인자 정의 직렬화 사례를 더한다
-- [ ] T017 `Conversation`에 `kind`를 더하고 `ToolLoop.run`이 넘긴다. `OpenAiChatCompletionsClient`는 생성 시 `assistant/prompts/answer-ko.txt`와 `assistant/prompts/term-ko.txt`를 읽고 `kind`로 고른다.
-  - 이 묶음에서는 `backend/src/main/resources/assistant/prompts/term-ko.txt`를 계약 §2 규칙의 뼈대만 담은 틀로 만든다. 본문은 T034가 채운다.
+- [x] T017 `Conversation`에 `kind`를 더하고 `ToolLoop.run`이 넘긴다. `OpenAiChatCompletionsClient`는 생성 시 `assistant/prompts/answer-ko.txt`와 `assistant/prompts/term-ko.txt`를 읽고 `kind`로 고른다.
+  - 이 묶음에서 `backend/src/main/resources/assistant/prompts/term-ko.txt` 첫 판을 계약·T035 규칙대로 쓴다. T035는 근거 빌더·도구가 생긴 뒤 실제 근거 모양에 맞춰 다듬는다.
   - `RESULT` 요청 본문이 이전과 바이트 단위로 같은지 `OpenAiChatCompletionsClientTest`로 고정한다.
-- [ ] T018 `AnswerValidator.render(draft, facts, policy)`를 구현한다(research R3·R4).
+- [x] T018 `AnswerValidator.render(draft, facts, policy)`를 구현한다(research R3·R4).
   - 숫자 토큰 정규식과 단위 목록, 한글 수사 + 수량 단위 판정표는 계약 §2.4 표 그대로다.
   - 고정 문장은 정책이 갖는다.
   - `Rendered`에 `rejectedBy`(걸린 규칙 이름, 없으면 null)를 더하고, `AssistantQuestionService` 로그에 `draftStatus`·`status`·`rejectedBy`를 남긴다(spec FR-013). 걸린 문구·원문은 남기지 않는다. `AnswerValidatorTest`에 규칙별 `rejectedBy` 사례를 더한다.
   - 서비스가 종류로 정책을 고른다.
-- [ ] T019 응답 `…/assistant/presentation/response/AssistantAnswerResponse.java`에 `relatedArticles`와 `evidence[].source`를 더한다.
+- [x] T019 응답 `…/assistant/presentation/response/AssistantAnswerResponse.java`에 `relatedArticles`와 `evidence[].source`를 더한다.
   - `AssistantAnswer`는 쓰인 근거에서 `articleId`를 중복 없이 처음 순서로 최대 3개 모은다.
   - `EvidenceBundle`에 `registryProvisional`·`sectorSample`을 더한다(`RESULT`는 둘 다 false). 서비스가 검증 뒤 접두를 붙인다. `registryProvisional`이고 쓰인 근거에 `REGISTRY`가 있으면 "이 설정 설명은 아직 확정 전의 임시 내용입니다. ", `sectorSample`이고 `SECTOR`가 있으면 "이 섹터 목록은 예시 대응표입니다. "를 붙이고, 순서는 등록표 → 섹터다(spec FR-009b). `AssistantControllerTest`에 사례를 더한다.
   - `docs/specs/assistant-api/examples/answer-*.json`에 `relatedArticles: []`·`source: null`을 넣는다.
@@ -168,7 +166,6 @@ description: "진단 화면 용어 도우미의 실행 작업 목록"
   - `prepare`: `publicToken` 금지, 한도 키 `page:{kind}:{ip}`
   - `build`: 처음 팩과 도구 셋을 요청 시점 목록으로 묶는다
   - 의존: `LearningQueryService`, `ParameterRegistryPort`, `SectorService`
-  - T014의 임시 빈 빌더를 지운다.
 - [ ] T034 [US1] 도구 `…/assistant/application/service/term/ReadArticleTool.java`·`ReadStrategyTool.java`·`ReadSectorListTool.java`를 구현한다(계약 §2.2). 도구 설명에 `id=이름` 대응을 적는다.
 - [ ] T035 [US2] 프롬프트 `backend/src/main/resources/assistant/prompts/term-ko.txt` 본문을 쓴다. 규칙:
   - 근거 밖 지식 금지, 근거 문장 풀어 쓰기 허용, 숫자는 근거 표기 그대로

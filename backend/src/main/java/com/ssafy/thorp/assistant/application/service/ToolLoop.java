@@ -13,6 +13,8 @@ import com.ssafy.thorp.assistant.application.result.EvidenceBundle;
 import com.ssafy.thorp.assistant.application.result.EvidenceKind;
 import com.ssafy.thorp.assistant.application.result.ModelDraft;
 import com.ssafy.thorp.assistant.application.result.ModelTurn;
+import com.ssafy.thorp.assistant.application.result.PageKind;
+import com.ssafy.thorp.assistant.application.result.ToolArgument;
 import com.ssafy.thorp.assistant.application.result.ToolCall;
 import com.ssafy.thorp.assistant.application.result.ToolRequests;
 import com.ssafy.thorp.assistant.application.result.ToolResult;
@@ -59,8 +61,19 @@ public class ToolLoop {
      */
     public record Outcome(ModelDraft draft, List<Evidence> facts, int rounds) {}
 
+    /** 결과 화면 대화(015). */
     public Outcome run(
             AssistantModelPort model, String question, EvidenceBundle bundle, Deadline deadline) {
+        return run(model, PageKind.RESULT, question, bundle, deadline);
+    }
+
+    /** {@code kind}는 모델 어댑터가 프롬프트를 고르는 데만 쓴다(017 research R6). */
+    public Outcome run(
+            AssistantModelPort model,
+            PageKind kind,
+            String question,
+            EvidenceBundle bundle,
+            Deadline deadline) {
         FactPack pack = new FactPack(settings.maxFacts());
         pack.add(bundle.facts(), settings.maxFacts());
         Map<String, AssistantTool> tools = new LinkedHashMap<>();
@@ -76,7 +89,7 @@ public class ToolLoop {
             }
             ModelTurn turn =
                     model.step(
-                            new Conversation(question, List.copyOf(exchanges)),
+                            new Conversation(kind, question, List.copyOf(exchanges)),
                             pack.facts(),
                             specs,
                             deadline.slice(roundBudget));
@@ -138,17 +151,30 @@ public class ToolLoop {
         return results;
     }
 
-    /** 인자 이름 집합이 정의와 정확히 같고 값이 모두 {@code YYYY-MM-DD}여야 한다. 식별자 같은 낯선 키는 여기서 걸린다. */
+    /**
+     * 인자 이름 집합이 정의와 정확히 같아야 한다. 날짜 인자는 {@code YYYY-MM-DD}, 열거 인자는 요청 시점의 닫힌 집합 안의 값이어야 한다(017
+     * research R2). 식별자 같은 낯선 키와 목록 밖 값은 여기서 걸린다.
+     */
     private static String checkArguments(ToolSpec spec, Map<String, String> arguments) {
-        Set<String> expected = new HashSet<>(spec.dateArguments());
+        Set<String> expected = new HashSet<>(spec.argumentNames());
         if (!expected.equals(arguments.keySet())) {
-            return "인자는 " + spec.dateArguments() + "만 받습니다";
+            return "인자는 " + spec.argumentNames() + "만 받습니다";
         }
-        for (Map.Entry<String, String> entry : arguments.entrySet()) {
-            try {
-                LocalDate.parse(entry.getValue());
-            } catch (DateTimeParseException | NullPointerException exc) {
-                return entry.getKey() + "는 YYYY-MM-DD 형식이어야 합니다";
+        for (ToolArgument argument : spec.arguments()) {
+            String value = arguments.get(argument.name());
+            switch (argument.type()) {
+                case DATE -> {
+                    try {
+                        LocalDate.parse(value);
+                    } catch (DateTimeParseException | NullPointerException exc) {
+                        return argument.name() + "는 YYYY-MM-DD 형식이어야 합니다";
+                    }
+                }
+                case ENUM -> {
+                    if (value == null || !argument.allowedValues().contains(value)) {
+                        return argument.name() + "는 목록에 있는 값이어야 합니다";
+                    }
+                }
             }
         }
         return null;

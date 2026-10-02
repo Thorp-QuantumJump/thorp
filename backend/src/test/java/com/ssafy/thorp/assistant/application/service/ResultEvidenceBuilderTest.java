@@ -526,7 +526,7 @@ class ResultEvidenceBuilderTest {
         assertThat(specs)
                 .allSatisfy(
                         spec ->
-                                assertThat(spec.dateArguments())
+                                assertThat(spec.argumentNames())
                                         .allMatch(
                                                 arg -> Set.of("date", "from", "to").contains(arg)));
     }

@@ -123,7 +123,7 @@ frontend/src/pages/SectorSelectionPage.tsx, StrategySettingsPage.tsx   # 맥락 
   2. 한도(IP·`page:{kind}:{ip}`·하루)
   3. 데드라인
   4. `TermEvidenceBuilder`
-- 종류별 차이를 `if (kind == RESULT)` 분기로 서비스에 흩지 않는다. `EvidenceBuilder`에 `prepare(command): Prepared(context, limitKey, limit)`(식별자 검증, 한도 키와 한도 값)를 더해 종류별로 둔다. 서비스는 순서만 소유한다.
+- 종류별 차이는 식별자 규칙 하나(`PageKind.requiresPublicToken()`)로 가른다. 서비스는 이 값 하나로 토큰 필수/금지, 한도 몫 키(`token:{publicToken}` / `page:{kind}:{ip}`), 토큰 판정 여부를 정하고, 순서를 소유한다. 근거 빌더는 근거·도구만 만든다. (구현 묶음 2에서 바꿈: 처음 설계는 `EvidenceBuilder.prepare`였으나, 빌더마다 같은 토큰 규칙을 되풀이하게 되어 종류의 성질 하나로 줄였다.)
 - 부분 결과 접두 문장은 `bundle.partialUntil()`이 있을 때만 붙는다. 진단 종류는 항상 null이라 그대로 둔다.
 
 ### 근거 팩과 도구 (spec FR-003·FR-004·FR-005, research R1·R2·R8·R9·R10)

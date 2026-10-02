@@ -76,7 +76,7 @@ class ToolLoopTest {
 
         @Override
         public ToolSpec spec() {
-            return new ToolSpec("getEquityOn", "특정 날짜의 시계열 점", List.of("date"));
+            return ToolSpec.dates("getEquityOn", "특정 날짜의 시계열 점", List.of("date"));
         }
 
         @Override
