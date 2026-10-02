@@ -205,8 +205,8 @@ backend/
 - 구글은 Spring 기본 OIDC provider를 쓰고 `email`·`email_verified` claim을 읽는다. 카카오·네이버는
   `spring.security.oauth2.client.provider.*`에 authorization·token·user-info URI를 직접 등록한다.
   - 카카오: `id`, `kakao_account.email`, `kakao_account.is_email_verified`, `kakao_account.profile.nickname`
-  - 네이버: `response.id`, `response.email`, `response.nickname`. 확인 여부 필드가 없으므로 FR-022의
-    Thorp 인증번호 경로로 보낸다.
+  - 네이버: `response.id`, `response.email`, `response.nickname`. 확인 여부 필드는 없지만 `email`은 네이버 메일이거나
+    네이버가 인증 메일로 확인한 연락처 이메일이므로 `VERIFIED`로 둔다(spec 2026-10-02 결정). Thorp 인증번호를 다시 받지 않는다.
   - 구글: `sub`, `email`, `email_verified`, `name`
 - 제공자별 응답 차이는 제공자마다 하나인 `SocialProfileExtractor`가 흡수해 `SocialProfile(provider,
   providerUserId, email?, emailVerified: TRUE|FALSE|UNKNOWN, nickname?)` 하나로 바꾼다. 이후 판정 로직은
