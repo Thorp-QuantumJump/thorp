@@ -66,7 +66,7 @@ class AssistantLiveTest {
                 new AssistantTool() {
                     @Override
                     public ToolSpec spec() {
-                        return new ToolSpec(
+                        return ToolSpec.dates(
                                 "getEquityOn", "특정 날짜의 자산가치·누적 수익률·하락 폭", List.of("date"));
                     }
 

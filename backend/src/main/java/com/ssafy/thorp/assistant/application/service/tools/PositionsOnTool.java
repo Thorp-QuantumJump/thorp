@@ -24,7 +24,7 @@ public class PositionsOnTool implements AssistantTool {
 
     @Override
     public ToolSpec spec() {
-        return new ToolSpec(NAME, "특정 날짜의 보유 종목과 비중", List.of("date"));
+        return ToolSpec.dates(NAME, "특정 날짜의 보유 종목과 비중", List.of("date"));
     }
 
     @Override
