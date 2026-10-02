@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "data": {
+    "status": "ANSWERED",
+    "answer": "리밸런싱은 시간이 지나 달라진 비중을 처음 정한 비중으로 되돌리는 일이에요. 이 화면의 리밸런싱 주기는 그 되돌리기를 얼마마다 할지 정하는 값이에요.",
+    "evidence": [
+      {
+        "id": "F3",
+        "label": "용어: 리밸런싱",
+        "value": "시간이 지나 달라진 비중을 처음 정한 비중으로 되돌리는 일이다.",
+        "asOf": null,
+        "tab": null,
+        "source": { "type": "TERM", "articleId": "weights-and-rebalancing", "articleTitle": "비중과 리밸런싱" }
+      },
+      {
+        "id": "F17",
+        "label": "설정 항목: 동일 비중 · 리밸런싱 주기",
+        "value": "같은 비중에서 벌어진 만큼을 얼마마다 되돌릴지 정한다.",
+        "asOf": null,
+        "tab": null,
+        "source": { "type": "REGISTRY", "articleId": null, "articleTitle": null }
+      }
+    ],
+    "relatedArticles": [
+      { "articleId": "weights-and-rebalancing", "title": "비중과 리밸런싱" }
+    ],
+    "page": { "kind": "STRATEGY_SETTINGS" }
+  },
+  "error": null
+}
