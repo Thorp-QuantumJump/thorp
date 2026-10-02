@@ -12,7 +12,10 @@ public class SocialSignupRequest {
     @Size(min = 2, max = 20)
     private String nickname;
 
-    @NotBlank
+    /**
+     * 선택 항목(spec 014 2026-10-02). 화면은 보내지 않는다. 실려 오면 형식을 검사한다 — {@code @Pattern}은 {@code null}을
+     * 통과시킨다.
+     */
     @Pattern(regexp = "^01[016789]\\d{7,8}$", message = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678")
     private String phoneNumber;
 

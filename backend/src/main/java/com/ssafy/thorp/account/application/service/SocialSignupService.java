@@ -64,8 +64,9 @@ public class SocialSignupService {
             SocialSignupCommand command, HttpServletRequest request, HttpServletResponse response) {
         PendingSocialLogin pending = access.require(Stage.SIGNUP);
 
-        if (command.phoneNumber() == null
-                || !PHONE_NUMBER_PATTERN.matcher(command.phoneNumber()).matches()) {
+        // 번호는 선택이다(spec 014 2026-10-02). 실려 왔을 때만 형식을 보고 번호 겹침 연결로 보낸다 — 문자 인증 도입에 대비해 남긴다.
+        boolean hasPhone = command.phoneNumber() != null;
+        if (hasPhone && !PHONE_NUMBER_PATTERN.matcher(command.phoneNumber()).matches()) {
             throw new BusinessException(
                     ErrorCode.INVALID_INPUT, "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678");
         }
@@ -76,7 +77,10 @@ public class SocialSignupService {
             throw new BusinessException(rejectionOf(outcome));
         }
 
-        Optional<User> phoneOwner = userRepository.findByPhoneNumber(command.phoneNumber());
+        Optional<User> phoneOwner =
+                hasPhone
+                        ? userRepository.findByPhoneNumber(command.phoneNumber())
+                        : Optional.empty();
         if (phoneOwner.isPresent()) {
             // 번호의 주인이 어떤 계정이든 응답은 같다. 계정 상태(정지·탈퇴)나 같은 제공자 연결 여부에 따라 응답이 갈리면, 남의 번호를
             // 넣는 것만으로 그 사실을 알아낼 수 있다. 쓸 수 없는 계정이거나 같은 제공자가 이미 있으면 소유 확인 뒤에야 드러난다.

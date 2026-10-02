@@ -142,6 +142,18 @@ class SocialSignupAndLinkServiceTest {
     }
 
     @Test
+    @DisplayName("번호 없이 낸 소셜 가입은 번호 검사를 건너뛰고 번호 없는 계정을 만든다")
+    void signupWithoutPhoneCreatesAccountWithoutNumber() {
+        store.save(signupPending());
+
+        signupService.signup(new SocialSignupCommand("새회원", null), request, response);
+
+        verify(users).save(argThat((User u) -> u.getPhoneNumber() == null));
+        verify(users, never()).findByPhoneNumber(any());
+        assertThat(store.current()).isNull();
+    }
+
+    @Test
     @DisplayName("가입 단계가 아닌 대기 상태로 가입하면 단계 불일치다")
     void signupOutsideSignupStageIsMismatch() {
         store.save(

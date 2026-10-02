@@ -24,8 +24,10 @@ public class SignupRequest {
      *
      * <p>국제 표기(+82…)는 받지 않는다. 같은 번호가 두 표기로 각각 저장돼 UNIQUE 제약과 중복 검사를 우회하는 것을 막기 위해서다. 해외 번호가 필요해지면
      * 저장 전 정규화를 함께 도입한다.
+     *
+     * <p><b>선택 항목이다</b>(spec 014 2026-10-02). 화면은 묻지 않는다. 문자 인증과 함께 다시 받을 때를 위해 형식 검사는 남긴다 —
+     * {@code @Pattern}은 {@code null}을 통과시킨다.
      */
-    @NotBlank
     @Pattern(regexp = "^01[016789]\\d{7,8}$", message = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678")
     private String phoneNumber;
 
