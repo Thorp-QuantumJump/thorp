@@ -240,7 +240,7 @@ backend/
 
 | 판정 | 조건 | 서버 동작 | FE 이동 |
 |---|---|---|---|
-| `LOGGED_IN` | `(provider, providerUserId)`가 연결됨, 계정 `ACTIVE` | 세션 ID 교체 후 인증 저장, `lastLoginAt` 갱신 | `/auth/social/complete` |
+| `LOGGED_IN` | `(provider, providerUserId)`가 연결됨, 계정 `ACTIVE` | 세션 ID 교체 후 인증 저장, `lastLoginAt` 갱신 | 시작 요청의 `returnTo`(서버가 검증해 세션에 둔 복귀 위치, 없거나 안전하지 않으면 `/diagnosis/sectors`)로 바로 이동. 경유 화면 없음(2026-10-02) |
 | `ACCOUNT_UNAVAILABLE` | 연결됐거나 이메일로 겹친 계정이 `ACTIVE`가 아님 | 인증하지 않음, 대기 상태 만들지 않음 | `/login?social=error` (계정 상태를 드러내지 않음) |
 | `EMAIL_MISSING` | 제공자 이메일 없음 | 대기 상태 만들지 않음 | `/auth/social/email-required?provider={p}` |
 | `EMAIL_VERIFICATION` | 이메일 확인 여부 `FALSE`·`UNKNOWN` | 대기 상태(stage=`EMAIL_VERIFICATION`) | `/auth/social/verify-email` |
@@ -295,14 +295,17 @@ backend/
   이동이다. 같은 탭으로 돌아오므로 `sessionStorage`의 기존 `returnTarget`이 그대로 보존된다.
 - 버튼은 제공자 공식 디자인 가이드(카카오 노랑, 네이버 초록, 구글 흰 바탕과 로고)를 따르고
   `GET /api/auth/social/providers`가 켠 제공자만 그린다.
-- 새 route: `/auth/social/complete`(현재 사용자 재확인 후 복귀 위치로 이동), `/signup/social`(추가 정보),
-  `/auth/social/verify-email`, `/auth/social/link`, `/auth/social/email-required`, `/auth/social/already-linked`.
+- 새 route: `/signup/social`(추가 정보), `/auth/social/verify-email`, `/auth/social/link`,
+  `/auth/social/email-required`, `/auth/social/already-linked`. 기존 계정 로그인의 경유 화면(`/auth/social/complete`)은
+  두지 않는다 — 시작 주소에 `returnTo`를 실어 서버가 콜백 뒤 바로 그 자리로 보낸다(2026-10-02, 깜빡이는 전환 화면 제거).
   대기 상태를 쓰는 화면은 진입 시 `GET /api/auth/social/pending`을 읽고, 404 `SOCIAL_PENDING_NOT_FOUND`면
   "처음부터 다시" 안내를 보여준다. 대기 상태 정보는 메모리에만 둔다.
 - `/login`은 `?social=cancelled|error`를 읽어 상태 알림 영역에 안내를 띄운 뒤 쿼리를 지운다.
 - `returnTarget`의 인증 경로 목록에 `/auth/social`을 더해 소셜 화면이 복귀 위치로 저장되지 않게 한다.
-- 인증 Provider의 상태 모델은 바꾸지 않는다. 소셜 로그인 완료는 `/auth/social/complete`에서 `/auth/me`
-  재확인으로 `authenticated`가 된다.
+- 인증 Provider의 상태 모델은 바꾸지 않는다. 소셜 로그인 완료는 복귀한 화면이 켜질 때 하는 `/auth/me`
+  확인으로 `authenticated`가 된다(새로고침과 같은 경로). `returnTo`의 검증 규칙(사이트 안 상대 경로, 인증 화면 제외)은
+  FE `returnTarget.ts`와 BE `SocialAuthorizationRequestResolver`가 같은 목록을 쓴다 — 리다이렉트를 서버가 만들므로
+  서버 검증이 있어야 open redirect 가 막힌다.
 
 ### Social error codes
 
