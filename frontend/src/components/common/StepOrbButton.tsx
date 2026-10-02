@@ -21,6 +21,13 @@ type StepOrbButtonProps = Omit<
   children?: ReactNode
   /** 원이 놓이는 칸(dock)에 더할 클래스. 격자 자리와 위아래 여백은 쓰는 화면이 정한다. */
   className?: string
+  /**
+   * 다 드러났지만 아직 누를 수 없는 원(2026-10-01). 주면 원을 회색으로 두고, 마우스를 올리거나 초점이 오면 이
+   * 문장을 원 왼쪽 말풍선으로 띄운다. 남은 것이 사용자가 아직 고르지 않은 항목뿐일 때 쓴다 — 무엇을 고르면
+   * 열리는지가 원 바로 옆에서 읽힌다. `stage`는 2, `aria-disabled`는 참으로 함께 넘긴다. 말풍선은 보조기술에
+   * 숨긴다: 같은 문장을 `aria-describedby`로 가리키는 쪽이 읽힌다.
+   */
+  pendingHint?: string
   'data-action'?: string
 }
 
@@ -45,11 +52,18 @@ export function StepOrbButton({
   label,
   children,
   className,
+  pendingHint,
   ...buttonProps
 }: StepOrbButtonProps) {
   return (
     <div className={className ? `${styles.dock} ${className}` : styles.dock} data-stage={stage}>
-      <button type="button" className={styles.orb} data-stage={stage} {...buttonProps}>
+      <button
+        type="button"
+        className={styles.orb}
+        data-stage={stage}
+        data-pending={pendingHint ? 'true' : undefined}
+        {...buttonProps}
+      >
         {/*
           원의 채움·테두리·흐림은 이 장식 요소가 맡는다. 단추 자체에 흐림 가림막을 걸면 가림막이 초점 테두리까지
           잘라 내, 이 화면의 주된 행동에 초점이 왔는지 보이지 않는다(WCAG 2.4.7).
@@ -63,6 +77,11 @@ export function StepOrbButton({
         </span>
         <ArrowRight className={styles.arrow} size={16} strokeWidth={2.2} aria-hidden="true" />
       </button>
+      {pendingHint ? (
+        <span className={styles.pendingHint} aria-hidden="true">
+          {pendingHint}
+        </span>
+      ) : null}
       {children}
     </div>
   )

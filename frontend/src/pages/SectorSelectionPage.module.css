@@ -690,6 +690,7 @@
 
   display: grid;
   grid-template-areas:
+    'market .'
     'timeline .'
     'notice .'
     'card proceed';
@@ -737,6 +738,7 @@
 @media (max-width: 760px) {
   .cardRow {
     grid-template-areas:
+      'market'
       'timeline'
       'notice'
       'card'
@@ -800,13 +802,6 @@
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.72rem);
   text-align: right;
-}
-
-/* 폭이 줄면 과거 시장과 뉴스를 위아래로 둔다. */
-@media (max-width: 1180px) {
-  .context {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 900px) {
@@ -1027,13 +1022,15 @@
   }
 }
 
-/* 탐색 카드 아래 '지금 국내 시장' 띠. 이름은 왼쪽, 지수 카드는 가로로 나란히 선다. */
+/* 비교 가능 기간 위 '지금 국내 시장' 띠. 이름은 왼쪽, 지수 카드는 가로로 나란히 선다. */
 .marketStrip {
+  grid-area: market;
+  min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
+  align-items: baseline;
   gap: 12px 24px;
-  margin-top: 16px;
+  margin-bottom: var(--card-gap);
   padding: var(--thorp-pad-card, 18px);
   border: 1px solid var(--thorp-line-control);
   border-radius: var(--thorp-radius-card, 18px);
@@ -1042,7 +1039,7 @@
 
 .marketStrip h2 {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
   margin: 0;
   color: var(--thorp-muted);
@@ -1053,6 +1050,7 @@
 }
 
 .marketStrip h2 svg {
+  align-self: center;
   flex-shrink: 0;
   color: var(--thorp-accent-soft);
 }
@@ -1061,13 +1059,4 @@
   .marketStrip {
     grid-template-columns: 1fr;
   }
-}
-
-/* 투자 대상 아래 한 줄: 지금과 비슷했던 과거 시장(넓게)과 시장 흐름 뉴스. 높이는 둘 중 긴 쪽에 맞춘다. */
-.context {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
-  align-items: stretch;
-  gap: var(--thorp-flow-gap, 22px);
-  margin-top: var(--thorp-flow-gap, 22px);
 }

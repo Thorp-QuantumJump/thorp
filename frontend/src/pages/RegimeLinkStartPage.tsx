@@ -99,8 +99,8 @@ export function RegimeLinkStartPage() {
         ) : (
           <div className={styles.blocked} role="alert">
             <p>{phase.message}</p>
-            {/* 사례를 고르는 자리는 투자 대상 고르기의 '지금과 비슷했던 과거 시장'이다(002 FR-018). */}
-            <Link to="/diagnosis/sectors">과거 사례 다시 고르기</Link>
+            {/* 사례를 다시 고르는 자리는 시장 흐름의 과거 시장 카드다(009 FR-019). */}
+            <Link to="/market-flow">과거 사례 다시 고르기</Link>
           </div>
         )}
       </main>

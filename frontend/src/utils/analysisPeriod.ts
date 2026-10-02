@@ -77,7 +77,7 @@ export function checkPeriodInput(
   }
   if (start > end) return '시작일이 종료일보다 늦습니다.'
   if (!isWithin({ start, end }, range)) {
-    return `평가 가능한 범위(${range.start} ~ ${range.end}) 밖의 날짜는 고를 수 없습니다.`
+    return `평가 가능 범위(${range.start} ~ ${range.end}) 밖의 날짜입니다.`
   }
   return null
 }

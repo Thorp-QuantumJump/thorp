@@ -93,3 +93,14 @@
 @media (max-width: 800px) {
   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
 }
+
+.context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+  align-items: stretch;
+  gap: var(--thorp-flow-gap, 22px);
+  margin-top: var(--thorp-flow-gap, 22px);
+}
+@media (max-width: 1180px) {
+  .context { grid-template-columns: minmax(0, 1fr); }
+}
