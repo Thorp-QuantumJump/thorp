@@ -18,8 +18,8 @@ import styles from './MarketNow.module.css'
     ETF는 최근 가격(`GET /sectors/latest-prices`) 한 번으로 마지막 값과 직전 값을 받는다.
   - 마지막 날이 거래정지일이거나 직전 값을 옮겨 적은 날이면 등락률 대신 그 사실을 적는다. 옮겨 적은 값을 그날
     거래된 값처럼 보이지 않는다(원칙 V).
-  - 카드가 창을 넘칠 때만 끝없이 왼쪽으로 흐르고, 마우스를 올리거나 초점이 들어오면 멈춘다. 넘치지 않으면 흐르지
-    않는다. 움직임을 줄이도록 설정한 사용자에게는 흐르지 않고 손으로 넘기는 띠가 된다.
+  - 카드는 끝없이 왼쪽으로 흐르고, 마우스를 올리거나 초점이 들어오면 멈춘다. 카드가 적으면 창을 채울 만큼 줄을
+    반복한다. 움직임을 줄이도록 설정한 사용자에게는 흐르지 않고 손으로 넘기는 띠가 된다.
   - 지수와 ETF는 서로 기다리지 않고 도착하는 대로 보인다. 받지 못한 지표는 빼고, 하나도 받지 못하면 한 문장만
     남긴다. 투자 대상 고르기는 막히지 않는다.
 */
@@ -162,19 +162,23 @@ function Cards({ readings, hidden = false }: { readings: Reading[]; hidden?: boo
 }
 
 /**
- * 한 줄이 창보다 넓은지 잰다. 넓을 때만 두 벌을 이어 흘린다. 좁은데 흘리면 창 오른쪽이 비고, 한 바퀴마다
- * 카드가 처음 자리로 튄다. 그 뒤 창이나 카드 폭이 바뀌면 다시 잰다.
+ * 카드 줄을 몇 번 반복해야 창을 채우는지 잰다. 반복한 묶음 두 벌을 이어 한 묶음 폭만큼 옮기므로, 한 묶음이 창보다
+ * 좁으면 창 오른쪽이 비고 한 바퀴마다 카드가 처음 자리로 튄다. 카드가 적어도(지수 4장뿐이어도) 빈틈 없이 흐르게
+ * 묶음 폭이 창 폭 이상이 되도록 반복한다. 폭을 잴 수 없으면 한 번이다. 창이나 카드 폭이 바뀌면 다시 잰다.
  */
-function useOverflowing(active: boolean, cardCount: number) {
+function useRepeatCount(active: boolean, cardCount: number) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const [overflowing, setOverflowing] = useState(false)
+  const [repeats, setRepeats] = useState(1)
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current
     const list = listRef.current
     if (!active || !viewport || !list) return
-    const measure = () => setOverflowing(list.scrollWidth > viewport.clientWidth)
+    const measure = () => {
+      const listWidth = list.scrollWidth
+      setRepeats(listWidth > 0 ? Math.max(1, Math.ceil(viewport.clientWidth / listWidth)) : 1)
+    }
     // 처음 한 번은 그리기 전에 직접 잰다. 관찰자의 첫 알림은 숨은 탭에서 늦거나 오지 않는다.
     measure()
     // 창 크기 이벤트도 함께 받는다. 관찰자 알림이 오지 않는 환경에서도 창을 넓히고 좁힐 때 다시 잰다.
@@ -188,7 +192,7 @@ function useOverflowing(active: boolean, cardCount: number) {
     }
   }, [active, cardCount])
 
-  return { viewportRef, listRef, overflowing }
+  return { viewportRef, listRef, repeats }
 }
 
 type MarketNowProps = {
@@ -231,7 +235,7 @@ export function MarketNow({ title, sectors }: MarketNowProps) {
   const readings = [...(indexReadings ?? []), ...(etfReadings ?? [])]
   const settled = indexReadings !== null && etfReadings !== null
   const ready = readings.length > 0
-  const { viewportRef, listRef, overflowing } = useOverflowing(ready, readings.length)
+  const { viewportRef, listRef, repeats } = useRepeatCount(ready, readings.length)
 
   if (!ready) {
     return (
@@ -258,23 +262,21 @@ export function MarketNow({ title, sectors }: MarketNowProps) {
         {dates === null ? null : <p className={styles.source}>{dates}</p>}
         <p className={styles.source}>출처 {providers}</p>
       </div>
-      {/* 넘칠 때만 같은 줄을 한 번 더 이어 붙여 끊김 없이 흐르게 한다. 뒤의 줄은 보조 기술에 숨긴다. */}
-      <div
-        ref={viewportRef}
-        className={styles.viewport}
-        role="region"
-        tabIndex={0}
-        aria-label="국내 대표 지수와 ETF"
-        data-flow={overflowing ? 'on' : 'off'}
-      >
+      {/*
+        창을 채울 만큼 반복한 묶음을 두 벌 이어 붙여 끊김 없이 흐르게 한다. 보조 기술에는 첫 줄만 읽히고 반복한
+        줄은 숨긴다.
+      */}
+      <div ref={viewportRef} className={styles.viewport} role="region" tabIndex={0} aria-label="국내 대표 지수와 ETF">
         <div
           className={styles.track}
-          style={{ '--ticker-duration': `${readings.length * SECONDS_PER_CARD}s` } as CSSProperties}
+          style={{ '--ticker-duration': `${readings.length * repeats * SECONDS_PER_CARD}s` } as CSSProperties}
         >
-          <div ref={listRef} className={styles.copy}>
+          <div ref={listRef}>
             <Cards readings={readings} />
           </div>
-          {overflowing ? <Cards readings={readings} hidden /> : null}
+          {Array.from({ length: repeats * 2 - 1 }, (_, index) => (
+            <Cards key={index} readings={readings} hidden />
+          ))}
         </div>
       </div>
     </>
