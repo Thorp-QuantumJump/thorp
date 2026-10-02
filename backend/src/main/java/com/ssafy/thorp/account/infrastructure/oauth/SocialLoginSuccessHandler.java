@@ -53,9 +53,11 @@ public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException {
         boolean linkIntent = takeLinkIntent(request);
+        // 로그인 판정이 아니어도 꺼내 지운다 — 다음 시작이 이전 자리로 튀지 않게.
+        String returnTarget = SocialAuthorizationRequestResolver.takeReturnTarget(request);
         String target;
         try {
-            target = handle(request, response, authentication, linkIntent);
+            target = handle(request, response, authentication, linkIntent, returnTarget);
         } catch (RuntimeException unexpected) {
             log.error("Social login callback failed", unexpected);
             authenticationService.dropAuthentication(request, response);
@@ -69,7 +71,8 @@ public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletRequest request,
             HttpServletResponse response,
             Authentication authentication,
-            boolean linkIntent) {
+            boolean linkIntent,
+            String returnTarget) {
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
         SocialProviderAdapter adapter =
                 registrations
@@ -84,7 +87,8 @@ public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
                         .startSession(outcome.userId(), request, response)
                         .isPresent()) {
             log.info("Social login: userId={}, provider={}", outcome.userId(), outcome.provider());
-            return "/auth/social/complete";
+            // 경유 화면 없이 시작할 때 적은 자리로 바로 간다(FR-011). FE 는 켜질 때 하는 현재 사용자 확인으로 상태를 맞춘다.
+            return returnTarget;
         }
 
         authenticationService.dropAuthentication(request, response);

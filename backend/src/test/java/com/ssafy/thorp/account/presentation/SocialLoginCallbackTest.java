@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.ssafy.thorp.account.domain.model.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
@@ -19,12 +21,12 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
     private static final long KAKAO_ID = 4100000001L;
 
     @Test
-    @DisplayName("연결된 카카오 계정은 세션 식별자를 바꿔 로그인하고 완료 화면으로 보낸다")
+    @DisplayName("연결된 카카오 계정은 세션 식별자를 바꿔 로그인하고 시작할 때 적은 자리로 바로 보낸다")
     void linkedAccountLogsInWithRotatedSession() throws Exception {
         User owner = saveUser(PREFIX + "linked@example.com", "01099000001", "password123");
         linkKakao(owner.getId(), KAKAO_ID);
 
-        String state = startKakao("");
+        String state = startKakaoReturningTo("/results/BT-1?tab=cost#summary");
         String anonymousSession = cookies.get("THORP_SESSION").getValue();
         NEXT_USER.putAll(kakaoUser(KAKAO_ID, PREFIX + "linked@example.com", true, "카카오"));
         MvcResult callback =
@@ -33,11 +35,50 @@ class SocialLoginCallbackTest extends SocialLoginIntegrationTestSupport {
                                 .param("code", "it-code")
                                 .param("state", state));
 
-        assertThat(pathOf(callback)).isEqualTo("/auth/social/complete");
+        assertThat(pathOf(callback)).isEqualTo("/results/BT-1?tab=cost#summary");
         assertThat(cookies.get("THORP_SESSION").getValue()).isNotEqualTo(anonymousSession);
         MvcResult me = send(get("/auth/me"));
         assertThat(me.getResponse().getStatus()).isEqualTo(200);
         assertThat(me.getResponse().getContentAsString()).contains("\"userId\":" + owner.getId());
+    }
+
+    @Test
+    @DisplayName("돌아갈 자리를 적지 않고 시작한 로그인은 기본 복귀 위치로 보낸다")
+    void linkedAccountWithoutReturnTargetGoesToDefault() throws Exception {
+        User owner = saveUser(PREFIX + "linked2@example.com", "01099000011", "password123");
+        linkKakao(owner.getId(), KAKAO_ID);
+
+        String target =
+                loginWithKakao(kakaoUser(KAKAO_ID, PREFIX + "linked2@example.com", true, "카카오"));
+
+        assertThat(target).isEqualTo("/diagnosis/sectors");
+    }
+
+    @ParameterizedTest(name = "returnTo={0}")
+    @ValueSource(
+            strings = {
+                "//evil.example/x",
+                "https://evil.example/x",
+                "/login",
+                "/signup/social",
+                "/auth/social/link",
+                "relative/path",
+                "/with\backslash"
+            })
+    @DisplayName("사이트 밖이거나 인증 화면인 돌아갈 자리는 기본 복귀 위치로 바꾼다")
+    void unsafeReturnTargetFallsBackToDefault(String returnTo) throws Exception {
+        User owner = saveUser(PREFIX + "linked3@example.com", "01099000012", "password123");
+        linkKakao(owner.getId(), KAKAO_ID);
+
+        String state = startKakaoReturningTo(returnTo);
+        NEXT_USER.putAll(kakaoUser(KAKAO_ID, PREFIX + "linked3@example.com", true, "카카오"));
+        MvcResult callback =
+                send(
+                        get("/auth/oauth2/callback/kakao")
+                                .param("code", "it-code")
+                                .param("state", state));
+
+        assertThat(pathOf(callback)).isEqualTo("/diagnosis/sectors");
     }
 
     @Test
