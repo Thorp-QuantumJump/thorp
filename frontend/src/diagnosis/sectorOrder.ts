@@ -53,3 +53,14 @@ export function compareSectorsForDisplay(left: SectorSummary, right: SectorSumma
 export function sortSectorsForDisplay(sectors: readonly SectorSummary[]): SectorSummary[] {
   return [...sectors].sort(compareSectorsForDisplay)
 }
+
+/**
+ * '지금 국내 시장' 띠의 ETF 순서. 국내 시장을 대표하는 반도체를 맨 앞에 두고, 나머지는 받은 순서(표시 순서)를
+ * 따른다(002 FR-018, 2026-10-02 사용자 결정). 목록의 표시 순서와 M3의 잔여분 자리는 바꾸지 않는다.
+ */
+export const MARKET_STRIP_LEAD_SECTOR_CODE = 'SEMICONDUCTOR'
+
+export function orderSectorsForMarketStrip(sectors: readonly SectorSummary[]): SectorSummary[] {
+  const lead = sectors.filter((sector) => sector.code === MARKET_STRIP_LEAD_SECTOR_CODE)
+  return [...lead, ...sectors.filter((sector) => sector.code !== MARKET_STRIP_LEAD_SECTOR_CODE)]
+}

@@ -261,15 +261,19 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           */}
           <div className={styles.cardRow}>
             {/*
-              지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-              비교 가능 기간 바로 위에 같은 폭으로 지수를 가로로 펼친다.
+              지금 국내 시장(대표 지수와 섹터 대표 ETF, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+              비교 가능 기간 바로 위에 같은 폭으로 두고, 카드는 띠 안에서 가로로 흐른다.
             */}
             <section className={styles.marketStrip} aria-labelledby="market-now-title">
-              <h2 id="market-now-title">
-                <ChartNoAxesCombined size={14} aria-hidden="true" />
-                지금 국내 시장
-              </h2>
-              <MarketNow />
+              <MarketNow
+                sectors={sectors}
+                title={
+                  <h2 id="market-now-title">
+                    <ChartNoAxesCombined size={14} aria-hidden="true" />
+                    지금 국내 시장
+                  </h2>
+                }
+              />
             </section>
             <AvailabilityTimeline
               className={`${styles.timeline} ${styles.rowTimeline}`}
