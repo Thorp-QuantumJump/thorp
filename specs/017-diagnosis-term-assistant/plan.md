@@ -176,7 +176,7 @@ frontend/src/pages/SectorSelectionPage.tsx, StrategySettingsPage.tsx   # 맥락 
   - `AssistantPageKind = 'RESULT' | 'SECTOR_SELECTION' | 'STRATEGY_SETTINGS'`
   - `AssistantContext`는 판별 union이다. `RESULT`만 `publicToken`을 갖는다.
   - 대화 초기화 키는 `kind + (publicToken ?? '')`다.
-- 문구는 `assistantCopy.ts`의 종류별 표 하나에 둔다. 머리글, 첫 전송 전 안내, 예시 질문 2~3개, 입력 안내다. 결과 화면 문구는 지금 값을 그대로 옮긴다.
+- 문구는 `assistantCopy.ts`의 종류별 표 하나에 둔다. 머리글, 첫 전송 전 안내, 예시 질문 2~3개, 입력 안내다. 결과 화면 문구는 지금 값을 그대로 옮긴다. 진단 화면의 예시 질문은 등록표·섹터 목록만으로 답할 수 있는 것만 쓴다(spec FR-002, SC-007). 섹터 이름이 들어가는 예시는 현재 대응표에 있는 섹터로 고르고, 묶음 5 표본에 그대로 넣는다.
 - `relatedArticles`가 있으면 답 아래에 `배우기: {title}` 연결을 보인다. 이동은 `/learn/{articleId}`, `state.returnTo`다. 이 규칙은 `TermHelp`와 같고, 013의 '하던 진단으로 돌아가기'를 그대로 쓴다.
 - 등록:
   - `SectorSelectionPage`: `useAssistantPageContext({kind:'SECTOR_SELECTION'})`
