@@ -14,14 +14,11 @@
   line-height: 1.35;
 }
 
+/* 양 끝을 배경으로 흐리게 녹여, 카드가 창 밖에서 들어오고 나가는 모양으로 보이게 한다. */
 .viewport {
   min-width: 0;
   overflow: hidden;
   border-radius: var(--thorp-radius-inset, 8px);
-}
-
-/* 흐를 때만 양 끝을 배경으로 흐리게 녹여, 카드가 창 밖에서 들어오고 나가는 모양으로 보이게 한다. */
-.viewport[data-flow='on'] {
   mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
 }
 
@@ -30,33 +27,19 @@
   outline-offset: 2px;
 }
 
-/* 같은 줄 두 벌을 잇고 한 벌의 폭만큼 옮긴다. 다 옮기면 처음과 같은 모양이라 끊김이 보이지 않는다. */
+/*
+  창을 채울 만큼 반복한 묶음 두 벌을 잇고 한 묶음의 폭(전체의 절반)만큼 옮긴다. 다 옮기면 처음과 같은 모양이라
+  끊김이 보이지 않는다.
+*/
 .track {
   display: flex;
-}
-
-.viewport[data-flow='on'] .track {
   width: max-content;
   animation: market-ticker var(--ticker-duration, 40s) linear infinite;
 }
 
-.viewport[data-flow='on']:hover .track,
-.viewport[data-flow='on']:focus-within .track {
+.viewport:hover .track,
+.viewport:focus-within .track {
   animation-play-state: paused;
-}
-
-/* 넘치지 않으면 흐르지 않고, 카드가 창 폭을 나눠 채운다. */
-.viewport[data-flow='off'] .copy {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.viewport[data-flow='off'] .cards {
-  padding-right: 0;
-}
-
-.viewport[data-flow='off'] .card {
-  flex: 1 1 auto;
 }
 
 @keyframes market-ticker {
@@ -141,15 +124,14 @@
   white-space: nowrap;
 }
 
-/* 움직임을 줄이도록 설정했으면 흐르지 않고 손으로 넘기는 띠가 된다. 이어 붙인 두 번째 줄은 감춘다. */
+/* 움직임을 줄이도록 설정했으면 흐르지 않고 손으로 넘기는 띠가 된다. 반복한 줄은 모두 감춘다. */
 @media (prefers-reduced-motion: reduce) {
-  .viewport,
-  .viewport[data-flow='on'] {
+  .viewport {
     overflow-x: auto;
     mask-image: none;
   }
 
-  .viewport[data-flow='on'] .track {
+  .track {
     animation: none;
   }
 
