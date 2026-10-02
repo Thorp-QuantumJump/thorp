@@ -127,6 +127,37 @@ export type PriceSeries = {
 }
 
 /**
+ * `GET /sectors/latest-prices`의 섹터 하나. 마지막 거래일 수정종가와 그 직전 거래일 값이다.
+ *
+ * **직전 값은 함께 비거나 함께 찬다.** 거래일이 하루뿐이면 둘 다 `null`이다. 0이나 같은 값으로 채우지 않는다.
+ * 마지막 날이 거래정지일이거나 직전 값을 옮겨 적은 날이면 그 표시가 함께 온다(원칙 V).
+ */
+export type LatestPrice = {
+  sectorCode: string
+  instrumentId: string
+  name: string
+  /** ISO 날짜 문자열(`YYYY-MM-DD`). */
+  date: string
+  adjustedClose: string
+  tradingSuspended: boolean
+  priceCarriedForward: boolean
+  previousDate: string | null
+  previousAdjustedClose: string | null
+}
+
+/** `GET /sectors/latest-prices` 응답을 camelCase로 1:1 옮긴 타입이다. */
+export type LatestPrices = {
+  mapVersion: string
+  datasetId: string
+  dataDeadline: string
+  isSample: boolean
+  /** 열린 대응표의 섹터 순서다. 가격이 있는 섹터만 담는다. */
+  prices: LatestPrice[]
+  /** 그 자료 버전에 가격이 한 행도 없는 섹터다. */
+  missingSectorCodes: string[]
+}
+
+/**
  * 섹터 도메인이 내보내는 서버 오류 신호 이름이다.
  *
  * 값의 원본은 백엔드의 `SectorExceptionHandler`이며 그 파일에 있는 넷을 그대로 옮겼다.
