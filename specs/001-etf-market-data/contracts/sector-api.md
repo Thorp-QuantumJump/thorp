@@ -2,7 +2,7 @@
 
 **근거**: [spec.md](../spec.md) FR-001·FR-002·FR-011·FR-015, User Story 1·3
 
-FRONT가 섹터 선택 화면(002)과 결과의 근거 패널(005)에서 쓰는 조회 계약이다. 가격 시계열은 이 계약으로 내보내지 않는다.
+FRONT가 섹터 선택 화면(002)과 결과의 근거 패널(005)에서 쓰는 조회 계약이다. 가격은 대표 ETF의 가격 흐름(`price-series`)과 최근 가격(`latest-prices`) 두 조회로만 내보낸다.
 
 ## 공통 규칙
 
@@ -117,6 +117,46 @@ User Story 3의 펼쳐 보는 층이다.
 
 **Backend가 시계열을 읽는 유일한 자리다.** plan.md는 "시계열을 읽는 것은 워커이고 Backend는 메타데이터만 본다"고 정했는데, 그 전제는 시계열을 쓰는 곳이 계산뿐이었다는 것이다. 고르기 전에 흐름을 보여 달라는 요구는 조회이고 워커는 메시지를 받아 도는 쪽이라 화면의 물음에 답할 수 없다. 계산은 여전히 워커가 한다.
 
+## GET /sectors/latest-prices — 섹터 대표 ETF의 최근 가격
+
+투자 대상 고르기의 '지금 국내 시장' 띠가 쓴다([002](../../002-sector-weight-selection/spec.md) FR-018). 섹터마다 가격 흐름 전체를 받아 마지막 두 점만 쓰던 자리를 요청 한 번으로 줄인다.
+
+```json
+{
+  "mapVersion": "SEM-2026-09-10-001",
+  "datasetId": "KRX_DAILY_20260922",
+  "dataDeadline": "2026-09-22T06:30:00Z",
+  "isSample": true,
+  "prices": [
+    {
+      "sectorCode": "CONSTRUCTION",
+      "instrumentId": "117700.XKRX",
+      "name": "KODEX 건설",
+      "date": "2026-09-18",
+      "adjustedClose": "10500.00000000",
+      "tradingSuspended": false,
+      "priceCarriedForward": false,
+      "previousDate": "2026-09-17",
+      "previousAdjustedClose": "10250.50000000"
+    }
+  ],
+  "missingSectorCodes": ["BANK"]
+}
+```
+
+| 필드 | 근거 |
+|---|---|
+| `prices[]` | 열린 대응표의 섹터 순서를 따른다. 가격이 있는 섹터만 담는다 |
+| `adjustedClose`·`date` | 그 자료 버전에서 가장 늦은 거래일의 수정종가다. 같은 섹터의 `price-series` 마지막 점과 늘 같다 |
+| `previousDate`·`previousAdjustedClose` | 그 직전 거래일 값이다. 거래일이 하루뿐이면 **둘 다 `null`이다** — 0이나 같은 값으로 채우면 "변화 없음"으로 읽힌다 |
+| `tradingSuspended`·`priceCarriedForward` | 마지막 날의 표시다. 그 날 값이 직전 값을 옮겨 적은 것일 수 있다(원칙 V) |
+| `missingSectorCodes` | 그 자료 버전에 가격이 한 행도 없는 섹터다. 조용히 빼지 않는다 |
+| `datasetId`·`dataDeadline`·`isSample` | `price-series`와 같은 뜻이며 값을 고르는 규칙도 같다 |
+
+**등락률을 계산하지 않는다.** 직전 값을 그대로 싣고 무엇과 견줄지는 보는 쪽이 정한다. `price-series`가 수익률로 바꾸지 않는 것과 같은 판단이다.
+
+**일부 섹터에 가격이 없으면 200이고, 어느 섹터에도 없으면 409 `PRICE_SERIES_NOT_READY`다.** 띠는 받은 것만 보이면 되므로 한 섹터의 적재 지연이 나머지를 막지 않는다. 고를 자료 버전이 없을 때도 같은 409다.
+
 ## GET /sectors/evaluation-window — 공통 평가 가능 기간
 
 003의 "이 조합은 언제부터 비교 가능합니다" 안내가 쓴다. 산식과 경계 동작은 [evaluation-window.md](./evaluation-window.md)가 기준이며, 이 엔드포인트는 그 산식의 HTTP 표면이다.
@@ -196,7 +236,7 @@ User Story 3의 펼쳐 보는 층이다.
 | 없는 섹터 코드 | 404 | `SECTOR_NOT_FOUND` |
 | 대응표가 발행되지 않음 | 409 | `SECTOR_MAP_NOT_READY` |
 | 대표 상품 정보가 아직 만들어지지 않음 | 409 | `INSTRUMENT_PROFILE_NOT_READY` |
-| 가격 자료가 아직 적재되지 않음 | 409 | `PRICE_SERIES_NOT_READY` |
+| 가격 자료가 아직 적재되지 않음(최근 가격은 어느 섹터에도 없을 때) | 409 | `PRICE_SERIES_NOT_READY` |
 | 후보 목록이 빈 요청 | 400 | 검증 실패 |
 | 평가 기간 산출 자료가 아직 없음 | 409 | `EVALUATION_WINDOW_NOT_READY` |
 | 등록되지 않은 전략 | 422 | `STRATEGY_NOT_REGISTERED` |

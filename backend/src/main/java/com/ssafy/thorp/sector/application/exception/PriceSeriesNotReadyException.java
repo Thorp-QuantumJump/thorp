@@ -11,4 +11,13 @@ public class PriceSeriesNotReadyException extends RuntimeException {
     public PriceSeriesNotReadyException(String sectorCode) {
         super("섹터 " + sectorCode + "의 가격 자료가 아직 준비되지 않았다");
     }
+
+    private PriceSeriesNotReadyException() {
+        super("대표 ETF의 가격 자료가 아직 준비되지 않았다");
+    }
+
+    /** 최근 가격 묶음에서 어느 섹터에도 가격이 없을 때다. 빈 목록을 내보내지 않는다. */
+    public static PriceSeriesNotReadyException forAllSectors() {
+        return new PriceSeriesNotReadyException();
+    }
 }

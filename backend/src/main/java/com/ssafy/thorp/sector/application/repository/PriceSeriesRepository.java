@@ -1,6 +1,8 @@
 package com.ssafy.thorp.sector.application.repository;
 
+import com.ssafy.thorp.sector.application.result.LatestPricesResult;
 import com.ssafy.thorp.sector.application.result.PriceSeriesResult;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -25,4 +27,15 @@ public interface PriceSeriesRepository {
      *     다룬다
      */
     Optional<PriceSeriesResult> findCurrentSeries(String mapVersion, String instrumentId);
+
+    /**
+     * 여러 종목의 가장 늦은 거래일 값과 그 직전 거래일 값.
+     *
+     * <p>자료 버전은 {@link #findCurrentSeries}와 <b>같은 규칙</b>으로 고른다. 규칙이 다르면 띠의 마지막 값과 그 종목 그래프의 끝점이
+     * 어긋난다.
+     *
+     * @return 고를 자료 버전이 없으면 {@link Optional#empty()}. 있으면 가격이 있는 종목만 담는다(빈 맵일 수 있다)
+     */
+    Optional<LatestPricesResult.Snapshot> findLatestPrices(
+            String mapVersion, Collection<String> instrumentIds);
 }
