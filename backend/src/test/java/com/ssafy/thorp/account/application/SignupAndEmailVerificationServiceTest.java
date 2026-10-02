@@ -94,6 +94,22 @@ class SignupAndEmailVerificationServiceTest {
     }
 
     @Test
+    void signupWithoutPhoneSkipsPhoneChecksAndStoresNoNumber() {
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(Optional.of(verified(CANONICAL_EMAIL)));
+        when(passwordEncoder.encode("password123")).thenReturn("password-hash");
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> savedUser(invocation.getArgument(0)));
+
+        signup(CANONICAL_EMAIL, null);
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().getPhoneNumber()).isNull();
+        verify(userRepository, never()).existsByPhoneNumber(any());
+    }
+
+    @Test
     void signupRejectsInvalidPhoneAtServiceBoundary() {
         assertBusinessCode(
                 () ->

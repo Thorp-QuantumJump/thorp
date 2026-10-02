@@ -447,6 +447,22 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
         return builder.contentType(MediaType.APPLICATION_JSON).content(body);
     }
 
+    @Test
+    @DisplayName("소셜 가입은 휴대폰 번호 없이 닉네임만으로 마치고 계정의 번호는 비어 있다")
+    void signupWithoutPhoneNumber() throws Exception {
+        String email = PREFIX + "nophone@example.com";
+        loginWithKakao(kakaoUser(KAKAO_ID, email, true, "카카오닉"));
+
+        data(sendWithCsrf(json(post("/auth/social/signup"), "{\"nickname\":\"새회원\"}")), 201);
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select phone_number is null from users where email = ?",
+                                Boolean.class,
+                                email))
+                .isTrue();
+    }
+
     private static String signupBody(String nickname, String phone) {
         return "{\"nickname\":\"" + nickname + "\",\"phoneNumber\":\"" + phone + "\"}";
     }
