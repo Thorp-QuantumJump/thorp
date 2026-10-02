@@ -146,6 +146,24 @@ describe('MarketFlowPage', () => {
     expect(fetchMarketNewsDigests).toHaveBeenCalled()
   })
 
+  it('과거 사례·뉴스를 화면 머리 바로 아래 두고, 분야 메뉴는 구역 제목과 함께 그 아래 둔다', async () => {
+    vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
+    vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })
+    renderWithRouter(<MarketFlowPage />)
+    const [firstField] = await screen.findAllByRole('button', { name: /분야 열기/ })
+
+    const pageTitle = screen.getByRole('heading', { level: 1, name: '지금 시장과 닮은 과거를 찾아보세요.' })
+    const pastTitle = screen.getByRole('heading', { name: '지금과 비슷했던 과거 시장' })
+    const newsTitle = screen.getByRole('heading', { name: '뉴스' })
+    const fieldTitle = screen.getByRole('heading', { level: 2, name: '시장 흐름을 분야별로 확인하세요.' })
+    const follows = (earlier: Node, later: Node) => Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(follows(pageTitle, pastTitle)).toBe(true)
+    expect(follows(newsTitle, fieldTitle)).toBe(true)
+    expect(follows(fieldTitle, firstField)).toBe(true)
+    // 분야 구역은 보이는 구역 제목으로 이름을 얻는다.
+    expect(screen.getByRole('region', { name: '시장 흐름을 분야별로 확인하세요.' }).contains(firstField)).toBe(true)
+  })
+
   describe('시장 흐름의 과거 사례와 뉴스', () => {
     it('과거 사례와 뉴스를 보이고 투자 대상과 국내 시장 참고 정보는 옮기지 않는다', async () => {
       vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })
