@@ -267,9 +267,9 @@ backend/
 
 ### Signup and link rules
 
-- 소셜 가입(`POST /auth/social/signup`)은 닉네임·휴대폰 번호만 받는다. 이메일은 대기 상태의 확인된 이메일을
+- 소셜 가입(`POST /auth/social/signup`)은 닉네임과 선택 항목인 휴대폰 번호만 받는다(화면은 번호를 보내지 않는다, 2026-10-02). 이메일은 대기 상태의 확인된 이메일을
   정규형으로 쓰고 `password_hash`는 `NULL`로 저장한다. 사용자 생성과 `social_accounts` 연결은 한 트랜잭션이다.
-- 휴대폰 번호가 다른 계정에서 쓰이면 계정을 만들지 않는다. 대기 상태를 stage=`LINK`, 대상 계정=번호 소유 계정,
+- 번호가 실려 왔고 그 번호가 다른 계정에서 쓰이면 계정을 만들지 않는다. 대기 상태를 stage=`LINK`, 대상 계정=번호 소유 계정,
   `linkReason=PHONE`으로 바꾸고 409 `SOCIAL_LINK_REQUIRED`를 돌려준다. 그 대상 계정에 같은 제공자의 다른 계정이
   연결돼 있으면 409 `SOCIAL_PROVIDER_ALREADY_LINKED`다. `linkReason=PHONE`이면 제공자 이메일 확인을 소유 확인으로
   인정하지 않는다. 번호로 찾은 계정이 `ACTIVE`가 아니면 연결을 권하지 않고 400 `SOCIAL_SIGNUP_REJECTED`로
