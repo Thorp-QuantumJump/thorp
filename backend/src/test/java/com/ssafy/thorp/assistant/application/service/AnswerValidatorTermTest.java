@@ -47,7 +47,7 @@ class AnswerValidatorTermTest {
 
     private AnswerValidator.Rendered render(AnswerPart... parts) {
         return validator.render(
-                new ModelDraft(AnswerStatus.ANSWERED, List.of(parts)), FACTS, Policy.TERM);
+                new ModelDraft(AnswerStatus.ANSWERED, List.of(parts)), FACTS, Policy.TERM, 0);
     }
 
     private static AnswerPart part(String text, String... factIds) {
@@ -84,7 +84,16 @@ class AnswerValidatorTermTest {
                 "두 번째로 변동성을 재요.|F2|true",
                 "기간은 몇 %인가요?|F2|false",
                 "자세한 건 https://example.com 에 있어요.|F2|false",
-                "금액은 ₩ 단위예요.|F2|false"
+                "금액은 ₩ 단위예요.|F2|false",
+                "열다섯 거래일을 봐요.|F2|false",
+                "스물두 개 섹터를 봐요.|F2|false",
+                "두 가지 방식으로 나눠요.|F2|true",
+                "한 번 정한 비중으로 되돌려요.|F2|true",
+                "40 원칙에 따라 나눠요.|F1|true",
+                "20 일반 거래일과 같아요.|F2|true",
+                "과거 20 거래일을 봐요.|F2|true",
+                "두 주식을 비교하지 않아요.|F2|true",
+                "1，000원까지예요.|F1|false"
             })
     @DisplayName("숫자·한글 수량 토큰은 그 문장이 가리킨 근거 원문에 같은 표기로 있어야 한다(전각은 반각과 같다)")
     void quotedNumbers(String text, String factId, boolean passes) {
@@ -133,7 +142,8 @@ class AnswerValidatorTermTest {
                                         new ModelDraft(
                                                 AnswerStatus.INSUFFICIENT_EVIDENCE, List.of()),
                                         FACTS,
-                                        Policy.TERM)
+                                        Policy.TERM,
+                                        0)
                                 .answer())
                 .isEqualTo("이 사이트 자료로는 확인할 수 없어요.");
         assertThat(
@@ -141,7 +151,8 @@ class AnswerValidatorTermTest {
                                 .render(
                                         new ModelDraft(AnswerStatus.OUT_OF_SCOPE, List.of()),
                                         FACTS,
-                                        Policy.TERM)
+                                        Policy.TERM,
+                                        0)
                                 .answer())
                 .isEqualTo(
                         "이 도우미는 이 사이트에 나오는 용어와 설정의 뜻을 설명해요. 무엇을 고를지는 정해 드리지 않고, 백테스트 결과는 결과 화면에서 물어볼 수 있어요.");
@@ -150,7 +161,8 @@ class AnswerValidatorTermTest {
                                 .render(
                                         new ModelDraft(AnswerStatus.GREETING, List.of()),
                                         FACTS,
-                                        Policy.TERM)
+                                        Policy.TERM,
+                                        0)
                                 .answer())
                 .isEqualTo("안녕하세요. 이 화면에 나오는 용어를 물어보세요. 예: 역변동성은 어떻게 비중을 정해?");
     }
@@ -169,8 +181,21 @@ class AnswerValidatorTermTest {
                                                 AnswerStatus.ANSWERED,
                                                 List.of(part("최대 40%까지예요.", "F1"))),
                                         FACTS,
-                                        Policy.RESULT)
+                                        Policy.RESULT,
+                                        0)
                                 .rejectedBy())
                 .isEqualTo(Rejection.PLACEHOLDER);
+    }
+
+    @Test
+    @DisplayName("길이 상한은 서버가 붙일 접두 길이를 미리 뺀 값으로 검사한다")
+    void reservedPrefixLengthCountsTowardLimit() {
+        String text = "가".repeat(590);
+        ModelDraft draft = new ModelDraft(AnswerStatus.ANSWERED, List.of(part(text, "F2")));
+
+        assertThat(validator.render(draft, FACTS, Policy.TERM, 0).status())
+                .isEqualTo(AnswerStatus.ANSWERED);
+        assertThat(validator.render(draft, FACTS, Policy.TERM, 30).rejectedBy())
+                .isEqualTo(Rejection.LENGTH);
     }
 }

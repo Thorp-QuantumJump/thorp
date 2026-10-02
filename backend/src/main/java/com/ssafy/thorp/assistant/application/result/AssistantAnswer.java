@@ -14,10 +14,4 @@ public record AssistantAnswer(
         String answer,
         List<Evidence> evidence,
         PageKind page,
-        List<RelatedArticle> relatedArticles) {
-
-    public AssistantAnswer(
-            AnswerStatus status, String answer, List<Evidence> evidence, PageKind page) {
-        this(status, answer, evidence, page, List.of());
-    }
-}
+        List<RelatedArticle> relatedArticles) {}

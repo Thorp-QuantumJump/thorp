@@ -84,7 +84,10 @@ public class AssistantQuestionService {
         if (command.extraContextKeys() != null && !command.extraContextKeys().isEmpty()) {
             throw new BusinessException(
                     ErrorCode.INVALID_INPUT,
-                    "context 에는 " + kind + " 의 식별자 하나만 둡니다: " + command.extraContextKeys());
+                    (kind.requiresPublicToken()
+                                    ? "context 에는 " + kind + " 의 식별자 하나만 둡니다: "
+                                    : "context 에는 kind 만 둡니다: ")
+                            + command.extraContextKeys());
         }
         String question = command.question() == null ? "" : command.question().strip();
         if (question.isEmpty() || question.length() > settings.maxQuestionLength()) {
@@ -130,7 +133,11 @@ public class AssistantQuestionService {
         long started = System.nanoTime();
         ToolLoop.Outcome outcome = loop.run(model.getObject(), kind, question, bundle, deadline);
         AnswerValidator.Rendered rendered =
-                validator.render(outcome.draft(), outcome.facts(), AnswerValidator.Policy.of(kind));
+                validator.render(
+                        outcome.draft(),
+                        outcome.facts(),
+                        AnswerValidator.Policy.of(kind),
+                        reservedPrefixLength(bundle));
         String answer = prefixed(rendered, bundle) + rendered.answer();
         log.info(
                 "assistant answered: kind={} draftStatus={} status={} rejectedBy={} rounds={} facts={} latencyMs={}",
@@ -163,6 +170,15 @@ public class AssistantQuestionService {
             }
         }
         return prefix.toString();
+    }
+
+    /**
+     * 진단 화면 접두가 붙을 수 있는 최대 길이. 검증기가 답 길이 상한에서 미리 빼서, 접두를 붙인 최종 답도 상한을 넘지 않게 한다(계약 §2.4). 결과 화면의 부분
+     * 결과 접두는 015 계약대로 상한 밖이라 넣지 않는다.
+     */
+    private static int reservedPrefixLength(EvidenceBundle bundle) {
+        return (bundle.registryProvisional() ? REGISTRY_PROVISIONAL_PREFIX.length() : 0)
+                + (bundle.sectorSample() ? SECTOR_SAMPLE_PREFIX.length() : 0);
     }
 
     private static boolean uses(AnswerValidator.Rendered rendered, EvidenceSourceType type) {

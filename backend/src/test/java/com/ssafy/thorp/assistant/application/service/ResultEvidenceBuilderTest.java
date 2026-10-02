@@ -74,7 +74,9 @@ class ResultEvidenceBuilderTest {
                     60,
                     30,
                     600,
-                    5);
+                    5,
+                    5,
+                    40);
 
     private final PublicResultService publicResults = mock(PublicResultService.class);
     private final SectorService sectors = mock(SectorService.class);

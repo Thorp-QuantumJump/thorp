@@ -125,12 +125,13 @@ class ToolLoopEnumArgumentTest {
     }
 
     @Test
-    @DisplayName("결과 화면 대화는 종류를 따로 주지 않아도 RESULT 다")
+    @DisplayName("결과 화면 대화는 RESULT 종류로 모델에 간다")
     void resultConversationDefaultsToResult() {
         ScriptedModel model = new ScriptedModel(turn -> ToolLoopTest.draft());
 
         loop.run(
                 model,
+                PageKind.RESULT,
                 "수익률은?",
                 new EvidenceBundle(List.of(ToolLoopTest.fact("x", "1")), List.of(), null),
                 new Deadline(clock, ToolLoopTest.SETTINGS.totalBudget()));

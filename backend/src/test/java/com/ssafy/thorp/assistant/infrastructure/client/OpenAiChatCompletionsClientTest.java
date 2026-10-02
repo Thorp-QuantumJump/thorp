@@ -128,7 +128,7 @@ class OpenAiChatCompletionsClientTest {
     }
 
     static Conversation question(String question) {
-        return new Conversation(question, List.of());
+        return new Conversation(PageKind.RESULT, question, List.of());
     }
 
     @Test
@@ -272,7 +272,7 @@ class OpenAiChatCompletionsClientTest {
                                 ToolResult.unavailable("call_2", "사용할 수 없음: 그런 도구가 없습니다")));
         List<Evidence> facts = List.of(FACTS.get(0), FACTS.get(1), fromTool);
 
-        step(new Conversation("그날 자산은?", List.of(exchange)), facts, TOOLS);
+        step(new Conversation(PageKind.RESULT, "그날 자산은?", List.of(exchange)), facts, TOOLS);
 
         JsonNode messages = received.get(0).get("messages");
         assertThat(messages)

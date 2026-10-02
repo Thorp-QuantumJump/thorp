@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -65,21 +66,46 @@ public class AnswerValidator {
     /** 계약 §2.4 수량 단위 목록. 긴 단위부터 맞춘다({@code 거래일}→{@code 일}, {@code 개월}→{@code 개}). */
     private static final String UNITS = "거래일|개월|가지|종목|섹터|%|％|원|개|번|일|주|년";
 
-    private static final String COUNT_UNITS = "거래일|개월|가지|종목|섹터|개|번|일|주|년";
+    /**
+     * 한글 수사 뒤의 수량 단위(계약 §2.4). {@code 가지}는 뺀다 — "두 가지 방식"처럼 근거 밖 수량이 아니라 문장 구조로 쓰이는 일이 대부분이라 맞는 답을
+     * 버리게 된다.
+     */
+    private static final String COUNT_UNITS = "거래일|개월|종목|섹터|개|번|일|주|년";
 
-    /** 아라비아 숫자 덩어리와 바로 붙거나 한 칸 뒤의 단위. 끝의 쉼표·마침표는 숫자에 넣지 않는다. */
-    private static final Pattern NUMBER_TOKEN =
-            Pattern.compile("[0-9０-９](?:[0-9０-９.,]*[0-9０-９])?(?:\\s?(?:" + UNITS + "))?");
+    /** 단위 뒤에 올 수 있는 것: 끝, 한글이 아닌 글자, 조사. 단위 글자로 시작하는 다른 낱말("원칙"·"일반"·"개념"·"주식")을 단위로 읽지 않게 한다. */
+    private static final String AFTER_UNIT =
+            "(?=$|[^가-힣]|을|를|이|가|은|는|의|에|까지|부터|동안|씩|로|으로|와|과|만|도|간|마다)";
 
     /**
-     * 어절 첫머리의 고유어 수사 + 수량 단위. 서수({@code 두 번째})는 뺀다. 한자어 수사는 {@code 이번}·{@code 일주} 같은 일반 낱말과 겹쳐 대상이
-     * 아니다(계약 §2.4).
+     * 아라비아 숫자 덩어리와 단위. 단위가 숫자에 바로 붙으면 그대로 읽고, 한 칸 뒤에 오면 {@link #AFTER_UNIT}를 만족할 때만 읽는다. 끝의 쉼표·마침표는
+     * 숫자에 넣지 않는다.
+     */
+    private static final Pattern NUMBER_TOKEN =
+            Pattern.compile(
+                    "[0-9０-９](?:[0-9０-９.,，．]*[0-9０-９])?(?:(?:"
+                            + UNITS
+                            + ")|\\s(?:"
+                            + UNITS
+                            + ")"
+                            + AFTER_UNIT
+                            + ")?");
+
+    /**
+     * 어절 첫머리의 고유어 수사(겹친 수사 "열다섯"·"스물두" 포함) + 수량 단위. 서수({@code 두 번째})와 관용 표현 "한 번"은 뺀다. 한자어 수사는
+     * {@code 이번}·{@code 일주} 같은 일반 낱말과 겹쳐 대상이 아니다(계약 §2.4).
      */
     private static final Pattern KOREAN_COUNT_TOKEN =
             Pattern.compile(
-                    "(?<![가-힣])(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|스물|서른|마흔|쉰)\\s?(?:"
+                    "(?<![가-힣])(?!한\\s?번(?!째))"
+                            + "(?:(?:열|스물|스무|서른|마흔|쉰|예순|일흔|여든|아흔)(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉)?"
+                            + "|한|두|세|네|다섯|여섯|일곱|여덟|아홉)"
+                            + "\\s?(?:"
                             + COUNT_UNITS
-                            + ")(?!째)");
+                            + ")(?!째)"
+                            + AFTER_UNIT);
+
+    /** 수량 토큰을 다 지운 뒤에도 남으면 안 되는 것. */
+    private static final Pattern LEFTOVER_NUMBER = Pattern.compile("[0-9０-９%％]");
 
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
@@ -159,11 +185,11 @@ public class AnswerValidator {
     public record Rendered(
             AnswerStatus status, String answer, List<Evidence> evidence, Rejection rejectedBy) {}
 
-    public Rendered render(ModelDraft draft, List<Evidence> facts) {
-        return render(draft, facts, Policy.RESULT);
-    }
-
-    public Rendered render(ModelDraft draft, List<Evidence> facts, Policy policy) {
+    /**
+     * @param reservedLength 검증 뒤 서버가 답 앞에 붙일 수 있는 접두의 길이. 답 길이 상한에서 미리 뺀다 — 접두를 붙인 최종 답도 상한을 넘지 않는다
+     */
+    public Rendered render(
+            ModelDraft draft, List<Evidence> facts, Policy policy, int reservedLength) {
         if (draft == null || draft.status() == null) {
             return insufficient(policy, Rejection.EMPTY);
         }
@@ -174,12 +200,8 @@ public class AnswerValidator {
             case INSUFFICIENT_EVIDENCE -> insufficient(policy, null);
             case GREETING ->
                     new Rendered(AnswerStatus.GREETING, policy.greetingMessage(), List.of(), null);
-            case ANSWERED -> answered(draft.parts(), facts, policy);
+            case ANSWERED -> answered(draft.parts(), facts, policy, reservedLength);
         };
-    }
-
-    static Rendered insufficient() {
-        return insufficient(Policy.RESULT, null);
     }
 
     private static Rendered insufficient(Policy policy, Rejection rejection) {
@@ -190,7 +212,8 @@ public class AnswerValidator {
                 rejection);
     }
 
-    private Rendered answered(List<AnswerPart> parts, List<Evidence> facts, Policy policy) {
+    private Rendered answered(
+            List<AnswerPart> parts, List<Evidence> facts, Policy policy, int reservedLength) {
         if (parts == null || parts.isEmpty()) {
             return insufficient(policy, Rejection.EMPTY);
         }
@@ -254,7 +277,7 @@ public class AnswerValidator {
             factIds.forEach(id -> used.putIfAbsent(id, byId.get(id)));
         }
         String full = answer.toString();
-        if (full.length() > settings.maxAnswerLength()) {
+        if (full.length() > settings.maxAnswerLength() - reservedLength) {
             return insufficient(policy, Rejection.LENGTH);
         }
         for (String phrase : forbiddenPhrases) {
@@ -299,22 +322,12 @@ public class AnswerValidator {
             matcher.appendTail(remaining);
             rest = remaining.toString();
         }
-        return !Pattern.compile("[0-9０-９%％]").matcher(rest).find();
+        return !LEFTOVER_NUMBER.matcher(rest).find();
     }
 
-    /** 공백을 지우고 전각 숫자·{@code ％}를 반각으로 바꾼다. */
+    /** 공백을 지우고 전각 숫자·기호를 반각으로 바꾼다(NFKC). */
     static String normalize(String text) {
-        StringBuilder out = new StringBuilder(text.length());
-        for (char ch : WHITESPACE.matcher(text).replaceAll("").toCharArray()) {
-            if (ch >= '０' && ch <= '９') {
-                out.append((char) ('0' + (ch - '０')));
-            } else if (ch == '％') {
-                out.append('%');
-            } else {
-                out.append(ch);
-            }
-        }
-        return out.toString();
+        return WHITESPACE.matcher(Normalizer.normalize(text, Normalizer.Form.NFKC)).replaceAll("");
     }
 
     /** 한 줄에 하나, {@code #}으로 시작하는 줄과 빈 줄은 무시한다. */

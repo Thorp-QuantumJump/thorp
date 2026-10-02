@@ -250,7 +250,10 @@ class AssistantControllerTermTest {
                         ask(
                                 "{\"kind\":\"SECTOR_SELECTION\",\"selected\":[\"SEMICONDUCTOR\"]}",
                                 "10.0.0.4"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.error.message")
+                                .value(org.hamcrest.Matchers.containsString("kind 만")));
 
         assertThat(fakes.conversations).isEmpty();
     }

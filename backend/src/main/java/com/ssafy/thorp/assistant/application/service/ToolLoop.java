@@ -61,12 +61,6 @@ public class ToolLoop {
      */
     public record Outcome(ModelDraft draft, List<Evidence> facts, int rounds) {}
 
-    /** 결과 화면 대화(015). */
-    public Outcome run(
-            AssistantModelPort model, String question, EvidenceBundle bundle, Deadline deadline) {
-        return run(model, PageKind.RESULT, question, bundle, deadline);
-    }
-
     /** {@code kind}는 모델 어댑터가 프롬프트를 고르는 데만 쓴다(017 research R6). */
     public Outcome run(
             AssistantModelPort model,
