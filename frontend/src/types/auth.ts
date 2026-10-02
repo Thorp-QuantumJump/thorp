@@ -41,7 +41,6 @@ export type AuthFieldName =
   | 'verificationCode'
   | 'password'
   | 'nickname'
-  | 'phoneNumber'
 
 export type AuthFieldError = {
   field: AuthFieldName
@@ -62,7 +61,6 @@ export type SignupRequest = {
   email: string
   password: string
   nickname: string
-  phoneNumber: string
 }
 
 export type LoginRequest = {
@@ -130,7 +128,6 @@ export type PendingSocialView = {
 
 export type SocialSignupRequest = {
   nickname: string
-  phoneNumber: string
 }
 
 export type SocialLinkRequest =

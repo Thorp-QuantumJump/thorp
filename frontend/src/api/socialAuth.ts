@@ -177,7 +177,7 @@ export async function socialSignup(
   const response = await runCsrfProtectedMutation(() =>
     apiClient.post<ApiEnvelope<unknown>>(
       '/auth/social/signup',
-      { nickname: input.nickname.trim(), phoneNumber: input.phoneNumber },
+      { nickname: input.nickname.trim() },
       { signal },
     ),
   )

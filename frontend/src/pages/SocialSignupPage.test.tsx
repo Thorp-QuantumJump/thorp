@@ -56,11 +56,13 @@ describe('SocialSignupPage', () => {
     })
     renderSocialRoutes('/signup/social')
 
-    await user.type(await screen.findByLabelText('휴대폰 번호'), '01012345678')
+    await screen.findByLabelText('닉네임')
+    // 가입에서 휴대폰 번호를 묻지 않는다(spec 014 2026-10-02).
+    expect(screen.queryByLabelText('휴대폰 번호')).toBeNull()
     await user.click(screen.getByRole('button', { name: '가입하기' }))
 
     expect(socialMocks.socialSignup).toHaveBeenCalledWith(
-      { nickname: '카카오닉', phoneNumber: '01012345678' },
+      { nickname: '카카오닉' },
       expect.any(AbortSignal),
     )
     expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()
@@ -85,7 +87,7 @@ describe('SocialSignupPage', () => {
     socialMocks.socialSignup.mockReturnValue(new Promise(() => undefined))
     renderSocialRoutes('/signup/social')
 
-    await user.type(await screen.findByLabelText('휴대폰 번호'), '01012345678')
+    await screen.findByLabelText('닉네임')
     const submit = screen.getByRole('button', { name: '가입하기' })
     await user.click(submit)
     await user.click(screen.getByRole('button', { name: '가입하는 중…' }))
@@ -94,14 +96,14 @@ describe('SocialSignupPage', () => {
     expect(socialMocks.socialSignup).toHaveBeenCalledTimes(1)
   })
 
-  it('휴대폰 번호가 다른 계정에서 쓰이면 계정 연결 확인 화면으로 간다', async () => {
+  it('가입 중 연결이 필요하다는 응답이면 계정 연결 확인 화면으로 간다', async () => {
     const user = userEvent.setup()
     socialMocks.socialSignup.mockRejectedValue(
       new ApiClientError('api', '이 번호로 가입된 계정이 있습니다.', { code: 'SOCIAL_LINK_REQUIRED' }),
     )
     renderSocialRoutes('/signup/social')
 
-    await user.type(await screen.findByLabelText('휴대폰 번호'), '01012345678')
+    await screen.findByLabelText('닉네임')
     socialMocks.getPendingSocial.mockResolvedValue(
       pendingView({
         stage: 'LINK',
