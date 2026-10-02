@@ -85,8 +85,13 @@ const seriesEndpoints: Record<MarketSeriesCode, string> = {
  * 일별 지표 하나의 최근 흐름. 백엔드가 아직 모으지 못했으면 503이고, 호출한 쪽은 예시 흐름을 쓴다.
  * 날짜가 오름차순이고 값이 숫자인지 확인한다 — 어긋난 응답으로 그린 차트는 틀린 흐름을 보인다.
  */
-export async function fetchMarketSeries(code: MarketSeriesCode): Promise<MarketSeriesResponse> {
-  const response = await apiClient.get<ApiEnvelope<MarketSeriesResponse>>(seriesEndpoints[code])
+export async function fetchMarketSeries(
+  code: MarketSeriesCode,
+  signal?: AbortSignal,
+): Promise<MarketSeriesResponse> {
+  const response = await apiClient.get<ApiEnvelope<MarketSeriesResponse>>(seriesEndpoints[code], {
+    signal,
+  })
   const body = response.data
   const series = body.result
   if (!body.isSuccess || !series || series.code !== code || !Array.isArray(series.points)) {

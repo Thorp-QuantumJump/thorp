@@ -1,6 +1,8 @@
 package com.ssafy.thorp.sector.infrastructure.persistence;
 
 import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;
+import com.ssafy.thorp.sector.application.result.LatestPricesResult;
+import com.ssafy.thorp.sector.application.result.LatestPricesResult.LatestPrice;
 import com.ssafy.thorp.sector.application.result.PriceSeriesResult;
 import com.ssafy.thorp.sector.application.result.PriceSeriesResult.PricePoint;
 import jakarta.persistence.EntityManager;
@@ -10,7 +12,10 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +63,26 @@ public class PriceSeriesRepositoryImpl implements PriceSeriesRepository {
              ORDER BY p.date ASC
             """;
 
+    /**
+     * 종목마다 가장 늦은 두 거래일. 순번 1이 마지막 날, 2가 그 직전이다.
+     *
+     * <p>종목 수만큼 따로 부르지 않고 한 번에 읽는다. 순번은 날짜 내림차순으로 매겨 저장 순서에 기대지 않는다.
+     */
+    private static final String LATEST_TWO_SQL =
+            """
+            SELECT t.instrument_id, t.date, t.adjusted_close,
+                   t.trading_suspended, t.price_carried_forward, t.rn
+              FROM (SELECT p.instrument_id, p.date, p.adjusted_close,
+                           p.trading_suspended, p.price_carried_forward,
+                           ROW_NUMBER() OVER (PARTITION BY p.instrument_id
+                                              ORDER BY p.date DESC) AS rn
+                      FROM daily_price p
+                     WHERE p.dataset_id = :datasetId
+                       AND p.instrument_id IN (:instrumentIds)) t
+             WHERE t.rn <= 2
+             ORDER BY t.instrument_id, t.rn
+            """;
+
     @PersistenceContext private EntityManager entityManager;
 
     @Override
@@ -76,6 +101,64 @@ public class PriceSeriesRepositoryImpl implements PriceSeriesRepository {
 
         return Optional.of(
                 new PriceSeriesResult(instrumentId, datasetId, dataDeadline, isSample, points));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<LatestPricesResult.Snapshot> findLatestPrices(
+            String mapVersion, Collection<String> instrumentIds) {
+        Object[] dataset = findCurrentDataset(mapVersion);
+        if (dataset == null) return Optional.empty();
+
+        String datasetId = (String) dataset[0];
+        Instant dataDeadline = toInstant(dataset[1]);
+        boolean isSample = (Boolean) dataset[2];
+        // 빈 IN 목록은 SQL 문법 오류다. 물을 종목이 없으면 묻지 않는다.
+        Map<String, LatestPrice> prices =
+                instrumentIds.isEmpty() ? Map.of() : findLatestTwo(datasetId, instrumentIds);
+        return Optional.of(
+                new LatestPricesResult.Snapshot(datasetId, dataDeadline, isSample, prices));
+    }
+
+    /** 순번 1의 행으로 값을 만들고, 순번 2의 행이 있으면 직전 값으로 채운다. 순번 오름차순으로 읽으므로 1이 늘 먼저 온다. */
+    private Map<String, LatestPrice> findLatestTwo(
+            String datasetId, Collection<String> instrumentIds) {
+        Query query =
+                entityManager
+                        .createNativeQuery(LATEST_TWO_SQL)
+                        .setParameter("datasetId", datasetId)
+                        .setParameter("instrumentIds", instrumentIds);
+
+        Map<String, LatestPrice> prices = new HashMap<>();
+        for (Object item : query.getResultList()) {
+            Object[] row = (Object[]) item;
+            String instrumentId = (String) row[0];
+            LocalDate date = toLocalDate(row[1]);
+            BigDecimal adjustedClose = (BigDecimal) row[2];
+            if (((Number) row[5]).intValue() == 1) {
+                prices.put(
+                        instrumentId,
+                        new LatestPrice(
+                                date,
+                                adjustedClose,
+                                (Boolean) row[3],
+                                (Boolean) row[4],
+                                null,
+                                null));
+            } else {
+                LatestPrice last = prices.get(instrumentId);
+                prices.put(
+                        instrumentId,
+                        new LatestPrice(
+                                last.date(),
+                                last.adjustedClose(),
+                                last.tradingSuspended(),
+                                last.priceCarriedForward(),
+                                date,
+                                adjustedClose));
+            }
+        }
+        return prices;
     }
 
     private Object[] findCurrentDataset(String mapVersion) {
