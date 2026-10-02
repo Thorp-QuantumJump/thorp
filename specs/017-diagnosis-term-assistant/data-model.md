@@ -42,12 +42,13 @@
 
 | 원천 | 라벨 | 값 |
 |---|---|---|
+| 항목 목록 | `읽을 수 있는 항목` | `글: {title}, …; 전략: {name}, …; 설정 항목: {axis label}({전략 name}), …` (요청 시점 목록. 구분 문자열에 숫자 없음) |
 | 게시 용어 | `용어: {label}` | `sentence` |
 | 글 제목·질문 | `글 «{title}»: 제목` / `글 «{title}»: 질문` | `title` / `question` |
 | 글 소제목·문단 | `글 «{title}»: 소제목 {순번}` / `글 «{title}»: 문단 {순번}` | 블록 `text` |
 | 글 용어 블록 | `용어: {label}` | 블록 `sentence`(게시 용어와 같은 문장) |
 | 전략 | `전략: {name}` | `description` |
-| 설정 항목 | `설정 항목: {전략 이름} · {axis label}` | `description` + (선택지가 있으면) `, 선택지: {label1}, {label2}…` |
+| 설정 항목 | `설정 항목: {전략 이름} · {axis label}` | `description` + (선택지가 있으면) `, 선택지: {label1}, {label2}…`. 선택지 이름은 `ParameterAxis.allowedRange().choices()[].label`만 쓰고, 같은 `allowedRange`의 최소·최대·간격과 선택지 `value`는 넣지 않는다(research R9) |
 | 규칙 | `설정 규칙: {전략 이름}` | rule `detail` |
 | 섹터 목록 | `섹터 목록` | `{name}({산업|테마}, 대표 ETF {ETF name}, 기초 지수 {benchmarkIndex})`를 `; `로 이음 |
 | 잘림 표시 | `읽은 범위` | `일부 용어 설명은 싣지 않음` / 015의 `일부만 읽음 (…)` |
@@ -88,7 +89,7 @@
 
 ## 7a. EvidenceBundle (필드 추가)
 
-`EvidenceBundle(facts, tools, partialUntil, registryProvisional)`. `registryProvisional`은 용어 빌더가 `ParameterRegistryPort.provisional()`로 채우고, `RESULT`는 항상 false다. 서비스는 이 값이 true이고 쓰인 근거에 `REGISTRY`가 있으면 임시 내용 접두 문장을 붙인다(spec FR-009b).
+`EvidenceBundle(facts, tools, partialUntil, registryProvisional, sectorSample)`. `registryProvisional`은 용어 빌더가 `ParameterRegistryPort.provisional()`로, `sectorSample`은 `SectorListResult.isSample()`로 채운다. `RESULT`는 둘 다 false다. 서비스는 값이 true이고 쓰인 근거에 해당 출처(`REGISTRY`·`SECTOR`)가 있으면 접두 문장을 붙인다(spec FR-009b).
 
 ## 8. AssistantAnswer (필드 추가)
 

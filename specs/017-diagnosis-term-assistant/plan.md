@@ -63,7 +63,7 @@
 | VI. 없는 결과를 만들지 않음 | PASS | 근거는 게시 콘텐츠·등록표·섹터 목록뿐이다. 근거가 없으면 고정 문장으로 답한다. 숫자는 인용 근거 원문에 있는 것만 쓴다(R3). 초안 콘텐츠는 근거에 넣지 않는다(R8). |
 | VIII. 재현할 수 있게 기록 | PASS | 평가 문서에 등록표 버전·게시 콘텐츠 상태·모델명을 함께 적는다(SC-005). |
 | IX. 한도는 실측으로 | PASS | 한도는 설정값이다. 화면 종류별 IP 키를 새로 두고, 하루 전체는 하나로 공유한다(R5). |
-| X. 자료는 이용 조건 안에서 | PASS | 근거는 우리가 작성한 콘텐츠와 001 섹터 목록(이미 공개 화면에 보이는 이름)이다. 상품 상세의 외부 출처 문단은 넣지 않는다(R9). |
+| X. 자료는 이용 조건 안에서 | PASS(확인 1건 남음) | 근거는 우리가 작성한 콘텐츠(013·003)와 001 섹터 목록의 이름 필드(섹터·ETF·기초 지수 이름)다. 외부 모델에 가는 것은 상품·지수의 **이름**이다. 원칙 X가 제3자 제공을 막는 KRX·DATA_GO_KR **시세·통계 값**은 보내지 않는다(015는 결과 값을 보내며, 그 조건은 ADR-0008이 다룬다). 상품 상세의 외부 출처 문단도 넣지 않는다(R9). 섹터 목록 답이 보이는 '투자 대상 고르기' 화면에는 002가 이미 KRX 출처를 표시한다. 상품 이름을 외부로 보내는 것이 이용 조건에 걸리는지는 확인되지 않아, '투자 대상 고르기'를 켜기 전에 확인한다(spec Assumptions, T053). |
 | 아키텍처 원칙 1 (Backend는 계산하지 않는다) | PASS | 근거는 원문 필드를 골라 옮긴 것이다. 요약·합성·수치 계산이 없다. |
 | 013 단일 원본 (013 FR-008) | PASS | 용어 설명은 013 게시 색인에서만 읽는다. 도우미가 풀어 쓴 답은 도움말 문장을 대체하지 않는 다른 표면이다. 근거로는 원문을 가리킨다. |
 | 작업 묶음 | PASS | 5개 묶음(DOCS 1·BE 3·FE 1)이고, 각각 따로 검증하고 되돌릴 수 있다. |
@@ -123,7 +123,7 @@ frontend/src/pages/SectorSelectionPage.tsx, StrategySettingsPage.tsx   # 맥락 
   2. 한도(IP·`page:{kind}:{ip}`·하루)
   3. 데드라인
   4. `TermEvidenceBuilder`
-- 종류별 차이를 `if (kind == RESULT)` 분기로 서비스에 흩지 않는다. `EvidenceBuilder`에 `prepare(command): PageContext`(검증·한도 키)를 더해 종류별로 둔다. 서비스는 순서만 소유한다.
+- 종류별 차이를 `if (kind == RESULT)` 분기로 서비스에 흩지 않는다. `EvidenceBuilder`에 `prepare(command): Prepared(context, limitKey, limit)`(식별자 검증, 한도 키와 한도 값)를 더해 종류별로 둔다. 서비스는 순서만 소유한다.
 - 부분 결과 접두 문장은 `bundle.partialUntil()`이 있을 때만 붙는다. 진단 종류는 항상 null이라 그대로 둔다.
 
 ### 근거 팩과 도구 (spec FR-003·FR-004·FR-005, research R1·R2·R8·R9·R10)
@@ -155,9 +155,10 @@ frontend/src/pages/SectorSelectionPage.tsx, StrategySettingsPage.tsx   # 맥락 
   - `OUT_OF_SCOPE`: "이 도우미는 이 사이트에 나오는 용어와 설정의 뜻을 설명해요. 무엇을 고를지는 정해 드리지 않고, 백테스트 결과는 결과 화면에서 물어볼 수 있어요."
   - `GREETING`: "안녕하세요. 이 화면에 나오는 용어를 물어보세요. 예: 역변동성은 어떻게 비중을 정해?" (예시는 등록표만으로 답할 수 있는 질문, spec FR-002·FR-008)
 - 숫자 규칙은 한글 수사 + 수량 단위도 수량 토큰으로 본다(spec FR-007(다), 계약 §2.4).
-- 등록표가 임시값이고 쓰인 근거에 `REGISTRY`가 있으면 서비스가 검증 뒤 임시 내용 접두 문장을 붙인다(spec FR-009b). `EvidenceBundle`에 `registryProvisional` 하나를 더해 빌더가 채운다.
+- 등록표가 임시값이고 쓰인 근거에 `REGISTRY`가 있으면 서비스가 검증 뒤 임시 내용 접두 문장을 붙인다(spec FR-009b). `EvidenceBundle`에 `registryProvisional`·`sectorSample` 둘을 더해 빌더가 채운다. 섹터 대응표가 예시 자료면, 섹터 목록 근거를 쓴 답에 "이 섹터 목록은 예시 대응표입니다." 접두를 같은 방식으로 붙인다.
 - 기본값을 권고처럼 말하는 어구("추천값"·"적정값"·"무난한")는 프롬프트에서 금지하고, 금지 표현 목록에 넣을지는 묶음 5에서 정한다(spec FR-009a).
 - 두 원천이 다르게 말하면 답 문장 안에서 출처를 근거 종류 이름으로 밝힌다(spec Edge Cases). 이 규칙은 프롬프트가 맡는다.
+- 서비스 로그에 모델 초안 상태(`draftStatus`)와 최종 상태를 남기고, 검증에 걸렸으면 규칙 이름(`rejectedBy`: `NUMBER`·`PLACEHOLDER`·`LENGTH`·`FORBIDDEN`·`UNKNOWN_FACT`)도 남긴다(spec FR-013). `AnswerValidator.Rendered`에 `rejectedBy`를 더한다. 걸린 문구·원문은 남기지 않는다.
 - 길이 600자·part 5개·금지 표현은 015와 같은 설정·파일을 쓴다. 금지 표현에 "추천드", "고르세요", "가장 좋은", "최적" 같은 고르기 권유 어구를 더할지는 표본에서 정한다(묶음 5).
 
 ### 모델 연결 (research R6)
@@ -171,7 +172,7 @@ frontend/src/pages/SectorSelectionPage.tsx, StrategySettingsPage.tsx   # 맥락 
 
 ### 한도 (research R5)
 
-- `AssistantRateLimiter.admit(ip, scopeKey, scopeLimit)`로 바꾼다. 015 호출부는 `("token:"+token, perTokenPerMinute)`를 넘긴다.
+- `AssistantRateLimiter.admit(ip, scopeKey, scopeLimit, reason)`로 바꾼다. 015 호출부는 `("token:"+token, perTokenPerMinute, "PER_TOKEN")`, 진단 종류는 `("page:"+kind+":"+ip, perPagePerIpPerMinute, "PER_PAGE")`를 넘긴다.
 - 새 설정은 `thorp.assistant.limits.per-page-per-ip-per-minute`(초안 5)이고, 환경 변수는 없다(설정 파일 기본값).
 
 ### 진입 UI와 글 연결 (spec FR-001·FR-002·FR-010)
