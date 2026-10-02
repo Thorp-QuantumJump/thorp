@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>사용자 식별자: {@code response.id}
  *   <li>이메일: {@code response.email}. 사용자가 제공에 동의하지 않으면 없다.
- *   <li><b>확인 여부를 알려주지 않는다.</b> 그래서 네이버 이메일은 언제나 Thorp 인증번호로 확인한 뒤 가입·연결로 간다(clarify 2026-10-01,
- *       FR-022).
+ *   <li><b>확인된 이메일로 본다</b>(clarify 2026-10-02, FR-022). 응답에 확인 여부 필드는 없지만, 이 값은 사용자가 고른 연락처 이메일이고
+ *       네이버 메일이거나 네이버가 등록 때 인증 메일로 확인한 외부 주소 둘뿐이다. 그래서 Thorp 인증번호를 다시 받지 않는다.
  *   <li>닉네임: {@code response.nickname}
  * </ul>
  *
@@ -51,7 +51,7 @@ public class NaverProviderAdapter implements SocialProviderAdapter {
                 provider(),
                 OAuth2Attributes.text(response.get("id")),
                 OAuth2Attributes.text(response.get("email")),
-                EmailStatus.UNKNOWN,
+                EmailStatus.VERIFIED,
                 OAuth2Attributes.text(response.get("nickname")));
     }
 
