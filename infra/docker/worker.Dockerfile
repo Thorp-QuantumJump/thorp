@@ -30,6 +30,20 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project \
  && uv pip check --python /app/.venv/bin/python
 
+# 실행에 쓰지 않는 파일을 걷어 내 이미지를 줄인다. 실행 단계는 이 가상환경을 그대로 복사한다.
+#   tests/test 폴더        패키지 자체의 테스트(pandas·scipy·pyarrow 등, 약 95MB)
+#   .pyx .pxd .pyi .c .h 등  컴파일과 타입 검사에만 쓰는 소스·헤더·스텁
+#   공유 라이브러리 디버그 정보  strip --strip-debug 로 지운다. *.libs 폴더는 auditwheel 이 patchelf 로 고친
+#                           라이브러리라 strip 이 깨뜨릴 수 있어 건드리지 않는다
+# 지운 뒤 실제로 쓰는 패키지를 import 해 본다. 라이브러리가 깨졌으면 여기서 이미지를 만들지 않는다.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends binutils \
+ && find /app/.venv -depth -type d \( -name tests -o -name test \) -exec rm -rf {} + \
+ && find /app/.venv -type f \( -name '*.pyx' -o -name '*.pxd' -o -name '*.pyi' -o -name '*.c' -o -name '*.cpp' \
+        -o -name '*.h' -o -name '*.hpp' \) -delete \
+ && find /app/.venv -type f -name '*.so*' -not -path '*.libs/*' -exec strip --strip-debug {} + \
+ && /app/.venv/bin/python -c "import numpy, scipy, pandas, pyarrow.parquet, psycopg, nautilus_trader.backtest.engine"
+
 # --- runtime stage ---
 # 설치를 마친 가상환경만 옮기고 uv 는 싣지 않는다. 가상환경의 python 은 기반 이미지의
 # /usr/local/bin/python3.11 을 가리키므로 두 단계는 같은 기반 이미지여야 한다.
