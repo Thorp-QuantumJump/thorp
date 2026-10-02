@@ -143,7 +143,19 @@ abstract class SocialLoginIntegrationTestSupport extends IntegrationTestSupport 
 
     /** 시작 요청을 보내고 제공자 인가 주소의 state를 돌려준다. */
     String startKakao(String query) throws Exception {
-        MvcResult start = send(get("/auth/oauth2/authorization/kakao" + query));
+        return startKakao(get("/auth/oauth2/authorization/kakao" + query));
+    }
+
+    /**
+     * 돌아갈 자리를 실어 시작한다. 질의 문자열이 아니라 {@code .param} 으로 싣는다 — MockMvc 는 URL 문자열을 템플릿으로 보고 한 번 더 인코딩하므로
+     * {@code %2F} 가 {@code %252F} 로 들어가 서버가 보는 값이 브라우저가 보낸 것과 달라진다.
+     */
+    String startKakaoReturningTo(String returnTo) throws Exception {
+        return startKakao(get("/auth/oauth2/authorization/kakao").param("returnTo", returnTo));
+    }
+
+    private String startKakao(MockHttpServletRequestBuilder request) throws Exception {
+        MvcResult start = send(request);
         assertThat(start.getResponse().getStatus()).isEqualTo(302);
         String location = start.getResponse().getRedirectedUrl();
         assertThat(location).startsWith("https://kauth.kakao.com/oauth/authorize");
