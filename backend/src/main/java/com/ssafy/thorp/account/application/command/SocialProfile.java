@@ -16,7 +16,7 @@ public record SocialProfile(
         EmailStatus emailStatus,
         String nickname) {
 
-    /** 제공자가 알려준 이메일 확인 여부. 알려주지 않았으면 {@link #UNKNOWN}이다(네이버). */
+    /** 제공자가 알려준 이메일 확인 여부. 알려주지 않았으면 {@link #UNKNOWN}이다(카카오가 확인 여부를 빼고 줄 때). */
     public enum EmailStatus {
         VERIFIED,
         UNVERIFIED,

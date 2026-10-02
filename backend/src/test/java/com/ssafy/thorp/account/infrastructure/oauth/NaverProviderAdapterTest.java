@@ -22,15 +22,23 @@ class NaverProviderAdapterTest {
     private final NaverProviderAdapter adapter = new NaverProviderAdapter();
 
     @Test
-    @DisplayName("response.id·email·nickname을 옮기고 이메일은 언제나 확인 여부를 모르는 것으로 둔다")
-    void extractsResponseBlockAsUnknownEmail() {
+    @DisplayName("response.id·email·nickname을 옮기고 네이버 메일은 확인된 이메일로 둔다")
+    void extractsResponseBlockAsVerifiedEmail() {
         SocialProfile profile = adapter.extract(naverUser("member@naver.com", "네이버"));
 
         assertThat(profile.provider()).isEqualTo(SocialProvider.NAVER);
         assertThat(profile.providerUserId()).isEqualTo("naver-abc123");
         assertThat(profile.email()).isEqualTo("member@naver.com");
-        assertThat(profile.emailStatus()).isEqualTo(EmailStatus.UNKNOWN);
+        assertThat(profile.emailStatus()).isEqualTo(EmailStatus.VERIFIED);
         assertThat(profile.nickname()).isEqualTo("네이버");
+    }
+
+    @Test
+    @DisplayName("외부 연락처 이메일도 네이버가 등록 때 인증 메일로 확인하므로 확인된 이메일로 둔다")
+    void externalContactEmailIsVerified() {
+        SocialProfile profile = adapter.extract(naverUser("member@gmail.com", "네이버"));
+
+        assertThat(profile.emailStatus()).isEqualTo(EmailStatus.VERIFIED);
     }
 
     @Test
