@@ -14,7 +14,7 @@
 | email | String | 필수, 유효한 이메일, 고유 |
 | passwordHash | String? | 이메일 가입 계정은 필수, `PasswordEncoder` 결과만 저장. 2026-10-01부터 소셜로만 가입한 계정은 `NULL` |
 | nickname | String | 필수, 가입 요청 기준 2~20자 |
-| phoneNumber | String | 필수, `^01[016789]\d{7,8}$`, 고유 |
+| phoneNumber | String? | 선택(2026-10-02, 가입 화면에서 묻지 않음). 있으면 `^01[016789]\d{7,8}$`, 고유 |
 | profileImageUrl | String? | 선택 |
 | status | UserStatus | `ACTIVE`, `SUSPENDED`, `WITHDRAWN`; 기존 enum의 `PENDING_VERIFICATION`은 현재 가입 흐름에서 생성되지 않음 |
 | lastLoginAt | Instant? | 로그인 성공 시 갱신 |
@@ -228,7 +228,7 @@ any ──10분 경과 / 취소 / 새 소셜 로그인 시작(intent=link 제외
 |---|---|---|
 | SocialProviders | `providers: SocialProvider[]` | 자격 증명이 설정된 제공자만 |
 | PendingSocialView | `provider`, `stage`, `email`, `suggestedNickname?`, `linkReason?`, `linkTargetMaskedEmail?`, `linkMethods[]`, `expiresAt` | `linkMethods`: `PASSWORD`, `EMAIL_CODE`, `VERIFIED_EMAIL`, `SOCIAL_KAKAO`, `SOCIAL_GOOGLE`, `SOCIAL_NAVER` 중 대상 계정에 쓸 수 있는 것 |
-| SocialSignupInput | `nickname`, `phoneNumber` | 이메일·비밀번호 없음 |
+| SocialSignupInput | `nickname`, `phoneNumber?` | 이메일·비밀번호 없음. 번호는 선택이며 화면이 보내지 않는다(2026-10-02) |
 | SocialLinkInput | `method`, `password?`, `verificationCode?` | `method`에 맞는 값만 필수 |
 
 `email`은 대기 상태의 주인인 사용자 자신의 제공자 이메일이라 가리지 않는다. 연결 대상 계정 이메일은
