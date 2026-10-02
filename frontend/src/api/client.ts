@@ -67,7 +67,7 @@ function isAuthFieldError(value: unknown): value is AuthFieldError {
   if (!isRecord(value)) return false
 
   return (
-    ['email', 'verificationCode', 'password', 'nickname', 'phoneNumber'].includes(
+    ['email', 'verificationCode', 'password', 'nickname'].includes(
       String(value.field),
     ) && typeof value.message === 'string'
   )

@@ -27,7 +27,6 @@ export type SignupProgress = {
   /** 1 계정 정보, 2 프로필 정보. */
   step: 1 | 2
   nickname: string
-  phoneNumber: string
 }
 
 function isString(value: unknown): value is string {
@@ -43,14 +42,14 @@ function parse(raw: string | null): SignupProgress | null {
     if (typeof value !== 'object' || value === null) return null
 
     const candidate = value as Record<string, unknown>
-    const { email, requestedEmail, verifiedEmail, step, nickname, phoneNumber } = candidate
+    const { email, requestedEmail, verifiedEmail, step, nickname } = candidate
 
-    if (!isString(email) || !isString(nickname) || !isString(phoneNumber)) return null
+    if (!isString(email) || !isString(nickname)) return null
     if (requestedEmail !== null && !isString(requestedEmail)) return null
     if (verifiedEmail !== null && !isString(verifiedEmail)) return null
     if (step !== 1 && step !== 2) return null
 
-    return { email, requestedEmail, verifiedEmail, step, nickname, phoneNumber }
+    return { email, requestedEmail, verifiedEmail, step, nickname }
   } catch {
     return null
   }

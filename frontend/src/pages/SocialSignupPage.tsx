@@ -14,14 +14,12 @@ import formStyles from '@/components/auth/AuthForm.module.css'
 import pageStyles from './SignupPage.module.css'
 import type { PendingSocialView } from '@/types/auth'
 
-const phonePattern = /^01[016789]\d{7,8}$/
-
-type Errors = Partial<Record<'nickname' | 'phoneNumber', string>>
+type Errors = Partial<Record<'nickname', string>>
 
 /**
  * 처음 오는 소셜 사용자의 추가 정보(`/signup/social`, spec 014 US6, FR-023).
  *
- * <p>이메일은 제공자에게 받은 값이라 고칠 수 없게 보여 주고, 닉네임과 휴대폰 번호만 받는다. 비밀번호와
+ * <p>이메일은 제공자에게 받은 값이라 고칠 수 없게 보여 주고, 닉네임만 받는다(휴대폰 번호는 묻지 않는다, spec 014 2026-10-02). 비밀번호와
  * 이메일 인증번호는 묻지 않는다. 가입이 끝나면 로그인 상태가 되고 `AuthEntryGuard`가 원래 자리로 보낸다.
  */
 export function SocialSignupPage() {
@@ -35,7 +33,7 @@ export function SocialSignupPage() {
     <SocialAuthLayout
       eyebrow="ALMOST DONE"
       title="가입까지 한 걸음 남았어요."
-      description="Thorp에서 쓸 닉네임과 휴대폰 번호만 알려 주세요."
+      description="Thorp에서 쓸 닉네임만 확인해 주세요."
       panelTitle="추가 정보"
       panelDescription="소셜 계정으로 가입하면 비밀번호를 따로 만들지 않아도 됩니다."
     >
@@ -52,10 +50,8 @@ function SocialSignupForm({ pending }: { pending: PendingSocialView }) {
   const navigate = useNavigate()
   const { completeSignIn } = useAuth()
   const nicknameRef = useRef<HTMLInputElement>(null)
-  const phoneRef = useRef<HTMLInputElement>(null)
   const requestRef = useRef<AbortController | null>(null)
   const [nickname, setNickname] = useState(pending.suggestedNickname ?? '')
-  const [phoneNumber, setPhoneNumber] = useState('')
   const [errors, setErrors] = useState<Errors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
@@ -68,10 +64,6 @@ function SocialSignupForm({ pending }: { pending: PendingSocialView }) {
     if (!trimmed) next.nickname = '닉네임을 입력해 주세요.'
     else if ([...trimmed].length < 2 || [...trimmed].length > 20) {
       next.nickname = '닉네임은 2~20자로 입력해 주세요.'
-    }
-    if (!phoneNumber) next.phoneNumber = '휴대폰 번호를 입력해 주세요.'
-    else if (!phonePattern.test(phoneNumber)) {
-      next.phoneNumber = '하이픈 없이 숫자만 입력해 주세요. 예: 01012345678'
     }
     return next
   }
@@ -87,17 +79,13 @@ function SocialSignupForm({ pending }: { pending: PendingSocialView }) {
       nicknameRef.current?.focus()
       return
     }
-    if (nextErrors.phoneNumber) {
-      phoneRef.current?.focus()
-      return
-    }
 
     const controller = new AbortController()
     requestRef.current?.abort()
     requestRef.current = controller
     setIsSubmitting(true)
     try {
-      const user = await socialSignup({ nickname, phoneNumber }, controller.signal)
+      const user = await socialSignup({ nickname }, controller.signal)
       setStatusMessage('가입했습니다. 하던 화면으로 이동합니다.')
       // 로그인 상태가 되면 인증 화면 가드가 소셜 로그인 전에 있던 자리로 보낸다.
       completeSignIn(user)
@@ -116,12 +104,10 @@ function SocialSignupForm({ pending }: { pending: PendingSocialView }) {
           setStatusMessage('소셜 로그인 시간이 지났습니다. 처음부터 다시 시도해 주세요.')
           return
         }
-        const fieldError = error.fieldErrors.find(
-          (item) => item.field === 'nickname' || item.field === 'phoneNumber',
-        )
-        if (fieldError?.field === 'nickname' || fieldError?.field === 'phoneNumber') {
-          setErrors({ [fieldError.field]: fieldError.message })
-          ;(fieldError.field === 'nickname' ? nicknameRef : phoneRef).current?.focus()
+        const fieldError = error.fieldErrors.find((item) => item.field === 'nickname')
+        if (fieldError) {
+          setErrors({ nickname: fieldError.message })
+          nicknameRef.current?.focus()
           return
         }
         setStatusMessage(error.message)
@@ -166,23 +152,6 @@ function SocialSignupForm({ pending }: { pending: PendingSocialView }) {
         onChange={(event) => {
           setNickname(event.target.value)
           setErrors((current) => ({ ...current, nickname: undefined }))
-        }}
-      />
-      <AuthField
-        ref={phoneRef}
-        label="휴대폰 번호"
-        name="phoneNumber"
-        type="tel"
-        inputMode="numeric"
-        autoComplete="tel-national"
-        placeholder="01012345678"
-        value={phoneNumber}
-        error={errors.phoneNumber}
-        hint="하이픈 없이 숫자만 입력해 주세요."
-        disabled={isSubmitting}
-        onChange={(event) => {
-          setPhoneNumber(event.target.value.replace(/\D/g, ''))
-          setErrors((current) => ({ ...current, phoneNumber: undefined }))
         }}
       />
       <AuthStatus
