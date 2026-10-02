@@ -8,9 +8,14 @@ import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository
 import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;
 import com.ssafy.thorp.sector.application.repository.SectorRepository;
 import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;
+import com.ssafy.thorp.sector.application.result.LatestPricesResult;
+import com.ssafy.thorp.sector.application.result.LatestPricesResult.LatestPrice;
+import com.ssafy.thorp.sector.application.result.LatestPricesResult.SectorLatestPrice;
 import com.ssafy.thorp.sector.application.result.PriceSeriesResult;
 import com.ssafy.thorp.sector.application.result.SectorListResult;
 import com.ssafy.thorp.sector.domain.model.Sector;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 /**
@@ -94,5 +99,55 @@ public class SectorService {
         return priceSeriesRepository
                 .findCurrentSeries(map.mapVersion(), sector.representativeEtf().instrumentId())
                 .orElseThrow(() -> new PriceSeriesNotReadyException(sectorCode));
+    }
+
+    /**
+     * 열린 대응표의 섹터마다 대표 ETF의 마지막 값과 그 직전 값.
+     *
+     * <p>투자 대상 고르기의 '지금 국내 시장' 띠가 쓴다. 가격 흐름 전체를 섹터 수만큼 받지 않게 하려는 자리다.
+     *
+     * <p><b>일부 섹터에 가격이 없으면 그 섹터만 {@code missingSectorCodes}로 밝히고 200이다.</b> 띠는 받은 것만 보이면 되고, 한 섹터의
+     * 적재 지연이 나머지를 막을 까닭이 없다. 어느 섹터에도 가격이 없으면 빈 목록이 아니라 409 {@code PRICE_SERIES_NOT_READY}다(원칙 VI).
+     *
+     * @throws SectorMapNotReadyException 대응표가 아직 발행되지 않았을 때
+     * @throws PriceSeriesNotReadyException 고를 자료 버전이 없거나 어느 섹터에도 가격이 없을 때
+     */
+    public LatestPricesResult getLatestPrices() {
+        SectorListResult map = getSectors();
+        List<String> instrumentIds =
+                map.sectors().stream()
+                        .map(sector -> sector.representativeEtf().instrumentId())
+                        .distinct()
+                        .toList();
+        LatestPricesResult.Snapshot snapshot =
+                priceSeriesRepository
+                        .findLatestPrices(map.mapVersion(), instrumentIds)
+                        .orElseThrow(PriceSeriesNotReadyException::forAllSectors);
+
+        List<SectorLatestPrice> prices = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+        for (Sector sector : map.sectors()) {
+            String instrumentId = sector.representativeEtf().instrumentId();
+            LatestPrice price = snapshot.byInstrument().get(instrumentId);
+            if (price == null) {
+                missing.add(sector.code().value());
+                continue;
+            }
+            prices.add(
+                    new SectorLatestPrice(
+                            sector.code().value(),
+                            instrumentId,
+                            sector.representativeEtf().name(),
+                            price));
+        }
+        if (prices.isEmpty()) throw PriceSeriesNotReadyException.forAllSectors();
+
+        return new LatestPricesResult(
+                map.mapVersion(),
+                snapshot.datasetId(),
+                snapshot.dataDeadline(),
+                snapshot.isSample(),
+                prices,
+                missing);
     }
 }
