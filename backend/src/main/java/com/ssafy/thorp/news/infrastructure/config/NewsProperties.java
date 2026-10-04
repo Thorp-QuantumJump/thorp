@@ -110,9 +110,4 @@ public record NewsProperties(
             throw new IllegalArgumentException("leaseTtl은 0보다 커야 한다: " + leaseTtl);
         }
     }
-
-    /** 공개 노출 모드인지 여부. 공개 모드에서는 허가된 매체의 항목만 보인다(spec FR-016). */
-    public boolean isPublic() {
-        return exposureMode.requiresPermissionFilter();
-    }
 }

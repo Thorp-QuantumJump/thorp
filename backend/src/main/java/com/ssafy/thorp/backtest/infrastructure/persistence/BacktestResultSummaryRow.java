@@ -28,12 +28,6 @@ interface BacktestResultSummaryRow {
     /** {@code execution} JSONB 전체. 5필드. */
     String getExecution();
 
-    /** {@code benchmark ->> 'instrumentId'}. 결과에 벤치마크가 없으면 null */
-    String getBenchmarkInstrumentId();
-
-    /** {@code benchmark ->> 'totalReturn'}. 문자열 그대로 */
-    String getBenchmarkTotalReturn();
-
     /** {@code costs} JSONB 전체. 5필드. null = 미저장 */
     String getCosts();
 
