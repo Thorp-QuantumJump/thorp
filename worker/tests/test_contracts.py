@@ -6,12 +6,12 @@
 import json
 
 import pytest
-from conftest import FIXTURE_DIR
+from conftest import FIXTURE_DIR, THREE_ETF_DIR
 from pydantic import ValidationError
 
 from worker.contracts.base import ContractModel
 from worker.contracts.control import ControlMessage, ControlType
-from worker.contracts.engine import BacktestEngine, ProgressCallback
+from worker.contracts.engine import BacktestEngine
 from worker.contracts.engine_input import EngineInput, Scenario
 from worker.contracts.engine_output import EngineOutput, RunStatus, TradeReason
 from worker.contracts.events import (
@@ -21,6 +21,8 @@ from worker.contracts.events import (
     ProgressPayload,
     StartedPayload,
 )
+from worker.engine_runner import PortfolioBacktestEngine
+from worker.market_data import CsvMarketDataProvider
 from worker.messaging import SCHEMA_VERSION
 
 FIXTURES: list[tuple[str, type[ContractModel]]] = [
@@ -185,10 +187,12 @@ def test_engine_output_non_final_status_is_rejected() -> None:
         EngineOutput.model_validate(body)
 
 
-def test_dummy_engine_satisfies_protocol() -> None:
-    class DummyEngine:
-        def run(self, engine_input: EngineInput, on_progress: ProgressCallback) -> EngineOutput:
-            raise NotImplementedError
+def test_portfolio_engine_satisfies_protocol() -> None:
+    """``main`` 이 실행 Consumer 에 넘기는 실제 엔진이 경계 Protocol 을 만족한다.
 
-    assert isinstance(DummyEngine(), BacktestEngine)
+    CI 는 타입 검사기를 돌리지 않으므로 엔진의 ``run`` 이 이름을 잃으면 여기서 잡는다.
+    """
+    engine = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))
+
+    assert isinstance(engine, BacktestEngine)
     assert not isinstance(object(), BacktestEngine)
