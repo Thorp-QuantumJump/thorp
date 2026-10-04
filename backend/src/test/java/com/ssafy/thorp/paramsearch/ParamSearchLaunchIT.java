@@ -43,9 +43,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  *       발행 직전에 처리되지 않은 예외로 죽는다.
  * </ol>
  *
- * <p>전략 ID를 적지 않는다(FR-025). 대상은 "등록표 활성 ∩ 004 지원 ∩ 축이 있는 전략 ∩ 기준이 아닌 전략"으로 <b>조회해서</b> 고른다. 축이 없는
- * 전략을 거르는 이유는 자동 탐색의 대상이 축을 가진 전략이기 때문이고, 기준을 빼는 이유는 <b>그것이 깨져 있던 조건</b>이기 때문이다 — 요청 전략에 기준이 우연히
- * 섞이면 결함이 가려진다.
+ * <p>전략 ID를 적지 않는다(FR-025). 대상은 탐색을 접수할 수 있는 전략에서 기준을 뺀 것({@link
+ * SearchableStrategies#excludingBaseline})으로 <b>조회해서</b> 고른다. 기준을 빼는 이유는 <b>그것이 깨져 있던 조건</b>이기 때문이다
+ * — 요청 전략에 기준이 우연히 섞이면 결함이 가려진다.
  */
 class ParamSearchLaunchIT extends PortMockedIntegrationTestSupport {
 
@@ -190,7 +190,6 @@ class ParamSearchLaunchIT extends PortMockedIntegrationTestSupport {
         assertThat(rulesVersions.get(baselineStrategyId)).isNotNull();
     }
 
-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유 ∩ 기준 아님. 전략 ID를 테스트에 적지 않는다(FR-025). */
     private CreateParamSearchCommand createCommand(List<String> strategyIds) {
         return new CreateParamSearchCommand(
                 requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());

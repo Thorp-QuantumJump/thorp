@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
  * 남은 후보를 '미실행'으로 돌려 끝나는 길({@link ParamSearchCancelService})이다. 두 곳에 같은 판정을 두면 한쪽만 고쳐져 <b>취소된 묶음에만
  * 선정이 안 붙는</b> 식으로 갈라진다.
  *
- * <p>끝났는가의 기준은 하나다 — {@code PENDING} 0 && {@code DISPATCHED} 0(내부 계약 §4 "묶음 종료"). 멈추기로 한 묶음이라도 이미
- * 발행된 후보가 남아 있으면 아직 끝이 아니다. 그 후보들은 회수할 수 없어 완주한다(research R2).
+ * <p>끝났는가의 기준은 하나다 — {@code PENDING} 0 {@code &&} {@code DISPATCHED} 0(내부 계약 §4 "묶음 종료"). 멈추기로 한
+ * 묶음이라도 이미 발행된 후보가 남아 있으면 아직 끝이 아니다. 그 후보들은 회수할 수 없어 완주한다(research R2).
  *
  * <p>{@code stopReason}이 있으면 {@code PARTIAL}, 없으면 {@code COMPLETED}다. 둘 다 선정을 계산한다 — 취소된 묶음도 완료된
  * 후보끼리는 같은 조건으로 계산됐으므로 그대로 비교할 수 있다(data-model §3).

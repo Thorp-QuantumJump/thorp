@@ -450,8 +450,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`�
   필요한 계산은 문자열로 다룬다.
 - **`GET /backtests/{id}`는 백테스트가 실패해도 200이다.** `status`와 `error`로 판단한다. 폴링은 이 리소스로 하고,
   하위 리소스의 409 `RESULT_NOT_READY`(계속) / `BACKTEST_FAILED`(중단)로 재시도 여부를 가른다(§2.5).
-- **벤치마크는 항상 비어 있다.** 요청에 `benchmark.instrumentId`를 넣으면 `config.benchmarkId`에는 보이지만, 메시지 계약
-  v2에는 벤치마크가 없어 워커에 전달되지 않는다. `summary.benchmark`는 `null`이고 `timeseries[].benchmarkReturn`은 키가 없다.
+- **벤치마크는 항상 비어 있다.** 요청 v2에는 벤치마크 블록이 없어서 보내도 무시되고 `config`에도 남지 않으며, 메시지 계약
+  v2에도 없어 워커에 전달되지 않는다. `summary`에는 벤치마크 항목이 없고 `timeseries[].benchmarkReturn`은 키가 없다.
   벤치마크 비교는 별도 spec에서 다룬다.
 - 현재 엔진이 실행할 수 있는 전략은 `MOMENTUM`(파라미터 `lookbackDays`)뿐이다. 다른 `strategyId`는 Job이 접수되고
   실행 단계에서 `FAILED`(`INVALID_REQUEST`)가 된다.
