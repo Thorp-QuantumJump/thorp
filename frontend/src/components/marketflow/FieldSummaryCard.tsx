@@ -3,7 +3,7 @@ import { Popover } from 'radix-ui'
 import { useId } from 'react'
 import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from '@/components/common/useHoverOpen'
 import type { FieldSummary } from '@/types/marketFlow'
-import { DataStateLine } from './DataStateNotice'
+import { DataStateLine } from './DataState'
 import { formatNarrative, stateLineLabels } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 

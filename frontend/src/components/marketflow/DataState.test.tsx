@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { DataStateFacts } from './DataStateNotice'
+import { DataStateFacts } from './DataState'
 
 describe('DataStateFacts', () => {
   it('정상 공급이면 표를 달지 않고, 수집 실패·자료 없음은 확인 중입니다로 보인다', () => {
