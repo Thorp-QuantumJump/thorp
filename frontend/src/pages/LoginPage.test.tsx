@@ -149,7 +149,7 @@ describe('LoginPage', () => {
     await act(async () => loginRequest.resolve(authenticatedUser))
   })
 
-  it('이미 로그인한 사용자는 인증 입력 대신 홈으로 이동한다', async () => {
+  it('이미 로그인한 사용자는 인증 입력 대신 기본 도착 화면으로 이동한다', async () => {
     apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)
     renderLogin()
 
