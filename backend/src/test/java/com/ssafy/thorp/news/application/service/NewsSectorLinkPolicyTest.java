@@ -167,5 +167,30 @@ class NewsSectorLinkPolicyTest {
 
             assertThat(policy.canQuery(null)).isTrue();
         }
+
+        @Test
+        @DisplayName("섹터 여럿은 모두 등록돼 있으면 그대로, 하나라도 모르는 값이면 거부한다")
+        void 섹터_여럿() {
+            NewsSectorQueryPolicy policy =
+                    new NewsSectorQueryPolicy(new StubSectorCatalog(Set.of(REGISTERED, "NEWS_IT")));
+
+            assertThat(policy.queryableOf(List.of(REGISTERED, "NEWS_IT")))
+                    .containsExactly(REGISTERED, "NEWS_IT");
+            assertThatThrownBy(() -> policy.queryableOf(List.of(REGISTERED, STALE_ENTRY)))
+                    .isInstanceOf(NewsQueryException.class)
+                    .hasMessageNotContaining(STALE_ENTRY);
+        }
+
+        @Test
+        @DisplayName("001 대응표가 아직 없으면 투자 대상 섹터는 빼고 뉴스 전용 섹터만 묻는다")
+        void 대응표_미발행이면_뉴스_전용_섹터만() {
+            NewsSectorQueryPolicy policy =
+                    new NewsSectorQueryPolicy(StubSectorCatalog.newsOwnedOnly(Set.of("NEWS_IT")));
+
+            assertThat(policy.queryableOf(List.of(REGISTERED, "NEWS_IT")))
+                    .as("확인할 수 없는 섹터 하나 때문에 확인할 수 있는 섹터의 뉴스까지 비우지 않는다")
+                    .containsExactly("NEWS_IT");
+            assertThat(policy.queryableOf(List.of(REGISTERED))).as("물을 섹터가 없으면 빈 화면이다").isEmpty();
+        }
     }
 }

@@ -35,7 +35,9 @@ class AnswerValidatorTest {
                     60,
                     30,
                     600,
-                    5);
+                    5,
+                    5,
+                    40);
 
     static final List<Evidence> FACTS =
             List.of(
@@ -70,7 +72,9 @@ class AnswerValidatorTest {
                         answered(
                                 part("비용을 뺀 전체 수익률은 {{F1}}이고, 거래비용은 모두 {{F4}}입니다.", "F1", "F4"),
                                 part("그중 수수료가 {{F5}}, 슬리피지가 {{F6}}입니다.", "F5", "F6")),
-                        FACTS);
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0);
 
         assertThat(rendered.status()).isEqualTo(AnswerStatus.ANSWERED);
         assertThat(rendered.answer())
@@ -100,7 +104,11 @@ class AnswerValidatorTest {
     @DisplayName("모르는 factId 는 거절한다")
     void rejectsUnknownFactId() {
         AnswerValidator.Rendered rendered =
-                validator.render(answered(part("수익률은 {{F9}}입니다.", "F9")), FACTS);
+                validator.render(
+                        answered(part("수익률은 {{F9}}입니다.", "F9")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0);
 
         assertInsufficient(rendered);
     }
@@ -120,7 +128,9 @@ class AnswerValidatorTest {
             })
     @DisplayName("자리표시자 밖의 아라비아 숫자·%·원 금액·날짜·URL·경로는 거절한다")
     void rejectsLiteralValuesOutsidePlaceholders(String text) {
-        assertInsufficient(validator.render(answered(part(text, "F1")), FACTS));
+        assertInsufficient(
+                validator.render(
+                        answered(part(text, "F1")), FACTS, AnswerValidator.Policy.RESULT, 0));
     }
 
     @Test
@@ -128,13 +138,20 @@ class AnswerValidatorTest {
     void allowsKoreanNumerals() {
         AnswerValidator.Rendered rendered =
                 validator.render(
-                        answered(part("두 번 거래했고 세 종목을 들었으며 수익률은 {{F1}}입니다.", "F1")), FACTS);
+                        answered(part("두 번 거래했고 세 종목을 들었으며 수익률은 {{F1}}입니다.", "F1")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0);
 
         assertThat(rendered.status()).isEqualTo(AnswerStatus.ANSWERED);
         assertThat(rendered.answer()).isEqualTo("두 번 거래했고 세 종목을 들었으며 수익률은 16.67%입니다.");
         assertThat(
                         validator
-                                .render(answered(part("매수/매도 모두 {{F1}}에 반영됐습니다.", "F1")), FACTS)
+                                .render(
+                                        answered(part("매수/매도 모두 {{F1}}에 반영됐습니다.", "F1")),
+                                        FACTS,
+                                        AnswerValidator.Policy.RESULT,
+                                        0)
                                 .status())
                 .isEqualTo(AnswerStatus.ANSWERED);
     }
@@ -142,9 +159,18 @@ class AnswerValidatorTest {
     @Test
     @DisplayName("text 의 자리표시자와 factIds 가 어긋나면 어느 쪽이든 거절한다")
     void rejectsPlaceholderFactIdMismatch() {
-        assertInsufficient(validator.render(answered(part("수익률은 {{F1}}입니다.", "F1", "F4")), FACTS));
         assertInsufficient(
-                validator.render(answered(part("수익률은 {{F1}}, 비용은 {{F4}}입니다.", "F1")), FACTS));
+                validator.render(
+                        answered(part("수익률은 {{F1}}입니다.", "F1", "F4")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
+        assertInsufficient(
+                validator.render(
+                        answered(part("수익률은 {{F1}}, 비용은 {{F4}}입니다.", "F1")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
     }
 
     @Test
@@ -155,7 +181,9 @@ class AnswerValidatorTest {
                         answered(
                                 part("수익률은 {{F1}}입니다.", "F1"),
                                 new AnswerPart("좋은 결과네요.", List.of())),
-                        FACTS));
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
     }
 
     @Test
@@ -176,20 +204,34 @@ class AnswerValidatorTest {
                                 60,
                                 30,
                                 20,
-                                1),
+                                1,
+                                5,
+                                40),
                         List.of());
 
         assertInsufficient(
-                strict.render(answered(part("비용을 뺀 전체 수익률은 {{F1}}입니다. 아주 긴 문장입니다.", "F1")), FACTS));
+                strict.render(
+                        answered(part("비용을 뺀 전체 수익률은 {{F1}}입니다. 아주 긴 문장입니다.", "F1")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
         assertInsufficient(
-                strict.render(answered(part("{{F1}}", "F1"), part("{{F4}}", "F4")), FACTS));
+                strict.render(
+                        answered(part("{{F1}}", "F1"), part("{{F4}}", "F4")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
     }
 
     @Test
     @DisplayName("금지 표현이 들어 있으면 거절한다")
     void rejectsForbiddenPhrases() {
         assertInsufficient(
-                validator.render(answered(part("수익률이 {{F1}}이니 이 전략을 추천합니다.", "F1")), FACTS));
+                validator.render(
+                        answered(part("수익률이 {{F1}}이니 이 전략을 추천합니다.", "F1")),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
     }
 
     @Test
@@ -200,20 +242,27 @@ class AnswerValidatorTest {
                         new ModelDraft(
                                 AnswerStatus.OUT_OF_SCOPE,
                                 List.of(part("이 전략 사도 됩니다 {{F1}}", "F1"))),
-                        FACTS);
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0);
         assertThat(scope.status()).isEqualTo(AnswerStatus.OUT_OF_SCOPE);
         assertThat(scope.answer()).isEqualTo(AnswerValidator.OUT_OF_SCOPE_MESSAGE);
         assertThat(scope.evidence()).isEmpty();
 
         assertInsufficient(
                 validator.render(
-                        new ModelDraft(AnswerStatus.INSUFFICIENT_EVIDENCE, List.of()), FACTS));
-        assertInsufficient(validator.render(null, FACTS));
+                        new ModelDraft(AnswerStatus.INSUFFICIENT_EVIDENCE, List.of()),
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0));
+        assertInsufficient(validator.render(null, FACTS, AnswerValidator.Policy.RESULT, 0));
 
         AnswerValidator.Rendered greeting =
                 validator.render(
                         new ModelDraft(AnswerStatus.GREETING, List.of(part("안녕하세요 {{F1}}", "F1"))),
-                        FACTS);
+                        FACTS,
+                        AnswerValidator.Policy.RESULT,
+                        0);
         assertThat(greeting.status()).isEqualTo(AnswerStatus.GREETING);
         assertThat(greeting.answer()).isEqualTo(AnswerValidator.GREETING_MESSAGE);
         assertThat(greeting.evidence()).isEmpty();

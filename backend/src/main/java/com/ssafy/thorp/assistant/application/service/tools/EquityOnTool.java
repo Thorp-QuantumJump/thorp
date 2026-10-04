@@ -21,7 +21,7 @@ public class EquityOnTool implements AssistantTool {
 
     @Override
     public ToolSpec spec() {
-        return new ToolSpec(NAME, "특정 날짜의 자산가치·누적 수익률·하락 폭. 휴장일이면 직전 거래일 값", List.of("date"));
+        return ToolSpec.dates(NAME, "특정 날짜의 자산가치·누적 수익률·하락 폭. 휴장일이면 직전 거래일 값", List.of("date"));
     }
 
     @Override

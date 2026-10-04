@@ -52,7 +52,9 @@ class ToolLoopTest {
                     60,
                     30,
                     600,
-                    5);
+                    5,
+                    5,
+                    40);
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-09-24T03:00:00Z"));
     private final ToolLoop loop = new ToolLoop(SETTINGS);
@@ -62,7 +64,7 @@ class ToolLoopTest {
     }
 
     private ToolLoop.Outcome run(AssistantModelPort model, String question, EvidenceBundle bundle) {
-        return loop.run(model, question, bundle, deadline());
+        return loop.run(model, PageKind.RESULT, question, bundle, deadline());
     }
 
     /** 호출 이력을 남기는 가짜 도구. {@code produce}만큼 근거를 돌려준다. */
@@ -76,7 +78,7 @@ class ToolLoopTest {
 
         @Override
         public ToolSpec spec() {
-            return new ToolSpec("getEquityOn", "특정 날짜의 시계열 점", List.of("date"));
+            return ToolSpec.dates("getEquityOn", "특정 날짜의 시계열 점", List.of("date"));
         }
 
         @Override
@@ -370,7 +372,14 @@ class ToolLoopTest {
         Deadline spent = deadline();
         clock.advance(Duration.ofSeconds(121));
 
-        assertThatThrownBy(() -> loop.run(model, "q", bundle(List.of(fact("a", "1"))), spent))
+        assertThatThrownBy(
+                        () ->
+                                loop.run(
+                                        model,
+                                        PageKind.RESULT,
+                                        "q",
+                                        bundle(List.of(fact("a", "1"))),
+                                        spent))
                 .isInstanceOf(BusinessException.class);
         assertThat(model.conversations).isEmpty();
     }

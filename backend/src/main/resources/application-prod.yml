@@ -89,7 +89,8 @@ thorp:
     pending-run-sweep-interval: ${THORP_REGIMELINK_PENDING_RUN_SWEEP_INTERVAL}
     job-max-rows: ${THORP_REGIMELINK_JOB_MAX_ROWS}
     job-max-instruments: ${THORP_REGIMELINK_JOB_MAX_INSTRUMENTS}
-  # 화면 맥락 도우미(spec 015). 아래 넷은 **예외로 빈 기본값**이다 — 이 기능의 요구가 "없으면 기능만 꺼진다"라서(계약 §4,
+  # 화면 맥락 도우미(spec 015·017). enabled-scopes 는 켤 화면 종류의 쉼표 목록이다 — RESULT(015)·SECTOR_SELECTION·
+  # STRATEGY_SETTINGS(017), 종류마다 품질 관문 뒤에 넣는다. 아래 넷은 **예외로 빈 기본값**이다 — 이 기능의 요구가 "없으면 기능만 꺼진다"라서(계약 §4,
   # ADR-0008). 기본값 없는 ${ENV} 는 미설정 시 기동 실패라 그 요구와 양립하지 않는다. 한도·시간 예산은 공통 설정의 값을
   # 물려받는다 — 물려받는 값이 상한이지 "상한 없음"이 아니라서 다른 블록과 달리 필수로 두지 않는다.
   assistant:

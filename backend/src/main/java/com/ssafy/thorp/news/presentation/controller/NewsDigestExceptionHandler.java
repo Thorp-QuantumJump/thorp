@@ -40,6 +40,9 @@ public class NewsDigestExceptionHandler {
     /** 시각 표기를 해석할 수 없을 때 돌려주는 말. 받은 값을 되비추지 않는다(spec FR-021). */
     private static final String MALFORMED_INSTANT = "시각은 ISO-8601 형식이어야 합니다.";
 
+    /** 개수를 정수로 읽지 못했을 때 돌려주는 말. 묶음 조회와 내보내기의 {@code limit}이 함께 쓴다. */
+    private static final String MALFORMED_LIMIT = "limit은 1 이상의 정수여야 합니다.";
+
     @ExceptionHandler(NewsQueryException.class)
     public ResponseEntity<HttpApiResponse<Void>> handleInvalidQuery(NewsQueryException e) {
         return ResponseEntity.badRequest()
@@ -47,14 +50,15 @@ public class NewsDigestExceptionHandler {
     }
 
     /**
-     * {@code from}·{@code to}를 {@code Instant}로 바꾸지 못했다.
+     * {@code from}·{@code to}를 {@code Instant}로, {@code limit}을 정수로 바꾸지 못했다.
      *
-     * <p>Spring이 만든 메시지에는 받은 값이 그대로 들어 있어 그대로 내보내지 않는다. 고정 문장으로 바꾼다.
+     * <p>Spring이 만든 메시지에는 받은 값이 그대로 들어 있어 그대로 내보내지 않는다. 파라미터에 맞는 고정 문장으로 바꾼다.
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<HttpApiResponse<Void>> handleMalformedInstant(
+    public ResponseEntity<HttpApiResponse<Void>> handleMalformedParameter(
             MethodArgumentTypeMismatchException e) {
+        String message = "limit".equals(e.getName()) ? MALFORMED_LIMIT : MALFORMED_INSTANT;
         return ResponseEntity.badRequest()
-                .body(HttpApiResponse.fail(HttpStatus.BAD_REQUEST, MALFORMED_INSTANT));
+                .body(HttpApiResponse.fail(HttpStatus.BAD_REQUEST, message));
     }
 }

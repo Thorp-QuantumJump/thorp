@@ -1,0 +1,552 @@
+/*
+  분야 상세 안의 '지금과 비슷했던 과거' 줄과 종합 비교 목록(009 FR-019). 줄은 분야 머리와 지표 칸 사이에 서서
+  어느 과거 구간을 그래프에 겹칠지 고르고, 그 구간으로 이어 갈 행동을 같은 줄 오른쪽에 둔다.
+  당시 경로는 점선과 회백(copy)으로, 지금 경로는 실선으로 가른다. 지금 선의 색은 오르내림을 따르므로 범례는
+  색이 아니라 선 모양으로 읽힌다.
+*/
+.compare {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.compareHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.compareTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--thorp-text-heading, 1.02rem);
+  font-weight: 650;
+}
+
+.compareTitle svg {
+  flex-shrink: 0;
+  color: var(--thorp-accent-soft);
+}
+
+.compareMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.allLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--thorp-line-strong);
+  color: var(--thorp-copy);
+  text-decoration: none;
+}
+
+.allLink:hover {
+  color: var(--thorp-foreground);
+}
+
+/* 고르는 칸들과 행동 버튼. 넓은 화면에서는 한 줄, 좁아지면 버튼이 아랫줄로 내려간다. */
+.chooser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: auto repeat(var(--case-count, 3), minmax(0, 1fr));
+  flex: 1 1 640px;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.option {
+  position: relative;
+  display: block;
+  min-width: 0;
+  cursor: pointer;
+}
+
+/* 고르는 칸은 라디오다. 화살표로 옮겨 다니고, 보이는 면은 그 다음 형제가 맡는다. */
+.option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.optionFace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  min-height: var(--thorp-control, 44px);
+  padding: 8px 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface-muted, transparent);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.option:hover .optionFace {
+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));
+  color: var(--thorp-foreground);
+}
+
+.option input:focus-visible + .optionFace {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.option input:checked + .optionFace {
+  border-color: var(--thorp-copy);
+  background: color-mix(in srgb, var(--thorp-copy) 9%, transparent);
+  color: var(--thorp-foreground);
+}
+
+.rank {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--thorp-line);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.option input:checked + .optionFace .rank {
+  background: var(--thorp-copy);
+  color: var(--thorp-background);
+}
+
+.nowOnly .optionFace {
+  justify-content: center;
+  padding: 8px 18px;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.backtest,
+.secondary {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: var(--thorp-control, 44px);
+  padding: 6px 18px;
+  border-radius: var(--thorp-radius-control, 6px);
+  font: inherit;
+  font-size: var(--thorp-control-font, 0.84rem);
+  font-weight: var(--thorp-control-weight, 680);
+  line-height: 1.25;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.backtest {
+  border: 1px solid var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.backtest small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.backtest:hover:not(:disabled) {
+  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+}
+
+.secondary {
+  align-items: center;
+  border: 1px solid var(--thorp-line-strong);
+  background: var(--thorp-surface-raised, transparent);
+  color: var(--thorp-copy);
+  font-weight: 600;
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));
+  color: var(--thorp-foreground);
+}
+
+.backtest:disabled,
+.secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.backtest:focus-visible,
+.secondary:focus-visible,
+.allLink:focus-visible,
+.pick:focus-visible,
+.detailButton:focus-visible,
+.inlineAction:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 범례: 실선은 지금, 점선은 당시, 옅은 띠는 보통 범위. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.key,
+.bandToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.bandToggle {
+  cursor: pointer;
+}
+
+.bandToggle input {
+  margin: 0;
+  accent-color: var(--thorp-accent);
+}
+
+.swatchNow,
+.swatchPast {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 2px solid var(--thorp-foreground);
+}
+
+.swatchPast {
+  border-top: 2px dashed var(--thorp-copy);
+}
+
+.swatchBand {
+  display: inline-block;
+  width: 22px;
+  height: 10px;
+  border: 1px dashed var(--thorp-line-strong);
+  border-radius: 2px;
+  background: var(--thorp-line);
+}
+
+.inlineAction {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
+  border-radius: var(--thorp-radius-control, 6px);
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 받지 못했을 때의 조용한 안내. 분야 상세는 막히지 않는다. */
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.78rem);
+}
+
+.loading {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.78rem);
+}
+
+.notes {
+  display: grid;
+  gap: 4px;
+}
+
+/* 사례가 없을 때 010이 준 검색 상태 문장. 010 화면의 EmptyResult와 같은 문장을 이 줄의 글자 크기로 적는다. */
+.emptyNote {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  line-height: 1.55;
+}
+
+/* 010의 신뢰 범위 표시(예시 자료·빠진 비교 시점·더 최신 발표·자료 기준 시점). 있을 때만 서고 늘 문구로 보인다. */
+.trust {
+  display: grid;
+  gap: 8px;
+}
+
+.trust:empty {
+  display: none;
+}
+
+.dataAsOf p {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  line-height: 1.5;
+}
+
+/* 비슷한 점·다른 점 이름표. 문구가 함께 있어 색만으로 가르지 않는다. */
+.reason {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.55;
+}
+
+.reason b {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 650;
+}
+
+.similarLabel {
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-accent-soft);
+}
+
+.differentLabel {
+  background: color-mix(in srgb, var(--thorp-warning) 16%, transparent);
+  color: var(--thorp-warning);
+}
+
+.similarText {
+  color: var(--thorp-accent-soft);
+}
+
+.differentText {
+  color: var(--thorp-warning);
+}
+
+/* 종합 비교. 분야 하나의 지표가 없으므로 예전 사례 목록 모양으로 보인다. */
+.composite {
+  display: grid;
+  gap: 16px;
+}
+
+.compositeHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.compositeHead h2 {
+  margin: 0;
+  color: var(--thorp-warning);
+  font: 600 1.6rem/1.2 var(--thorp-font-page, var(--thorp-font-body));
+  letter-spacing: -0.045em;
+}
+
+.compositeLead {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+  line-height: 1.55;
+}
+
+.basis {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.cases {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 사례 한 줄: 왼쪽은 관측 구간과 비슷한 점·다른 점, 오른쪽은 이 기간으로 백테스트. */
+.case {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 24px;
+  padding: var(--thorp-pad-inset, 12px 14px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface-muted);
+}
+
+.caseBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.caseRange {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+
+.caseRange strong {
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-body, 0.86rem);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.caseRange span {
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+}
+
+.caseActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+
+.pick {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--thorp-control, 40px);
+  padding: 0 16px;
+  border-radius: var(--thorp-radius-control, 6px);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+  font-size: var(--thorp-control-font, 0.82rem);
+  font-weight: var(--thorp-control-weight, 680);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pick:hover {
+  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+}
+
+.detailButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--thorp-control, 40px);
+  padding: 0 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: var(--thorp-control-font, 0.82rem);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.detailButton:hover {
+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));
+  color: var(--thorp-foreground);
+}
+
+@media (max-width: 1180px) {
+  .options {
+    flex-basis: 100%;
+  }
+
+  .actions {
+    flex: 1 1 100%;
+  }
+
+  .actions > * {
+    flex: 1;
+    align-items: center;
+  }
+}
+
+@media (max-width: 800px) {
+  .options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nowOnly {
+    grid-column: 1 / -1;
+  }
+
+  .case {
+    grid-template-columns: 1fr;
+  }
+
+  .caseActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .options {
+    grid-template-columns: 1fr;
+  }
+
+  .nowOnly {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .optionFace,
+  .backtest,
+  .secondary {
+    transition: none;
+  }
+}

@@ -170,7 +170,7 @@ PUBLIC 현재 조회 순서:
 3. 선택 sector/topic 필터
 4. 허가된 기사만으로 묶음의 대표 기사·대표 제목·사실 요약·매체 수·최근성 재계산. 대표 기사가 미허가면 남은 허가 기사에 같은 대표 선정 규칙(검증 발행 시각 최초 → canonical URL 오름차순)을 다시 적용한다
 5. 허가 기사가 없거나 남은 기사로 요약 조건을 만족하지 못하는 묶음 제외
-6. importance tuple 정렬 후 최대 3건
+6. importance tuple 정렬 후 `limit`건(생략하면 3, 서버 상한 20, 2026-10-02)
 
 `NewsDigest`에 저장된 `representativeArticleId`, `representativeTitle`, `factualSummary`, `distinctPublisherCount`는 전체 멤버 기준의 값이며 허가 상태 변경 시 갱신하지 않는다. PUBLIC 응답은 위 순서로 조회 시점에 계산한 값만 사용한다.
 
