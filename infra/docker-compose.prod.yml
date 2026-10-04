@@ -6,11 +6,14 @@ services:
     image: postgres:16-alpine
     container_name: thorp-postgres
     restart: unless-stopped
+    # 자원은 실측(2026-10-02 옛 운영 서버, 4주 가동) 기준이다. DB 가 408MB 라 shared_buffers 2GB 는 채워질 수
+    # 없었고, 컨테이너 최고 메모리는 789MB(대부분 파일 캐시, 프로세스 자체는 27MB)였다. CPU 1.5 중 상한에
+    # 걸린 비율은 0.04% 였다. maintenance_work_mem 은 덤프 복원·인덱스 생성이 쓰므로 상한 안에서 넉넉히 둔다.
     command: >
       postgres
-      -c shared_buffers=2GB
+      -c shared_buffers=256MB
       -c work_mem=32MB
-      -c maintenance_work_mem=512MB
+      -c maintenance_work_mem=256MB
       -c max_connections=100
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -30,8 +33,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
-          cpus: "1.5"
+          memory: 1G
+          cpus: "1.0"
     networks: [backend]
 
   # Job 전달은 RabbitMQ가 담당한다. Kafka는 설치만 해둔 상태라 기본 기동에서 제외한다.
@@ -77,12 +80,17 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      # Erlang 은 컨테이너 CPU 상한이 아니라 호스트 코어 수만큼 스케줄러를 띄우고, 일이 없을 때도 스케줄러가
+      # 잠깐씩 돌며 기다린다(busy wait). 옛 서버에서 CPU 0.5 상한에 걸린 시간이 22% 였던 원인이다.
+      # 스케줄러를 하나로 두고 대기 회전을 끈다. 메모리 설정은 rabbitmq/conf.d/90-thorp.conf 에 있다.
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+S 1:1 +sbwt none +sbwtdcpu none +sbwtdio none"
       TZ: Asia/Seoul
     ports:
       # AMQP(5672)는 호스트에 열지 않는다. 관리 UI만 SSH 터널로 접근.
       - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/conf.d/90-thorp.conf:/etc/rabbitmq/conf.d/90-thorp.conf:ro
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 15s
@@ -91,7 +99,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 512M
           cpus: "0.5"
     networks: [backend]
 
@@ -166,7 +174,9 @@ services:
       # 값이 없으면 메일 발송 빈을 만드는 단계에서 기동이 실패한다.
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-      JAVA_TOOL_OPTIONS: "-Xmx1536m"
+      # 옛 서버 실측 최고 사용량은 681MB 였다(재배포 뒤 1시간 분량이라 근거가 짧다). 힙 1GB 에 메타스페이스·
+      # 스레드·코드 캐시 몫을 더해 컨테이너 상한을 1.5GB 로 둔다. 상한에 닿으면 이 값부터 다시 잰다.
+      JAVA_TOOL_OPTIONS: "-Xmx1024m"
       TZ: Asia/Seoul
     expose:
       - "8080"
@@ -178,7 +188,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 1536M
           cpus: "1.0"
     networks: [backend, edge]
 
@@ -295,8 +305,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: "0.5"
+          # 옛 서버 3주 가동 최고 17MB, CPU 상한에 걸린 비율 0.2%.
+          memory: 64M
+          cpus: "0.25"
     networks: [edge]
 
   # Cloudflare Tunnel 커넥터. Cloudflare 쪽으로 나가는 연결만 맺고 들어오는 포트는 없다.
