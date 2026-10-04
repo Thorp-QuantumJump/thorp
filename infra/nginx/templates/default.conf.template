@@ -5,32 +5,28 @@ upstream backend_was {
     keepalive 32;
 }
 
-# HTTP: 인증서 발급 경로만 열고 나머지는 HTTPS로 보낸다
+# 백엔드에 넘길 원래 요청의 스킴. TLS는 Cloudflare가 끝내고 cloudflared가 이 80 포트로 평문을 넘기므로
+# $scheme 은 늘 http 다. 그대로 넘기면 백엔드가 요청을 HTTP로 보고 XSRF-TOKEN 쿠키에 Secure를 붙이지 않는다
+# (application-prod.yml forward-headers-strategy). Cloudflare가 붙인 X-Forwarded-Proto 를 그대로 쓰고,
+# 헤더 없이 들어온 요청(내부 확인용 curl 등)만 $scheme 으로 둔다.
+map $http_x_forwarded_proto $thorp_forwarded_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+
+# 정적 프론트 + /api 리버스 프록시. 앞단은 Cloudflare Tunnel(compose 의 cloudflared)이다.
+# 호스트에 포트를 열지 않으므로 이 서버에 닿는 것은 같은 Docker 네트워크의 컨테이너뿐이다.
 server {
     listen 80;
     server_name ${DOMAIN};
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# HTTPS: 정적 프론트 + /api 리버스 프록시
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name ${DOMAIN};
-
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache   shared:SSL:10m;
-    ssl_session_timeout 1d;
+    # 사용자의 실제 IP. 모든 요청이 cloudflared 컨테이너에서 오므로 $remote_addr 은 늘 그 주소다.
+    # Cloudflare가 붙이는 CF-Connecting-IP 로 바꿔 둔다 — 화면 도우미의 IP 한도가 이 값을 키로 쓴다.
+    # 사설 대역만 믿는 것은 이 서버에 닿을 수 있는 곳이 Docker 네트워크뿐이기 때문이다.
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header   CF-Connecting-IP;
 
     client_max_body_size 20m;
 
@@ -42,10 +38,6 @@ server {
     gzip_types text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
     location /api/ {
         # 끝의 슬래시가 /api 접두사를 떼어낸다. 없으면 /api/backtests 가 그대로
         # 전달되어 백엔드(/backtests)가 못 받는다. 지우지 말 것.
@@ -54,8 +46,11 @@ server {
         proxy_set_header Connection        "";
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        # $proxy_add_x_forwarded_for 를 쓰지 않는다. 그것은 사용자가 보낸 X-Forwarded-For 뒤에 덧붙이고,
+        # 백엔드(forward-headers-strategy: framework)는 맨 앞 값을 IP로 읽으므로 사용자가 IP를 꾸밀 수 있다.
+        # 위 real_ip 설정으로 $remote_addr 이 이미 실제 IP라 그 값 하나만 넘긴다.
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $thorp_forwarded_proto;
         # 백테스트 조회가 길어질 수 있어 기본 60s보다 넉넉히 준다
         proxy_connect_timeout 10s;
         proxy_read_timeout    300s;
