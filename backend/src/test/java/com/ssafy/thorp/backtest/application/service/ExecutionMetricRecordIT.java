@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.ssafy.thorp.backtest.application.command.ExecutionMetricRecord;
 import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;
 import com.ssafy.thorp.backtest.application.repository.ExecutionMetricRepository;
 import com.ssafy.thorp.backtest.application.result.ExecutionMetricSummary;
@@ -86,6 +87,31 @@ class ExecutionMetricRecordIT extends IntegrationTestSupport {
                 "SELECT * FROM backtest_run_metric WHERE run_id = ?", run.getId());
     }
 
+    /** 이미 기록된 실행을 다시 넣는 측정 행. 겹치는 것은 {@code run_id}이고 나머지 값은 판정에 쓰이지 않는다. */
+    private ExecutionMetricRecord duplicateMetric(BacktestRun run) {
+        RunLifecycle lc = run.getLifecycle();
+        return new ExecutionMetricRecord(
+                run.getId(),
+                ExecutionType.SINGLE,
+                run.getStatus(),
+                run.getFailureCode(),
+                lc.queuedAt(),
+                lc.startedAt(),
+                lc.finishedAt(),
+                null,
+                null,
+                0,
+                null,
+                null,
+                false,
+                0L,
+                null,
+                null,
+                null,
+                null,
+                clock.instant());
+    }
+
     private Integer metricCount(BacktestRun run) {
         return jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM backtest_run_metric WHERE run_id = ?",
@@ -124,14 +150,14 @@ class ExecutionMetricRecordIT extends IntegrationTestSupport {
         finished(run, MessageFixtures.FINISHED_FAILED);
         BacktestRun settled = runRepository.findById(run.getId()).orElseThrow();
 
+        // 종결 경로가 같은 실행을 다시 기록해도 예외 없이 지나간다. 기록기는 저장소가 돌려준 false를 로그로만 남기므로
+        // 그 값은 저장소를 직접 불러 확인한다.
+        transactionTemplate.executeWithoutResult(status -> recorder.record(settled, null));
         Boolean again =
                 transactionTemplate.execute(
-                        status -> {
-                            recorder.record(settled, null);
-                            return true;
-                        });
+                        status -> metricRepository.record(duplicateMetric(settled)));
 
-        assertThat(again).isTrue();
+        assertThat(again).as("run_id가 겹치면 ON CONFLICT DO NOTHING이 0행을 넣는다").isFalse();
         assertThat(metricCount(run)).isEqualTo(1);
         assertThat(metricOf(run).get("status")).isEqualTo("FAILED");
     }

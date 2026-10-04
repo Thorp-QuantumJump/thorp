@@ -147,6 +147,27 @@ class ParamSearchRejectionIT extends LauncherMockedIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("목표 비중을 사용자가 대는 전략이면 422 STRATEGY_NOT_SEARCHABLE이고 묶음만 REJECTED로 남는다")
+    void userSuppliedWeightsAreRejectedAsNotSearchable() {
+        // 자동 탐색은 목표 비중을 만들지 않는다. 실행 미지원과 같은 코드로 답하면 사용자가 '기다리면 되는 일'로 읽는다.
+        useRegistry(
+                RegistryFixtures.registry(VERSION)
+                        .strategy(STRATEGY, RegistryFixtures.axisOfSize("x", 2))
+                        .targetWeightSource(STRATEGY, "USER")
+                        .build());
+
+        assertThatThrownBy(() -> paramSearchService.create(command()))
+                .isInstanceOf(ParamSearchRejectedException.class)
+                .extracting(e -> ((ParamSearchRejectedException) e).getErrorCode())
+                .isEqualTo(ErrorCode.STRATEGY_NOT_SEARCHABLE);
+
+        ParamSearch rejected = onlySearch();
+        assertThat(rejected.getStatus()).isEqualTo(ParamSearchStatus.REJECTED);
+        assertThat(rejected.getStopReason()).isEqualTo(StopReason.STRATEGY_NOT_SEARCHABLE);
+        Mockito.verifyNoInteractions(launcher);
+    }
+
+    @Test
     @DisplayName("거부해도 묶음 식별자가 남아 사용자가 기록을 되짚을 수 있다")
     void theRejectedBundleKeepsItsIdentifier() {
         useRegistry(

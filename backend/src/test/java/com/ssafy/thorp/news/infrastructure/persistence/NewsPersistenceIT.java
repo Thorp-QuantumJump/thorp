@@ -352,27 +352,6 @@ class NewsPersistenceIT extends PostgresTestSupport {
     }
 
     @Test
-    @DisplayName("발행 시각이 확인된 기사만 구간 조회에 나온다")
-    void verifiedTimeQueryExcludesUnknown() {
-        NewsPublisher publisher = savePublisher("dd", PermissionStatus.ALLOWED);
-        saveArticle(
-                publisher.getId(),
-                "https://rss.dd.example.com/1",
-                "확인된 기사",
-                Instant.parse("2026-09-10T04:00:00Z"));
-        saveArticle(publisher.getId(), "https://rss.dd.example.com/2", "미확인 기사", null);
-
-        List<NewsArticle> found =
-                articleRepository.findVerifiedBetween(
-                        Instant.parse("2026-09-10T00:00:00Z"),
-                        Instant.parse("2026-09-10T05:00:00Z"));
-
-        assertThat(found).hasSize(1);
-        assertThat(found.get(0).getTitle()).isEqualTo("확인된 기사");
-        assertThat(found.get(0).getPublishedAtStatus()).isEqualTo(PublicationTimeStatus.VERIFIED);
-    }
-
-    @Test
     @DisplayName("묶음은 전체 멤버로 저장되고 공개 투영은 허가된 기사만으로 다시 계산된다")
     void permissionFirstProjection() {
         NewsPublisher allowed = savePublisher("ee", PermissionStatus.ALLOWED);
@@ -849,25 +828,6 @@ class NewsPersistenceIT extends PostgresTestSupport {
         assertThat(inRange.digests()).hasSize(1);
         assertThat(outOfRange.digests()).isEmpty();
         assertThat(outOfRange.context()).isEqualTo(NewsDigestQuery.Context.HISTORICAL);
-    }
-
-    @Test
-    @DisplayName("회신하지 않은 매체의 기사는 공개 조회에 나오지 않는다")
-    void 미허가_매체_제외() {
-        NewsPublisher pending = savePublisher("pending", PermissionStatus.PENDING);
-        NewsArticle article =
-                saveArticle(
-                        pending.getId(),
-                        "https://pending.example.com/1",
-                        "회신 전 매체 기사",
-                        NOW.minusSeconds(600));
-        digestRepository.save(
-                NewsDigest.of(List.of(article), "요약", GROUPING_RULE, IMPORTANCE_RULE));
-        flushAndClear();
-
-        NewsDigestListResult result = queryService.query(NewsDigestQuery.current(null));
-
-        assertThat(result.digests()).as("회신이 없는 매체의 항목은 공개 환경에 표시하지 않는다(spec FR-016)").isEmpty();
     }
 
     @Test

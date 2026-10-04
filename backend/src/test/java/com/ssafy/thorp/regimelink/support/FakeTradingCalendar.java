@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 판정 시험용 거래일 달력. <b>평일이 곧 거래일</b>이고 공휴일은 따로 지정한다.
+ * 판정 시험용 거래일 달력. <b>평일이 곧 거래일</b>이고 공휴일은 두지 않는다.
  *
  * <p>실제 달력(KOSPI 일별 행)을 쓰지 않는 것은 시험이 특정 해의 휴장일에 묶이지 않게 하기 위해서다 — 여기서 확인하려는 것은 판정 규칙이지 달력 자료가 아니다.
  * 달력 조회 자체는 Testcontainers 통합 시험이 본다.
@@ -18,7 +18,6 @@ import java.util.Set;
 public class FakeTradingCalendar implements TradingCalendarPort {
 
     private final LocalDate dataAsOf;
-    private final Set<LocalDate> holidays = new HashSet<>();
     private final Map<String, LocalDate> delistings = new HashMap<>();
     private final Set<String> mappedSectors = new HashSet<>();
     private String mappingVersion = "MAP-1";
@@ -124,8 +123,6 @@ public class FakeTradingCalendar implements TradingCalendarPort {
     }
 
     private boolean tradingDay(LocalDate date) {
-        return date.getDayOfWeek() != DayOfWeek.SATURDAY
-                && date.getDayOfWeek() != DayOfWeek.SUNDAY
-                && !holidays.contains(date);
+        return date.getDayOfWeek() != DayOfWeek.SATURDAY && date.getDayOfWeek() != DayOfWeek.SUNDAY;
     }
 }

@@ -52,15 +52,21 @@ class RegimeNoComputationTest {
                     ".doubleValue(",
                     ".floatValue(");
 
-    /** 지표 시계열을 가리키는 이름. 여기 닿는 순간 Backend가 008의 값을 직접 읽는 것이다(계약 §0.1). */
+    /**
+     * 지표 시계열을 가리키는 이름. 여기 닿는 순간 Backend가 008의 값을 직접 읽는 것이다(계약 §0.1).
+     *
+     * <p>Java 쪽 통로는 008 조회 저장소의 관측값 메서드와 그 행 타입이고, SQL 쪽 통로는 관측값 표 {@code macro_observation}이다. 표
+     * 이름은 SQL 문자열 안에만 나타나므로 이 검사는 문자열을 남긴 코드에서 찾는다.
+     */
     private static final List<String> TIME_SERIES_NAMES =
             List.of(
-                    "macro_indicator_value",
-                    "macro_indicator",
+                    "findObservations",
+                    "findLatestValidMonths",
+                    "ObservationRow",
+                    "LatestMonthRow",
+                    "macro_observation",
                     "monthlySeries",
-                    "rawSeries",
-                    "monthly_series",
-                    "raw_series");
+                    "rawSeries");
 
     @Test
     @DisplayName("산술 연산이 0건이다")
@@ -98,7 +104,8 @@ class RegimeNoComputationTest {
         for (Path file : sources()) {
             // 주석은 걷어 낸다. 포트의 javadoc 이 "여기에 monthlySeries() 를 두지 않는다"라고
             // 설명하는 자리까지 위반으로 잡으면, 그 설명을 지우는 방향으로 고치게 된다.
-            String code = strip(read(file));
+            // 문자열은 남긴다. 걷어 내면 SQL로 관측값 표를 읽어도 보이지 않는다.
+            String code = stripComments(read(file));
             for (String name : TIME_SERIES_NAMES) {
                 if (code.contains(name)) {
                     offenders.add(file.getFileName() + ": " + name);
@@ -138,12 +145,16 @@ class RegimeNoComputationTest {
      * 꺼진다. 꺼진 검사는 없는 검사보다 나쁘다 — 통과한다는 사실이 근거처럼 읽힌다.
      */
     private static String strip(String code) {
-        String withoutBlockComments = code.replaceAll("(?s)/\\*.*?\\*/", " ");
-        String withoutLineComments = withoutBlockComments.replaceAll("//[^\\n]*", " ");
-        String withoutText = withoutLineComments.replaceAll("(?s)\"\"\".*?\"\"\"", " ");
+        String withoutText = stripComments(code).replaceAll("(?s)\"\"\".*?\"\"\"", " ");
         String withoutStrings = withoutText.replaceAll("\"(\\\\.|[^\"\\\\])*\"", " ");
         String withoutChars = withoutStrings.replaceAll("'(\\\\.|[^'\\\\])'", " ");
         return withoutChars.replace("->", " ");
+    }
+
+    /** 주석만 걷어 낸다. 문자열은 남으므로 SQL에 적힌 표 이름도 보인다. */
+    private static String stripComments(String code) {
+        String withoutBlockComments = code.replaceAll("(?s)/\\*.*?\\*/", " ");
+        return withoutBlockComments.replaceAll("//[^\\n]*", " ");
     }
 
     private static String snippet(String code, int at) {

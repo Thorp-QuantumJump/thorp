@@ -3,6 +3,7 @@ package com.ssafy.thorp.market;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.thorp.market.application.service.MarketSeriesService;
 import com.ssafy.thorp.market.application.service.MarketService;
 import com.ssafy.thorp.market.infrastructure.client.*;
 import com.ssafy.thorp.market.infrastructure.config.MarketConfig;
@@ -16,27 +17,40 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-/** 명시적으로 활성화한 경우에만 실제 키로 원천 API를 호출한다. DB는 필요 없다. */
+/**
+ * 명시적으로 활성화한 경우에만 실제 키로 원천 API를 호출한다. DB는 필요 없다.
+ *
+ * <p>CI는 {@code MARKET_LIVE_TEST}를 넣지 않으므로 늘 건너뛴다. 키를 바꾼 뒤 사람이 직접 돌리는 수동 시험이고, 실행 절차는 {@code
+ * docs/specs/market-api.md}에 있다. 늘 건너뛰는 탓에 컨텍스트 구성이 운영과 어긋나도 드러나지 않으니, 컨트롤러가 새 의존성을 받으면 아래 목록에도
+ * 더한다.
+ */
 @EnabledIfEnvironmentVariable(named = "MARKET_LIVE_TEST", matches = "true")
+// 공통 설정의 news health 그룹은 뉴스 빈을 가리킨다. 시장 빈만 올리는 이 컨텍스트에는 그 빈이 없어 그룹 검증을 끈다.
 @SpringBootTest(
         classes = MarketLiveApiTest.LiveConfig.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "management.endpoint.health.validate-group-membership=false")
 class MarketLiveApiTest {
     @Configuration
+    // 보안 자동 설정도 뺀다. 앱의 SecurityConfig 없이 기본 설정만 뜨면 모든 요청이 401이 되어 원천을 부르기도 전에 끝난다.
     @EnableAutoConfiguration(
             exclude = {
                 DataSourceAutoConfiguration.class,
                 HibernateJpaAutoConfiguration.class,
-                KafkaAutoConfiguration.class
+                KafkaAutoConfiguration.class,
+                SecurityAutoConfiguration.class,
+                ManagementWebSecurityAutoConfiguration.class
             })
     @Import({
         MarketConfig.class,
@@ -46,6 +60,8 @@ class MarketLiveApiTest {
         KosisMarketClient.class,
         CustomsMarketClient.class,
         MarketService.class,
+        // 컨트롤러가 일별 지표 조회도 맡아 이 서비스 없이는 컨텍스트가 뜨지 않는다. 갱신 스케줄러는 넣지 않는다.
+        MarketSeriesService.class,
         MarketController.class,
         MarketExceptionHandler.class,
         com.ssafy.thorp.common.web.advice.GlobalExceptionHandler.class

@@ -79,7 +79,7 @@ public final class RegistryFixtures {
 
     /** 조회가 실패하는 등록표. 503 경로(FR-028, research R9) 검증용이다. */
     public static ParameterRegistryPort unavailable() {
-        return new FixtureRegistry(null, List.of(), Map.of(), null) {
+        return new FixtureRegistry(null, List.of(), Map.of()) {
             @Override
             public Optional<StrategyRegistration> find(String strategyId) {
                 throw new IllegalStateException("registry down");
@@ -94,7 +94,7 @@ public final class RegistryFixtures {
 
     /** 유효성 판정만 실패하는 등록표. 판정을 못 받은 조합을 유효로 넘기지 않는지 보는 데 쓴다. */
     public static ParameterRegistryPort validationUnavailable() {
-        return new FixtureRegistry("FIXTURE-BROKEN", List.of(), Map.of(), null) {
+        return new FixtureRegistry("FIXTURE-BROKEN", List.of(), Map.of()) {
             @Override
             public ValidationVerdict validate(
                     String strategyId, Map<String, Object> parameters, SearchContext context) {
@@ -108,7 +108,6 @@ public final class RegistryFixtures {
         private final String version;
         private final List<StrategyRegistration> strategies = new ArrayList<>();
         private final Map<String, List<FixtureRule>> rules = new LinkedHashMap<>();
-        private String baselineStrategyId;
 
         private Builder(String version) {
             this.version = version;
@@ -193,14 +192,8 @@ public final class RegistryFixtures {
             return this;
         }
 
-        public Builder baseline(String strategyId) {
-            this.baselineStrategyId = strategyId;
-            return this;
-        }
-
         public ParameterRegistryPort build() {
-            return new FixtureRegistry(
-                    version, List.copyOf(strategies), Map.copyOf(rules), baselineStrategyId);
+            return new FixtureRegistry(version, List.copyOf(strategies), Map.copyOf(rules));
         }
     }
 
@@ -212,17 +205,14 @@ public final class RegistryFixtures {
         private final String version;
         private final List<StrategyRegistration> strategies;
         private final Map<String, List<FixtureRule>> rules;
-        private final String baselineStrategyId;
 
         private FixtureRegistry(
                 String version,
                 List<StrategyRegistration> strategies,
-                Map<String, List<FixtureRule>> rules,
-                String baselineStrategyId) {
+                Map<String, List<FixtureRule>> rules) {
             this.version = version;
             this.strategies = strategies;
             this.rules = rules;
-            this.baselineStrategyId = baselineStrategyId;
         }
 
         @Override
@@ -273,9 +263,10 @@ public final class RegistryFixtures {
             return ValidationVerdict.ok();
         }
 
+        /** fixture 등록표에는 기준 전략이 없다. 기준 전략 경로는 실제 등록표를 쓰는 {@code ParamSearchLaunchIT}가 본다. */
         @Override
         public Optional<String> baselineStrategyId() {
-            return Optional.ofNullable(baselineStrategyId);
+            return Optional.empty();
         }
     }
 }

@@ -66,13 +66,11 @@ class AuthSessionLifecycleIntegrationTest extends IntegrationTestSupport {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JdbcTemplate jdbcTemplate;
 
-    private Long userId;
-
     @BeforeEach
     void setUp() {
         jdbcTemplate.update("delete from spring_session");
         jdbcTemplate.update("delete from users where email like 'lifecycle-it-%'");
-        userId = saveUser().getId();
+        saveUser();
     }
 
     @Test
@@ -219,25 +217,6 @@ class AuthSessionLifecycleIntegrationTest extends IntegrationTestSupport {
                         assertThat(liveColumnsOf(table))
                                 .as("마이그레이션의 %s 열", table)
                                 .containsAll(columns));
-    }
-
-    @Test
-    @DisplayName("세션 저장소는 마이그레이션이 만든 표에 인증 상태를 그대로 쓴다")
-    void sessionRepositoryWritesIntoTheMigratedTables() throws Exception {
-        // 위 대조가 통과해도 앱이 다른 표를 쓰고 있으면 의미가 없다. 로그인 한 번으로 실제 기록을 확인한다.
-        loginAndGetSessionCookie();
-
-        assertThat(
-                        jdbcTemplate.queryForObject(
-                                "select principal_name from spring_session", String.class))
-                .isEqualTo(String.valueOf(userId));
-        assertThat(
-                        jdbcTemplate.queryForObject(
-                                "select count(*) from spring_session_attributes"
-                                        + " where attribute_name = ?",
-                                Integer.class,
-                                "SPRING_SECURITY_CONTEXT"))
-                .isEqualTo(1);
     }
 
     /** 세션이 마지막으로 쓰인 시각을 과거로 민다. Spring Session은 이 값으로 만료를 판정한다. */

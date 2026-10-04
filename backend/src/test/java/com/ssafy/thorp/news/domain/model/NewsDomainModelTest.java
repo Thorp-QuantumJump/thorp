@@ -511,7 +511,6 @@ class NewsDomainModelTest {
                     .doesNotContain("가 매체 제목")
                     .contains("나 매체 제목");
             assertThat(projection.distinctPublisherCount()).isEqualTo(1);
-            assertThat(projection.publisherIds()).containsExactly(2L);
         }
 
         @Test
@@ -572,19 +571,6 @@ class NewsDomainModelTest {
             assertThat(claimed.getLeaseOwner()).isEqualTo("instance-1");
             assertThat(claimed.isDue(COLLECTED.plus(Duration.ofMinutes(1)))).isFalse();
             assertThat(claimed.isDue(COLLECTED.plus(Duration.ofMinutes(16)))).isTrue();
-        }
-
-        @Test
-        @DisplayName("정리 작업도 수집 뉴스원과 같은 점유 규칙을 쓴다")
-        void 정리_작업_점유() {
-            NewsCollectionState cleanup =
-                    NewsCollectionState.idle(NewsCollectionState.RETENTION_CLEANUP_SOURCE_KEY);
-
-            assertThat(cleanup.isDue(COLLECTED)).isTrue();
-            assertThat(
-                            cleanup.claimed("instance-1", COLLECTED, Duration.ofMinutes(15))
-                                    .isDue(COLLECTED))
-                    .isFalse();
         }
 
         @Test

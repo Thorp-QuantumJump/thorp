@@ -314,14 +314,15 @@ class RssNewsClientTest {
         }
 
         @Test
-        @DisplayName("힌트가 없으면 비어 있다")
+        @DisplayName("피할 시간대와 요일이 없으면 ttl만 읽고 나머지는 비어 있다")
         void 힌트_없음() {
             NewsFetchResult result = client(StubHttpClient.ok("valid.xml")).fetch(SOURCE);
 
-            assertThat(result.channelHints().isEmpty())
-                    .as("valid.xml은 ttl 15만 있어 비어 있지 않다")
-                    .isFalse();
+            assertThat(result.channelHints().ttl())
+                    .as("valid.xml은 ttl 15만 준다")
+                    .isEqualTo(Duration.ofMinutes(15));
             assertThat(result.channelHints().skipHours()).isEmpty();
+            assertThat(result.channelHints().skipDays()).isEmpty();
         }
 
         @Test
