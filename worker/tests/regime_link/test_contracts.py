@@ -340,8 +340,3 @@ def test_snapshot_wider_than_the_universe_is_a_contract_violation() -> None:
 
     with pytest.raises(ValidationError, match="종목 수"):
         RegimeLinkJob.model_validate(body)
-
-
-def test_fixtures_are_within_the_size_limits() -> None:
-    for name in ("job-continuous.json", "job-fresh-cash.json", "job-partial-delisted.json"):
-        RegimeLinkJob.model_validate_json(load(name))

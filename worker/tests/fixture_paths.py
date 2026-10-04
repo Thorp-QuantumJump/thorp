@@ -36,7 +36,7 @@ REGIME_LINK_BACKEND_MESSAGE_DIR = (
     / "message"
 )
 
-#: 백엔드 토폴로지 상수(011 T030). 아직 없으면 계약 문서와 대조한다.
+#: 백엔드 토폴로지 상수(011 T030). 워커 계약 상수와 직접 대조한다.
 REGIME_LINK_BACKEND_CONFIG = (
     Path(__file__).resolve().parents[2]
     / "backend"

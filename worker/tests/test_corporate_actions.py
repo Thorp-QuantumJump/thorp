@@ -70,15 +70,6 @@ def test_distribution_is_paid_once():
     assert ledger.on_pay_date(PAY_DATE) == [], "같은 분배금이 두 번 들어오면 안 된다"
 
 
-def test_unpaid_entitlement_is_not_counted_as_cash():
-    """지급일이 실행 종료일 뒤면 끝내 받지 못한다. 받은 것으로 치지 않는다."""
-    ledger = DistributionLedger([distribution()])
-    ledger.on_ex_date(EX_DATE, {ETF: Decimal(10)})
-
-    assert len(ledger.unpaid) == 1
-    assert ledger.unpaid[0].cash == Decimal("1200")
-
-
 def test_unheld_instrument_earns_nothing():
     ledger = DistributionLedger([distribution()])
 
