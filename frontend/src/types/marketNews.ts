@@ -46,7 +46,7 @@ export type NewsDigestResult = {
   lastUpdatedAt: string | null
   stale: boolean
   statusMessage: string | null
-  /** 최대 3개다. */
+  /** 주요도 순서다. `limit`을 주지 않으면 3개, 주면 서버 상한(기본 20)까지다(012, 2026-10-02). */
   digests: NewsDigest[]
 }
 

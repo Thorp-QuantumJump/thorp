@@ -2,6 +2,8 @@ package com.ssafy.thorp.news.application.service;
 
 import com.ssafy.thorp.news.application.exception.NewsQueryException;
 import com.ssafy.thorp.news.application.port.NewsSectorCatalog;
+import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
@@ -47,6 +49,30 @@ public class NewsSectorQueryPolicy {
             return false;
         }
         // 값을 메시지에 싣지 않는다. 요청 값을 그대로 되돌려 주면 가림 규칙이 응답에서 무너진다(spec FR-021).
+        throw new NewsQueryException("등록되지 않은 섹터입니다.");
+    }
+
+    /**
+     * 여러 섹터를 한 번에 대조하고 실제로 물을 섹터만 돌려준다(2026-10-02).
+     *
+     * <p>등록표를 한 번만 읽는다. 섹터마다 {@link #canQuery}를 부르면 분류 하나(섹터 여섯)를 묻는 요청 하나가 001 대응표를 여섯 번 읽는다.
+     *
+     * <p>판정은 {@link #canQuery}와 같다. 대응표는 있는데 모르는 값이 하나라도 섞이면 400이다. 대응표가 아직 없으면 투자 대상 섹터는 확인할 수
+     * 없으므로 거부하지 않고 빼고, 012가 소유한 뉴스 전용 섹터만 남긴다. 여럿을 묻는 뜻이 '그중 하나 이상과 연결된 묶음'이라, 확인할 수 없는 섹터 때문에 확인할
+     * 수 있는 섹터의 뉴스까지 비우지 않는다.
+     *
+     * @param sectorIds 요청이 지정한 섹터. 비어 있지 않다.
+     * @return 물을 섹터. 비었으면 빈 화면으로 답한다.
+     * @throws NewsQueryException 대응표는 있는데 등록되지 않은 식별자가 섞였을 때.
+     */
+    public List<String> queryableOf(List<String> sectorIds) {
+        Set<String> registered = sectors.registeredSectorIds();
+        if (registered.containsAll(sectorIds)) {
+            return sectorIds;
+        }
+        if (sectors.isEmpty()) {
+            return sectorIds.stream().filter(registered::contains).toList();
+        }
         throw new NewsQueryException("등록되지 않은 섹터입니다.");
     }
 }

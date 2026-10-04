@@ -6,6 +6,7 @@ import com.ssafy.thorp.news.application.service.NewsDigestQueryService;
 import com.ssafy.thorp.news.presentation.response.NewsArticleExportResponse;
 import com.ssafy.thorp.news.presentation.response.NewsDigestResponse;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,21 +64,27 @@ public class NewsDigestController {
     /**
      * 현재 또는 지정 구간의 뉴스 묶음.
      *
-     * @param sectorId 좁힐 섹터. spec 001이 소유하는 식별자이며 등록되지 않은 값은 400이다.
+     * <p>{@code sectorId}는 여러 번(또는 쉼표로 이어) 줄 수 있다. 여럿이면 그중 하나 이상과 연결된 묶음을 주요도 순으로 준다 — 투자 대상 고르기의
+     * '분류별 뉴스'가 분류의 섹터들을 한 번에 받는 자리다(spec FR-001 ③, 2026-10-02). 과거 구간은 섹터 하나까지만 받는다.
+     *
+     * @param sectorId 좁힐 섹터. 등록되지 않은 값이 하나라도 있으면 400이다. 최대 {@link
+     *     com.ssafy.thorp.news.application.command.NewsDigestQuery#MAX_SECTORS}개다.
      * @param from 과거 구간 시작. {@code to}와 함께 줘야 한다.
      * @param to 과거 구간 끝. 구간 상한은 서버 설정이 정한다.
+     * @param limit 받을 묶음 수(1 이상). 서버 상한보다 크면 상한까지만 준다. 생략하면 예전과 같은 3개다.
      */
     @GetMapping("/digests")
     public ResponseEntity<HttpApiResponse<NewsDigestResponse>> getDigests(
-            @RequestParam(required = false) String sectorId,
+            @RequestParam(required = false) List<String> sectorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
                     Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                    Instant to) {
+                    Instant to,
+            @RequestParam(required = false) Integer limit) {
 
         return ResponseEntity.ok(
                 HttpApiResponse.ok(
-                        NewsDigestResponse.from(queryService.query(sectorId, from, to))));
+                        NewsDigestResponse.from(queryService.query(sectorId, from, to, limit))));
     }
 
     /**
