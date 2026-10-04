@@ -2,7 +2,7 @@ import type { MarketData, Indicator } from '@/types/market'
 
 const retrievedAt = '2026-08-31T09:00:00+09:00'
 
-// 시장 스냅샷에서 거래일 기준 변화와 데이터 지연 상태를 확인하는 예시 지표다.
+// 첫 화면 시세 창이 최신값을 받기 전에 출발점으로 쓰는 시장 예시 지표다.
 const marketIndicators: Indicator[] = [
   {
     id: 'kospi',
