@@ -519,13 +519,13 @@ def test_다른_종목은_걸러진다() -> None:
 def test_ISIN을_못_붙이는_공시는_결과에_드러난다() -> None:
     """빈 결과와 「읽지 못했다」를 가르지 못하면 없는 분배를 없다고 잘못 말하게 된다."""
     source = ScriptedSource(
-        [ref("20110427000489", date(2011, 4, 27))],
-        {"20110427000489": fixture("body_legacy_20110427001051.html")},
+        [ref(LEGACY_ACPT, date(2011, 4, 27))],
+        {LEGACY_ACPT: fixture("body_legacy_20110427001051.html")},
     )
     history = collect_distribution_history(source, TARGET_ISIN, date(2011, 4, 1), date(2011, 5, 31))
     assert history.records == ()
     assert len(history.unkeyed) == 1
-    assert history.unkeyed[0].acpt_no == "20110427000489"
+    assert history.unkeyed[0].acpt_no == LEGACY_ACPT
     assert history.is_complete is False
 
 
@@ -727,7 +727,10 @@ def test_브랜드명을_이어붙인_이름으로는_찾을_수_없다() -> Non
     """
     (row,) = parse_distribution_rows(fixture(f"body_legacy_acpt{KODEX_SECURITIES_ACPT}.html"))
     assert row.short_name == "삼성 KODEX 증권주증권상장지수투자신탁(주식)"
-    assert "KODEX 증권증권상장지수투자신탁" not in row.short_name
+    made = build_fund_name_index(
+        {"삼성 KODEX 증권증권상장지수투자신탁(주식)": KODEX_SECURITIES_ISIN}
+    )
+    assert match_fund_name(row.short_name, made) is None
 
 
 # --- 갈래 가르기 -------------------------------------------------------------
