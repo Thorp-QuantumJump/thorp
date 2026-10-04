@@ -60,13 +60,15 @@ class AssistantLiveTest {
                         60,
                         30,
                         600,
-                        5);
+                        5,
+                        5,
+                        40);
         AtomicInteger toolRuns = new AtomicInteger();
         AssistantTool equityOn =
                 new AssistantTool() {
                     @Override
                     public ToolSpec spec() {
-                        return new ToolSpec(
+                        return ToolSpec.dates(
                                 "getEquityOn", "특정 날짜의 자산가치·누적 수익률·하락 폭", List.of("date"));
                     }
 
@@ -122,11 +124,13 @@ class AssistantLiveTest {
                 new ToolLoop(settings)
                         .run(
                                 model,
+                                PageKind.RESULT,
                                 "2024년 3월 4일에 자산은 얼마였어?",
                                 bundle,
                                 new Deadline(Clock.systemUTC(), settings.totalBudget()));
         AnswerValidator.Rendered rendered =
-                new AnswerValidator(settings).render(outcome.draft(), outcome.facts());
+                new AnswerValidator(settings)
+                        .render(outcome.draft(), outcome.facts(), AnswerValidator.Policy.RESULT, 0);
 
         System.out.println("[LIVE] rounds=" + outcome.rounds() + " toolRuns=" + toolRuns.get());
         System.out.println("[LIVE] draft=" + outcome.draft());

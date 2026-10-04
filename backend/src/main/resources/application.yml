@@ -217,8 +217,8 @@ thorp:
     # 짧게 둔다 — 길면 프록시가 먼저 끊고 화면은 서버 장애와 구분할 수 없는 오류를 받는다.
     progress-stream-timeout: PT4M
   assistant:
-    # 화면 맥락 도우미(spec 015, ADR-0008). **비활성이 기본**이다 — 켜는 것은 품질 관문(T053) 뒤이고, 켤 때
-    # THORP_ASSISTANT_ENABLED_SCOPES=RESULT 를 넣는다. 키·주소·모델 중 하나라도 비면 어댑터 빈이 뜨지 않아
+    # 화면 맥락 도우미(spec 015·017, ADR-0008). **비활성이 기본**이다 — 켜는 것은 화면 종류마다 품질 관문(015 T053,
+    # 017 T053) 뒤이고, 켤 때 THORP_ASSISTANT_ENABLED_SCOPES 에 RESULT·SECTOR_SELECTION·STRATEGY_SETTINGS 중 켤 것을 쉼표로 넣는다. 키·주소·모델 중 하나라도 비면 어댑터 빈이 뜨지 않아
     # capabilities.enabled=false 이고 기동은 정상이다(계약 §4). 그래서 이 넷은 prod 에서도 빈 기본값이다.
     enabled-scopes: ${THORP_ASSISTANT_ENABLED_SCOPES:}
     model:
@@ -235,6 +235,9 @@ thorp:
       max-rounds: 2
       max-facts: 60
       max-facts-per-round: 30
+      # 진단 화면(017): 토큰이 없어 결과 토큰 몫 대신 화면 종류별 IP 분당을 센다. IP 분당·하루 전체는 결과 화면과 함께 센다.
+      per-page-per-ip-per-minute: 5
+      term-initial-facts: 40
     # 요청 전체 시간 예산이 우선이고, 라운드별 모델 호출 예산은 그 안에서 남은 시간과 작은 쪽이다.
     timeout:
       total: PT2M
