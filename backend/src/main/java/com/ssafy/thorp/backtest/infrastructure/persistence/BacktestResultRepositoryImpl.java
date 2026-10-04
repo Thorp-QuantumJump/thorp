@@ -119,8 +119,6 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {
                                         read(
                                                 row.getExecution(),
                                                 EngineOutput.ExecutionResult.class),
-                                        row.getBenchmarkInstrumentId(),
-                                        decimal(row.getBenchmarkTotalReturn()),
                                         read(row.getCosts(), EngineOutput.Costs.class),
                                         read(row.getLiquidation(), EngineOutput.Liquidation.class),
                                         read(row.getAnalytics(), EngineOutput.Analytics.class),

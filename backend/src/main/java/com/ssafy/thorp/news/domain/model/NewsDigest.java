@@ -282,13 +282,6 @@ public class NewsDigest {
         public boolean hasVerifiedPublishedAt() {
             return latestPublishedAt != null;
         }
-
-        /** 이 묶음이 다루는 매체 식별자. */
-        public Set<Long> publisherIds() {
-            return articles.stream()
-                    .map(NewsArticle::getPublisherId)
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        }
     }
 
     public Long getId() {
