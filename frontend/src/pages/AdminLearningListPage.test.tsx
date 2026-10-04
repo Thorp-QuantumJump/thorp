@@ -112,7 +112,7 @@ describe('AdminLearningListPage', () => {
     renderList()
 
     expect(await screen.findByRole('heading', { name: '다시 로그인해 주세요' })).not.toBeNull()
-    expect(screen.queryByText(/권한이 없습니다/)).toBeNull()
+    expect(screen.queryByText('볼 수 없는 화면입니다')).toBeNull()
   })
 
   it('만들기가 409면 그 자리에 안내가 보인다', async () => {

@@ -177,9 +177,9 @@ describe('AssistantBubble', () => {
     await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))
     expect(within(dialog).getByRole('status').textContent).toContain('답을 만들고')
 
-    // 다른 결과로 이동 — 실제 앱에서는 라우트 전환으로 `ResultPage`가 새 토큰을 등록한다.
-    view.unmount()
-    renderAssistant({ path: `/results/${OTHER_TOKEN}` })
+    // 다른 결과로 이동 — 트리를 내리지 않고 라우트만 바꾼다. 실제 앱처럼 결과 화면이 새 토큰을 등록하고,
+    // 제공자와 버튼은 그대로 남아 맥락이 바뀐 것만 보고 정리해야 한다.
+    await view.navigate(`/results/${OTHER_TOKEN}`)
     await screen.findByRole('button', { name: '질문하기' })
     expect(firstSignal?.aborted).toBe(true)
     expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull()

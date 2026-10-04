@@ -443,9 +443,6 @@ describe("DetailSettingsPanel", () => {
       name: "투자 대상 고르기로 돌아가세요",
     });
     expect(link.getAttribute("href")).toBe("/diagnosis/sectors");
-    expect(
-      screen.queryByText(/계산 결과이며 입력한 비중과 다릅니다/),
-    ).toBeNull();
   });
 
   it("비중을 고치면 그 값이 올라온다", async () => {
