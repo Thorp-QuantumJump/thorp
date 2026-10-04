@@ -486,9 +486,13 @@ class TestConnection:
         assert database_url_from_env(env_file).startswith("postgresql+psycopg://")
 
     def test_missing_url_is_reported(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        with pytest.raises(RepositoryError):
-            database_url_from_env(tmp_path / "absent.env")
+        # 없는 파일을 넘기면 파일 검사에서 먼저 걸린다. 있는 파일에 값만 비워 둔다.
+        # setenv로 먼저 기록해 두면 load_dotenv가 환경을 바꿔도 테스트가 끝날 때 되돌아온다.
+        monkeypatch.setenv("DATABASE_URL", "postgresql://공용:x@shared:5432/thorp")
+        env_file = tmp_path / ".env"
+        env_file.write_text("DATABASE_URL=\n", encoding="utf-8")
+        with pytest.raises(RepositoryError, match="DATABASE_URL이 비어 있다"):
+            database_url_from_env(env_file)
 
     def test_no_credentials_are_hardcoded(self) -> None:
         source = (

@@ -26,7 +26,6 @@ from data_pipeline.regime.era import (
     EraPosition,
     EraPositionCache,
     era_position_for,
-    era_positions_for,
 )
 from data_pipeline.regime.explain import format_value
 from data_pipeline.regime.macro.types import IndicatorEntry
@@ -115,6 +114,10 @@ class TestSentence:
         assert format_value(-0.25) == "-0.3"  # 사사오입
         assert format_value(4.346167) == "4.3"
         assert format_value(-0.04) == "0"
+        # 12.35는 부동소수 표현(12.3499…) 그대로 반올림하면 12.3이 된다.
+        # 0.1+0.2의 꼬리도 문장에 남지 않는다.
+        assert format_value(12.35) == "12.4"
+        assert format_value(0.30000000000000004) == "0.3"
 
     def test_지수_표기가_문장에_실리지_않는다(self) -> None:
         position = era_position_for(indicator(), END_MONTH, series_with(0.00005))
@@ -177,6 +180,7 @@ class TestLimitedOnly:
         assert era_position_for(indicator(), END_MONTH, series_with(None)) is None
 
     def test_못_만든_지표는_키가_없다(self) -> None:
+        """운영 배치가 쓰는 캐시로 본다 — snapshot은 이 캐시에서 보조 위치를 받는다."""
         good = indicator()
         bad = IndicatorEntry(
             id="OTHER",
@@ -186,11 +190,8 @@ class TestLimitedOnly:
             transform="LEVEL",
             display_order=2,
         )
-        positions = era_positions_for(
-            [good, bad],
-            END_MONTH,
-            {good.id: series_with(20.0), bad.id: series_with(None)},
-        )
+        cache = EraPositionCache({good.id: series_with(20.0), bad.id: series_with(None)})
+        positions = cache.positions_for([good, bad], END_MONTH)
         assert set(positions) == {good.id}
 
 

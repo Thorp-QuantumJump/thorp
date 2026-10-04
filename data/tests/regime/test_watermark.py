@@ -11,19 +11,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
+from functools import cache
 
 import pytest
 from conftest import make_registry, make_series
 
-from data_pipeline.regime.candidates import MINIMUM_GAP_MONTHS
-from data_pipeline.regime.comparison import COMPARISON_OFFSETS
+from data_pipeline.regime.candidates import MINIMUM_GAP_MONTHS, is_far_enough
+from data_pipeline.regime.distance import DistanceModel, build_model
+from data_pipeline.regime.era import era_position_for
 from data_pipeline.regime.macro.types import MacroSourceError
-from data_pipeline.regime.scale import (
-    WINDOW_END_OFFSET,
-    WINDOW_START_OFFSET,
-    shift_month,
-)
+from data_pipeline.regime.scale import WINDOW_END_OFFSET, shift_month
 from data_pipeline.regime.watermark import (
     ORIGIN_CHANGED_SINCE,
     ORIGIN_REQUESTED,
@@ -39,6 +38,68 @@ CHANGED = date(2010, 6, 1)
 
 def months_after(month: date, count: int) -> date:
     return shift_month(month, -count)
+
+
+#: 네 경로를 따라갈 계열. 값이 달마다 달라 척도가 선다 — 아래 `series` 픽스처처럼 값이 한결같으면
+#: MAD·IQR이 0이라 공통 척도와 시대별 보조 척도 경로를 탈 수 없다.
+PATH_REGISTRY = make_registry({"A": ["A1"]})
+PATH_ENTRY = PATH_REGISTRY.indicators[0]
+PATH_SERIES = {PATH_ENTRY.id: make_series((1994, 1), [float(index % 7) for index in range(400)])}
+
+#: M 앞뒤 2년의 기준월. 네 경로의 첫 경계(M ~ M+16)를 담고, M보다 이른 달도 그만큼 본다.
+SCAN = tuple(months_after(CHANGED, offset) for offset in range(-24, 25))
+
+
+@cache
+def model_at(baseline_month: date) -> DistanceModel:
+    model = build_model(PATH_REGISTRY, baseline_month, PATH_SERIES)
+    assert isinstance(model, DistanceModel), f"{baseline_month}에서 계산 준비물이 서지 않았다"
+    return model
+
+
+def candidate_ends(baseline_month: date) -> list[date]:
+    return [end for end in PATH_SERIES[PATH_ENTRY.id] if is_far_enough(baseline_month, end)]
+
+
+def query_reaches(baseline_month: date) -> bool:
+    """질의 비교 시점이 M을 읽는가."""
+    return CHANGED in model_at(baseline_month).comparison.by_indicator[PATH_ENTRY.id].months
+
+
+def scale_reaches(baseline_month: date) -> bool:
+    """공통 척도가 M을 구간에 넣었는가."""
+    scale = model_at(baseline_month).scales[PATH_ENTRY.id]
+    return scale.window_start <= CHANGED <= scale.window_end
+
+
+def case_reaches(baseline_month: date) -> bool:
+    """어느 후보의 관측 구간이 M을 읽는가."""
+    model = model_at(baseline_month)
+    return any(
+        CHANGED in model.case_months_for(PATH_ENTRY.id, end)
+        for end in candidate_ends(baseline_month)
+    )
+
+
+@cache
+def era_ends_reaching() -> tuple[date, ...]:
+    """시대별 보조 척도 구간에 M이 들어가는 후보 종료월. 기준월과 무관하다(SC-011)."""
+    series = PATH_SERIES[PATH_ENTRY.id]
+    ends: list[date] = []
+    for end in series:
+        position = era_position_for(PATH_ENTRY, end, series)
+        if position is not None and position.window_start <= CHANGED <= position.window_end:
+            ends.append(end)
+    return tuple(ends)
+
+
+def era_reaches(baseline_month: date) -> bool:
+    """후보가 된 종료월 중 보조 척도 구간에 M을 넣은 것이 있는가."""
+    return any(is_far_enough(baseline_month, end) for end in era_ends_reaching())
+
+
+def first_reached(reaches: Callable[[date], bool]) -> date:
+    return next(month for month in SCAN if reaches(month))
 
 
 class StubSource:
@@ -60,29 +121,23 @@ def series() -> dict[str, dict[date, float]]:
 
 
 class TestFourPaths:
-    """M이 닿는 네 경로의 경계가 모두 `t ≥ M` 안에 있는가 (research R3)."""
+    """M이 닿는 네 경로의 경계가 모두 `t ≥ M` 안에 있는가 (research R3).
+
+    경계는 운영 계산에 기준월을 하나씩 넣어 **M을 실제로 읽는 첫 t**로 찾는다. 경계를 여기서
+    셈으로만 적으면 계산이 다른 경계를 써도 시험은 늘 참이 된다.
+    """
 
     def test_질의_비교_시점_경계(self) -> None:
         """M이 `t-2 ~ t`에 들어가는 가장 이른 t는 M 자신이다 — 네 경로 중 가장 넓다."""
-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)
-        earliest = CHANGED  # t = M 일 때 M 이 비교 시점의 마지막 달이다
-        assert watermark.covers(earliest)
-        assert max(COMPARISON_OFFSETS) == 2
-        for offset in COMPARISON_OFFSETS:
-            assert watermark.covers(months_after(CHANGED, offset))
+        assert first_reached(query_reaches) == CHANGED
 
     def test_공통_척도_구간_경계(self) -> None:
-        """M이 `[t-122, t-3]`에 처음 들어가는 t는 M+3이고, 마지막은 M+122다."""
-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)
-        first = months_after(CHANGED, WINDOW_END_OFFSET)
-        last = months_after(CHANGED, WINDOW_START_OFFSET)
-        assert watermark.covers(first)
-        assert watermark.covers(last)
+        """M이 `[t-122, t-3]`에 처음 들어가는 t는 M+3이다."""
+        assert first_reached(scale_reaches) == months_after(CHANGED, WINDOW_END_OFFSET)
 
     def test_후보_관측_구간_경계(self) -> None:
         """후보는 t보다 12개월 **초과** 이전이므로 M이 후보에 닿는 가장 이른 t는 M+13이다."""
-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)
-        assert watermark.covers(months_after(CHANGED, MINIMUM_GAP_MONTHS + 1))
+        assert first_reached(case_reaches) == months_after(CHANGED, MINIMUM_GAP_MONTHS + 1)
 
     def test_시대별_보조_척도_구간_경계(self) -> None:
         """가장 늦게 닿는 경로다 — `c ≥ M+3`이고 `t > c+12`라 t는 M+16부터다.
@@ -90,19 +145,17 @@ class TestFourPaths:
         순위가 같아도 이 경로 하나 때문에 결과가 달라질 수 있다. 보조 설명이 바뀌면 화면에
         나가는 것이 달라지므로 새 결과다(FR-017·FR-030).
         """
-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)
-        earliest = months_after(CHANGED, WINDOW_END_OFFSET + MINIMUM_GAP_MONTHS + 1)
-        assert watermark.covers(earliest)
+        assert first_reached(era_reaches) == months_after(
+            CHANGED, WINDOW_END_OFFSET + MINIMUM_GAP_MONTHS + 1
+        )
 
     def test_가장_넓은_경로가_나머지를_덮는다(self) -> None:
-        """네 경계 중 가장 이른 것이 `t = M`이라 규칙이 한 줄이다 (research R3)."""
-        boundaries = (
-            CHANGED,
-            months_after(CHANGED, WINDOW_END_OFFSET),
-            months_after(CHANGED, MINIMUM_GAP_MONTHS + 1),
-            months_after(CHANGED, WINDOW_END_OFFSET + MINIMUM_GAP_MONTHS + 1),
-        )
-        assert min(boundaries) == CHANGED
+        """네 경로 어디로든 M이 닿는 t는 모두 `t ≥ M`이라 규칙이 한 줄이다 (research R3)."""
+        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)
+        for reaches in (query_reaches, scale_reaches, case_reaches, era_reaches):
+            reached = [month for month in SCAN if reaches(month)]
+            assert reached, reaches.__name__
+            assert all(watermark.covers(month) for month in reached), reaches.__name__
 
     def test_M_직전_달은_대상이_아니다(self) -> None:
         """`t < M`은 네 경로 어디로도 M이 들어가지 않는다 — 다시 계산하면 낭비다."""

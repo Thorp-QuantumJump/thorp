@@ -335,17 +335,32 @@ def test_value_rule_change_requires_the_whole_range(publishing_fixture) -> None:
     first = replace(request, observations=_observations(("2026-07", "2026-08")))
     dataset_id = publish_atomically(engine, first)
 
-    # 단위를 바꾸면 값 규칙 지문이 달라진다.
+    # 단위를 바꾸면 값 규칙 지문이 달라진다. 새 규칙의 등록표를 먼저 올려 두어야 지문 대조가
+    # 아니라 이어받기 판정에서 걸리는지를 볼 수 있다.
     changed = tuple(
         replace(i, transformed_unit=f"{i.transformed_unit} (개정)")
         for i in request.indicators
     )
+    with engine.begin() as connection:
+        connection.execute(
+            text("INSERT INTO macro_calculation_registry_version VALUES "
+                 "(2, :fingerprint, 'PUBLISHED')"),
+            {"fingerprint": value_rule_fingerprint(changed)},
+        )
+        connection.execute(
+            text("INSERT INTO macro_indicator_definition "
+                 "SELECT 2, indicator_id, field_id, nominal_weight "
+                 "FROM macro_indicator_definition WHERE registry_version_id=1")
+        )
+    # 정기 수집처럼 2026-08 만 받았다. 규칙이 같았다면 2026-07 을 이어받아 발행된다.
     second = replace(
         request, version_key="macro-3", attempt_key="attempt-3",
         indicators=changed,
+        observations=_observations(("2026-08",)),
         pointer=PublicationPointer(dataset_id, 1, 1),
+        target_registry_id=2,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="빠진 월"):
         publish_atomically(engine, second)
 
 

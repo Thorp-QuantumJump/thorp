@@ -176,10 +176,11 @@ class TestPublicationAndVersions:
     def test_모르면_None을_돌려준다(self, macro_source: MacroIndicatorSource) -> None:
         """`changed_since()`가 답할 수 없으면 `None`이고 배치는 전 구간으로 물러난다 (계약 §1).
 
-        '바뀐 것 없음'을 뜻하는 값을 돌려주면 낡은 결과가 남는다.
+        '바뀐 것 없음'을 뜻하는 값을 돌려주면 낡은 결과가 남는다. 발행한 적 없는 버전 뒤에 무엇이
+        바뀌었는지는 어느 구현체도 알 수 없다 — 개정 이력이 있다고 달을 짐작해 돌려주면 배치가
+        일부만 다시 계산하고 나머지는 낡은 채로 남는다.
         """
-        changed = macro_source.changed_since(macro_source.data_version())
-        assert changed is None or isinstance(changed, date)
+        assert macro_source.changed_since("발행한-적-없는-자료-버전") is None
 
 
 class TestFactory:
