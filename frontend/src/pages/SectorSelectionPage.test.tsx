@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SectorCatalogResult } from '@/api/sectors'
@@ -55,8 +56,11 @@ function catalog(isSample: boolean): SectorCatalog {
   }
 }
 
-/** AppHeader가 인증 상태를 읽으므로 화면 검증에 필요한 최소 컨텍스트만 준다. */
-function renderPage() {
+/**
+ * AppHeader가 인증 상태를 읽으므로 화면 검증에 필요한 최소 컨텍스트만 준다. `strict`면 실제 앱(`main.tsx`)처럼
+ * StrictMode로 감싼다.
+ */
+function renderPage({ strict = false }: { strict?: boolean } = {}) {
   const authValue: AuthContextValue = {
     status: 'anonymous',
     user: null,
@@ -66,13 +70,14 @@ function renderPage() {
     updateNickname: vi.fn(),
   }
 
-  return render(
+  const page = (
     <MemoryRouter initialEntries={['/diagnosis/sectors']}>
       <AuthContext.Provider value={authValue}>
         <SectorSelectionPage />
       </AuthContext.Provider>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  return render(strict ? <StrictMode>{page}</StrictMode> : page)
 }
 
 function loaded(isSample: boolean): SectorCatalogResult {
@@ -352,27 +357,26 @@ describe('SectorSelectionPage', () => {
 
   it('취소된 요청의 응답이 뒤늦게 와도 화면을 덮지 않는다', async () => {
     // Promise를 만드는 함수는 그 자리에서 실행되므로 이 값은 아래에서 반드시 채워져 있다.
-    let settleSecond!: (result: SectorCatalogResult) => void
-    const secondCall = new Promise<SectorCatalogResult>((resolve) => {
-      settleSecond = resolve
+    let settleFirst!: (result: SectorCatalogResult) => void
+    const firstCall = new Promise<SectorCatalogResult>((resolve) => {
+      settleFirst = resolve
     })
 
     apiMocks.fetchSectorCatalog
-      .mockImplementationOnce(() => Promise.resolve(networkFailure))
-      .mockImplementationOnce(() => secondCall)
+      .mockImplementationOnce(() => firstCall)
       .mockImplementationOnce(() => Promise.resolve(loaded(false)))
 
-    renderPage()
-    await userEvent.click(await screen.findByRole('button', { name: '다시 불러오기' }))
-
-    // 두 번째 요청이 답하지 않는 사이에 화면을 다시 마운트해 세 번째 요청이 결과를 채우게 한다.
-    const { unmount } = renderPage()
+    // StrictMode는 마운트 직후 효과를 한 번 정리하고 다시 돌린다. 화면 하나가 그대로 남은 채 첫 요청은
+    // 그 정리에서 취소되고, 두 번째 요청이 목록을 채운다.
+    renderPage({ strict: true })
     await screen.findAllByRole('listitem')
+    expect(apiMocks.fetchSectorCatalog).toHaveBeenCalledTimes(2)
 
-    // 취소된 두 번째 요청이 이제야 답한다. 그 값이 화면에 반영되면 목록이 사라진다.
-    settleSecond(networkFailure)
-    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0))
-
-    unmount()
+    // 취소된 첫 요청이 이제야 답한다. 그 값이 화면에 반영되면 목록이 실패 안내로 바뀐다.
+    await act(async () => {
+      settleFirst(networkFailure)
+    })
+    expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0)
+    expect(screen.queryByText('투자 대상 목록을 불러오지 못했습니다.')).toBeNull()
   })
 })

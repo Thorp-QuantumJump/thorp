@@ -380,7 +380,7 @@ describe('대표 상품 정보 패널', () => {
     expect(
       cardBody()?.querySelector('[data-slot="profile-sample"]'),
     ).not.toBeNull()
-    expect(screen.queryByText(/이 섹터 목록은 아직 확정되지 않은/)).toBeNull()
+    expect(screen.queryByText(/예시 대응표/)).toBeNull()
   })
 
   it('거래대금을 자릿수 대신 읽을 수 있는 단위로 보인다', async () => {

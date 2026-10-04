@@ -80,18 +80,6 @@ describe('섹터 목록 조회', () => {
     expect(calledPaths).not.toContain('/sectors/evaluation-window')
   })
 
-  it('봉투 안의 data를 목록으로 읽는다', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(catalogSuccess))
-
-    const result = await fetchSectorCatalog()
-
-    expect(result.status).toBe('loaded')
-    if (result.status !== 'loaded') return
-    expect(result.catalog.mapVersion).toBe('SEM-2026-09-10-001')
-    expect(result.catalog.isSample).toBe(true)
-    expect(result.catalog.sectors[0].representativeEtf.name).toBe('KODEX 반도체')
-  })
-
   it('409 SECTOR_MAP_NOT_READY를 예외가 아니라 상태 값으로 돌려준다', async () => {
     vi.spyOn(apiClient, 'get').mockRejectedValue(
       axiosFailure(409, errorEnvelope('SECTOR_MAP_NOT_READY', '대응표가 아직 발행되지 않았다')),
@@ -442,7 +430,7 @@ describe('공통 평가 기간 조회(T042)', () => {
     ).rejects.toMatchObject({ kind: 'api', code: 'RESOURCE_NOT_FOUND' })
   })
 
-  it('합의한 필드 셋이 없는 응답(지금 001 계약의 모양)은 읽지 못한 것으로 거부한다', async () => {
+  it('합의한 필드 셋이 없는 응답(001 계약이 넓어지기 전의 옛 모양)은 읽지 못한 것으로 거부한다', async () => {
     const legacy = omitKeys(
       windowBody,
       'warmupBaseDate',

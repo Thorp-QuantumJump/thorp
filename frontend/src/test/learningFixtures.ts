@@ -1,7 +1,6 @@
 import type {
   LearningArticle,
   LearningArticleSummary,
-  LearningTermEntry,
 } from '@/types/learning'
 import type {
   AdminLearningArticle,
@@ -87,14 +86,6 @@ export const harborArticle: LearningArticle = {
   },
   sources: [],
   publishedAt: '2026-09-21T01:00:00Z',
-}
-
-export const ebbGapTerm: LearningTermEntry = {
-  termId: 'ebb-gap',
-  label: '썰물 간격',
-  sentence: '합성 용어 문장이다. 줄이거나 바꾸지 않고 보여야 한다.',
-  articleId: 'tide-reading',
-  articleTitle: '물때 읽기',
 }
 
 /**

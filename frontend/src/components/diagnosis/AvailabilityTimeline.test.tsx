@@ -56,8 +56,11 @@ describe('비교 가능 구간 타임라인', () => {
     const { container } = renderTimeline([반도체, 자동차, 조선])
 
     expect(container.querySelectorAll('[data-slot="common-bar"]')).toHaveLength(1)
-    expect(container.querySelector('[data-slot="timeline-track"]')).toBeNull()
-    expect(container.querySelector('[data-slot="track-bar"]')).toBeNull()
+    // 대상이 셋이어도 줄과 막대 자리는 하나다. 대상마다 줄이나 막대를 더하면 이 개수가 늘어난다.
+    expect(container.querySelectorAll('[data-slot="timeline-row"]')).toHaveLength(1)
+    const lanes = container.querySelectorAll('[data-slot="timeline-lane"]')
+    expect(lanes).toHaveLength(1)
+    expect(lanes[0].children).toHaveLength(1)
   })
 
   it('공통 시작일과 오늘 날짜를 기본 화면에 보인다', () => {
