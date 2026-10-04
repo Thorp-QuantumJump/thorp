@@ -16,17 +16,11 @@ import java.util.Optional;
 public class FakeMarketMetadata implements MarketMetadataPort {
 
     private final Map<String, LocalDate> listings = new HashMap<>();
-    private String dataVersion = "DATA-1";
-    private String mappingVersion = "MAP-1";
+    private final String dataVersion = "DATA-1";
+    private final String mappingVersion = "MAP-1";
 
     public FakeMarketMetadata listed(String instrumentId, LocalDate on) {
         listings.put(instrumentId, on);
-        return this;
-    }
-
-    public FakeMarketMetadata versions(String dataVersion, String mappingVersion) {
-        this.dataVersion = dataVersion;
-        this.mappingVersion = mappingVersion;
         return this;
     }
 

@@ -35,7 +35,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @DisplayName("거시지표 스냅샷 조회 계약")
 class MacroSnapshotContractTest extends PostgresTestSupport {
 
-    /** 분야별 지표 수 — 등록표의 실제 분포다(FR-001). 합이 17이다. */
     @Autowired private JdbcTemplate jdbc;
 
     private MacroSnapshotQueryService service;
@@ -296,10 +295,5 @@ class MacroSnapshotContractTest extends PostgresTestSupport {
                 .findFirst()
                 .orElseThrow()
                 .latest();
-    }
-
-    private long idOf(String table, String versionKey) {
-        return jdbc.queryForObject(
-                "SELECT id FROM " + table + " WHERE version_key = ?", Long.class, versionKey);
     }
 }

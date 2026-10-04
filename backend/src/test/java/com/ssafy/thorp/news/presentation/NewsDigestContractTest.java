@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
  * <p>계약 예시 파일을 그대로 읽어 대조한다. 예시를 시험 안에 베껴 적으면 계약이 바뀌었을 때 두 곳을 고쳐야 하고, 고치지 않은 쪽이 남아 시험은 통과하는데 화면은 깨지는
  * 상태가 된다.
  *
- * <p><b>세 묶음이 안 되면 채우지 않는다.</b> 이것이 이 시험의 두 번째 초점이다. 개수를 맞추려고 관련 없는 기사를 끌어오면 화면은 그것을 '주요 뉴스'로 읽는다
- * (원칙 VI).
+ * <p>세 묶음이 안 될 때 채우지 않는 규칙은 개수를 정하는 조회 서비스의 시험({@code NewsDigestQueryServiceTest})이 본다. 컨트롤러는 받은
+ * 묶음을 옮기기만 하므로 여기서는 개수를 바꿀 수 없다.
  */
 class NewsDigestContractTest {
 
@@ -90,16 +90,6 @@ class NewsDigestContractTest {
         assertThat(MAPPER.readTree(body))
                 .as("계약 예시가 기준이다. 화면은 이 모양을 보고 만들어졌다")
                 .isEqualTo(example("current-ready.json"));
-    }
-
-    @Test
-    @DisplayName("묶음이 세 개가 안 되면 있는 만큼만 돌려준다")
-    void 부족하면_채우지_않는다() throws Exception {
-        mockMvc(query -> ready())
-                .perform(get("/market-news/digests"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.digests.length()").value(1))
-                .andExpect(jsonPath("$.result.state").value("READY"));
     }
 
     @Test

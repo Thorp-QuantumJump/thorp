@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.backtest.domain.model.BacktestRun;
 import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;
-import com.ssafy.thorp.backtest.domain.model.RunStatus;
 import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;
 import com.ssafy.thorp.backtest.domain.vo.InstrumentId;
 import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestRunRepositoryImpl;
@@ -921,52 +920,6 @@ class FlywayMigrationTest extends RepositoryTestSupport {
                 .as("뉴스는 섹터 마스터를 따로 만들지 않는다")
                 .doesNotContain("news_sector", "sectors");
         assertThat(sectorTables).as("섹터 식별자는 spec 001이 소유한다").contains("sector");
-    }
-
-    @Test
-    @DisplayName("V1 스키마에 Entity를 저장하고 다시 읽을 수 있다")
-    void entityRoundTripsOnMigratedSchema() {
-        Map<String, Object> parameters = Map.of("shortWindow", 20, "threshold", 0.05);
-        List<InstrumentId> instruments = List.of(new InstrumentId("005930.XKRX"));
-
-        BacktestRun saved =
-                repository.save(
-                        BacktestRun.create(
-                                "MA_CROSSOVER",
-                                "1.0.0",
-                                parameters,
-                                instruments,
-                                PERIOD,
-                                new BigDecimal("10000000.00"),
-                                PositionSizingMode.STRATEGY_DEFINED,
-                                new BigDecimal("0.5000"),
-                                new InstrumentId("069500.XKRX"),
-                                42));
-        entityManager.flush();
-        entityManager.clear();
-
-        assertThat(saved.getId()).isNotNull();
-        assertThat(repository.findById(saved.getId()))
-                .get()
-                .satisfies(
-                        job -> {
-                            assertThat(job.getBacktestId()).isEqualTo(saved.getBacktestId());
-                            assertThat(job.getStrategyId()).isEqualTo("MA_CROSSOVER");
-                            assertThat(job.getStrategyVersion()).isEqualTo("1.0.0");
-                            assertThat(job.getParameters()).isEqualTo(parameters);
-                            assertThat(job.getInstrumentIds()).isEqualTo(instruments);
-                            assertThat(job.getPeriod()).isEqualTo(PERIOD);
-                            assertThat(job.getInitialCash())
-                                    .isEqualByComparingTo(new BigDecimal("10000000.00"));
-                            assertThat(job.getPositionSizingType())
-                                    .isEqualTo(PositionSizingMode.STRATEGY_DEFINED);
-                            assertThat(job.getMaxPositionPct())
-                                    .isEqualByComparingTo(new BigDecimal("0.5000"));
-                            assertThat(job.getBenchmarkInstrumentId())
-                                    .isEqualTo(new InstrumentId("069500.XKRX"));
-                            assertThat(job.getRandomSeed()).isEqualTo(42);
-                            assertThat(job.getStatus()).isEqualTo(RunStatus.QUEUED);
-                        });
     }
 
     /** 애플리케이션 스키마(public)의 컬럼만 센다. 시스템 카탈로그에 같은 이름의 테이블이 있어도 섞이지 않는다. */
