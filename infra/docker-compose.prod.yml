@@ -1,4 +1,4 @@
-# 운영(EC2) 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.
+# 운영 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.
 name: thorp
 
 services:
@@ -278,9 +278,9 @@ services:
     image: nginx:1.27-alpine
     container_name: thorp-nginx
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    # 호스트에 포트를 열지 않는다. 외부 요청은 cloudflared 가 같은 edge 네트워크에서 nginx:80 으로 넘긴다.
+    # 공유기 포트포워딩·고정 IP·인증서가 필요 없고, 이 서버에 닿을 수 있는 곳이 컨테이너뿐이라
+    # 템플릿의 real_ip 설정(사설 대역만 신뢰)이 안전하다.
     environment:
       DOMAIN: ${DOMAIN}
       # templates/*.template 안에서 ${DOMAIN}만 치환한다.
@@ -290,8 +290,6 @@ services:
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
       - ./nginx/html:/usr/share/nginx/html:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
     depends_on:
       - backend
     deploy:
@@ -299,6 +297,26 @@ services:
         limits:
           memory: 256M
           cpus: "0.5"
+    networks: [edge]
+
+  # Cloudflare Tunnel 커넥터. Cloudflare 쪽으로 나가는 연결만 맺고 들어오는 포트는 없다.
+  # TLS 인증서와 공개 주소(Public Hostname → http://thorp-nginx:80)는 Cloudflare 대시보드의 터널 설정이 갖고,
+  # 이 컨테이너는 그 터널의 토큰만 받는다. 토큰이 없거나 비어 있으면 compose 명령이 멈추게 :? 로 둔다.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.5.0
+    container_name: thorp-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?.env.prod 에 CLOUDFLARE_TUNNEL_TOKEN 을 넣으세요. Cloudflare 대시보드의 터널 토큰}
+      TZ: Asia/Seoul
+    depends_on:
+      - nginx
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
     networks: [edge]
 
 volumes:

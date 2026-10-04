@@ -41,8 +41,8 @@ pipeline {
             // (bind mount 경로가 호스트 기준으로 해석되기 때문)
             steps {
                 // 이 디렉토리는 배포 전용이며 git 내용을 그대로 반영한다.
-                // reset --hard 는 추적 파일만 되돌린다. .env.prod, certbot/(인증서·개인키),
-                // nginx/html/(빌드 산출물)은 gitignore 대상이라 영향을 받지 않는다.
+                // reset --hard 는 추적 파일만 되돌린다. .env.prod, nginx/html/(빌드 산출물)은
+                // gitignore 대상이라 영향을 받지 않는다.
                 sh '''
                     cd "$DEPLOY_DIR"
                     git fetch --prune origin
@@ -91,7 +91,7 @@ pipeline {
 
                     docker compose -f docker-compose.prod.yml --env-file .env.prod ps
 
-                    # 1) nginx 설정 유효성 (인증서 경로 포함)
+                    # 1) nginx 설정 유효성
                     docker exec thorp-nginx nginx -t
 
                     # 2) 백엔드 상태 — TLS를 거치지 않고 컨테이너 네트워크에서 직접 확인
@@ -103,12 +103,15 @@ pipeline {
                         -sf --max-time 5 --retry 30 --retry-delay 2 --retry-connrefused \
                         http://backend:8080/actuator/health
 
-                    # 3) 공개 경로 — 인증서 검증을 켠 채로 확인한다.
-                    #    --connect-to로 SNI는 실제 도메인을 유지하면서 nginx 컨테이너에 직접
-                    #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.
+                    # 3) nginx 경유 — 터널 없이 edge 네트워크에서 nginx 의 /api 프록시만 확인한다.
                     docker run --rm --network thorp-edge curlimages/curl:8.10.1 \
                         -sf --max-time 5 --retry 10 --retry-delay 2 --retry-connrefused \
-                        --connect-to "${DOMAIN}:443:nginx:443" \
+                        -H "Host: ${DOMAIN}" -o /dev/null http://nginx/api/actuator/health
+
+                    # 4) 공개 경로 — 사용자와 같은 길(Cloudflare → 터널 → nginx)로 확인한다. 인증서 검증을 켠다.
+                    #    3)이 통과하고 여기서 실패하면 원인은 터널(cloudflared·대시보드 설정) 쪽이다.
+                    docker run --rm curlimages/curl:8.10.1 \
+                        -sf --max-time 10 --retry 10 --retry-delay 3 \
                         -o /dev/null "https://${DOMAIN}/api/actuator/health"
                 '''
             }
