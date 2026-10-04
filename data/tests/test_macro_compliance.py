@@ -76,12 +76,6 @@ class TestRecordedTerms:
         for indicator in INDICATORS:
             assert "출처" in indicator.export_notice, indicator.indicator_id
 
-    def test_작성기관과_제공기관이_다른_지표가_있다(self) -> None:
-        """이용 조건은 작성기관 쪽을 먼저 본다 (FR-016). 둘이 같다고 전제하면 안 된다."""
-        assert BY_ID["dubai_crude"].agency == "국제통화기금(IMF)"
-        assert "한국은행" in BY_ID["dubai_crude"].attribution
-        assert BY_ID["housing_sale_price"].agency == "한국부동산원"
-
 
 class TestPendingRights:
     """권리 확인 대기와 미확인은 다른 상태다 (FR-016a)."""

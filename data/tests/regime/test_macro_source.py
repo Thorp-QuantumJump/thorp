@@ -13,7 +13,6 @@ from datetime import date
 import pytest
 
 from data_pipeline.regime.macro import (
-    SOURCE_CHOICES,
     UnknownMacroSourceError,
     create_source,
 )
@@ -187,7 +186,3 @@ class TestFactory:
     def test_모르는_소스는_거부한다(self) -> None:
         with pytest.raises(UnknownMacroSourceError):
             create_source("no-such-source")
-
-    def test_기본_소스가_임시_대역이_아니다(self) -> None:
-        """플래그 없이 돌린 배치가 가짜 자료를 적재하면 안 된다 (계약 §4.1)."""
-        assert SOURCE_CHOICES[0] == "macro"

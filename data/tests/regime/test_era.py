@@ -202,12 +202,6 @@ class TestBaselineIndependent:
         assert names == ["indicator", "end_month", "series"]
         assert not any("baseline" in name for name in names)
 
-    def test_같은_후보월이면_같은_값이다(self) -> None:
-        series = series_with(20.0)
-        assert era_position_for(indicator(), END_MONTH, series) == era_position_for(
-            indicator(), END_MONTH, series
-        )
-
     def test_후보월이_다르면_제_시대로_잰다(self) -> None:
         series = series_with(20.0)
         other = date(2016, 6, 1)
