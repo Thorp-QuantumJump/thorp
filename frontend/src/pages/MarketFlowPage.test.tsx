@@ -98,11 +98,8 @@ describe('MarketFlowPage', () => {
     vi.mocked(fetchSectorCatalog).mockResolvedValue(sectorCatalog)
     // 참고 정보는 늦거나 빠질 수 있다. 기본값은 '없음'으로 두고 필요한 테스트만 채운다.
     vi.mocked(fetchMarketIndicatorsFor).mockResolvedValue({ data: {}, errors: {} })
-    vi.mocked(fetchMarketNewsDigests).mockResolvedValue({
-      context: 'CURRENT', state: 'EMPTY', sectorId: null, from: null, to: null,
-      lastUpdatedAt: null, stale: false, statusMessage: null, digests: [],
-    })
-    vi.mocked(fetchNewsSectors).mockResolvedValue([])
+    vi.mocked(fetchMarketNewsDigests).mockReset()
+    vi.mocked(fetchNewsSectors).mockReset()
     vi.mocked(getRegimeSearch).mockReset()
     vi.mocked(getRegimeSearch).mockResolvedValue(fieldSearch)
     vi.mocked(getRegimeCaseDetail).mockReset()
@@ -332,12 +329,13 @@ describe('MarketFlowPage', () => {
     })
   })
 
-  it('분야 자료가 실패해도 뉴스 카드는 유지한다', async () => {
+  it('분야 자료가 실패하면 알린다. 지금 시장 뉴스는 투자 대상 고르기로 옮겨 이 화면에 두지 않는다', async () => {
     vi.mocked(fetchMarketFlowFields).mockRejectedValue(new Error('failed'))
     renderWithRouter(<MarketFlowPage />)
     expect(await screen.findByRole('alert')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: '뉴스' })).toBeTruthy()
-    expect(fetchMarketNewsDigests).toHaveBeenCalled()
+    expect(screen.queryByRole('heading', { name: /뉴스/ })).toBeNull()
+    expect(fetchMarketNewsDigests).not.toHaveBeenCalled()
+    expect(fetchNewsSectors).not.toHaveBeenCalled()
   })
 
   it('투자 대상과 국내 시장 참고 정보는 옮겨 오지 않는다', async () => {

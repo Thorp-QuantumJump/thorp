@@ -1,4 +1,3 @@
-import { SectorNews } from '@/components/diagnosis/SectorNews'
 import { Activity, RefreshCw } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
@@ -236,10 +235,6 @@ export function MarketFlowPage() {
           </div>
         )}
 
-        {/* 뉴스는 투자 대상 고르기 하단으로 옮긴다(012 FR-001). 그 화면이 준비될 때까지 이 자리에 둔다. */}
-        <div className={styles.news}>
-          <SectorNews />
-        </div>
       </main>
     </div>
   )

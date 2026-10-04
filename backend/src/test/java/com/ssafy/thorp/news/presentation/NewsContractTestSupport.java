@@ -122,8 +122,9 @@ final class NewsContractTestSupport {
         }
 
         @Override
-        public NewsDigestListResult query(String sectorId, Instant from, Instant to) {
-            return query(NewsDigestQuery.of(sectorId, from, to, maxRangeDays));
+        public NewsDigestListResult query(
+                List<String> sectorIds, Instant from, Instant to, Integer limit) {
+            return query(NewsDigestQuery.of(sectorIds, from, to, limit, maxRangeDays));
         }
 
         @Override

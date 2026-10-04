@@ -683,14 +683,18 @@ class NewsPersistenceIT extends PostgresTestSupport {
     /** 허가 매체 하나와 그 매체의 기사로 만든 묶음. 섹터 연결까지 붙인다. */
     private NewsDigest seedDigest(
             String key, String url, String title, Instant publishedAt, String sectorId) {
+        return seedDigestLinkedTo(
+                key, url, title, publishedAt, sectorId == null ? Set.of() : Set.of(sectorId));
+    }
+
+    /** 기사 하나를 섹터 여럿에 연결한 묶음. 섹터 여럿 조회가 같은 묶음을 두 번 내지 않는지 볼 때 쓴다. */
+    private NewsDigest seedDigestLinkedTo(
+            String key, String url, String title, Instant publishedAt, Set<String> sectorIds) {
         NewsPublisher publisher = savePublisher(key, PermissionStatus.ALLOWED);
         NewsArticle article = saveArticle(publisher.getId(), url, title, publishedAt);
         Long topicId = linkRepository.ensureTopic("semiconductor", "반도체", true, LINK_RULE);
         linkRepository.replaceLinks(
-                article.getId(),
-                sectorId == null ? Set.of() : Set.of(sectorId),
-                java.util.Map.of(topicId, "semiconductor"),
-                LINK_RULE);
+                article.getId(), sectorIds, java.util.Map.of(topicId, "semiconductor"), LINK_RULE);
         NewsDigest digest =
                 digestRepository.save(
                         NewsDigest.of(List.of(article), "요약", GROUPING_RULE, IMPORTANCE_RULE));
@@ -719,6 +723,44 @@ class NewsPersistenceIT extends PostgresTestSupport {
         assertThat(result.digests()).as("조인 조건이 틀리면 대역에서는 통과하고 운영에서만 다른 섹터가 섞인다").hasSize(1);
         assertThat(result.digests().get(0).sectors()).containsExactly(SEMICONDUCTOR);
         assertThat(result.sectorId()).isEqualTo(SEMICONDUCTOR);
+    }
+
+    @Test
+    @DisplayName("섹터를 여럿 지정하면 그중 하나 이상에 연결된 묶음을 한 번의 질의로 모은다 (spec FR-001 ③)")
+    void 섹터_여럿_필터() {
+        seedDigest(
+                "semi",
+                "https://semi.example.com/many",
+                "반도체 수출 지표",
+                NOW.minusSeconds(3600),
+                SEMICONDUCTOR);
+        seedDigest(
+                "batt",
+                "https://batt.example.com/many",
+                "이차전지 수출 지표",
+                NOW.minusSeconds(7200),
+                BATTERY);
+        seedDigest(
+                "none",
+                "https://none.example.com/many",
+                "섹터 연결이 없는 기사",
+                NOW.minusSeconds(1800),
+                null);
+        seedDigestLinkedTo(
+                "both",
+                "https://both.example.com/many",
+                "두 섹터에 걸친 수출 지표",
+                NOW.minusSeconds(5400),
+                Set.of(SEMICONDUCTOR, BATTERY));
+
+        NewsDigestListResult result =
+                queryService.query(List.of(SEMICONDUCTOR, BATTERY), null, null, 10);
+
+        assertThat(result.digests())
+                .as("IN 조건이 틀리면 연결 없는 묶음이 섞이고, DISTINCT가 빠지면 두 섹터에 걸친 묶음이 두 번 나온다")
+                .extracting(NewsDigestListResult.Digest::representativeTitle)
+                .containsExactly("반도체 수출 지표", "두 섹터에 걸친 수출 지표", "이차전지 수출 지표");
+        assertThat(result.sectorId()).as("섹터가 여럿이면 응답의 sectorId는 비운다").isNull();
     }
 
     @Test
