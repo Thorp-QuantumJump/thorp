@@ -15,6 +15,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,6 +47,10 @@ class NewsRedactionPolicyTest {
                     "e.getMessage()",
                     "getMessage()");
 
+    /** 로그 호출의 시작. 인자는 그 뒤 짝이 맞는 닫는 괄호까지 이어 붙여 본다. */
+    private static final Pattern LOG_CALL =
+            Pattern.compile("\\blog\\.(trace|debug|info|warn|error)\\s*\\(");
+
     private static NewsHttpSecurityPolicy policy() {
         return new NewsHttpSecurityPolicy(
                 new NewsProperties.Http(
@@ -60,6 +66,33 @@ class NewsRedactionPolicyTest {
 
     private static Stream<Path> newsSources() throws IOException {
         return Files.walk(NEWS_SOURCE_ROOT).filter(p -> p.toString().endsWith(".java"));
+    }
+
+    /**
+     * {@code start}에서 시작한 호출을 짝이 맞는 닫는 괄호까지 한 줄로 이어 돌려준다. 문자열 안의 괄호는 세지 않는다.
+     *
+     * <p>줄 단위로 보면 포매터가 인자를 다음 줄로 넘긴 호출은 첫 줄 {@code log.warn(}만 보이고 인자는 한 번도 검사되지 않는다.
+     */
+    private static String callAt(String body, int start) {
+        int depth = 0;
+        boolean inString = false;
+        for (int i = start; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (inString) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    inString = false;
+                }
+            } else if (c == '"') {
+                inString = true;
+            } else if (c == '(') {
+                depth++;
+            } else if (c == ')' && --depth == 0) {
+                return body.substring(start, i + 1).replaceAll("\\s+", " ");
+            }
+        }
+        return body.substring(start).replaceAll("\\s+", " ");
     }
 
     @Nested
@@ -110,29 +143,30 @@ class NewsRedactionPolicyTest {
         @DisplayName("뉴스 도메인 로그에 주소·응답 원문·예외 메시지를 넣지 않는다")
         void 위험한_로그_인자() throws IOException {
             List<String> violations = new ArrayList<>();
+            int checked = 0;
 
             try (Stream<Path> sources = newsSources()) {
                 for (Path source : sources.toList()) {
                     String body = Files.readString(source, StandardCharsets.UTF_8);
-                    for (String line : body.split("\\R")) {
-                        String trimmed = line.trim();
-                        if (!trimmed.startsWith("log.") && !trimmed.contains("log.warn")) {
-                            continue;
-                        }
+                    Matcher call = LOG_CALL.matcher(body);
+                    while (call.find()) {
+                        String statement = callAt(body, call.start());
+                        checked++;
                         for (String forbidden : FORBIDDEN_LOG_ARGUMENTS) {
-                            if (trimmed.contains(forbidden)) {
+                            if (statement.contains(forbidden)) {
                                 violations.add(
                                         source.getFileName()
                                                 + " :: "
                                                 + forbidden
                                                 + " :: "
-                                                + trimmed);
+                                                + statement);
                             }
                         }
                     }
                 }
             }
 
+            assertThat(checked).as("로그 호출을 하나도 찾지 못하면 이 시험은 아무것도 보지 않는다").isPositive();
             assertThat(violations).as("로그에 실리면 운영 로그 수집기로 그대로 흘러 나간다").isEmpty();
         }
 

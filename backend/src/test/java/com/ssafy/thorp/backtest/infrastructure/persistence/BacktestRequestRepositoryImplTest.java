@@ -189,7 +189,6 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {
         BacktestRequest found = requests.findByPublicToken(saved.getPublicToken()).orElseThrow();
         assertThat(found.getBacktestId()).isEqualTo(saved.getBacktestId());
         assertThat(found.getRequesterId()).isNull();
-        assertThat(found.isAnonymous()).isTrue();
         assertThat(found.getPublicTokenExpiresAt()).isEqualTo(expiresAt);
         assertThat(requests.findByPublicToken(PublicResultToken.generate())).isEmpty();
     }

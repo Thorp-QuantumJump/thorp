@@ -5,18 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.thorp.news.application.command.NewsDigestQuery;
 import com.ssafy.thorp.news.application.result.NewsDigestListResult;
 import com.ssafy.thorp.news.application.service.NewsDigestQueryService;
-import com.ssafy.thorp.news.infrastructure.config.NewsProperties;
 import com.ssafy.thorp.news.presentation.controller.NewsDigestController;
 import com.ssafy.thorp.news.presentation.controller.NewsDigestExceptionHandler;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -59,11 +55,7 @@ final class NewsContractTestSupport {
 
     private NewsContractTestSupport() {}
 
-    /**
-     * 조회 서비스를 준 함수로 대신하는 MockMvc.
-     *
-     * <p>{@code properties}는 컨트롤러가 구간 상한을 읽는 데만 쓴다.
-     */
+    /** 조회 서비스를 준 함수로 대신하는 MockMvc. */
     static MockMvc mockMvc(Function<NewsDigestQuery, NewsDigestListResult> stub) {
         NewsDigestQueryService service = new StubQueryService(stub, MAX_RANGE_DAYS);
         MappingJackson2HttpMessageConverter converter =
@@ -78,29 +70,6 @@ final class NewsContractTestSupport {
     static JsonNode example(String fileName) throws IOException {
         return MAPPER.readTree(
                 Files.readString(EXAMPLES.resolve(fileName), StandardCharsets.UTF_8));
-    }
-
-    /** 기본 설정. 구간 상한 93일은 plan이 고정한 값이다. */
-    static NewsProperties properties() {
-        return new NewsProperties(
-                com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL,
-                Duration.ofMinutes(30),
-                Duration.ofMinutes(15),
-                Duration.ofMinutes(15),
-                LocalDate.of(2026, 11, 7),
-                "Asia/Seoul",
-                93,
-                20,
-                3,
-                Duration.ofHours(48),
-                new NewsProperties.Http(
-                        3,
-                        Duration.ofSeconds(5),
-                        Duration.ofSeconds(20),
-                        10_485_760L,
-                        Set.of("application/xml"),
-                        Set.of("application/json"),
-                        List.of("api.gdeltproject.org")));
     }
 
     /**

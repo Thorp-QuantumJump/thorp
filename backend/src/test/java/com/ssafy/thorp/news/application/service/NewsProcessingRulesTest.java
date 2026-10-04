@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class NewsProcessingRulesTest {
 
     private static final Instant COLLECTED = Instant.parse("2026-09-10T06:00:00Z");
-    private static final String GROUPING_RULE = "news-grouping-v1";
+    private static final String GROUPING_RULE = NewsGroupingPolicy.RULE_VERSION;
 
     private static final NewsLinkRegistry LINKS =
             new NewsLinkRegistry(
@@ -323,16 +323,21 @@ class NewsProcessingRulesTest {
         }
 
         @Test
-        @DisplayName("제목 유사도가 0.60 미만이면 합치지 않는다")
+        @DisplayName("제목 문자 2-gram 유사도가 0.30 이상이면 합치고 미만이면 합치지 않는다")
         void 유사도_경계() {
+            // 두 쌍 모두 시간·주제가 같고 '반도체'·'수출'을 함께 써서 고유어 조건에 걸리지 않는다. 남는 차이는 유사도뿐이다.
             Instant base = Instant.parse("2026-09-10T04:00:00Z");
             NewsGroupingPolicy.Candidate a =
                     candidate("https://a.example.com/1", "반도체 수출 지표 발표", base, "semiconductor");
-            NewsGroupingPolicy.Candidate different =
-                    candidate(
-                            "https://b.example.com/1", "환율 급등 원인 분석 보도 자료", base, "semiconductor");
+            // 합친 2-gram 12개 가운데 4개가 겹친다(0.333).
+            NewsGroupingPolicy.Candidate above =
+                    candidate("https://b.example.com/1", "반도체 수출 증가 소식", base, "semiconductor");
+            // 합친 2-gram 14개 가운데 4개가 겹친다(0.286).
+            NewsGroupingPolicy.Candidate below =
+                    candidate("https://c.example.com/1", "반도체 수출 감소 우려 확산", base, "semiconductor");
 
-            assertThat(policy.group(List.of(a, different), GROUPING_RULE)).hasSize(2);
+            assertThat(policy.group(List.of(a, above), GROUPING_RULE)).hasSize(1);
+            assertThat(policy.group(List.of(a, below), GROUPING_RULE)).hasSize(2);
         }
 
         @Test
