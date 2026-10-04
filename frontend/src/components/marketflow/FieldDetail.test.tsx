@@ -3,8 +3,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import type { FieldDetailResult } from '@/types/marketFlow'
 import { FieldDetail } from './FieldDetail'
+import type { IndicatorPast } from './pastOverlay'
 
-/** 진입점이 링크라 라우터 안에서 그린다. */
+/** 비교 줄에 링크가 있어 라우터 안에서 그린다. */
 function renderDetail(detail: FieldDetailResult) {
   return render(
     <MemoryRouter>
@@ -63,53 +64,134 @@ describe('FieldDetail', () => {
     expect(within(path).queryByText('3.1 %')).toBeNull()
     expect(screen.getByText(/기준월 뒤 발표 · 2026-09 3.1 %/)).toBeTruthy()
   })
-  describe("'비슷했던 때 보기'로 넘기는 값 (T027, FR-009)", () => {
-    it('분야와 그 분야의 기준월을 실어 둔다', () => {
-      renderDetail(detailOf('2026-08'))
+  describe('지금과 비슷했던 과거 겹쳐 보기 (009 FR-019)', () => {
+    function unemploymentDetail(): FieldDetailResult {
+      const detail = detailOf('2026-08')
+      detail.indicators = [{
+        indicatorId: 'unemployment', name: '실업률', unit: '%', value: 2.9,
+        path: [{ month: '2026-06', value: 2.8 }, { month: '2026-07', value: 2.8 }, { month: '2026-08', value: 2.9 }],
+        referenceMonth: '2026-08', releaseDate: null, source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: null,
+      }]
+      return detail
+    }
+    const past: IndicatorPast = {
+      path: { months: ['2010-01', '2010-02', '2010-03'], values: [3.5, 3.4, 3.6] },
+      verdict: { kind: 'similar', text: '실업률은 2.9%로 당시 3.6%와 비슷합니다.' },
+      band: [2, 4],
+    }
 
-      const link = screen.getByRole('link', { name: /비슷했던 때 보기/ })
-      expect(JSON.parse(link.getAttribute('data-handoff') ?? 'null')).toEqual({
-        fieldId: 'labor',
-        referenceMonth: '2026-08',
-      })
-    })
-
-    it('그 분야와 기준월을 주소에 실어 검색으로 간다', () => {
-      renderDetail(detailOf('2026-08'))
-
-      // 주소로 넘기는 이유는 새로고침에도 남아야 해서다. 상태로 넘기면 같은 화면을 다시 열 수 없다.
-      expect(screen.getByRole('link', { name: /비슷했던 때 보기/ }).getAttribute('href')).toBe(
-        '/regime-search?field=labor&month=2026-08',
+    it('비교 줄은 분야 머리와 지표 칸 사이에 선다', () => {
+      render(
+        <MemoryRouter>
+          <FieldDetail detail={unemploymentDetail()} compare={<p>비교 줄</p>} />
+        </MemoryRouter>,
       )
+      const head = screen.getByRole('heading', { level: 2, name: '노동' })
+      const compare = screen.getByText('비교 줄')
+      const indicator = screen.getByRole('heading', { level: 3, name: '실업률' })
+      expect(head.compareDocumentPosition(compare) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(compare.compareDocumentPosition(indicator) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
 
-    it('기준월이 없으면 넘길 값을 만들지 않고 그 사유를 보인다', () => {
-      renderDetail(detailOf(null))
-
-      // 링크가 아니라 눌리지 않는 버튼이다. 기준월이 없으면 검색이 무엇을 찾을지 정해지지 않는다.
+    it('예전 비슷했던 때 보기 버튼은 두지 않는다(FR-009은 비교 줄의 모두 보기가 맡는다)', () => {
+      renderDetail(unemploymentDetail())
       expect(screen.queryByRole('link', { name: /비슷했던 때 보기/ })).toBeNull()
-      const button = screen.getByRole('button', { name: /비슷했던 때 보기/ })
-      expect(button).toHaveProperty('disabled', true)
-      expect(button.getAttribute('data-handoff')).toBeNull()
-      expect(screen.getByText(/기준월이 아직 정해지지 않아/)).toBeTruthy()
+      expect(screen.queryByRole('button', { name: /비슷했던 때 보기/ })).toBeNull()
     })
 
-    it('열린 진입점과 막힌 진입점이 같은 모양을 쓴다', () => {
-      // CSS 는 시험이 보지 못한다. 최소한 두 상태가 같은 클래스를 쓰는 것은 고정해 둔다 —
-      // 한쪽만 바꾸면 눌리는 링크에 '못 누름' 표시가 남는 식으로 어긋난다.
-      const open = renderDetail(detailOf('2026-08'))
-      const openClass = screen.getByRole('link', { name: /비슷했던 때 보기/ }).className
-      open.unmount()
-
-      renderDetail(detailOf(null))
-
-      expect(screen.getByRole('button', { name: /비슷했던 때 보기/ }).className).toBe(openClass)
+    it('고른 과거 구간의 당시 경로를 점선으로 겹치고, 문장은 그 지표 칸에 붙인다', () => {
+      const { container } = render(
+        <MemoryRouter>
+          <FieldDetail detail={unemploymentDetail()} pasts={{ unemployment: past }} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByText('비슷한 점')).toBeTruthy()
+      expect(screen.getByText('실업률은 2.9%로 당시 3.6%와 비슷합니다.')).toBeTruthy()
+      expect(container.querySelector('path[data-past]')).not.toBeNull()
+      // 보조기기는 그래프를 보지 않아도 달마다 맞댄 당시 값을 읽는다.
+      const list = screen.getByRole('list', { name: '실업률 3개월 경로' })
+      expect(list.textContent).toContain('t 2026-08 2.9 % · 당시 2010-03 3.6 %')
+      // 보통 범위 띠는 켰을 때만 그린다.
+      expect(container.querySelector('rect[data-band]')).toBeNull()
     })
 
-    it("'준비 중' 표기가 남아 있지 않다", () => {
-      renderDetail(detailOf('2026-08'))
-
-      expect(screen.queryByText('준비 중')).toBeNull()
+    it('보통 범위를 켜면 띠를 그리고 세로축 설명도 그 범위를 포함한다', () => {
+      const { container } = render(
+        <MemoryRouter>
+          <FieldDetail detail={unemploymentDetail()} pasts={{ unemployment: past }} showBand />
+        </MemoryRouter>,
+      )
+      expect(container.querySelector('rect[data-band]')).not.toBeNull()
+      expect(container.textContent).toContain('세로축이 0을 포함합니다.')
     })
+
+    it('문장이 다루지 않는 지표에는 지금 값과 당시 값만 적는다', () => {
+      renderDetailWith({ unemployment: { ...past, verdict: null } })
+      expect(screen.queryByText('비슷한 점')).toBeNull()
+      expect(screen.getByText(/지금 2\.9%/).textContent).toContain('당시 3.6%')
+    })
+
+    it('010이 비교하지 않은 달은 비워 두고 잇지 않는다', () => {
+      const { container } = renderDetailWith({
+        unemployment: { ...past, path: { months: [null, '2010-02', '2010-03'], values: [null, 3.4, 3.6] } },
+      })
+      const d = container.querySelector('path[data-past]')?.getAttribute('d') ?? ''
+      expect(d.match(/M/g)).toHaveLength(1)
+      const first = screen.getByRole('list', { name: '실업률 3개월 경로' }).querySelector('li')
+      expect(first?.textContent).not.toContain('당시')
+    })
+
+    it('지금 값이 없으면 단위를 붙이지 않고, % 밖의 단위는 한 칸 띄운다', () => {
+      const detail = unemploymentDetail()
+      detail.indicators[0] = { ...detail.indicators[0], value: null }
+      render(
+        <MemoryRouter>
+          <FieldDetail detail={detail} pasts={{ unemployment: { ...past, verdict: null } }} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByText(/지금 자료 없음 ·/).textContent).toBe('지금 자료 없음 · 당시 3.6%')
+
+      const usd = unemploymentDetail()
+      usd.indicators[0] = { ...usd.indicators[0], unit: '미국 달러', value: 34_785_482_585 }
+      render(
+        <MemoryRouter>
+          <FieldDetail detail={usd} pasts={{ unemployment: { ...past, verdict: null, path: { months: [null, null, '2010-03'], values: [null, null, 20_000_000_000] } } }} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByText(/지금 약 347억/).textContent).toBe('지금 약 347억 9천만 미국 달러 · 당시 약 200억 미국 달러')
+    })
+
+    it('010 문장의 큰 금액도 이 칸의 다른 숫자처럼 줄여 적는다', () => {
+      renderDetailWith({ unemployment: { ...past, verdict: { kind: 'different', text: '실업률은 지금이 34785482585미국 달러로 당시보다 큽니다.' } } })
+      expect(screen.getByText('실업률은 지금이 약 347억 9천만 미국 달러로 당시보다 큽니다.')).toBeTruthy()
+    })
+
+    it('지금 값이 모두 없으면 당시 값이 있어도 관측값 없음을 적는다', () => {
+      const detail = unemploymentDetail()
+      detail.indicators[0] = { ...detail.indicators[0], value: null, path: [{ month: '2026-06', value: null }, { month: '2026-07', value: null }, { month: '2026-08', value: null }] }
+      render(
+        <MemoryRouter>
+          <FieldDetail detail={detail} pasts={{ unemployment: past }} showBand />
+        </MemoryRouter>,
+      )
+      expect(screen.getByText('관측값 없음')).toBeTruthy()
+    })
+
+    it('과거 구간을 고른 동안에는 당시 경로를 받는 중이어도 그래프 높이를 그대로 둔다', () => {
+      const { container } = render(
+        <MemoryRouter>
+          <FieldDetail detail={unemploymentDetail()} comparing />
+        </MemoryRouter>,
+      )
+      expect(container.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 640 240')
+    })
+
+    function renderDetailWith(pasts: Record<string, IndicatorPast>) {
+      return render(
+        <MemoryRouter>
+          <FieldDetail detail={unemploymentDetail()} pasts={pasts} />
+        </MemoryRouter>,
+      )
+    }
   })
 })

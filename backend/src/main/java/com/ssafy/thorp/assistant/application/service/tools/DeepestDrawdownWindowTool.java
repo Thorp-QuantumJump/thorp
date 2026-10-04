@@ -27,7 +27,7 @@ public class DeepestDrawdownWindowTool implements AssistantTool {
 
     @Override
     public ToolSpec spec() {
-        return new ToolSpec(NAME, "자산이 가장 크게 줄었던 구간: 그 앞 고점 날과 가장 낮은 날. 인자 없음", List.of());
+        return ToolSpec.dates(NAME, "자산이 가장 크게 줄었던 구간: 그 앞 고점 날과 가장 낮은 날. 인자 없음", List.of());
     }
 
     @Override

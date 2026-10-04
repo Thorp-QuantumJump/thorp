@@ -17,6 +17,14 @@ vi.mock('@/api/sectors', async () => {
   return { ...actual, ...apiMocks }
 })
 
+// 뉴스 구역은 목록 아래에 선다. 구역 안의 배치는 NewsSection 검사가 본다.
+const newsMocks = vi.hoisted(() => ({
+  fetchMarketNewsDigests: vi.fn(),
+  fetchNewsSectors: vi.fn(),
+}))
+
+vi.mock('@/api/marketNews', () => newsMocks)
+
 function sector(
   code: string,
   name: string,
@@ -87,6 +95,32 @@ describe('SectorSelectionPage', () => {
       status: 'notReady',
       message: '준비 중',
     })
+    newsMocks.fetchNewsSectors.mockResolvedValue([])
+    newsMocks.fetchMarketNewsDigests.mockResolvedValue({
+      context: 'CURRENT',
+      state: 'EMPTY',
+      sectorId: null,
+      from: null,
+      to: null,
+      lastUpdatedAt: null,
+      stale: false,
+      statusMessage: null,
+      digests: [],
+    })
+  })
+
+  it('지금 시장 뉴스는 투자 대상 탐색 아래에 서고, 목록을 받지 못해도 남는다', async () => {
+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))
+    const { unmount } = renderPage()
+
+    const browser = await screen.findByRole('region', { name: '투자 대상 탐색' })
+    const news = await screen.findByRole('region', { name: '지금 시장 뉴스' })
+    expect(browser.compareDocumentPosition(news) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    unmount()
+
+    apiMocks.fetchSectorCatalog.mockResolvedValue(networkFailure)
+    renderPage()
+    expect(await screen.findByRole('region', { name: '지금 시장 뉴스' })).toBeTruthy()
   })
 
   it('목록을 표시 순서대로 보인다', async () => {

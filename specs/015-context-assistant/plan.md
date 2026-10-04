@@ -14,7 +14,7 @@
 
 **Primary Dependencies**: 기존만 쓴다 — Frontend `radix-ui` Popover·`lucide-react`·Axios; Backend Spring MVC·Validation, Java `HttpClient`(`market/infrastructure/client/MarketHttpClient` 관례), Jackson. 새 SDK·벡터 DB·채팅 저장소는 없다.
 
-**Storage**: 없다. 질문·답변 원문을 저장하지 않는다. 한도 카운터는 인스턴스 메모리다(다중 인스턴스 전까지). 버튼 위치만 브라우저 `localStorage` `thorp.assistant.fabPosition`.
+**Storage**: 없다. 질문·답변 원문을 저장하지 않는다. 한도 카운터는 인스턴스 메모리다(다중 인스턴스 전까지). 버튼 위치만 브라우저 `sessionStorage` `thorp.assistant.fabPosition`(탭을 닫으면 지워진다, constitution 6.1.0 초안). 2026-10-02 전 구현은 `localStorage`를 썼고, 코드 변경은 별도 작업이다.
 
 **Testing**: Backend JUnit 5·MockMvc·`PortMockedIntegrationTestSupport`(PostgreSQL Testcontainers), 모델은 가짜 포트와 로컬 가짜 HTTP 서버. Frontend Vitest·React Testing Library. 실제 모델 호출은 Task 6 평가 문서에만.
 

@@ -37,6 +37,8 @@ public class AssistantConfig {
                 limits.getMaxFacts(),
                 limits.getMaxFactsPerRound(),
                 answer.getMaxLength(),
-                answer.getMaxParts());
+                answer.getMaxParts(),
+                limits.getPerPagePerIpPerMinute(),
+                limits.getTermInitialFacts());
     }
 }

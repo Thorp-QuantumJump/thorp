@@ -107,10 +107,15 @@ public class NewsDigestQueryService {
      * <p>구간 상한이 설정값이라 조회 객체를 만드는 일도 여기 있다. 컨트롤러가 만들면 설정을 읽어야 하고, 설정 record는 infrastructure에 있어
      * presentation이 infrastructure를 참조하게 된다(ADR-0001 계층 방향).
      */
+    /**
+     * @param sectorIds 좁힐 섹터. 비었거나 null이면 전체다. 여럿이면 그중 하나 이상과 연결된 묶음이다(spec FR-001, 2026-10-02).
+     * @param limit 받을 묶음 수. null이면 {@link NewsDigestQuery#DEFAULT_LIMIT}개이고, 어느 쪽이든 서버 상한을 넘지 않는다.
+     */
     @Transactional(readOnly = true)
-    public NewsDigestListResult query(String sectorId, Instant from, Instant to) {
+    public NewsDigestListResult query(
+            List<String> sectorIds, Instant from, Instant to, Integer limit) {
         return query(
-                NewsDigestQuery.of(sectorId, from, to, settings.maxHistoricalRangeDays()),
+                NewsDigestQuery.of(sectorIds, from, to, limit, settings.maxHistoricalRangeDays()),
                 settings.exposureMode());
     }
 
@@ -137,7 +142,9 @@ public class NewsDigestQueryService {
         // 요청이 유효한지를 먼저 본다. 등록되지 않은 섹터는 매체 허가 상태와 무관하게 잘못된 요청이다.
         // 이 검사를 상태 판정 뒤로 미루면, 매체 회신 전에는 어떤 오타를 보내도 '준비 중'이 돌아와
         // 화면을 만드는 쪽이 잘못된 요청을 눈치채지 못한다(spec FR-005).
-        boolean sectorResolvable = sectorPolicy.canQuery(query.sectorId());
+        // 섹터를 여럿 주면 하나하나가 등록돼 있어야 한다. 하나라도 모르는 값이면 400이다(spec FR-005).
+        List<String> sectorIds =
+                query.hasSector() ? sectorPolicy.queryableOf(query.sectorIds()) : List.of();
 
         List<NewsPublisher> visible = visiblePublishers(mode);
         if (visible.isEmpty()) {
@@ -145,8 +152,8 @@ public class NewsDigestQueryService {
             return empty(query, NewsDigestState.PREPARING, lastUpdatedAt, now);
         }
 
-        if (!sectorResolvable) {
-            // 001의 대응표가 아직 발행되지 않았다. 확인할 섹터가 없으므로 빈 화면이다(spec FR-005).
+        if (query.hasSector() && sectorIds.isEmpty()) {
+            // 001의 대응표가 아직 발행되지 않아 물을 수 있는 섹터가 없다. 빈 화면이다(spec FR-005).
             return empty(query, NewsDigestState.EMPTY, lastUpdatedAt, now);
         }
 
@@ -154,7 +161,7 @@ public class NewsDigestQueryService {
         visible.forEach(publisher -> byId.put(publisher.getId(), publisher));
         Predicate<NewsArticle> permitted = article -> byId.containsKey(article.getPublisherId());
 
-        List<NewsDigest> candidates = candidates(query, now);
+        List<NewsDigest> candidates = candidates(query, sectorIds, now);
         Map<Long, Set<String>> candidateTopics =
                 mode.requiresPermissionFilter()
                         ? links.findTopicKeysByArticleIds(
@@ -178,7 +185,8 @@ public class NewsDigestQueryService {
                         .flatMap(Optional::stream)
                         .toList();
 
-        List<NewsDigest.Projection> top = importance.top(projections, settings.maxDigests());
+        List<NewsDigest.Projection> top =
+                importance.top(projections, query.limitWithin(settings.maxDigests()));
         NewsDigestState state =
                 freshness.stateOf(
                         true, !top.isEmpty(), lastUpdatedAt, now, settings.staleThreshold());
@@ -201,14 +209,20 @@ public class NewsDigestQueryService {
      * <p>과거 조회는 검증된 발행 시각이 구간 안인 기사만 본다. GDELT 기록 시각을 발행 시각으로 쓰지 않는다 — 그 값은 우리가 받은 시각이지 매체가 낸 시각이
      * 아니다(spec FR-006·FR-012, 원칙 V).
      */
-    private List<NewsDigest> candidates(NewsDigestQuery query, Instant now) {
+    private List<NewsDigest> candidates(
+            NewsDigestQuery query, List<String> sectorIds, Instant now) {
         if (query.isHistorical()) {
-            return digests.findVerifiedBetween(query.from(), query.to(), query.sectorId());
+            // 과거 구간은 섹터를 하나까지만 받는다(NewsDigestQuery).
+            return digests.findVerifiedBetween(
+                    query.from(), query.to(), sectorIds.isEmpty() ? null : sectorIds.get(0));
         }
         Instant since = now.minus(settings.currentWindow());
-        return query.hasSector()
-                ? digests.findRecentBySector(since, query.sectorId())
-                : digests.findRecent(since);
+        if (sectorIds.isEmpty()) {
+            return digests.findRecent(since);
+        }
+        return sectorIds.size() == 1
+                ? digests.findRecentBySector(since, sectorIds.get(0))
+                : digests.findRecentInSectors(since, sectorIds);
     }
 
     /**

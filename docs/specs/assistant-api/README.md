@@ -49,3 +49,20 @@ spec 015 결과 화면 질문 도우미가 쓰는 경로의 요약이다. 원본
 - 큰 자료(시계열·거래·보유)는 모델이 요청하면 서버가 검증 뒤 읽는 도구 다섯 개로만 읽는다. 도구는 날짜 인자만 받고 어느 결과인지는 서버가 묶어 둔다.
 - 서버는 새 합계·비율·구간을 계산하지 않는다. 시계열에서 고르기만 한다.
 - 한도(429): IP 8/분, 토큰 5/분, 하루 1,000회(설정값, [ADR-0008](../../adr/0008-external-llm-via-gms.md)). 질문 300자는 입력 검증(400), 서버 2분은 시간 예산(503)이다.
+
+## 5. 진단 화면 용어 도우미 (spec 017)
+
+'투자 대상 고르기'(`SECTOR_SELECTION`)·'전략 선택'(`STRATEGY_SETTINGS`) 화면의 용어 질문이다. 원본은 [`specs/017-diagnosis-term-assistant/contracts/term-assistant-api.md`](../../../specs/017-diagnosis-term-assistant/contracts/term-assistant-api.md)이고, 적지 않은 것은 위 015 규칙을 따른다.
+
+| 파일 | 내용 |
+|---|---|
+| [`examples/term-question-request.json`](examples/term-question-request.json) | 진단 화면 요청. `context`에 `kind`만 |
+| [`examples/term-answer-answered.json`](examples/term-answer-answered.json) | 사이트 콘텐츠 근거 답. `evidence[].source`·`relatedArticles` |
+| [`examples/term-answer-insufficient.json`](examples/term-answer-insufficient.json) | 사이트 자료에 없는 용어 |
+| [`examples/term-answer-out-of-scope.json`](examples/term-answer-out-of-scope.json) | 고르기·성과 판단·결과 값 질문 |
+
+- `context`는 `kind` 하나뿐이다. `publicToken`이나 화면 선택값이 있으면 400이다. 토큰·결과 관련 오류(404 토큰·409·410)는 없다.
+- 근거는 013 게시 용어·글, 003 등록표, 001 섹터 목록뿐이다. 초안 콘텐츠와 모델 일반 지식은 쓰지 않는다.
+- 숫자는 답이 가리키는 근거 원문에 같은 표기로 있는 것만 쓸 수 있다(결과 화면보다 넓고, 그 밖의 숫자는 거절).
+- 응답에 `relatedArticles[{articleId, title}]`(최대 3)와 `evidence[].source`가 더해진다. 결과 화면 응답에서는 빈 배열·null이다.
+- 한도: IP 8/분과 하루 1,000회를 결과 화면과 함께 쓰고, 토큰 대신 화면 종류별 IP 5/분(`PER_PAGE`)을 둔다.

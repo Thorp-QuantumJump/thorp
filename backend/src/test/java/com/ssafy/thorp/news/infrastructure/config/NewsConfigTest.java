@@ -6,10 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.core.io.ClassPathResource;
 
 /** 뉴스 설정과 버전 관리되는 등록표의 검증 규칙. 근거: specs/012-market-news-digest/spec.md, plan.md. */
@@ -143,6 +146,18 @@ class NewsConfigTest {
 
             assertThat(properties.maxHistoricalRangeDays()).isEqualTo(93);
             assertThat(properties.maxDigests()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("묶음 수 상한은 설정이 없으면 20이다 (2026-10-02)")
+        void 묶음_수_상한_기본값() {
+            NewsProperties defaults =
+                    new Binder(new MapConfigurationPropertySource(Map.of()))
+                            .bindOrCreate("thorp.news", NewsProperties.class);
+
+            assertThat(defaults.maxDigests())
+                    .as("뉴스 구역의 분류 칸이 주요 뉴스 다섯과 고른 섹터 몫을 건너뛰고도 셋을 채울 만큼이다")
+                    .isEqualTo(20);
         }
     }
 

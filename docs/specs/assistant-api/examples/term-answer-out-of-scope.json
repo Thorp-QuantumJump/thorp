@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "data": {
+    "status": "OUT_OF_SCOPE",
+    "answer": "이 도우미는 이 사이트에 나오는 용어와 설정의 뜻을 설명해요. 무엇을 고를지는 정해 드리지 않고, 백테스트 결과는 결과 화면에서 물어볼 수 있어요.",
+    "evidence": [],
+    "relatedArticles": [],
+    "page": { "kind": "SECTOR_SELECTION" }
+  },
+  "error": null
+}

@@ -33,7 +33,8 @@ public class TradesBetweenTool implements AssistantTool {
 
     @Override
     public ToolSpec spec() {
-        return new ToolSpec(NAME, "구간에 진입한 거래 목록(첫 페이지). 많으면 구간을 좁혀 다시 요청", List.of("from", "to"));
+        return ToolSpec.dates(
+                NAME, "구간에 진입한 거래 목록(첫 페이지). 많으면 구간을 좁혀 다시 요청", List.of("from", "to"));
     }
 
     @Override

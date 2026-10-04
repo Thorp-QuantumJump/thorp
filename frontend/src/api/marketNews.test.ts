@@ -72,6 +72,29 @@ describe('시장 흐름 뉴스 API', () => {
     })
   })
 
+  it('섹터를 여럿 주면 쉼표로 이어 한 번에 묻고, limit도 함께 보낸다 (012 FR-001 ③)', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(response(body('EMPTY')))
+
+    await fetchMarketNewsDigests(['NEWS_IT', 'SEMICONDUCTOR'], undefined, undefined, 5)
+
+    // axios 기본 배열 직렬화(sectorId[]=)는 서버가 받지 않으므로 쉼표로 잇는다.
+    expect(apiClient.get).toHaveBeenCalledWith('/market-news/digests', {
+      params: { sectorId: 'NEWS_IT,SEMICONDUCTOR', limit: '5' }, signal: undefined,
+    })
+  })
+
+  it('빈 문자열 섹터는 고르지 않은 것과 같다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(response(body('EMPTY')))
+
+    await fetchMarketNewsDigests('')
+    await fetchMarketNewsDigests(['', 'NEWS_IT'])
+
+    expect(apiClient.get).toHaveBeenNthCalledWith(1, '/market-news/digests', { params: undefined, signal: undefined })
+    expect(apiClient.get).toHaveBeenNthCalledWith(2, '/market-news/digests', {
+      params: { sectorId: 'NEWS_IT' }, signal: undefined,
+    })
+  })
+
   it('타입에 없는 상태는 막는다', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue(response(body('UNKNOWN' as NewsDigestState)))
 
