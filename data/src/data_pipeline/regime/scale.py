@@ -32,7 +32,8 @@ from scipy.stats import norm
 
 from data_pipeline.regime.macro.types import MonthlyValue, format_month, require_month
 
-#: 척도 구간은 관측 종료월 기준 `[end-122, end-3]`이다 (spec FR-005).
+#: 척도 구간은 관측 종료월 기준 `[end-122, end-3]`이다 (spec FR-005). 이 값이 끝을 정하고,
+#: 시작은 끝에서 `WINDOW_MAX_MONTHS`개월을 거슬러 올라간 자리다.
 WINDOW_END_OFFSET: Final[int] = 3
 
 #: 최대 120개월, 최소 60개월 연속 (spec FR-005).

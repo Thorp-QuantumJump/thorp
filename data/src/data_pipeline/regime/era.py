@@ -150,10 +150,12 @@ class EraPositionCache:
     def positions_for(
         self, indicators: Iterable[IndicatorEntry], end_month: date
     ) -> dict[str, EraPosition]:
-        """그 후보월의 지표별 보조 위치. **매번 새 dict를 돌려준다.**
+        """그 후보월의 지표별 보조 위치. **만들지 못한 지표는 키가 없다**(data-model §4).
 
-        안쪽 것을 그대로 주면 부르는 쪽이 걸러 내거나 지운 결과가 캐시에 남아, 다음 사례부터
-        조용히 줄어든 설명을 받는다.
+        키 없음이 "이 지표는 말하지 않는다"이다. 빈 값을 넣어 두면 화면이 그것을 무언가로 그린다.
+
+        **매번 새 dict를 돌려준다.** 안쪽 것을 그대로 주면 부르는 쪽이 걸러 내거나 지운 결과가
+        캐시에 남아, 다음 사례부터 조용히 줄어든 설명을 받는다.
         """
         found = ((indicator, self.position_for(indicator, end_month)) for indicator in indicators)
         return {
