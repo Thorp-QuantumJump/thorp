@@ -134,7 +134,6 @@ public class NewsPublisher {
                 lastModified);
     }
 
-    /** 조건부 요청 값을 갱신한다. RSS가 304를 주면 cursor와 기사 데이터는 두고 이 값만 유지·갱신한다(spec FR-013). */
     /**
      * 등록표가 소유하는 채널 정보만 갈아 끼운다(spec FR-009).
      *
@@ -163,6 +162,7 @@ public class NewsPublisher {
                 lastModified);
     }
 
+    /** 조건부 요청 값을 갱신한다. RSS가 304를 주면 cursor와 기사 데이터는 두고 이 값만 유지·갱신한다(spec FR-013). */
     public NewsPublisher withConditionalRequestState(String etag, String lastModified) {
         return new NewsPublisher(
                 id,

@@ -144,7 +144,7 @@ class MyRecordLimitIT extends LauncherMockedIntegrationTestSupport {
                 .formatted(UNIVERSE, supportedStrategyIdsJson(), registry.version());
     }
 
-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(007 FR-025). */
+    /** 탐색을 접수할 수 있는 전략({@link SearchableStrategies}). 전략 ID를 테스트에 적지 않는다(007 FR-025). */
     private String supportedStrategyIdsJson() {
         return SearchableStrategies.of(registry, jdbcTemplate).stream()
                 .map(id -> "\"" + id + "\"")

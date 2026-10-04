@@ -41,7 +41,6 @@ class BacktestPublishAfterCommitIT extends IntegrationTestSupport {
     @Autowired private TransactionTemplate transactionTemplate;
     @Autowired private JdbcTemplate jdbcTemplate;
 
-    /** users FK를 만족시킬 최소 행. 회원 도메인을 끌어오지 않으려고 직접 넣는다. */
     /**
      * 계약 예시를 그대로 쓰되 시작 금액만 매번 다르게 한다.
      *
@@ -53,6 +52,7 @@ class BacktestPublishAfterCommitIT extends IntegrationTestSupport {
         return Files.readString(REQUEST_FIXTURE).replace("10000000.00", unique + ".00");
     }
 
+    /** users FK를 만족시킬 최소 행. 회원 도메인을 끌어오지 않으려고 직접 넣는다. */
     private long newUser() {
         // phone_number 는 varchar(20) 이다. 긴 이메일을 그대로 넣으면 길이 제약에 걸린다.
         String suffix = Long.toString(System.nanoTime() % 1_000_000_000L);
