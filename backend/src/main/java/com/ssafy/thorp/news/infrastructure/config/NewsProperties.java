@@ -23,7 +23,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param retentionZone 삭제 기준일을 해석하는 시간대. 날짜만으로 해석하지 않는다.
  * @param maxHistoricalRangeDays 과거 조회 요청 구간 상한. 자료 존재를 보장하지 않는 별개 경계다.
  * @param maxPublishers 등록 매체 수 계획 상한. 검증된 운영 용량이 아니다.
- * @param maxDigests 한 응답의 묶음 수 상한(spec FR-001).
+ * @param maxDigests 한 응답의 묶음 수 상한(spec FR-001). 요청의 {@code limit}이 이보다 크면 이 값까지만 준다. 투자 대상 고르기의 뉴스
+ *     구역은 분류 칸이 앞 부분에 이미 보인 묶음(주요 뉴스 다섯과 그 분류의 고른 섹터마다 둘)을 건너뛰고도 셋을 채우도록 이만큼 받는다(2026-10-02, 예전 기본값
+ *     3). {@code limit}을 주지 않은 요청은 이 상한이 아니라 {@code NewsDigestQuery.DEFAULT_LIMIT}개를 받는다. 정렬
+ *     규칙(news-importance-v1)은 바뀌지 않았다.
  * @param currentWindow 현재 뉴스로 볼 최근 구간. 묶음 규칙의 시간 조건과 같은 48시간이 기본이며, 그보다 넓히면 어제 뉴스가 '현재'로 올라온다.
  * @param http 외부 호출 보안 경계.
  */
@@ -37,7 +40,7 @@ public record NewsProperties(
         @DefaultValue("Asia/Seoul") String retentionZone,
         @DefaultValue("93") int maxHistoricalRangeDays,
         @DefaultValue("20") int maxPublishers,
-        @DefaultValue("3") int maxDigests,
+        @DefaultValue("20") int maxDigests,
         @DefaultValue("48h") Duration currentWindow,
         @DefaultValue Http http) {
 
