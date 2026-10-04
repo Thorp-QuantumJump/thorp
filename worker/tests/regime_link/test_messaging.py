@@ -1,16 +1,14 @@
 """사례 연결 계약 상수 대조.
 
-큐·exchange·routing key·스키마 버전은 백엔드와 합의한 계약값이다. 백테스트는 워커
-테스트가 백엔드 ``BacktestRabbitConfig.java``를 직접 읽어 대조하는데, 011은 그 Java
-파일(``RegimeLinkRabbitConfig``, T030)이 아직 없으므로 **계약 문서**
-(``docs/specs/regime-link-messaging/README.md``)와 대조한다. Java 파일이 생기면
-아래 ``test_topology_constants_match_the_backend``가 저절로 살아난다.
+큐·exchange·routing key·스키마 버전은 백엔드와 합의한 계약값이다. 워커가 아는 이름은
+**계약 문서**(``docs/specs/regime-link-messaging/README.md``)와 대조하고, 백테스트가
+``BacktestRabbitConfig.java``를 읽듯 백엔드 ``RegimeLinkRabbitConfig.java``(T030)도 직접
+읽어 그 상수와 대조한다.
 """
 
 import re
 from pathlib import Path
 
-import pytest
 from fixture_paths import REGIME_LINK_BACKEND_CONFIG, REGIME_LINK_CONTRACT_README
 
 from worker.regime_link import messaging
@@ -60,7 +58,7 @@ def held_names() -> set[str]:
 
 
 def test_topology_names_match_the_contract() -> None:
-    """워커가 아는 이름과 계약 문서가 적은 이름이 정확히 같다 (T030 전까지)."""
+    """워커가 아는 이름과 계약 문서가 적은 이름이 정확히 같다."""
     documented = documented_names()
     assert documented, "계약 문서에서 토폴로지 이름을 찾지 못했다"
 
@@ -84,14 +82,12 @@ def test_prefetch_is_one() -> None:
 
 
 def test_topology_constants_match_the_backend() -> None:
-    """백엔드 ``RegimeLinkRabbitConfig`` 가 생기면 그 상수와 직접 대조한다."""
-    if not REGIME_LINK_BACKEND_CONFIG.exists():
-        # 경로가 틀려 영영 skip 되는 것과 아직 T030 을 안 한 것을 가른다. 이 skip 은
-        # "못 잡는 쪽"으로 실패하므로 닻이 없으면 대조가 영영 돌지 않아도 알 수 없다.
-        assert REGIME_LINK_BACKEND_CONFIG.parent.is_dir(), (
-            f"{REGIME_LINK_BACKEND_CONFIG.parent} 가 없다 — 경로가 틀렸거나 패키지가 옮겨졌다"
-        )
-        pytest.skip("RegimeLinkRabbitConfig.java 는 spec 011 T030(묶음 M5)에서 만든다")
+    """백엔드 ``RegimeLinkRabbitConfig`` 의 상수와 직접 대조한다."""
+    # 파일이 없으면 건너뛰지 않고 실패한다. 이름이 바뀌거나 옮겨진 것을 skip 으로 넘기면
+    # 대조가 영영 돌지 않아도 알 수 없다.
+    assert REGIME_LINK_BACKEND_CONFIG.is_file(), (
+        f"{REGIME_LINK_BACKEND_CONFIG} 가 없다 — 경로가 틀렸거나 파일이 옮겨졌다"
+    )
 
     source = REGIME_LINK_BACKEND_CONFIG.read_text(encoding="utf-8")
     declared = dict(re.findall(r'public static final String (\w+) = "([^"]+)";', source))
