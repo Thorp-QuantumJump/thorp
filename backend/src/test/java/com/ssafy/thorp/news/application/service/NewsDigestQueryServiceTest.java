@@ -308,6 +308,14 @@ class NewsDigestQueryServiceTest {
     }
 
     @Test
+    @DisplayName("묶음이 셋이 안 되면 있는 만큼만 주고 다른 섹터 묶음으로 채우지 않는다 (spec FR-001)")
+    void 부족하면_채우지_않는다() {
+        assertThat(titlesOf(sectorService(10).query(List.of("A"), null, null, null)))
+                .as("개수를 맞추려고 관련 없는 기사를 끌어오면 화면은 그것을 '주요 뉴스'로 읽는다(원칙 VI)")
+                .containsExactly("기사 newest", "기사 oldest");
+    }
+
+    @Test
     @DisplayName("섹터 가운데 하나라도 등록되지 않은 값이면 요청을 거절한다")
     void 모르는_섹터가_섞이면_거절() {
         assertThatThrownBy(() -> sectorService(5).query(List.of("A", "UNKNOWN"), null, null, null))

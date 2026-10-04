@@ -19,7 +19,6 @@ public class FakeBacktestRuns implements BacktestRunReadPort {
 
     private final List<BundleRunView> bundle;
     private final Map<Long, RunSlice> slices = new HashMap<>();
-    private final Map<Long, RunProgressView> progress = new HashMap<>();
 
     public FakeBacktestRuns(List<BundleRunView> bundle) {
         this.bundle = List.copyOf(bundle);
@@ -27,11 +26,6 @@ public class FakeBacktestRuns implements BacktestRunReadPort {
 
     public FakeBacktestRuns slice(Long runId, RunSlice slice) {
         slices.put(runId, slice);
-        return this;
-    }
-
-    public FakeBacktestRuns progress(Long runId, RunProgressView view) {
-        progress.put(runId, view);
         return this;
     }
 
@@ -59,6 +53,6 @@ public class FakeBacktestRuns implements BacktestRunReadPort {
 
     @Override
     public Optional<RunProgressView> readProgress(Long runId) {
-        return Optional.ofNullable(progress.get(runId));
+        return Optional.empty();
     }
 }

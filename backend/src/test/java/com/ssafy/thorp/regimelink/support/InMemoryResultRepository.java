@@ -19,8 +19,4 @@ public class InMemoryResultRepository implements RegimeLinkResultRepository {
     public void save(Long linkId, StoredResult result) {
         stored.put(linkId, result);
     }
-
-    public int size() {
-        return stored.size();
-    }
 }

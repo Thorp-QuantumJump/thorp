@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;
-import com.ssafy.thorp.backtest.application.port.message.ControlMessage;
 import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;
 import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;
 import com.ssafy.thorp.backtest.application.port.message.StartedPayload;
@@ -39,7 +38,6 @@ public final class MessageFixtures {
             new TypeReference<>() {};
     public static final TypeReference<BacktestEvent<FinishedPayload>> FINISHED_EVENT =
             new TypeReference<>() {};
-    public static final TypeReference<ControlMessage> CONTROL = new TypeReference<>() {};
 
     private static final ObjectMapper MAPPER = BacktestRabbitConfig.messageObjectMapper();
 
@@ -106,9 +104,5 @@ public final class MessageFixtures {
 
     public static BacktestEvent<FinishedPayload> finishedCancelled() {
         return read(FINISHED_CANCELLED, FINISHED_EVENT);
-    }
-
-    public static ControlMessage controlCancel() {
-        return read(CONTROL_CANCEL, CONTROL);
     }
 }

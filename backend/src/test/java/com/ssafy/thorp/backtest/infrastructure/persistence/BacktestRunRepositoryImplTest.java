@@ -97,18 +97,6 @@ class BacktestRunRepositoryImplTest extends RepositoryTestSupport {
     }
 
     @Test
-    @DisplayName("findByBacktestId로 문자열 식별자 조회가 된다")
-    void findByBacktestId() {
-        BacktestRun saved = repository.save(newJob());
-        entityManager.flush();
-        entityManager.clear();
-
-        Optional<BacktestRun> found = repository.findByBacktestId(saved.getBacktestId().value());
-        assertThat(found).isPresent();
-        assertThat(found.get().getId()).isEqualTo(saved.getId());
-    }
-
-    @Test
     @DisplayName("update는 상태 전이를 저장하고 나머지 컬럼은 그대로 둔다")
     void updatePersistsStatusTransition() {
         BacktestRun saved = repository.save(newJob());
@@ -162,7 +150,6 @@ class BacktestRunRepositoryImplTest extends RepositoryTestSupport {
     @DisplayName("없는 식별자는 빈 Optional을 돌려준다")
     void findReturnsEmptyWhenMissing() {
         assertThat(repository.findById(999L)).isEmpty();
-        assertThat(repository.findByBacktestId("BT-20260907-999999")).isEmpty();
     }
 
     @Test
