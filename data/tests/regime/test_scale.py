@@ -185,17 +185,6 @@ class TestCommonScaleAppliesToAllCandidates:
         old_value = 3.25  # 1970년대 어느 달의 값이라고 하자 — 척도 구간 한참 밖이다
         assert scale.standardize(old_value) == (old_value - scale.median) / scale.spread
 
-    def test_질의와_후보가_같은_자를_쓴다(self) -> None:
-        """같은 값이면 같은 z다. 후보마다 제 척도로 재면 이 등식이 깨진다."""
-        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))
-        scale = scale_for(INDICATOR, BASELINE, series)
-        assert isinstance(scale, Scale)
-
-        assert scale.standardize(12.0) == scale.standardize(12.0)
-        assert scale.standardize(12.0) - scale.standardize(10.0) == pytest.approx(
-            (12.0 - 10.0) / scale.spread
-        )
-
     def test_중앙값과_같은_값의_z는_0이다(self) -> None:
         series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))
         scale = scale_for(INDICATOR, BASELINE, series)

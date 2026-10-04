@@ -27,7 +27,6 @@ from data_pipeline.regime.phase import (
 )
 from data_pipeline.regime.scale import shift_month
 
-START = date(2000, 1, 1)
 MONTHS = 240
 
 

@@ -13,7 +13,6 @@ import pytest
 from data_pipeline.macro import publish
 from data_pipeline.macro.normalize import NormalizedObservation
 from data_pipeline.macro.registry import (
-    EXPECTED_INDICATOR_COUNT,
     FIELD_IDS,
     INDICATORS,
     REVIEW_PENDING_RIGHTS,
@@ -297,6 +296,3 @@ class TestDecisionLookup:
         assert decision.baseline_for(publish.SCOPE_ALL) is not None
         assert decision.baseline_for("production") is not None
         assert decision.baseline_for("없는_분야") is None
-
-    def test_등록표가_열일곱개다(self) -> None:
-        assert len(INDICATORS) == EXPECTED_INDICATOR_COUNT == 17

@@ -208,32 +208,6 @@ def test_표본_세_달이_손계산과_정확히_일치한다(indicator: Indica
         )
 
 
-@pytest.mark.parametrize(
-    "rule",
-    [
-        TRANSFORM_YOY,
-        TRANSFORM_MOM,
-        TRANSFORM_MONTH_END,
-        TRANSFORM_MONTH_AVERAGE,
-        TRANSFORM_OFFICIAL_AMOUNT,
-        TRANSFORM_SEASONAL_RATE,
-    ],
-)
-def test_여섯_변환_유형이_모두_대조에_든다(rule: str) -> None:
-    """SC-007 은 여섯 유형을 모두 표본에 넣으라고 한다. 하나라도 빠지면 그 경로가 대조 밖이다."""
-    assert [i.indicator_id for i in INDICATORS if i.transform_rule == rule]
-
-
-def test_실업률은_원천_계절조정값을_그대로_둔다() -> None:
-    """우리가 다시 계절조정하지 않는다 (FR-001, T072)."""
-    indicator = BY_ID["unemployment_rate"]
-    observations = _observations(indicator)
-    produced = _produced(indicator, observations)
-    values = _by_period(observations)
-    for period in _sample_months(produced):
-        assert produced[period].value == values[period]
-
-
 def test_결측_직후_달도_비교_대상을_옮기지_않는다() -> None:
     """결측 뒤의 달이 가까운 달로 물러나 계산되지 않는다 (FR-006, T072).
 

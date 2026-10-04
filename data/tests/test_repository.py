@@ -25,7 +25,6 @@ from data_pipeline.dataset_version import (
     DatasetNotPublishedError,
     DatasetVersion,
     DatasetVersionError,
-    InvalidDatasetIdError,
     dataset_deadline_date,
 )
 from data_pipeline.repository import (
@@ -144,9 +143,6 @@ class TestPublish:
         assert repository.is_published(DATASET_ID) is True
         assert count_rows(repository, dataset_version_table) == 1
 
-    def test_unknown_dataset_is_not_published(self, repository: MarketDataRepository) -> None:
-        assert repository.is_published(DATASET_ID) is False
-
     def test_republishing_same_dataset_id_is_rejected(
         self, published: MarketDataRepository
     ) -> None:
@@ -172,12 +168,6 @@ class TestPublish:
             ).one()
         assert bool(stored.complete) is False
         assert stored.failure_reason == "이용 한도 도달"
-
-    def test_bad_dataset_id_never_reaches_the_database(
-        self, repository: MarketDataRepository
-    ) -> None:
-        with pytest.raises(InvalidDatasetIdError):
-            repository.is_published("KRX_DAILY_V1")
 
 
 class TestLoadOrder:

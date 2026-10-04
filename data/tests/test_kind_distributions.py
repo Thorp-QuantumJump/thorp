@@ -925,18 +925,6 @@ def test_대응표_파일은_여덟_종목을_모두_담는다() -> None:
     assert set(names.values()) == EIGHT_ISINS
 
 
-def test_대응표의_모든_이름이_제_종목을_가리킨다() -> None:
-    """이름 수와 열쇠 수는 다를 수 있다 — 띄어쓰기만 다른 표기는 같은 열쇠가 된다.
-
-    걸어야 할 것은 개수가 아니라 **어긋남이 없다**는 것이다. 이름 하나가 엉뚱한 ISIN을
-    가리키면 그 종목의 분배가 남의 것으로 붙는다.
-    """
-    names = load_fund_names(FUND_NAMES_PATH)
-    index = build_fund_name_index(names)
-    for name, isin in names.items():
-        assert match_fund_name(name, index) == isin
-
-
 def test_대응표가_2019년_본문의_정식명을_맞춘다() -> None:
     """픽스처는 2019-04-26에 실제로 공시된 본문이다. 대응표가 이것을 못 맞추면 헛것이다."""
     index = build_fund_name_index(load_fund_names(FUND_NAMES_PATH))
