@@ -33,10 +33,6 @@ public record RssChannelHints(Duration ttl, Set<Integer> skipHours, Set<String> 
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
-    public boolean isEmpty() {
-        return ttl == null && skipHours.isEmpty() && skipDays.isEmpty();
-    }
-
     /**
      * 다음에 부를 시각을 정한다.
      *

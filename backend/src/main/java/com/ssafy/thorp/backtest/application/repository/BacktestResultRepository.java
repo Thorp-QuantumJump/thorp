@@ -31,7 +31,7 @@ public interface BacktestResultRepository {
     void save(SaveBacktestResultCommand command);
 
     /**
-     * 요약에 필요한 스칼라만 읽는다. {@code portfolio_series}와 벤치마크 시계열은 읽지 않는다.
+     * 요약에 필요한 스칼라만 읽는다. {@code portfolio_series}와 {@code benchmark}는 읽지 않는다.
      *
      * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면
      * 정상이고, {@code COMPLETED}·{@code FAILED}면 저장 트랜잭션이 깨진 데이터 손상이다.
