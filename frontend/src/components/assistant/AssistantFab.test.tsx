@@ -47,8 +47,8 @@ describe('AssistantFab', () => {
     expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()
   })
 
-  it('로그인·관리 경로에서는 맥락이 있어도 버튼이 없다', async () => {
-    renderAssistant({ path: '/login' })
+  it.each(['/login', '/admin/learning'])('로그인·관리 경로에서는 맥락이 있어도 버튼이 없다(%s)', async (path) => {
+    renderAssistant({ path })
     await waitFor(() => expect(api.fetchAssistantCapabilities).toHaveBeenCalled())
     expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()
   })

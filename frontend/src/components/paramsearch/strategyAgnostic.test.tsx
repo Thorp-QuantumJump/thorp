@@ -34,7 +34,7 @@ const EXCLUDED = /\.test\.tsx?$|^src\/test\//
 
 /**
  * 등록표의 전략 ID와 이름. 원본은
- * `backend/src/main/resources/registry/parameter-registry-provisional.yml`이고 여기 적은 것은
+ * `backend/src/main/resources/registry/parameter-registry.yml`이고 여기 적은 것은
  * **화면 코드에 나타나면 안 되는 낱말 목록**이다. 등록표에 전략이 늘면 이 목록에도 더한다.
  */
 const registryWords = [

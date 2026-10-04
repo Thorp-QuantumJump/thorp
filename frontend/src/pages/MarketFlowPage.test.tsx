@@ -17,25 +17,6 @@ vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))
 vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn(), fetchNewsSectors: vi.fn() }))
 vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))
 
-const sectorCatalog = {
-  status: 'loaded' as const,
-  catalog: {
-    mapVersion: 'map-v1',
-    isSample: false,
-    sectors: [
-      {
-        code: 'SEMICONDUCTOR',
-        name: '반도체',
-        classification: 'INDUSTRY' as const,
-        representativeEtf: {
-          instrumentId: 'SEMI-ETF', name: '반도체 ETF',
-          listedOn: '2015-03-02', benchmarkIndex: 'KRX 반도체',
-        },
-      },
-    ],
-  },
-}
-
 const fieldNames = ['생산', '소비·투자', '대외거래', '노동', '물가·원자재', '금융·주택', '해외 경기']
 const fields: FieldSummary[] = fieldNames.map((displayName, index) => ({
   fieldId: ['production', 'consumption_investment', 'external_trade', 'labor', 'prices_commodities', 'finance_housing', 'overseas'][index] as FieldSummary['fieldId'],
@@ -95,9 +76,6 @@ function mockFields() {
 
 describe('MarketFlowPage', () => {
   beforeEach(() => {
-    vi.mocked(fetchSectorCatalog).mockResolvedValue(sectorCatalog)
-    // 참고 정보는 늦거나 빠질 수 있다. 기본값은 '없음'으로 두고 필요한 테스트만 채운다.
-    vi.mocked(fetchMarketIndicatorsFor).mockResolvedValue({ data: {}, errors: {} })
     vi.mocked(fetchMarketNewsDigests).mockReset()
     vi.mocked(fetchNewsSectors).mockReset()
     vi.mocked(getRegimeSearch).mockReset()

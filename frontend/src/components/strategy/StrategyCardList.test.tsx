@@ -351,7 +351,8 @@ describe('StrategyCardList', () => {
   it('불러오는 중에는 고를 수 있는 카드가 없다', () => {
     renderList({ status: 'loading' })
 
-    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    // 카드는 `role="radio"`를 단 단추라 단추가 아니라 라디오로 잡힌다.
+    expect(screen.queryAllByRole('radio')).toHaveLength(0)
     expect(screen.getByRole('status').textContent).toContain('불러오는 중')
   })
 })

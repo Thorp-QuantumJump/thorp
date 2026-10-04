@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CASE_PERIOD_PREFILLED_NOTE, defaultCasePeriod } from './casePeriodConstraint'
+import { defaultCasePeriod } from './casePeriodConstraint'
 
 const constraint = { startMax: '2012-01-02', endMin: '2012-07-03', note: '' }
 
@@ -27,9 +27,5 @@ describe('사례에서 들어왔을 때 미리 맞출 분석 기간 (S15P21E205-
 
   it('범위가 사례를 덮지 못하면 맞추지 않는다', () => {
     expect(defaultCasePeriod(constraint, { start: '2012-03-02', end: '2026-08-31' }, 0)).toBeNull()
-  })
-
-  it('미리 맞췄다는 문구가 있다', () => {
-    expect(CASE_PERIOD_PREFILLED_NOTE).toContain('미리 맞춰')
   })
 })

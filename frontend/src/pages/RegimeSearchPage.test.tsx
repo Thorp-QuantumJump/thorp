@@ -88,6 +88,8 @@ describe('경제환경 검색 화면', () => {
           expect.any(AbortSignal),
         ),
       )
+      // 물러난 사실을 알린다. 알리지 않으면 고른 달의 결과로 읽힌다.
+      expect(await screen.findByText('기준월을 2026-07로 바꾸어 새 검색을 열었습니다.')).toBeTruthy()
     })
 
     it('전략 진단에서 종합 비교로 넘어오면 종합 비교가 선택된 상태로 연다 (S15P21E205-450)', async () => {

@@ -7,7 +7,12 @@ import {
 } from '@/test/resultFixtures'
 import type { PublicResultDetail, ResultSummary } from '@/types/result'
 import { COMPUTED_WEIGHTS_NOTE } from './conditionLine'
-import { METRIC_DEFINITIONS, ResultConditionLine, ResultSummaryCard } from './ResultSummaryCard'
+import {
+  METRIC_DEFINITIONS,
+  ResultConditionLine,
+  ResultSummaryCard,
+  ResultValuationNote,
+} from './ResultSummaryCard'
 
 /** 005 T036. FR-001~FR-003, FR-013~FR-015, quickstart 1·2. */
 
@@ -58,10 +63,6 @@ describe('ResultSummaryCard', () => {
       fireEvent.blur(help)
     }
     expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')
-
-    expect(screen.queryByLabelText('분석 조건')).toBeNull()
-    expect(screen.queryByText('이전 고점 회복까지 9거래일')).toBeNull()
-    expect(screen.queryByText(/종료일 시가평가 기준 수익률은 16\.67%/)).toBeNull()
   })
 
   it('분석 조건을 요약 탭에서 쓸 수 있도록 별도로 렌더링한다', () => {
@@ -85,7 +86,6 @@ describe('ResultSummaryCard', () => {
     expect(container.querySelector('section')).toBeNull()
     // `\b`는 한글 경계를 모르므로 금액은 숫자 바로 뒤의 '원'으로 찾는다.
     expect(container.textContent).not.toMatch(/\d%|\d원/)
-    expect(container.textContent).not.toContain('계산되지 않았습니다')
   })
 
   it('수익률과 가장 크게 줄었던 폭이 모두 0이면 좋은 결과로 읽히지 않게 설명한다', () => {
@@ -117,9 +117,11 @@ describe('ResultSummaryCard', () => {
     expect(screen.getByText('기준 WAVE_LEVELING · 비교 대상 없음')).not.toBeNull()
   })
 
-  it('요약 카드는 종료일 평가 안내를 차트 위에 보이지 않는다', () => {
-    render(<ResultSummaryCard detail={withSummary({ liquidation: null })} />)
+  it('청산을 가정하지 않은 결과는 끝 금액이 종료일 시가평가 기준이라고 밝힌다', () => {
+    render(<ResultValuationNote detail={withSummary({ liquidation: null })} />)
 
-    expect(screen.queryByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).toBeNull()
+    expect(
+      screen.getByText('끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'),
+    ).not.toBeNull()
   })
 })
