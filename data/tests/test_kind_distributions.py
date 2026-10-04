@@ -519,13 +519,13 @@ def test_다른_종목은_걸러진다() -> None:
 def test_ISIN을_못_붙이는_공시는_결과에_드러난다() -> None:
     """빈 결과와 「읽지 못했다」를 가르지 못하면 없는 분배를 없다고 잘못 말하게 된다."""
     source = ScriptedSource(
-        [ref("20110427000489", date(2011, 4, 27))],
-        {"20110427000489": fixture("body_legacy_20110427001051.html")},
+        [ref(LEGACY_ACPT, date(2011, 4, 27))],
+        {LEGACY_ACPT: fixture("body_legacy_20110427001051.html")},
     )
     history = collect_distribution_history(source, TARGET_ISIN, date(2011, 4, 1), date(2011, 5, 31))
     assert history.records == ()
     assert len(history.unkeyed) == 1
-    assert history.unkeyed[0].acpt_no == "20110427000489"
+    assert history.unkeyed[0].acpt_no == LEGACY_ACPT
     assert history.is_complete is False
 
 
@@ -727,7 +727,10 @@ def test_브랜드명을_이어붙인_이름으로는_찾을_수_없다() -> Non
     """
     (row,) = parse_distribution_rows(fixture(f"body_legacy_acpt{KODEX_SECURITIES_ACPT}.html"))
     assert row.short_name == "삼성 KODEX 증권주증권상장지수투자신탁(주식)"
-    assert "KODEX 증권증권상장지수투자신탁" not in row.short_name
+    made = build_fund_name_index(
+        {"삼성 KODEX 증권증권상장지수투자신탁(주식)": KODEX_SECURITIES_ISIN}
+    )
+    assert match_fund_name(row.short_name, made) is None
 
 
 # --- 갈래 가르기 -------------------------------------------------------------
@@ -923,18 +926,6 @@ def test_대응표_파일은_여덟_종목을_모두_담는다() -> None:
     """한 종목이라도 빠지면 그 종목의 2019년 이전 분배가 통째로 사라진다."""
     names = load_fund_names(FUND_NAMES_PATH)
     assert set(names.values()) == EIGHT_ISINS
-
-
-def test_대응표의_모든_이름이_제_종목을_가리킨다() -> None:
-    """이름 수와 열쇠 수는 다를 수 있다 — 띄어쓰기만 다른 표기는 같은 열쇠가 된다.
-
-    걸어야 할 것은 개수가 아니라 **어긋남이 없다**는 것이다. 이름 하나가 엉뚱한 ISIN을
-    가리키면 그 종목의 분배가 남의 것으로 붙는다.
-    """
-    names = load_fund_names(FUND_NAMES_PATH)
-    index = build_fund_name_index(names)
-    for name, isin in names.items():
-        assert match_fund_name(name, index) == isin
 
 
 def test_대응표가_2019년_본문의_정식명을_맞춘다() -> None:

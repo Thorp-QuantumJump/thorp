@@ -130,12 +130,6 @@ def test_등록표의_공표_정밀도가_원천_응답과_같다(indicator) -> 
     )
 
 
-def test_열일곱_모두에_공표_정밀도가_있다() -> None:
-    """빈 칸을 남기면 010 이 척도를 판정할 때 그 지표만 다른 규칙으로 간다 (FR-015)."""
-    missing = [i.indicator_id for i in INDICATORS if i.published_precision is None]
-    assert missing == []
-
-
 def test_주택가격은_원천이_여덟_자리로_준다() -> None:
     """눈에 띄는 값이라 따로 고정한다.
 

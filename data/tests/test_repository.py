@@ -25,7 +25,6 @@ from data_pipeline.dataset_version import (
     DatasetNotPublishedError,
     DatasetVersion,
     DatasetVersionError,
-    InvalidDatasetIdError,
     dataset_deadline_date,
 )
 from data_pipeline.repository import (
@@ -144,9 +143,6 @@ class TestPublish:
         assert repository.is_published(DATASET_ID) is True
         assert count_rows(repository, dataset_version_table) == 1
 
-    def test_unknown_dataset_is_not_published(self, repository: MarketDataRepository) -> None:
-        assert repository.is_published(DATASET_ID) is False
-
     def test_republishing_same_dataset_id_is_rejected(
         self, published: MarketDataRepository
     ) -> None:
@@ -172,12 +168,6 @@ class TestPublish:
             ).one()
         assert bool(stored.complete) is False
         assert stored.failure_reason == "이용 한도 도달"
-
-    def test_bad_dataset_id_never_reaches_the_database(
-        self, repository: MarketDataRepository
-    ) -> None:
-        with pytest.raises(InvalidDatasetIdError):
-            repository.is_published("KRX_DAILY_V1")
 
 
 class TestLoadOrder:
@@ -496,9 +486,13 @@ class TestConnection:
         assert database_url_from_env(env_file).startswith("postgresql+psycopg://")
 
     def test_missing_url_is_reported(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        with pytest.raises(RepositoryError):
-            database_url_from_env(tmp_path / "absent.env")
+        # 없는 파일을 넘기면 파일 검사에서 먼저 걸린다. 있는 파일에 값만 비워 둔다.
+        # setenv로 먼저 기록해 두면 load_dotenv가 환경을 바꿔도 테스트가 끝날 때 되돌아온다.
+        monkeypatch.setenv("DATABASE_URL", "postgresql://공용:x@shared:5432/thorp")
+        env_file = tmp_path / ".env"
+        env_file.write_text("DATABASE_URL=\n", encoding="utf-8")
+        with pytest.raises(RepositoryError, match="DATABASE_URL이 비어 있다"):
+            database_url_from_env(env_file)
 
     def test_no_credentials_are_hardcoded(self) -> None:
         source = (

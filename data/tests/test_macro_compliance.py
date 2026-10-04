@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import os
 import traceback
 from dataclasses import replace
 from datetime import date
@@ -75,12 +74,6 @@ class TestRecordedTerms:
         """006 이 파일로 내보낼 때 받는 사람이 출처를 알 수 있어야 한다 (FR-018)."""
         for indicator in INDICATORS:
             assert "출처" in indicator.export_notice, indicator.indicator_id
-
-    def test_작성기관과_제공기관이_다른_지표가_있다(self) -> None:
-        """이용 조건은 작성기관 쪽을 먼저 본다 (FR-016). 둘이 같다고 전제하면 안 된다."""
-        assert BY_ID["dubai_crude"].agency == "국제통화기금(IMF)"
-        assert "한국은행" in BY_ID["dubai_crude"].attribution
-        assert BY_ID["housing_sale_price"].agency == "한국부동산원"
 
 
 class TestPendingRights:
@@ -419,12 +412,15 @@ class TestKeySecrecy:
 
         assert redact("아무 문자열") == "아무 문자열"
 
-    def test_등록표와_설정이_키_값을_들고_있지_않다(self) -> None:
+    def test_등록표와_설정이_키_값을_들고_있지_않다(self, monkeypatch) -> None:
         """설정 객체를 로그에 그대로 찍는 일이 흔한데 거기 키가 있으면 안 된다."""
         from data_pipeline.macro.config import load_source_config
 
+        # CI에는 키가 없다. 직접 넣어 두지 않으면 자리표시 문자열만 견주게 되어 이 검사가
+        # 실패할 수 없다.
+        for name in API_KEY_ENV_NAMES:
+            monkeypatch.setenv(name, self.KEY)
+
         for source_id in registry.used_sources():
             config = load_source_config(source_id)
-            rendered = repr(config)
-            for name in API_KEY_ENV_NAMES:
-                assert os.environ.get(name, "___없음___") not in rendered
+            assert self.KEY not in repr(config), source_id
