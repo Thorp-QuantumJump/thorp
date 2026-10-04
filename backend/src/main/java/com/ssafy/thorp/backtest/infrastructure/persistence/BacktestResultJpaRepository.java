@@ -14,8 +14,8 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt
     Optional<Boolean> findFillsRecorded(@Param("runId") Long runId);
 
     /**
-     * 요약 조회. **select 목록에 {@code portfolio_series}와 {@code benchmark} 전체가 없는 것이 이 쿼리의 존재 이유다** —
-     * 엔티티를 읽으면 5년치 수백 KB가 함께 온다. 이 값을 쓰는 엔드포인트는 프론트가 폴링한다.
+     * 요약 조회. **select 목록에 {@code portfolio_series}와 {@code benchmark}가 없는 것이 이 쿼리의 존재 이유다** — 엔티티를
+     * 읽으면 5년치 수백 KB가 함께 온다. 이 값을 쓰는 엔드포인트는 프론트가 폴링한다.
      */
     @Query(
             value =
