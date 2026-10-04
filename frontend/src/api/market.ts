@@ -69,7 +69,7 @@ export async function fetchMarketIndicatorsFor(
   return batch
 }
 
-/** 대시보드가 쓰는 11개 전부다. */
+/** 11개 전부다. 첫 화면의 `useMarketIndicators`가 부른다. */
 export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {
   return fetchMarketIndicatorsFor(marketIndicatorCodes)
 }
