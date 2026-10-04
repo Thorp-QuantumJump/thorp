@@ -140,7 +140,7 @@ class BacktestResultQueryServiceTest {
                 6, 6, 0, new BigDecimal("3941.19"), new BigDecimal("13137.30"));
     }
 
-    private static BacktestResultSummary summary(String errorCode, boolean benchmark) {
+    private static BacktestResultSummary summary(String errorCode) {
         return new BacktestResultSummary(
                 errorCode,
                 errorCode == null ? null : "no data",
@@ -148,8 +148,6 @@ class BacktestResultQueryServiceTest {
                 Instant.parse("2026-09-07T01:00:12Z"),
                 errorCode == null ? performance() : null,
                 errorCode == null ? execution() : null,
-                benchmark ? "069500.XKRX" : null,
-                benchmark ? new BigDecimal("0.053292") : null,
                 errorCode == null ? costs() : null,
                 errorCode == null ? liquidation() : null,
                 errorCode == null ? analytics() : null,
@@ -249,7 +247,7 @@ class BacktestResultQueryServiceTest {
     @DisplayName("COMPLETED는 performance·execution을 summary로 합친다")
     void detailCompleted() {
         given(RunStatus.COMPLETED);
-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, true)));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null)));
 
         BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID, REQUESTER).summary();
 
@@ -282,7 +280,7 @@ class BacktestResultQueryServiceTest {
                 .thenReturn(Optional.of(requestFor(REQUESTER)));
         when(jobRepository.findById(JOB_ID))
                 .thenReturn(Optional.of(jobIn(RunStatus.COMPLETED).withPlan(plannedVersions())));
-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null)));
 
         Map<String, Object> versions = service.getDetail(BACKTEST_ID, REQUESTER).versions();
 
@@ -349,7 +347,7 @@ class BacktestResultQueryServiceTest {
                 .thenReturn(Optional.of(stoppedRequest()));
         when(jobRepository.findById(JOB_ID))
                 .thenReturn(Optional.of(cancelledRun(LocalDate.parse("2025-03-25"))));
-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));
+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null)));
 
         BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
 
@@ -609,7 +607,7 @@ class BacktestResultQueryServiceTest {
     void detailFailed() {
         given(RunStatus.FAILED);
         when(resultRepository.findSummary(JOB_ID))
-                .thenReturn(Optional.of(summary("DATA_INSUFFICIENT", false)));
+                .thenReturn(Optional.of(summary("DATA_INSUFFICIENT")));
 
         BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);
 
