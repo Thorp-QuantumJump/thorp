@@ -12,7 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
 /**
- * 남용 방지 한도(FR-013): IP별 분당, 결과 토큰별 분당, 하루 전체. 넘으면 429 {@code ASSISTANT_LIMIT}과 다시 가능한 시점이다.
+ * 남용 방지 한도(015 FR-013, 017 FR-011): IP별 분당, 화면 몫 분당(결과 화면은 토큰별, 진단 화면은 종류별 IP), 하루 전체. 넘으면 429
+ * {@code ASSISTANT_LIMIT}과 다시 가능한 시점이다. IP 분당과 하루 전체는 모든 화면 종류가 함께 센다.
  *
  * <p>고정 창 카운터다. 분 창은 벽시계의 분 경계, 하루 창은 UTC 자정 경계이고 {@code retryAfterSeconds}는 그 창이 끝날 때까지다.
  */
@@ -32,12 +33,17 @@ public class AssistantRateLimiter {
         this.clock = clock;
     }
 
-    /** 순서: IP → 토큰 → 하루. 앞 단계에서 거절되면 뒷 단계는 세지 않는다. */
-    public void admit(String clientIp, String publicToken) {
+    /**
+     * 순서: IP → 화면 몫 → 하루. 앞 단계에서 거절되면 뒷 단계는 세지 않는다.
+     *
+     * @param scopeKey 화면 몫 키. 결과 화면은 {@code token:{publicToken}}, 진단 화면은 {@code page:{kind}:{ip}}
+     * @param reason 넘었을 때 {@code details.reason}. {@code PER_TOKEN} 또는 {@code PER_PAGE}
+     */
+    public void admit(String clientIp, String scopeKey, int scopeLimit, String reason) {
         Instant now = clock.instant();
         prune(now);
         count("ip:" + clientIp, MINUTE, settings.perIpPerMinute(), now, "PER_IP");
-        count("token:" + publicToken, MINUTE, settings.perTokenPerMinute(), now, "PER_TOKEN");
+        count(scopeKey, MINUTE, scopeLimit, now, reason);
         count("day", DAY, settings.perDay(), now, "PER_DAY");
     }
 

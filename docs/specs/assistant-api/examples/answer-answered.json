@@ -4,11 +4,12 @@
     "status": "ANSWERED",
     "answer": "비용을 뺀 전체 수익률은 16.67%이고, 거래비용은 모두 17,078원입니다. 그중 수수료가 12,000원, 슬리피지가 5,078원입니다.",
     "evidence": [
-      { "id": "F1", "label": "비용 차감 후 전체 수익률", "value": "16.67%", "asOf": "2024-12-31", "tab": "summary" },
-      { "id": "F4", "label": "거래비용 합계", "value": "17,078원", "asOf": null, "tab": "settings" },
-      { "id": "F5", "label": "수수료", "value": "12,000원", "asOf": null, "tab": "settings" },
-      { "id": "F6", "label": "슬리피지", "value": "5,078원", "asOf": null, "tab": "settings" }
+      { "id": "F1", "label": "비용 차감 후 전체 수익률", "value": "16.67%", "asOf": "2024-12-31", "tab": "summary", "source": null },
+      { "id": "F4", "label": "거래비용 합계", "value": "17,078원", "asOf": null, "tab": "settings", "source": null },
+      { "id": "F5", "label": "수수료", "value": "12,000원", "asOf": null, "tab": "settings", "source": null },
+      { "id": "F6", "label": "슬리피지", "value": "5,078원", "asOf": null, "tab": "settings", "source": null }
     ],
+    "relatedArticles": [],
     "page": { "kind": "RESULT" }
   },
   "error": null

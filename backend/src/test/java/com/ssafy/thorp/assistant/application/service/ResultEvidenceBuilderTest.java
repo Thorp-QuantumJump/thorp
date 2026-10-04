@@ -74,7 +74,9 @@ class ResultEvidenceBuilderTest {
                     60,
                     30,
                     600,
-                    5);
+                    5,
+                    5,
+                    40);
 
     private final PublicResultService publicResults = mock(PublicResultService.class);
     private final SectorService sectors = mock(SectorService.class);
@@ -526,7 +528,7 @@ class ResultEvidenceBuilderTest {
         assertThat(specs)
                 .allSatisfy(
                         spec ->
-                                assertThat(spec.dateArguments())
+                                assertThat(spec.argumentNames())
                                         .allMatch(
                                                 arg -> Set.of("date", "from", "to").contains(arg)));
     }

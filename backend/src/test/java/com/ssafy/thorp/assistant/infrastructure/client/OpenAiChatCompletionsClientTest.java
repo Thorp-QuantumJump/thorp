@@ -12,6 +12,8 @@ import com.ssafy.thorp.assistant.application.result.Evidence;
 import com.ssafy.thorp.assistant.application.result.EvidenceKind;
 import com.ssafy.thorp.assistant.application.result.ModelDraft;
 import com.ssafy.thorp.assistant.application.result.ModelTurn;
+import com.ssafy.thorp.assistant.application.result.PageKind;
+import com.ssafy.thorp.assistant.application.result.ToolArgument;
 import com.ssafy.thorp.assistant.application.result.ToolCall;
 import com.ssafy.thorp.assistant.application.result.ToolRequests;
 import com.ssafy.thorp.assistant.application.result.ToolResult;
@@ -118,15 +120,15 @@ class OpenAiChatCompletionsClientTest {
                     fact("F2", "거래비용 합계", "17078", null));
     static final List<ToolSpec> TOOLS =
             List.of(
-                    new ToolSpec("getEquityOn", "특정 날짜의 시계열 점", List.of("date")),
-                    new ToolSpec("getEquityRange", "구간의 첫·끝·최고·최저 점", List.of("from", "to")));
+                    ToolSpec.dates("getEquityOn", "특정 날짜의 시계열 점", List.of("date")),
+                    ToolSpec.dates("getEquityRange", "구간의 첫·끝·최고·최저 점", List.of("from", "to")));
 
     ModelTurn step(Conversation conversation, List<Evidence> facts, List<ToolSpec> tools) {
         return client.step(conversation, facts, tools, Duration.ofSeconds(5));
     }
 
     static Conversation question(String question) {
-        return new Conversation(question, List.of());
+        return new Conversation(PageKind.RESULT, question, List.of());
     }
 
     @Test
@@ -270,7 +272,7 @@ class OpenAiChatCompletionsClientTest {
                                 ToolResult.unavailable("call_2", "사용할 수 없음: 그런 도구가 없습니다")));
         List<Evidence> facts = List.of(FACTS.get(0), FACTS.get(1), fromTool);
 
-        step(new Conversation("그날 자산은?", List.of(exchange)), facts, TOOLS);
+        step(new Conversation(PageKind.RESULT, "그날 자산은?", List.of(exchange)), facts, TOOLS);
 
         JsonNode messages = received.get(0).get("messages");
         assertThat(messages)
@@ -384,5 +386,55 @@ class OpenAiChatCompletionsClientTest {
                             assertThat(exc.getMessage())
                                     .isEqualTo(ErrorCode.ASSISTANT_UNAVAILABLE.getMessage());
                         });
+    }
+
+    @Test
+    @DisplayName("결과 화면은 015 프롬프트, 진단 화면은 용어 프롬프트를 developer 메시지로 보낸다(017 research R6)")
+    void promptByKind() {
+        responses.add(Scripted.ok(DRAFT_RESPONSE));
+        responses.add(Scripted.ok(DRAFT_RESPONSE));
+
+        step(question("수익률은?"), FACTS, TOOLS);
+        step(new Conversation(PageKind.STRATEGY_SETTINGS, "리밸런싱이 뭐야?", List.of()), FACTS, TOOLS);
+
+        assertThat(received.get(0).path("messages").get(0).path("content").asText())
+                .isEqualTo(
+                        OpenAiChatCompletionsClient.loadResource(
+                                OpenAiChatCompletionsClient.PROMPT_RESOURCE));
+        assertThat(received.get(1).path("messages").get(0).path("content").asText())
+                .isEqualTo(
+                        OpenAiChatCompletionsClient.loadResource(
+                                OpenAiChatCompletionsClient.TERM_PROMPT_RESOURCE));
+    }
+
+    @Test
+    @DisplayName("열거 인자는 strict enum 으로, 인자 없는 도구는 빈 properties·required 로 정의한다")
+    void enumAndNoArgumentToolDefinitions() {
+        responses.add(Scripted.ok(DRAFT_RESPONSE));
+        List<ToolSpec> tools =
+                List.of(
+                        new ToolSpec(
+                                "readArticle",
+                                "게시 글 본문. weights-and-rebalancing=비중과 리밸런싱",
+                                List.of(
+                                        ToolArgument.oneOf(
+                                                "articleId",
+                                                List.of("weights-and-rebalancing", "backtest")))),
+                        new ToolSpec("readSectorList", "섹터 목록", List.of()));
+
+        step(new Conversation(PageKind.SECTOR_SELECTION, "대표 ETF가 뭐야?", List.of()), FACTS, tools);
+
+        JsonNode definitions = received.get(0).path("tools");
+        JsonNode article = definitions.get(0).path("function");
+        assertThat(article.path("strict").asBoolean()).isTrue();
+        assertThat(article.path("parameters").path("properties").path("articleId").path("enum"))
+                .extracting(JsonNode::asText)
+                .containsExactly("weights-and-rebalancing", "backtest");
+        assertThat(article.path("parameters").path("required").get(0).asText())
+                .isEqualTo("articleId");
+        assertThat(article.path("parameters").path("additionalProperties").asBoolean()).isFalse();
+        JsonNode sectorList = definitions.get(1).path("function").path("parameters");
+        assertThat(sectorList.path("properties").size()).isZero();
+        assertThat(sectorList.path("required").size()).isZero();
     }
 }
