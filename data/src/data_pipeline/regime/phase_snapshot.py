@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Final
 
-from data_pipeline.regime.explain import format_pair, format_value, topic_particle
+from data_pipeline.regime.explain import format_pair, topic_particle
 from data_pipeline.regime.macro.types import IndicatorEntry, format_month
 from data_pipeline.regime.phase import Block, PhaseDistance, PhaseModel
 from data_pipeline.regime.rounding import round_for_storage, to_storage_text
@@ -56,11 +56,6 @@ KIND_LABELS: Final[dict[str, str]] = {
     "YOY_PCT": " 1년 변화율",
     "CUM12_FROM_MOM": " 12개월 누적 변화율",
 }
-
-
-def format_phase_value(value: float) -> str:
-    """v3 문장 값 표기 — v1과 같은 규칙(`explain.format_value`, 소수 첫째 자리)이다."""
-    return format_value(value)
 
 
 def subject_of(name: str, label: str) -> str:
