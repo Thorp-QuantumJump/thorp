@@ -25,7 +25,10 @@ function AuthenticatedEntryRedirect({ resume }: { resume: boolean }) {
   return <Navigate to={target} replace />
 }
 
-/** 인증 여부 확인 전에는 인증 폼을 숨기고, 로그인 사용자는 홈으로 돌려보낸다. */
+/**
+ * 인증 여부 확인 전에는 인증 폼을 숨긴다. 이 화면에서 방금 로그인한 사용자는 저장해 둔 돌아갈 화면(없으면 전략 진단
+ * 첫 단계)으로, 이미 로그인한 채 들어온 사용자는 전략 진단 첫 단계로 보낸다.
+ */
 export function AuthEntryGuard({ children }: { children: ReactNode }) {
   const { status } = useAuth()
   const previousStatusRef = useRef(status)

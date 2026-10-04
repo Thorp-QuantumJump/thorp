@@ -98,7 +98,7 @@ function mergeIndicators(
   })
 }
 
-/** 홈과 대시보드가 같은 최신 지표 조회 결과를 사용하도록 UI 지표 모델에 병합한다. */
+/** 최신 지표 조회 결과를 첫 화면이 쓰는 UI 지표 모델에 병합한다. */
 export function useMarketIndicators(
   marketIndicators: Indicator[],
   macroIndicators: Indicator[],

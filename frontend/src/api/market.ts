@@ -45,8 +45,8 @@ async function fetchMarketIndicator(code: MarketIndicatorCode) {
 /**
  * 한 원천기관의 실패가 다른 지표를 가리지 않도록 요청 결과를 독립적으로 모은다.
  *
- * 필요한 지표만 고를 수 있게 목록을 받는다. 참고 정보 영역 하나 때문에 11개를 모두
- * 부르면 그 영역의 지연이 다른 화면까지 끌고 간다.
+ * 필요한 지표만 고를 수 있게 목록을 받는다. 지금 부르는 곳은 11개를 모두 넘기는
+ * `fetchLatestMarketIndicators` 하나다.
  */
 export async function fetchMarketIndicatorsFor(
   codes: readonly MarketIndicatorCode[],
@@ -69,7 +69,7 @@ export async function fetchMarketIndicatorsFor(
   return batch
 }
 
-/** 대시보드가 쓰는 11개 전부다. */
+/** 11개 전부다. 첫 화면의 `useMarketIndicators`가 부른다. */
 export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {
   return fetchMarketIndicatorsFor(marketIndicatorCodes)
 }
