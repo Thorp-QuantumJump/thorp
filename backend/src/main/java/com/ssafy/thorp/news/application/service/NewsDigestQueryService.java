@@ -106,8 +106,7 @@ public class NewsDigestQueryService {
      *
      * <p>구간 상한이 설정값이라 조회 객체를 만드는 일도 여기 있다. 컨트롤러가 만들면 설정을 읽어야 하고, 설정 record는 infrastructure에 있어
      * presentation이 infrastructure를 참조하게 된다(ADR-0001 계층 방향).
-     */
-    /**
+     *
      * @param sectorIds 좁힐 섹터. 비었거나 null이면 전체다. 여럿이면 그중 하나 이상과 연결된 묶음이다(spec FR-001, 2026-10-02).
      * @param limit 받을 묶음 수. null이면 {@link NewsDigestQuery#DEFAULT_LIMIT}개이고, 어느 쪽이든 서버 상한을 넘지 않는다.
      */

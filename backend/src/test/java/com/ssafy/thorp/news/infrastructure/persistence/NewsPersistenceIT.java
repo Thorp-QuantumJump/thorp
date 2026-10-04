@@ -654,11 +654,10 @@ class NewsPersistenceIT extends PostgresTestSupport {
                         });
     }
 
-    /**
-     * 조회 경로를 실제 DB에서 확인한다(spec FR-005·FR-006, T025·T030·T032).
-     *
-     * <p>섹터 필터와 과거 구간 필터는 JPQL 조인이 전부라 대역으로는 확인할 수 없다. 조인 조건이 틀리면 대역에서는 통과하고 운영에서만 빈 화면이 된다.
-     */
+    // 조회 경로를 실제 DB에서 확인한다(spec FR-005·FR-006, T025·T030·T032).
+    //
+    // 섹터 필터와 과거 구간 필터는 JPQL 조인이 전부라 대역으로는 확인할 수 없다. 조인 조건이 틀리면 대역에서는 통과하고 운영에서만 빈 화면이 된다.
+
     /** 허가 매체 하나와 그 매체의 기사로 만든 묶음. 섹터 연결까지 붙인다. */
     private NewsDigest seedDigest(
             String key, String url, String title, Instant publishedAt, String sectorId) {
