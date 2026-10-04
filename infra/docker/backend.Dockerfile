@@ -20,7 +20,7 @@ RUN ./gradlew bootJar --no-daemon
 #   jdk.charsets     응답의 Content-Type 이 EUC-KR 같은 비표준 문자셋이면 이 모듈이 있어야 디코딩된다
 #   jdk.localedata   ko 로캘 서식. 없으면 오류 없이 기본 로캘로 내려가 출력만 달라지므로 미리 넣는다
 #   jdk.management   Actuator 의 JVM 지표가 com.sun.management 를 리플렉션으로 읽는다
-#   jdk.zipfs        jar 안의 자원을 파일 시스템으로 여는 라이브러리가 있다
+#   jdk.zipfs        jar·zip 을 파일 시스템으로 열 때 서비스 로더로 찾는 모듈이라 jdeps 에 잡히지 않는다. 작아서 미리 넣는다
 FROM eclipse-temurin:21-jdk-alpine AS jre
 WORKDIR /work
 COPY --from=build /app/build/libs/*.jar app.jar
