@@ -1,0 +1,386 @@
+/*
+  투자 대상 고르기 하단의 뉴스 구역(012 FR-001). 투자 대상 탐색 카드와 같은 면·모서리를 쓰고 전체 폭으로 선다.
+  세 부분(주요·고른 섹터·분류별)은 옅은 선으로 나눈다. 1위 묶음은 왼쪽에 크게, 그다음 넷은 오른쪽 목록이다.
+*/
+.section {
+  display: grid;
+  gap: 16px;
+  margin-top: var(--thorp-flow-gap, 28px);
+  padding: var(--thorp-pad-card, 20px 24px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 12px);
+  background: var(--thorp-surface);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
+/* 제목과 그 옆 i 표시. */
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--thorp-text-heading, 1.05rem);
+  font-weight: 650;
+}
+
+.title svg {
+  flex-shrink: 0;
+  color: var(--thorp-accent-soft);
+}
+
+.updated,
+.meta {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.notice,
+.loading,
+.empty {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+}
+
+.empty,
+.loading {
+  color: var(--thorp-muted);
+}
+
+/*
+  분류 줄. 칩보다 한 단 위의 고르기라 테두리 칩이 아니라 밑줄 탭으로 둔다. 같은 모양이면 두 줄이 한 목록처럼
+  읽힌다.
+*/
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.group {
+  position: relative;
+  min-height: var(--thorp-control-sm, 32px);
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.group:hover {
+  color: var(--thorp-foreground);
+}
+
+.group[aria-pressed='true'] {
+  color: var(--thorp-accent-soft);
+}
+
+.group[aria-pressed='true']::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--thorp-accent);
+  content: '';
+}
+
+/* 섹터 하나로 좁혀 보기(012 FR-005). */
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--thorp-control-sm, 32px);
+  padding: 0 12px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  font-size: var(--thorp-text-small, 0.78rem);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.chip:hover {
+  border-color: var(--thorp-line-control-hover);
+  color: var(--thorp-foreground);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--thorp-accent-soft);
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.group:focus-visible,
+.chip:focus-visible,
+.inlineAction:focus-visible,
+.moreReports:focus-visible,
+.section a:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 세 부분 하나. 위에 옅은 선을 그어 나눈다. */
+.part {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+/* 분류 탭 바로 아래 오는 부분은 탭의 밑줄이 이미 나누므로 윗줄을 겹쳐 긋지 않는다. */
+.groups + .part {
+  padding-top: 4px;
+  border-top: 0;
+}
+
+.partHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.partTitle {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-body, 0.9rem);
+  font-weight: 650;
+}
+
+/*
+  주요 뉴스: 왼쪽 1위 묶음, 오른쪽 그다음 넷. 좁아지면 위아래로 쌓는다. 1위 카드는 옆 목록과 같은 높이로 서고 보도 목록을
+  카드 바닥에 붙인다. 카드가 목록보다 짧게 끝나면 그 아래가 빈 자리로 남는다.
+*/
+.leadGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px 28px;
+}
+
+.leadStory {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface-muted, transparent);
+}
+
+.leadTitle {
+  color: var(--thorp-foreground);
+  font-size: 1.28rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  word-break: keep-all;
+}
+
+.leadTitle:hover,
+.itemTitle:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.summary {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* 칸 안의 요약은 두 줄까지만 보인다. 칸 높이가 묶음마다 크게 달라지지 않게 한다. */
+.clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 1위 묶음을 다룬 보도. 매체 이름이 원문 링크다. */
+.reports {
+  display: grid;
+  gap: 4px;
+  margin: auto 0 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--thorp-line);
+  list-style: none;
+  font-size: var(--thorp-text-caption, 0.74rem);
+}
+
+.reports li {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.reports a {
+  flex: none;
+  color: var(--thorp-accent-soft);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reportTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--thorp-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reportTime {
+  flex: none;
+  color: var(--thorp-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 접어 둔 보도를 펼친다. 목록 바로 아래 글자 단추로 두어 카드의 무게를 바꾸지 않는다. */
+.moreReports {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--thorp-muted);
+  font: inherit;
+  font-size: var(--thorp-text-caption, 0.74rem);
+  cursor: pointer;
+}
+
+.moreReports:hover {
+  color: var(--thorp-foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 옆 카드가 더 길어져도 항목 사이를 벌리지 않는다. */
+.list {
+  display: grid;
+  align-content: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.item:first-child {
+  padding-top: 0;
+}
+
+.item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.itemTitle {
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-body, 0.88rem);
+  font-weight: 600;
+  line-height: 1.45;
+  text-decoration: none;
+  word-break: keep-all;
+}
+
+/*
+  고른 섹터·분류 칸. 넓으면 여러 칸이 나란히 서고 좁아지면 접힌다. 칸이 적어도 늘이지 않아(auto-fill) 고른 섹터 칸과 분류 칸이
+  같은 세로줄에 선다.
+*/
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px 24px;
+}
+
+.column {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.columnTitle {
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--thorp-line-strong);
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-small, 0.8rem);
+  font-weight: 680;
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.78rem);
+}
+
+.failure p {
+  margin: 0;
+}
+
+.inlineAction {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
+  border-radius: var(--thorp-radius-control, 6px);
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  font-size: var(--thorp-text-small, 0.78rem);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .leadGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group,
+  .chip {
+    transition: none;
+  }
+}

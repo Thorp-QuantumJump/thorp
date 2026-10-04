@@ -31,8 +31,12 @@ import org.junit.jupiter.api.Test;
  */
 class NewsExposureNotSelectableTest {
 
-    /** 이 엔드포인트가 받기로 한 질의 파라미터. 계약(contracts/openapi.yaml)에 적힌 셋이 전부다. */
-    private static final List<String> ALLOWED_PARAMETERS = List.of("sectorId", "from", "to");
+    /**
+     * 이 엔드포인트가 받기로 한 질의 파라미터. 계약(contracts/openapi.yaml)에 적힌 넷이 전부다. {@code limit}은 받을 묶음 수일 뿐 노출
+     * 범위를 바꾸지 않는다 — 서버 상한을 넘지 못하고 허가 필터는 그대로다(2026-10-02, spec FR-001).
+     */
+    private static final List<String> ALLOWED_PARAMETERS =
+            List.of("sectorId", "from", "to", "limit");
 
     private static NewsDigestListResult preparing() {
         return new NewsDigestListResult(
@@ -48,7 +52,7 @@ class NewsExposureNotSelectableTest {
     }
 
     @Test
-    @DisplayName("엔드포인트가 받는 질의 파라미터는 셋뿐이다")
+    @DisplayName("엔드포인트가 받는 질의 파라미터는 계약에 적힌 넷뿐이다")
     void 파라미터_목록_고정() {
         Method endpoint =
                 Arrays.stream(NewsDigestController.class.getDeclaredMethods())

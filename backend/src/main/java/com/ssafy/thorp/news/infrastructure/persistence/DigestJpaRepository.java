@@ -43,6 +43,21 @@ public interface DigestJpaRepository extends JpaRepository<NewsDigestJpaEntity, 
             @Param("since") Instant since, @Param("sectorId") String sectorId);
 
     /**
+     * 섹터 여럿 가운데 하나 이상에 연결된 기사를 가진 묶음(spec FR-001 ③). {@link #findRecentBySector}를 섹터마다 부르지 않고 한 번에
+     * 읽는다. DISTINCT라 여러 섹터에 걸친 묶음도 한 번만 나온다.
+     */
+    @Query(
+            "SELECT DISTINCT d FROM NewsDigestJpaEntity d"
+                    + " JOIN NewsArticleJpaEntity r ON r.id = d.representativeArticleId"
+                    + " JOIN NewsDigestArticleJpaEntity m ON m.key.digestId = d.id"
+                    + " JOIN NewsArticleSectorJpaEntity s ON s.key.articleId = m.key.articleId"
+                    + " WHERE s.key.sectorId IN :sectorIds"
+                    + " AND COALESCE(d.latestPublishedAt, r.collectedAt) >= :since"
+                    + " ORDER BY d.latestPublishedAt DESC NULLS LAST, d.digestId ASC")
+    List<NewsDigestJpaEntity> findRecentInSectors(
+            @Param("since") Instant since, @Param("sectorIds") Collection<String> sectorIds);
+
+    /**
      * 검증된 발행 시각이 구간 안인 기사를 가진 묶음(spec FR-006).
      *
      * <p>"검증된 것만 본다"는 규칙은 호출자가 고를 값이 아니라 이 조회의 성질이다. 그래서 상태를 인자로 노출하지 않고 여기서 채운다. 호출자가 고를 수 있으면 언젠가

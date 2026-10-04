@@ -105,17 +105,25 @@ export type NewsDigestRange = { from?: string; to?: string }
  *
  * 012가 형식을 검증하지 않고 섹터 목록(`fetchNewsSectors`)에 있는지만 보므로 화면도 모양을 따지지 않는다.
  * 여기서 규칙을 만들면 012가 규칙을 바꾼 날 화면만 거부하는 값이 생긴다.
+ *
+ * 섹터는 여럿일 수 있다(012 FR-001 ③, 2026-10-02). 여럿이면 그중 하나 이상과 연결된 묶음을 012가 주요도 순으로 모아
+ * 준다 — 화면이 섹터마다 받아 합치지 않는다. 쉼표로 이어 보낸다(axios 기본값인 `sectorId[]=` 꼴은 서버가 받지 않는다).
+ * `limit`은 받을 묶음 수이며 012의 상한을 넘으면 상한까지만 온다.
  */
 export async function fetchMarketNewsDigests(
-  sectorId?: string | null,
+  sectorId?: string | readonly string[] | null,
   signal?: AbortSignal,
   range?: NewsDigestRange,
+  limit?: number,
 ): Promise<NewsDigestResult> {
   try {
     const params: Record<string, string> = {}
-    if (sectorId) params.sectorId = sectorId
+    // 빈 문자열은 고르지 않은 것과 같다. 붙여 보내면 `sectorId=`가 된다.
+    const sectorIds = (typeof sectorId === 'string' ? [sectorId] : (sectorId ?? [])).filter((id) => id !== '')
+    if (sectorIds.length > 0) params.sectorId = sectorIds.join(',')
     if (range?.from) params.from = range.from
     if (range?.to) params.to = range.to
+    if (limit !== undefined) params.limit = String(limit)
     const response = await apiClient.get<unknown>('/market-news/digests', {
       params: Object.keys(params).length > 0 ? params : undefined,
       signal,

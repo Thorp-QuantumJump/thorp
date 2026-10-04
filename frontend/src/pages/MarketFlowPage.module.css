@@ -98,6 +98,3 @@
 @media (max-width: 800px) {
   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
 }
-
-/* 뉴스 카드. 투자 대상 고르기 하단으로 옮기기 전까지 분야 상세 아래에 둔다(012 FR-001). */
-.news { margin-top: var(--thorp-flow-gap, 22px); }
