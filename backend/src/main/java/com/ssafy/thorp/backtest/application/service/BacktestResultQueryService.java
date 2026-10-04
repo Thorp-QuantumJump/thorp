@@ -425,12 +425,12 @@ public class BacktestResultQueryService {
     }
 
     /**
-     * 최종 상태 Job의 결과 행. 없으면 결과 저장과 상태 전이를 한 트랜잭션으로 묶은 불변식이 깨진 것이다.
+     * 관문({@link #requireResultReady})을 통과한 최종 상태 Job의 결과 컬럼. 없으면 결과 저장과 상태 전이를 한 트랜잭션으로 묶은 불변식이 깨진
+     * 것이다.
      *
      * <p>{@code RESULT_NOT_READY}(409)로 돌려주면 안 된다 — 그 코드는 "기다리면 온다"는 뜻이고 최종 상태에서는 영원히 오지 않아 프론트가 무한
      * 폴링한다.
      */
-    /** 관문을 통과한(=COMPLETED) Job인데 결과 컬럼이 없으면 데이터 손상이다. {@link #requireSummary}와 같은 이유. */
     private <T> T require(Optional<T> value, BacktestRun job) {
         return value.orElseThrow(() -> missingResultRow(job));
     }

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * 섹터 조회 API의 오류 매핑 (contracts/sector-api.md 「오류」).
  *
  * <table>
+ *   <caption>상황별 응답</caption>
  *   <tr><th>상황</th><th>상태</th><th>코드</th></tr>
  *   <tr><td>대응표가 발행되지 않음</td><td>409</td><td>{@code SECTOR_MAP_NOT_READY}</td></tr>
  *   <tr><td>없는 섹터 코드</td><td>404</td><td>{@code SECTOR_NOT_FOUND}</td></tr>

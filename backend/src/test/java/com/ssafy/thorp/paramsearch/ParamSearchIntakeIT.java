@@ -354,7 +354,6 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {
                 .toList();
     }
 
-    /** 등록표에는 있으나 004가 실행을 지원하지 않는 전략. 이름을 적지 않고 조회로 찾는다. */
     /**
      * 004가 실행할 수 없는 전략을 한시적으로 만들어 넘긴다.
      *

@@ -249,7 +249,6 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {
                 """);
     }
 
-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
     /**
      * 취소 시점에 미실행으로 확정될 후보 수 — <b>취소 직전에 대기 중이던 후보를 센다.</b>
      *
