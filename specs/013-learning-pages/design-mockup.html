@@ -1,0 +1,1970 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<!-- spec 013 FR-031 디자인 목업(2026-10-05). 숫자와 상황은 모두 가상의 예다. 설명은 design-notes.md. -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>배우기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0d0f0e;--surface:#161918;--raised:#1f2321;--fg:#f5f7f6;--copy:#b8bfbb;--muted:#8b928e;
+  --line:rgb(255 255 255/9%);--line-strong:rgb(255 255 255/15%);--line-control:rgb(255 255 255/36%);
+  --brand:#03c75a;--brand-soft:#2fdc7a;--brand-muted:rgb(3 199 90/12%);--on-brand:#01170a;
+  --s1:#5FD3A6;--s2:#B7DD6E;--s3:#D4A2EA;--s4:#5CC6CC;--s5:#C9C67C;--s6:#DDA3DA;
+  /* 초록 한 줄(지도 선과 손에 쥐는 물건이 같은 값을 쓴다): 밝음 #7EF0B0 → #2FDC7A → #03C75A → 그늘 #0B5E33 */
+  --node-done:radial-gradient(circle at 35% 30%,#7EF0B0 0%,#2FDC7A 35%,#03C75A 75%);
+  --lip-green:#02813B;--lip-gray:#2A2F2D;--path-read:#2FDC7A;--path-todo:#6E716F;
+  /* 물건(도장·메달·표장)의 빛과 그림자: 빛은 왼쪽 위, 그림자는 아래로 한 값 */
+  --obj-shadow:drop-shadow(0 6px 8px rgb(0 0 0/.5));--obj-shadow-up:drop-shadow(0 9px 10px rgb(0 0 0/.58));
+  --well:#141716;
+  --ease-enter:cubic-bezier(.05,.7,.1,1);--ease-state:cubic-bezier(.2,0,0,1);--ease-pop:cubic-bezier(.34,1.3,.64,1);
+  --font:'SUIT Variable','Pretendard Variable','Pretendard',-apple-system,'Segoe UI',sans-serif;
+  --font-d:'Geist Variable','Geist','Pretendard Variable','Pretendard',sans-serif;
+  --colx:52px;
+}
+/* 글자 크기 단계: 12 / 13 / 14 / 15 / 16 / 17 / 20 / 22 / 26 / 28 / 32 / 36 / 44 */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:var(--sticky-h,0px)}
+/* 떠 있는 '이어서 읽기'(커리큘럼·로그인)가 있을 때 초점·스크롤 대상이 그 아래로 숨지 않게 */
+html:has(body[data-screen=curriculum][data-auth=in]){scroll-padding-bottom:88px}
+body{margin:0;min-height:100vh;color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.6;font-weight:500;
+  font-variant-numeric:tabular-nums;word-break:keep-all;overflow-wrap:break-word;
+  background:radial-gradient(1100px 520px at 18% -6%,rgb(3 199 90/5%),transparent 62%),var(--bg)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+h1,h2,h3,h4{text-wrap:balance}
+p{text-wrap:pretty}
+:focus-visible{outline:2px solid var(--brand-soft);outline-offset:3px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px;padding:0;border:0}
+.defs{position:absolute;width:0;height:0;overflow:hidden}
+.nw{white-space:nowrap}
+.stp text,.med text,.emb text{font-family:var(--font-d)}
+/* 같은 물건을 넓은 화면·좁은 화면 크기로 따로 그린다(CSS로 줄이면 상태를 나르는 선 굵기가 가늘어진다) */
+svg.v-sm{display:none!important}
+
+/* ───── 목업 조작 띠(제품 화면 아님) ───── */
+.demo{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;justify-content:center;
+  padding:8px 16px;background:rgb(10 12 11/90%);border-bottom:1px solid var(--line)}
+@supports (backdrop-filter:blur(1px)){.demo{backdrop-filter:blur(10px)}}
+.demo .lbl{font-size:12px;font-weight:700;color:var(--muted);border:1px solid var(--line-strong);border-radius:6px;padding:1px 6px}
+.demo .grp{display:flex;flex-wrap:wrap;gap:2px;padding:3px;border:1px solid var(--line-strong);border-radius:14px}
+.demo button{border:0;background:transparent;color:var(--copy);font:600 13px/1.2 var(--font);padding:7px 11px;border-radius:10px;cursor:pointer;min-height:32px}
+.demo button:hover{color:var(--fg)}
+.demo button[aria-pressed=true]{background:var(--fg);color:#0d0f0e}
+.demo .note{font-size:12px;color:var(--muted)}
+
+/* ───── Thorp 헤더 ───── */
+.hdr{position:relative;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 40px;border-bottom:1px solid var(--line)}
+.logo{display:inline-flex;align-items:center;min-height:44px;font:800 20px/1 var(--font-d);letter-spacing:-.04em}.logo b{color:var(--brand)}
+.navw{display:flex;align-items:center}
+.nav{display:flex;gap:28px;font-size:14px;color:var(--copy)}
+.nav a{display:inline-flex;align-items:center;min-height:44px}
+.nav a:hover{color:var(--fg)}
+.nav .cur{color:var(--brand);font-weight:700}
+.menu-btn{display:none}
+.who{font-size:14px;color:var(--copy);display:inline-flex;align-items:center;gap:8px;min-height:44px}
+.who .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(140deg,#2a3a31,#1a211d);box-shadow:inset 0 0 0 1px rgb(255 255 255/12%);
+  display:grid;place-items:center;color:var(--copy)}
+.who.login{color:var(--brand-soft);text-decoration:underline;text-underline-offset:3px}
+
+main{overflow-x:clip}
+.view{display:none}.view.on{display:block}
+.wrap{width:min(100% - 32px,960px);margin:0 auto;padding:12px 0 120px}
+.wrap.read{width:min(100% - 32px,760px)}
+h1[tabindex="-1"]:focus:not(:focus-visible),h3[tabindex="-1"]:focus:not(:focus-visible),th[tabindex="-1"]:focus:not(:focus-visible),p[tabindex="-1"]:focus:not(:focus-visible){outline:none}
+
+/* ───── 머리 ───── */
+.head{position:relative;isolation:isolate;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:24px 0 16px}
+.contours{position:absolute;left:-160px;right:-160px;top:-12px;height:360px;z-index:-1;pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse 70% 80% at 30% 0%,#000 30%,transparent 80%);mask-image:radial-gradient(ellipse 70% 80% at 30% 0%,#000 30%,transparent 80%)}
+.contours svg{width:100%;height:100%}
+h1.big{margin:0;font:800 44px/1.08 var(--font-d);letter-spacing:-.03em;
+  background:linear-gradient(100deg,#E8F8ED 5%,#85EEA7 58%,#03C75A 112%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{max-width:360px;margin:0;color:var(--copy);font-size:15px;line-height:1.7;border-left:1px solid var(--line-strong);padding-left:16px}
+
+/* ───── 여행 수첩(요약 패널) ───── */
+.journal{position:relative;border:1px solid var(--line);border-radius:16px;padding:12px 20px 14px;
+  background:linear-gradient(180deg,rgb(31 35 33/80%),rgb(22 25 24/86%));
+  box-shadow:inset 0 1px 0 rgb(255 255 255/7%),0 24px 48px -28px rgb(0 0 0/90%)}
+@supports (backdrop-filter:blur(1px)){.journal{backdrop-filter:blur(14px)}}
+@supports not (backdrop-filter:blur(1px)){.journal{background:#161918}}
+.j-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.j-top h2{margin:0;font-size:14px;font-weight:700;color:var(--copy);letter-spacing:0}
+.lnk{color:var(--brand-soft);text-decoration:underline;text-underline-offset:3px;font-size:14px;display:inline-flex;align-items:center;min-height:32px}
+.j-grid{display:grid;grid-template-columns:2.1fr .72fr .72fr 2.46fr;align-items:stretch}
+.j-cell{min-width:0;padding:4px 20px;border-left:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+.j-cell:first-child{padding-left:0;border-left:0}
+.j-cell.c1{flex-direction:row;align-items:center;justify-content:flex-start;gap:14px}
+.j-emb{flex:none;width:64px;height:64px;display:block}
+.j-emb svg{display:block;width:100%;height:100%;overflow:visible;filter:var(--obj-shadow)}
+.j-lvw{flex:1;min-width:0}
+.j-lv{display:flex;align-items:center;gap:8px;font:800 28px/1.1 var(--font-d);letter-spacing:-.02em}
+.j-cap{font-size:13px;color:var(--muted);font-weight:600}
+.j-num{font:800 28px/1.15 var(--font-d);letter-spacing:-.02em}.j-num small{font:650 15px var(--font);margin-left:2px;color:var(--copy)}
+.mini-mile{display:block;width:220px;max-width:100%;height:30px;margin:6px 0 2px}
+.j-sub{font-size:14px;color:var(--copy)}
+.pill-new{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font:700 12px/1 var(--font);letter-spacing:0;
+  color:var(--brand-soft);background:var(--brand-muted);box-shadow:inset 0 0 0 1px var(--brand-soft);white-space:nowrap;vertical-align:middle}
+.resume{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
+.resume .r-t{display:block;font-size:16px;font-weight:650;line-height:1.4;text-wrap:balance}
+.resume .r-p{display:block;font-size:13px;color:var(--brand-soft);font-weight:650}
+.peb-mini{position:relative;flex:none;width:44px;height:44px;display:block}
+.peb-mini svg{display:block;width:100%;height:100%;overflow:visible;filter:var(--obj-shadow)}
+.btn-go{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 16px;border-radius:10px;border:0;cursor:pointer;
+  background:linear-gradient(180deg,#14d468,#03c75a);color:var(--on-brand);font-weight:750;font-size:15px;white-space:nowrap;
+  box-shadow:0 3px 0 var(--lip-green),inset 0 1px 0 rgb(255 255 255/30%);transition:transform .15s var(--ease-state),box-shadow .15s var(--ease-state)}
+.btn-go:active{transform:translateY(3px);box-shadow:0 0 0 var(--lip-green),inset 0 1px 0 rgb(255 255 255/30%)}
+
+/* 비로그인 견본 */
+.sample{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:24px;align-items:center;border:1.5px solid rgb(255 255 255/15%);border-radius:16px;
+  padding:22px 24px;background:linear-gradient(120deg,rgb(3 199 90/4%),transparent 55%),var(--surface);overflow:hidden}
+.sample .s-t{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em;color:var(--fg)}
+.sample .s-row{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.sample .s-c{margin:6px 0 0;font-size:14px;color:var(--copy)}
+.sample svg{width:100%;height:auto;display:block}
+.sample.tall{grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);padding:28px;min-height:230px;
+  background:radial-gradient(80% 120% at 90% 10%,rgb(3 199 90/6%),transparent 60%),linear-gradient(120deg,rgb(3 199 90/4%),transparent 55%),var(--surface)}
+.sample.tall .s-t{font-size:20px}
+/* 나의 학습(비로그인): 로그인하면 생기는 것 세 칸. 실루엣은 금속 기운만, 글리프·숫자·윤곽·점선 없음 */
+.gain{margin-top:28px}
+.gain h2{margin:0 0 14px;font-size:16px;font-weight:700;color:var(--fg)}
+.gain ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.gain li{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:20px 20px 18px;border-radius:14px;border:1px solid var(--line);
+  background:radial-gradient(90% 80% at 20% 0%,rgb(3 199 90/5%),transparent 60%),var(--surface);min-width:0}
+.gain .g-art{display:block;height:72px;margin-bottom:12px}
+.gain .g-art svg{display:block;height:72px;width:auto;overflow:visible}
+.gain .g-tx{display:flex;flex-direction:column;gap:4px;min-width:0}
+.gain b{font-size:15px;font-weight:650;color:var(--fg)}
+.gain span.g-c{font-size:13px;color:var(--copy);line-height:1.55;text-wrap:pretty}
+
+/* 공개 안내(새 지역 표지) */
+.notice{display:flex;gap:14px;align-items:center;margin-top:12px;padding:6px 0 6px 14px;border-left:2px solid var(--brand)}
+.notice .ic{flex:none;width:28px;height:28px}
+.notice .n-body{flex:1;min-width:0}
+.notice p{margin:0;font-size:15px;color:var(--copy);line-height:1.65}
+.notice .links{display:inline-flex;flex-wrap:wrap;gap:0 16px;margin-left:12px}
+.notice .links a{display:inline-flex;align-items:center;min-height:24px;color:var(--brand-soft);text-decoration:underline;text-underline-offset:3px;font-size:14px;font-weight:600}
+.notice .x{flex:none;width:44px;height:44px;border:0;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;border-radius:8px}
+.notice .x:hover{color:var(--fg);background:var(--raised)}
+
+/* 보기 전환 + 읽는 순서(한 줄) */
+.vrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;margin-top:14px}
+.vtoggle{display:inline-flex;border:1px solid var(--line-strong);border-radius:10px;padding:3px;background:var(--surface)}
+.vtoggle button{border:0;background:transparent;color:var(--copy);font:650 14px var(--font);padding:7px 18px;border-radius:7px;cursor:pointer;min-height:36px}
+.vtoggle button[aria-pressed=true]{background:var(--raised);color:var(--fg);box-shadow:inset 0 -2px 0 var(--brand)}
+.order{margin:0;font-size:14px;color:var(--copy);display:flex;gap:10px;align-items:center}
+.order svg{flex:none}
+
+/* ───── 지도 ───── */
+.map{position:relative;margin-top:16px}
+.road{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.road path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.road .bed{stroke:rgb(255 255 255/3.5%);stroke-width:14}
+.road .g{stroke:var(--path-read);stroke-width:4}
+.road .s{stroke:var(--path-todo);stroke-width:3}
+.road .d{stroke:var(--path-todo);stroke-width:3;stroke-dasharray:6 6;stroke-linecap:butt}
+.road .n{stroke:#2c3230;stroke-width:6}
+.road circle.end{fill:var(--path-todo);stroke:#0d0f0e;stroke-width:2}
+.road circle.end.n{fill:#2c3230}
+.region{position:relative;z-index:1}
+.ra{position:absolute;left:var(--colx);top:50%;width:0;height:0}
+.region,[data-sa]{scroll-margin-top:16px}
+
+.band{position:relative;isolation:isolate;display:grid;grid-template-columns:44px minmax(0,1fr) 160px;column-gap:20px;align-items:center;
+  min-height:112px;padding:14px 24px 14px 30px;border-radius:16px;border:1px solid var(--line);overflow:hidden;
+  background:radial-gradient(120% 140% at 100% 0%,color-mix(in srgb,var(--stage) 8%,transparent),transparent 60%),var(--surface);
+  box-shadow:inset 0 1px 0 rgb(255 255 255/5%);transition:border-color .6s var(--ease-state),box-shadow .6s var(--ease-state)}
+.band::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.07;pointer-events:none;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.band.flash{border-color:var(--stage);box-shadow:inset 0 1px 0 rgb(255 255 255/5%),0 0 0 3px color-mix(in srgb,var(--stage) 22%,transparent)}
+.b-text{min-width:0;grid-column:2;grid-row:1}
+.band>.marker{grid-column:1;grid-row:1;align-self:start;margin-top:4px}
+.band>.b-art{grid-column:3;grid-row:1}
+.band.pend>.b-text{grid-column:1}
+.band.pend>.b-art{grid-column:2}
+.b-art{width:160px;height:110px;align-self:center}
+.b-art svg{width:100%;height:100%;display:block}
+.band h3{margin:0;font-weight:750}
+.b-kick{display:block;font-size:13px;font-weight:650;color:var(--stage);letter-spacing:0}
+.b-name{display:block;font-size:26px;letter-spacing:-.02em;line-height:1.25;margin-top:2px}
+.b-desc{margin:6px 0 0;font-size:15px;color:var(--copy);line-height:1.6;text-wrap:balance}
+.b-prog{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:14px;font-weight:650;color:var(--fg)}
+/* 단계 머리의 도장 줄: 오목한 판 안에 글 도장 칸, 세로 구분선, 단계 완주 아치 메달 */
+.b-well{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:12px}
+.well{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:14px;background:var(--well);
+  box-shadow:inset 0 2px 3px rgb(0 0 0/.55),inset 0 -1px 0 rgb(255 255 255/.05)}
+.cells{display:flex;gap:10px}
+.cell{display:block;width:44px;height:44px;flex:none}
+.cell svg{display:block;width:100%;height:100%;overflow:visible}
+.w-dest{display:flex;align-items:center;padding-left:12px;border-left:1px solid var(--line-strong)}
+.w-dest svg{display:block;overflow:visible}
+.w-cap{margin:0;display:flex;flex-wrap:wrap;gap:0 8px;font-size:14px;color:var(--copy);line-height:1.45}
+.w-cap b{font-weight:700;color:var(--fg)}
+.w-cap .dot{color:var(--muted)}
+.marker{position:relative;width:44px;height:44px;display:grid;place-items:center;font:750 16px/1 var(--font-d);color:var(--fg)}
+.marker svg{position:absolute;inset:0;overflow:visible}
+.marker span{position:relative}
+.marker.done{color:var(--on-brand)}
+.marker.neutral{color:var(--copy)}
+.marker.pend{color:var(--muted)}
+
+/* 단계 풍경(공통 기호를 <use>로 다시 씀) */
+.land{--lw:1.75px;stroke-width:var(--lw);overflow:visible}
+.land.pend{--fa:0;--fa2:0;--fb:0;--hl:0;stroke-dasharray:4 4}
+.lico,.st-ico{display:inline-block;flex:none}
+.lico .land,.st-ico .land{--lw:1.3px}
+.lico .land.pend,.st-ico .land.pend{stroke-dasharray:3 2}
+
+.stops{list-style:none;margin:0;padding:16px 0 4px 24px}
+.stop-li{padding-left:var(--x,0px);margin:0 0 18px}
+.stop{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:20px;align-items:center;min-height:72px;border-radius:14px}
+/* 길 위의 글 도장: 종이 원판 위에 찍힌 도장(완료, 큰 체크. 번호는 바로 옆 카드에 있다), 실선 회색 빈칸(안 읽음), 초록 진행 호(읽는 중) */
+.snode{position:relative;width:48px;height:48px;display:block;transition:transform .15s var(--ease-state)}
+.snode svg{display:block;width:100%;height:100%;overflow:visible;filter:var(--obj-shadow);transition:filter .15s var(--ease-state)}
+.stop:hover .snode,.stop:focus-visible .snode{transform:translateY(-2px)}
+.stop:hover .snode svg,.stop:focus-visible .snode svg{filter:var(--obj-shadow-up)}
+.card{display:block;min-width:0;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:rgb(22 25 24/92%);transition:border-color .15s var(--ease-state)}
+.c-main{display:block;min-width:0}
+.stop:hover .card,.stop:focus-visible .card{border-color:var(--line-strong)}
+.stop.now .card{border-color:rgb(47 220 122/.45);background:linear-gradient(90deg,rgb(3 199 90/.09),transparent 65%),#161918;box-shadow:0 0 0 4px rgb(3 199 90/.06)}
+.stop.now:hover .card,.stop.now:focus-visible .card{border-color:rgb(47 220 122/.75)}
+.c-no{display:block;font:700 12px/1.2 var(--font-d);color:var(--muted);letter-spacing:.02em}
+.c-t{display:block;font-size:16px;font-weight:650;line-height:1.4;margin-top:3px;letter-spacing:0;transition:color .15s var(--ease-state);text-wrap:balance}
+.stop:hover .c-t,.stop:focus-visible .c-t{color:var(--brand-soft)}
+.c-q{display:block;font-size:14px;color:var(--copy);margin-top:2px;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:8px;align-items:center}
+.chip{white-space:nowrap;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:13px;font-weight:650}
+.chip.ok{background:var(--brand-muted);color:var(--brand-soft)}
+.chip.ing{box-shadow:inset 0 0 0 1.5px var(--muted);color:var(--fg)}
+.chip.no{box-shadow:inset 0 0 0 1.5px var(--muted);color:var(--copy)}
+.chip.pend{border:1.5px dashed var(--muted);color:var(--copy);height:24px}
+/* 이전 판: 실선(안 함)·점선(준비 중)과 겹치지 않는 세 번째 모양 = 테두리 없는 채운 꼬리표 + 종이 아이콘 */
+.chip.old{background:rgb(255 255 255/8%);color:var(--copy);border-radius:5px;padding:0 8px 0 7px}
+.chip.got{background:var(--brand-muted);color:var(--brand-soft)}
+.chip.pick{background:rgb(255 255 255/9%);color:var(--fg);border-radius:5px}
+/* 틀린 보기: 실선 회색 윤곽('아직 하지 않음')과 겹치지 않게 테두리 없는 옅은 채움 + × */
+.chip.wrong{background:rgb(255 255 255/6%);color:var(--copy);border-radius:5px;padding:0 8px 0 7px}
+.chip svg{flex:none}
+.meta{font-size:13px;color:var(--muted);white-space:nowrap}
+.go-hint{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:13px;font-weight:700;color:var(--brand-soft);white-space:nowrap}
+@media (min-width:1024px){
+  .card{display:grid;grid-template-columns:minmax(0,1fr) 262px;column-gap:24px;align-items:center}
+  .card .chips{margin-top:0;display:grid;grid-template-columns:112px 56px 70px;column-gap:8px;row-gap:8px;justify-content:end;justify-items:start}
+  .card .chips.g{grid-template-columns:56px 70px}
+  .card .go-hint{grid-column:1/-1;justify-self:end;margin:0}
+}
+
+/* 단계 끝: 길이 단계 기둥으로 돌아오는 꺾임점만 둔다. 단계 완주 아치는 단계 머리의 도장 줄에만 있다(길 위에 두면 지나야 하는 문처럼 읽힌다) */
+.dest{position:relative;min-height:24px;padding-bottom:12px}
+
+.boundary{position:relative;display:flex;align-items:center;gap:10px;margin:0;padding:4px 0 24px calc(var(--colx) + 40px);font-size:15px;color:var(--copy);font-weight:600}
+.boundary::before{content:"";position:absolute;left:calc(var(--colx) - 14px);width:42px;height:1.5px;top:calc(50% - 10px);background:var(--muted)}
+
+.pending{position:relative;padding-left:calc(var(--colx) + 52px);margin-bottom:28px}
+.pmark{position:absolute;left:calc(var(--colx) - 22px);top:22px}
+.band.pend{grid-template-columns:minmax(0,1fr) 160px;background:transparent;border:1.5px dashed var(--muted);box-shadow:none;padding-left:26px}
+.band.pend::before{display:none}
+.band.pend .b-kick{color:color-mix(in srgb,var(--stage) 45%,#8b928e)}
+.b-tagrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:2px}
+.b-tagrow .b-name{margin-top:0}
+.b-reason{margin:4px 0 0;font-size:14px;color:var(--copy);text-wrap:balance}
+.olds{margin-top:14px}
+.olds h4{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--copy);text-wrap:wrap}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.note{display:block;border-radius:10px}
+.note-paper{position:relative;display:block;height:100%;padding:14px 34px 14px 16px;border-radius:10px;background:#141716;
+  box-shadow:inset 0 0 0 1px rgb(255 255 255/15%);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%)}
+.note-paper::after{content:"";position:absolute;top:0;right:0;width:14px;height:14px;border-bottom-left-radius:3px;
+  background:linear-gradient(225deg,transparent 50%,#2a302d 50%);box-shadow:-1px 1px 0 rgb(255 255 255/12%)}
+.note .n-t{display:block;font-size:15px;font-weight:650;line-height:1.4}
+.note .n-q{display:block;font-size:13px;color:var(--copy);margin-top:3px;line-height:1.5}
+.note .chips{margin-top:8px}
+.note:hover .n-t,.note:focus-visible .n-t{color:var(--brand-soft)}
+
+/* 떠 있는 '이어서 읽기': 요약 패널의 단추가 화면에서 사라졌을 때만 보인다 */
+.fab{position:fixed;right:24px;bottom:24px;z-index:40;display:none;align-items:center;gap:10px;height:48px;padding:0 18px 0 12px;border-radius:14px;
+  background:linear-gradient(180deg,#14d468,#03c75a);color:var(--on-brand);font-weight:750;font-size:15px;
+  box-shadow:0 3px 0 var(--lip-green),inset 0 1px 0 rgb(255 255 255/30%),0 14px 30px -10px rgb(0 0 0/80%)}
+.fab.show{display:inline-flex}
+.fab svg{width:26px;height:26px}
+
+/* 변경 기록 */
+.log{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
+.log summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:650;color:var(--copy);min-height:36px}
+.log summary::-webkit-details-marker{display:none}
+.log summary::before{content:"";width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);margin-right:2px;transition:transform .15s}
+.log[open] summary::before{transform:rotate(45deg)}
+.tl{list-style:none;margin:10px 0 0;padding:0}
+.tl li{display:grid;grid-template-columns:96px 20px minmax(0,1fr);column-gap:10px;font-size:14px;color:var(--copy);position:relative;padding-bottom:16px}
+.tl li time{font-weight:650;color:var(--fg)}
+.tl li .dot{position:relative;display:block}
+.tl li .dot::before{content:"";position:absolute;left:6px;top:8px;width:8px;height:8px;border-radius:50%;background:var(--brand-soft)}
+.tl li:not(:last-child) .dot::after{content:"";position:absolute;left:9.5px;top:20px;bottom:-16px;width:1px;background:var(--line-strong)}
+
+.ref{margin-top:40px;padding:18px 20px;border-radius:14px;background:rgb(255 255 255/2%);box-shadow:inset 0 0 0 1px var(--line)}
+.ref h2{margin:0 0 12px;font-size:14px;font-weight:650;color:var(--muted)}
+.artbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 8px;padding:10px 14px;border-radius:10px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.artbar .a-l{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--copy)}
+.artbar .lnk{font-weight:650}
+.ref p{margin:10px 0 0;font-size:13px;color:var(--muted)}
+
+/* ───── 목록 보기(노선표) ───── */
+.route{width:100%;border-collapse:collapse;margin-top:22px;font-size:14px}
+.route th,.route td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.route thead th{font-size:13px;color:var(--muted);font-weight:650;padding-top:6px;padding-bottom:8px}
+.route tbody tr{position:relative}
+.route .rail{position:relative;width:36px;padding:0;border-bottom:0}
+.route .rail::before,.route .rail::after,.rol .rail::before,.rol .rail::after{content:"";position:absolute;left:50%;width:3px;margin-left:-1.5px}
+.route .rail::before,.rol .rail::before{top:0;height:50%}
+.route .rail::after,.rol .rail::after{top:50%;bottom:0}
+.rail.tg::before,.rail.bg::after{background:var(--path-read);width:4px!important;margin-left:-2px!important}
+.rail.ts::before,.rail.bs::after{background:var(--path-todo)}
+.rail.td::before,.rail.bd::after{background:repeating-linear-gradient(to bottom,var(--path-todo) 0 6px,transparent 6px 12px)}
+.rail.tn::before,.rail.bn::after{background:#2c3230;width:5px!important;margin-left:-2.5px!important}
+.sdot{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;z-index:1;display:block}
+.sdot svg{width:14px;height:14px;display:block;overflow:visible}
+.gmark{position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;z-index:1;display:grid;place-items:center;font:700 12px/1 var(--font-d);color:var(--fg)}
+.gmark svg{position:absolute;inset:0;width:24px;height:24px}
+.gmark span{position:relative}
+.route tbody th[scope=rowgroup]{background:color-mix(in srgb,var(--stage) 6%,#161918);font-weight:650;font-size:14px;color:var(--fg)}
+.route tr.grow td{background:color-mix(in srgb,var(--stage) 6%,#161918)}
+.route tbody.pend th[scope=rowgroup],.route tbody.pend tr.grow td{background:#141716}
+.grp-in{display:flex;flex-wrap:wrap;align-items:center;row-gap:4px}
+.grp-in .sep{margin:0 6px;color:var(--muted)}
+.grp-in .chip{margin-left:10px}
+.lico{width:34px;height:24px;margin-right:10px}
+.lico svg{width:100%;height:100%;display:block}
+.grp-sub{display:block;font-weight:500;font-size:13px;color:var(--copy);margin-top:4px;padding-left:44px}
+.route td.no{font:700 13px var(--font-d);color:var(--muted);white-space:nowrap;width:48px}
+.route td .chip{flex:none;min-width:max-content}
+.route .tt a{font-weight:650;font-size:15px}
+.route .tt a::after{content:"";position:absolute;inset:0;z-index:2}
+.route tbody tr:hover .tt a{color:var(--brand-soft)}
+.route .tt .tt-l{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.route .tt .q{display:block;font-size:13px;color:var(--copy);margin-top:2px}
+.route .mn{font-size:13px;color:var(--muted);white-space:nowrap}
+.route tr.oldr td{padding-top:9px;padding-bottom:9px}
+.rol{display:none;list-style:none;margin:22px 0 0;padding:0}
+.rol h3{margin:0;padding:12px 12px 12px 44px;position:relative;font-size:15px;font-weight:700;border-radius:10px;background:color-mix(in srgb,var(--stage) 6%,#161918)}
+.rol li.pend h3{background:#141716}
+.rol .grp-sub{font-size:13px}
+.rol li{position:relative}
+.rol .rrow{position:relative;display:block;padding:12px 4px 12px 44px;border-bottom:1px solid var(--line)}
+.rol .rail{position:absolute;left:0;top:0;bottom:0;width:32px}
+.rol .r-t{display:block;font-size:15px;font-weight:650;line-height:1.4}
+.rol .r-q{display:block;font-size:13px;color:var(--copy);margin-top:2px}
+.rol .chips{margin-top:6px}
+.rol .grp-head{position:relative}
+.rol .grp-head .rail{position:absolute;left:0;top:0;bottom:0;width:32px}
+
+/* ───── 나의 학습 ───── */
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--copy);min-height:44px;margin-top:18px}
+.back:hover{color:var(--fg)}
+h1.mh{margin:2px 0 0;font:800 36px/1.15 var(--font-d);letter-spacing:-.02em}
+.lvcard{position:relative;margin-top:22px;border-radius:16px;border:1px solid var(--line);padding:24px 28px 22px;overflow:hidden;
+  background:radial-gradient(80% 140% at 0% 0%,rgb(3 199 90/7%),transparent 55%),var(--surface);box-shadow:inset 0 1px 0 rgb(255 255 255/6%)}
+.lv-head{display:flex;align-items:center;gap:24px}
+.lv-emb{position:relative;flex:none;width:112px;height:112px;display:block}
+.lv-emb svg{display:block;width:100%;height:100%;overflow:visible;filter:var(--obj-shadow)}
+.lv-top{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+.lv-big{margin:0;font:800 44px/1 var(--font-d);letter-spacing:-.03em;display:inline-flex;align-items:center;gap:10px}
+.lv-sub{font-size:15px;color:var(--copy)}
+.lv-sub b{color:var(--fg);font-weight:700}
+.mile{position:relative;height:96px;margin:18px 6px 0}
+.m-trk{position:absolute;left:0;right:0;top:46px;height:4px}
+.m-trk i{position:absolute;top:0;height:4px;border-radius:2px}
+.m-trk .md{background:var(--path-read)}
+.m-trk .mt{background:var(--path-todo);height:3px;top:.5px}
+.m-trk .mp{height:3px;top:.5px;background:repeating-linear-gradient(to right,var(--path-todo) 0 6px,transparent 6px 12px)}
+.m-flag{position:absolute;top:0;width:0}
+.m-flag svg{position:absolute;left:-1px;top:20px;width:20px;height:28px;overflow:visible}
+.m-flag .ml{position:absolute;top:58px;left:0;transform:translateX(-50%);text-align:center;white-space:nowrap;font-size:13px;font-weight:650;color:var(--copy);line-height:1.3}
+.m-flag .ml small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.m-flag.first .ml{transform:none;text-align:left}
+.m-dot{position:absolute;top:41px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--brand-soft);box-shadow:0 0 0 4px rgb(3 199 90/20%),0 0 14px rgb(47 220 122/45%)}
+.m-bub{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font:750 12px/1 var(--font-d);color:var(--on-brand);background:var(--brand-soft);padding:4px 7px;border-radius:6px;white-space:nowrap}
+.m-bub::after{content:"";position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:var(--brand-soft)}
+.mw{display:flex;align-items:flex-start;gap:18px}
+.mw .mile{flex:1 1 auto;min-width:0}
+.m-after{flex:0 0 220px;margin:52px 0 0;font-size:13px;color:var(--copy);line-height:1.5;text-wrap:balance}
+.lv-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px;padding-top:18px;border-top:1px solid var(--line)}
+.lvn{display:flex;gap:14px;align-items:center;min-width:0;padding:0 20px;border-left:1px solid var(--line)}
+.lvn:first-child{padding-left:0;border-left:0}
+.lvn svg{flex:none;width:40px;height:40px;overflow:visible}
+.lvn .cap{display:block;font-size:13px;color:var(--muted);font-weight:650}
+.lvn b{display:block;font:800 28px/1.15 var(--font-d);letter-spacing:-.02em}
+.lvn b small{font:650 15px var(--font);color:var(--copy);margin-left:3px}
+.lvn .ex{display:block;font-size:13px;color:var(--copy)}
+.rcard{margin-top:22px;padding:16px 18px;border-radius:14px;border:1px solid rgb(3 199 90/22%);background:linear-gradient(90deg,rgb(3 199 90/6%),transparent 60%),var(--surface)}
+h2.sec{margin:44px 0 14px;font-size:20px;font-weight:750;letter-spacing:-.01em;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+h2.sec small{font-size:14px;font-weight:500;color:var(--muted);letter-spacing:0}
+.stations{list-style:none;margin:0;padding:6px 0 0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.stations li{position:relative;text-align:center;padding:0 6px;min-width:0}
+.stations li::before{content:"";position:absolute;top:32px;left:calc(-50% + 40px);right:calc(50% + 40px);height:3px;margin-top:-1.5px;background:var(--path-todo)}
+.stations li.dl::before{background:repeating-linear-gradient(to right,var(--path-todo) 0 6px,transparent 6px 12px)}
+.stations li:first-child::before{display:none}
+.station{position:relative;display:grid;place-items:center;width:64px;height:64px;margin:0 auto;border-radius:50%;font:750 17px/1 var(--font-d);color:var(--fg)}
+.station svg{position:absolute;inset:0;width:64px;height:64px;overflow:visible}
+.station span{position:relative}
+.station.pend{color:var(--muted)}
+a.station:hover{color:var(--brand-soft)}
+.st-ico{display:block;width:36px;height:25px;margin:10px auto 0}
+.st-ico svg{width:100%;height:100%;display:block}
+.st-k{display:block;margin-top:6px;font-size:12px;font-weight:650;color:var(--muted)}
+.stations b{display:block;margin-top:1px;font-size:14px;font-weight:650;line-height:1.4;min-height:calc(2 * 1.4em);text-wrap:balance}
+.stations .st-s{display:block;margin-top:4px;font-size:13px;color:var(--copy)}
+.stations .chip{margin-top:6px}
+.terms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.term{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-width:0}
+.term:hover{border-color:var(--line-strong)}
+.term:hover b{color:var(--brand-soft)}
+.term i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--stage);margin-top:8px}
+.term b{display:block;font-size:15px;font-weight:650}
+.term small{display:block;font-size:13px;color:var(--copy);line-height:1.45;margin-top:2px}
+.terms-c{margin:10px 0 0;font-size:14px;color:var(--copy)}
+.nextb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:8px}
+.nb{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-width:0}
+.nb svg{flex:none;width:56px;height:56px;overflow:visible}
+.nb .c{display:block;margin-top:3px;font-size:12px;color:var(--muted);line-height:1.45}
+.nb b{display:block;font-size:15px;font-weight:650}
+.nb span{display:block;font-size:13px;color:var(--copy)}
+.nb-k{margin:0 0 10px;font-size:14px;color:var(--muted);font-weight:650}
+.fam{margin-top:30px;min-width:0}
+#fam-stage+.ladder{--bw:160px}
+.fam h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:16px;font-weight:700}
+.ladder{--bw:184px;--bsz:76px;display:flex;flex-wrap:wrap;align-items:flex-start;row-gap:22px;list-style:none;margin:0;padding:0}
+.ladder>li{position:relative;width:var(--bw);padding:0 10px;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+/* 사다리를 잇는 작은 길: 메달 가운데 높이에서 메달 가장자리 10px 바깥까지 */
+.ladder>li::before{content:"";position:absolute;top:calc(var(--bsz) / 2 - 1px);height:2px;left:calc(var(--bw) * -0.5 + var(--bsz) / 2 + 10px);right:calc(50% + var(--bsz) / 2 + 10px);background:var(--path-todo)}
+.ladder>li:first-child::before,.ladder.nol>li::before{display:none}
+.ladder>li.cg::before{background:var(--path-read)}
+.ladder>li.cd::before{background:repeating-linear-gradient(to right,var(--path-todo) 0 5px,transparent 5px 10px)}
+.bdg{position:relative;width:var(--bsz);height:var(--bsz);display:block}
+.bdg svg{width:100%;height:100%;display:block;overflow:visible}
+.bdg.got svg{filter:var(--obj-shadow)}
+/* 기준 숫자 리본(메달 오른쪽 아래): 받음은 갈래 에나멜 빛, 아직은 실선 회색 */
+.rib{position:absolute;left:calc(50% + 12px);bottom:-3px;z-index:2;height:18px;padding:0 7px;border-radius:999px;font:750 12px/18px var(--font-d);white-space:nowrap}
+.rib.got{background:color-mix(in srgb,var(--en) 22%,#141716);color:#f5f7f6;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--en) 50%,transparent),0 2px 4px rgb(0 0 0/.4)}
+.rib.yet{background:#141716;color:#b8bfbb;box-shadow:inset 0 0 0 1px #8b928e}
+.b-n{display:block;margin-top:10px;font-size:15px;font-weight:650;line-height:1.35;text-wrap:balance}
+.b-s{margin-top:6px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.b-c{display:block;margin-top:6px;font-size:13px;color:var(--copy);line-height:1.5;text-wrap:balance}
+.toks{display:flex;flex-wrap:wrap;align-items:flex-start;row-gap:10px;margin:16px 0 0;padding-left:10px}
+.toks::before{content:"";flex:none;width:22px;height:2px;margin:15px 4px 0 0;background:repeating-linear-gradient(to right,var(--path-todo) 0 4px,transparent 4px 8px)}
+.tk{position:relative;display:flex;flex-direction:column;align-items:center;width:54px}
+.tk+.tk::before{content:"";position:absolute;top:15px;left:-10px;width:20px;height:2px;background:repeating-linear-gradient(to right,var(--path-todo) 0 4px,transparent 4px 8px)}
+.tk svg{width:32px;height:32px;overflow:visible;display:block}
+.tk small{margin-top:4px;font-size:12px;color:var(--muted);font-weight:650;white-space:nowrap}
+.pline{margin:12px 0 0;font-size:14px;color:var(--copy);display:flex;gap:10px;align-items:flex-start}
+.pline::before{content:"";flex:none;width:16px;height:0;border-top:1.5px dashed var(--muted);margin-top:11px}
+.pline span{text-wrap:pretty}
+@media (min-width:1024px){
+  .fams{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);column-gap:40px;align-items:start}
+  .fams .fam.wide{grid-column:1/-1}
+  .fams .ladder{--bw:150px}
+  .fams #fam-level+.ladder{--bw:170px}
+  .fams #fam-stage+.ladder{--bw:160px}
+  .fams .ladder.nol{--bw:196px}
+}
+
+/* ───── 글 끝 ───── */
+.rbar{position:relative;height:2px;background:#6E716F;margin-top:20px}
+.rbar i{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--brand-soft)}
+.crumb{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:22px;font-size:14px;color:var(--copy)}
+.crumb a{display:inline-flex;align-items:center;min-height:24px}
+.crumb a:hover{color:var(--fg)}
+.crumb .sep{color:var(--muted)}
+.a-no{display:inline-block;margin-top:16px;font:700 13px var(--font-d);color:var(--muted)}
+h1.at{margin:4px 0 0;font:800 32px/1.25 var(--font-d);letter-spacing:-.02em}
+.a-meta{margin-top:8px;font-size:14px;color:var(--muted)}
+.body{position:relative;margin-top:26px}
+.omit{display:flex;align-items:center;gap:10px;margin:0 0 22px;font-size:13px;color:var(--muted)}
+.omit::before,.omit::after{content:"";flex:1;height:0;border-top:1px solid var(--line)}
+.body h2{margin:0 0 10px;font-size:20px;font-weight:750;letter-spacing:-.01em}
+.body p{margin:0 0 18px;font-size:17px;line-height:1.75;color:var(--copy)}
+.endmark{display:flex;align-items:center;gap:12px;margin:30px 0 32px;color:var(--muted);font-size:13px;font-weight:650}
+.endmark::before,.endmark::after{content:"";flex:1;height:1px;background:var(--line-strong)}
+.endmark svg{flex:none}
+.done-card{position:relative;isolation:isolate;border-radius:16px;border:1px solid rgb(3 199 90/35%);background:var(--surface);overflow:hidden;
+  box-shadow:0 0 0 6px rgb(3 199 90/6%),0 30px 60px -36px rgb(0 0 0/90%)}
+.done-card::before{content:"";position:absolute;right:-120px;top:-140px;width:420px;height:360px;z-index:-1;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--s1) 10%,transparent),transparent)}
+.dc-sec{padding:22px 28px;border-top:1px solid var(--line)}
+.dc-sec:first-child{border-top:0}
+/* 완료 카드 머리: 보이는 순서 = 읽는 순서(제목인 완료 날짜 → 1단계 미니 길 → 1단계 4/4) */
+.dc-head{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.dc-left{display:flex;align-items:center;gap:8px;min-width:0}
+.dc-path{width:266px;height:86px;flex:none}
+.dc-path>svg{width:100%;height:100%;overflow:visible;display:block}
+.dc-prog{font:800 28px/1 var(--font-d);letter-spacing:-.02em;color:var(--fg);white-space:nowrap}
+.dc-date{margin:0;font-size:14px;font-weight:650;color:var(--copy);white-space:nowrap;letter-spacing:0}
+/* 성취 줄: 1열 새 배지(두 줄 높이), 2열 레벨(위)·이정표와 경험치(아래), 3열 이번에 받은 경험치. DOM 순서도 같다 */
+.dc-ach{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 220px;grid-template-rows:auto auto;gap:0}
+.ach{min-width:0;padding:0 20px;border-left:1px solid var(--line)}
+.ach.a-arch{grid-column:1;grid-row:1/span 2;padding-left:0;border-left:0}
+.ach.a-lv{grid-column:2;grid-row:1}
+.ach.a-lvx{grid-column:2;grid-row:2;display:flex;flex-direction:column;align-items:center;text-align:center}
+.ach.a-xp{grid-column:3;grid-row:1/span 2;padding-right:0}
+.ach .k{display:block;font-size:13px;color:var(--muted);font-weight:650;margin-bottom:10px}
+.ach.hero{display:flex;flex-direction:column;align-items:center;text-align:center}
+.ach.hero .k{align-self:stretch}
+/* 새 배지 칸 아래: 다음 배지 한 줄(상태 알림 문장의 '다음 배지'와 같은 것) */
+.ach .nxt{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:16px;font-size:13px;font-weight:600;color:var(--copy);text-align:left;line-height:1.45}
+.ach .nxt svg{flex:none}
+.ach .nxt b{display:block;color:var(--fg);font-weight:650}
+.hero-art{position:relative;display:block;width:96px;height:96px}
+/* 방금 얻은 두 물건 뒤의 빛 한 겹(이 화면의 빛나는 곳 두 곳) */
+.hero-art::before{content:"";position:absolute;left:50%;top:46%;width:210px;height:170px;transform:translate(-50%,-50%);z-index:0;pointer-events:none;
+  background:radial-gradient(closest-side,rgb(47 220 122/.2),transparent)}
+.hero-art svg{position:relative;z-index:1;width:100%;height:100%;display:block;overflow:visible}
+.flip{position:relative;display:block;width:96px;height:96px;perspective:620px}
+.flip>svg{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.flip .fb{filter:var(--obj-shadow)}
+.flip .fa{opacity:0}
+.emb-roll{position:relative;display:block;width:96px;height:96px}
+.emb-roll>svg{position:absolute;inset:0;filter:var(--obj-shadow)}
+.roll-win{position:absolute;left:0;right:0;top:51%;z-index:2;height:48px;margin-top:-24px;overflow:hidden;font:800 48px/1 var(--font-d);text-align:center}
+.roll{display:flex;flex-direction:column;transform:translateY(-50%)}
+.roll i{display:block;height:1em;font-style:normal;background:linear-gradient(180deg,#EFFFF5 0%,#9DF5C2 38%,#2FDC7A 70%,#0B8F45 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ach b.big{display:block;margin-top:10px;font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.ach .row{display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;gap:6px;margin-top:8px}
+.xpnow{font-size:14px;color:var(--copy);margin-top:4px}
+.xpnow .xpn{font-weight:750;color:var(--fg)}
+.mm2{display:block;width:100%;max-width:260px;height:auto;margin-top:14px;overflow:visible}
+.xp{list-style:none;margin:0;padding:0}
+.xp li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--copy);padding:3px 0}
+.xp li span:last-child{font-weight:700;color:var(--fg);font-family:var(--font-d)}
+.xp li.sum{border-top:1px solid var(--line-strong);margin-top:6px;padding-top:8px;color:var(--fg);font-weight:700}
+.xp li.sum span:last-child{font-size:18px;color:var(--fg)}
+.status{display:flex;gap:10px;align-items:flex-start;margin:20px 0 0;padding:12px 14px;border-radius:10px;background:rgb(255 255 255/2.5%);font-size:15px;color:var(--copy);line-height:1.6}
+.status>span{text-wrap:pretty}
+.status svg{flex:none;margin-top:4px}
+.termrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:14px;color:var(--copy)}
+.tpill{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--brand-soft);color:var(--fg);font-weight:650;font-size:14px;white-space:nowrap}
+.tpill em{font-style:normal;color:var(--brand-soft)}
+.qhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:22px 0 4px}
+.qhead h3{margin:0;font-size:17px;font-weight:750}
+.vtag{font-size:13px;color:var(--copy);box-shadow:inset 0 0 0 1px var(--line-strong);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.q{margin-top:16px}
+.q .qt{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;font-size:16px;font-weight:650;line-height:1.5;margin:0}
+.q .qt .qn{color:var(--muted);font:700 13px/1.9 var(--font-d);white-space:nowrap}
+.q .qt .fa{font-size:12px;font-weight:700;color:var(--copy);box-shadow:inset 0 0 0 1px var(--line-strong);border-radius:999px;padding:0 8px;line-height:22px;white-space:nowrap}
+.opts{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.opt{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;width:100%;min-height:48px;padding:10px 14px;border-radius:10px;border:0;background:transparent;text-align:left;font-size:15px;color:var(--copy);
+  box-shadow:inset 0 0 0 1px var(--line-strong)}
+.opt .ot{flex:1 1 200px;min-width:0}
+.opt .tags{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.opt .on{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font:700 13px/1 var(--font-d);color:var(--copy);box-shadow:inset 0 0 0 1px var(--line-control)}
+.opt.right .on{color:var(--on-brand);background:var(--brand-soft);box-shadow:none}
+.opt.right{box-shadow:inset 0 0 0 1.5px var(--brand-soft);background:rgb(3 199 90/8%);color:var(--fg)}
+.opt.picked{box-shadow:inset 0 0 0 1.5px var(--copy);color:var(--fg)}
+.ox{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 0}
+.opt.free{box-shadow:inset 0 0 0 1.5px var(--muted);color:var(--fg);cursor:pointer;justify-content:center;flex-direction:column;gap:0;min-height:56px}
+.opt.free b{font:800 20px/1.1 var(--font-d)}
+.opt.free small{font-size:13px;font-weight:600;color:var(--copy)}
+.opt.free:hover{box-shadow:inset 0 0 0 1.5px var(--fg)}
+.qhint{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.qsum{margin:12px 0 0;font-size:14px;font-weight:650;color:var(--fg)}
+.expl{margin:10px 0 0;padding:12px 14px;border-radius:10px;background:var(--raised);font-size:15px;color:var(--copy);line-height:1.65}
+.expl b{color:var(--fg);margin-right:6px}
+.nextc{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr) 24px;gap:16px;align-items:center;padding:16px 18px 16px 20px;border-radius:12px;
+  background:var(--raised);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.nextc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--s2)}
+.nextc .na svg{width:64px;height:46px;display:block}
+.nextc .nk{display:block;font-size:13px;color:var(--copy);font-weight:650}
+.nextc .nt{display:block;font-size:20px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
+.nextc .nt span{font:700 14px var(--font-d);color:var(--muted);margin-right:8px}
+.nextc .nq{display:block;font-size:14px;color:var(--copy);margin-top:2px}
+.nextc .nm{display:block;font-size:13px;color:var(--muted);margin-top:4px}
+.nextc:hover .nt{color:var(--brand-soft)}
+.nextc .arr{color:var(--copy)}
+.qcard{border-radius:16px;border:1px solid var(--line);background:var(--surface);padding:22px 28px}
+.qcard .qhead{margin-top:0}
+.guestend{margin-top:16px}
+
+/* ───── 움직임: 기본은 최종 상태, 움직임은 no-preference에서만 ───── */
+@media (prefers-reduced-motion:no-preference){
+  .road .draw{stroke-dasharray:1 1;animation:drawpath .7s var(--ease-enter) both}
+  .road .bed,.road .end{animation:fadein .5s var(--ease-enter) both}
+  @keyframes drawpath{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  /* 완료 도장이 한 칸씩 찍힌다(60ms 간격, 600ms 안에 끝) */
+  .snode.press svg{animation:press .24s var(--ease-pop) both;animation-delay:calc(var(--d,0) * 60ms)}
+  @keyframes press{from{transform:scale(1.12);opacity:0}to{transform:none;opacity:1}}
+  .snode .arcp{animation:arcFill .6s .2s var(--ease-enter) both}
+  .arc-anim{animation:arcFill .7s var(--ease-enter) both}
+  @keyframes arcFill{from{stroke-dasharray:0 100}}
+  .snode .tip{animation:fadein .2s .75s both}
+  .fab.show{animation:fabin .3s var(--ease-enter) both}
+  @keyframes fabin{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+  /* '새' 메달·방금 얻은 메달 위로 흰 띠가 한 번 지나간다 */
+  .sweep{animation:sweep .5s ease-in-out .45s both}
+  .my .sweep{animation-duration:.7s;animation-delay:.2s}
+  @keyframes sweep{from{transform:translateX(0)}to{transform:translateX(210px)}}
+  /* 완료 카드: 1-4 칸의 호가 차고(300ms) 도장이 찍힌다(240ms) */
+  .dc4 .d4a{animation:d4out .3s linear both}
+  @keyframes d4out{0%,99%{opacity:1}100%{opacity:0}}
+  .dc4 .d4a .arcp{animation:arcEnd .3s var(--ease-enter) both}
+  @keyframes arcEnd{from{stroke-dasharray:62 100}to{stroke-dasharray:100 100}}
+  .dc4 .d4b{animation:press .24s .3s var(--ease-pop) both;transform-box:fill-box;transform-origin:center}
+  .plant .cloth{animation:cloth .25s .45s var(--ease-enter) both}
+  @keyframes cloth{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+  /* 단계 완주 메달: 실선 회색 윤곽이 접히고 스테인드글라스 면이 펼쳐진다 */
+  .flip .fa{animation:flipOut .2s cubic-bezier(.4,0,1,1) .25s both}
+  .flip .fb{animation:flipIn .2s var(--ease-enter) .45s both}
+  @keyframes flipOut{0%{transform:rotateY(0);opacity:1}99%{transform:rotateY(90deg);opacity:1}100%{transform:rotateY(90deg);opacity:0}}
+  @keyframes flipIn{from{transform:rotateY(-90deg)}to{transform:rotateY(0)}}
+  /* 레벨 표장: 숫자가 2에서 3으로 넘어가고 눈금 12개가 나타난다 */
+  .roll{animation:roll .4s var(--ease-state) .3s both}
+  @keyframes roll{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+  .ticks-in{animation:fadein .4s ease .3s both}
+  .hero-art::before{animation:fadein .4s ease .3s both}
+  .mv{animation:mv .4s .3s var(--ease-enter) both}
+  @keyframes mv{from{transform:translateX(var(--from))}to{transform:translateX(0)}}
+  .mvbar{animation:mvbar .4s .3s var(--ease-enter) both}
+  @keyframes mvbar{from{transform:scaleX(var(--sx))}to{transform:scaleX(1)}}
+  .f3 .fl{animation:f3 .25s .65s var(--ease-state) both}
+  @keyframes f3{from{fill:#161918;stroke:#8b928e}to{fill:url(#b-gmetal);stroke:#2FDC7A}}
+  .xpn{animation:count .6s .3s var(--ease-enter) both}
+  @keyframes count{from{--xp:260}to{--xp:360}}
+  .rise{animation:rise .35s var(--ease-enter) both;animation-delay:calc(var(--d,0) * 80ms + 200ms)}
+  @keyframes rise{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+}
+@property --xp{syntax:'<integer>';inherits:false;initial-value:360}
+.xpn{counter-reset:xp var(--xp)}
+.xpn::after{content:counter(xp)}
+.dc4 .d4a{opacity:0}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .stop:hover .snode,.stop:focus-visible .snode{transform:none}
+  .btn-go:active{transform:none}
+}
+@media (forced-colors:active){
+  .band.pend,.chip.pend{border-color:CanvasText}
+  .well,.rib{border:1px solid CanvasText}
+}
+
+/* ───── 720px 미만 ───── */
+@media (max-width:719px){
+  :root{--colx:22px}
+  .demo{position:static}
+  .hdr{padding:0 16px;gap:8px}
+  .logo{padding:0 2px}
+  .navw{margin-left:auto}
+  .nav{display:none}
+  .menu-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:var(--copy);font:650 14px var(--font);cursor:pointer}
+  .menu-btn:hover{color:var(--fg);background:var(--raised)}
+  .hdr.open .nav{display:flex;position:absolute;top:64px;left:0;right:0;z-index:55;flex-direction:column;gap:0;padding:6px 16px 10px;
+    background:#121514;border-bottom:1px solid var(--line);box-shadow:0 24px 40px -24px rgb(0 0 0/90%)}
+  .hdr.open .nav a{min-height:48px;border-bottom:1px solid var(--line);font-size:15px}
+  .hdr.open .nav a:last-child{border-bottom:0}
+  .head{flex-direction:column;align-items:flex-start;gap:12px;padding:24px 0 18px}
+  h1.big{font-size:32px}
+  .lede{max-width:none;border-left:0;padding-left:0;font-size:15px}
+  .journal{padding:12px 16px 16px}
+  .j-grid{grid-template-columns:1fr 1fr;row-gap:14px}
+  .j-cell{padding:0 0 0 14px}
+  .j-cell.c1{grid-column:1/-1;padding-left:0;border-left:0;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .j-cell.c2{padding-left:0;border-left:0}
+  .j-cell.c4{grid-column:1/-1;padding:12px 0 0;border-left:0;border-top:1px solid var(--line)}
+  .resume{grid-template-columns:44px minmax(0,1fr)}
+  .resume .btn-go{grid-column:1/-1;width:100%;height:48px}
+  .sample,.sample.tall{grid-template-columns:1fr;padding:18px 16px;gap:14px;min-height:0}
+  .sample.tall .s-t{font-size:17px}
+  .gain{margin-top:24px}
+  .gain ul{grid-template-columns:1fr;gap:10px}
+  .gain li{flex-direction:row;align-items:center;gap:16px;padding:14px 16px}
+  .gain .g-art{flex:none;width:104px;height:auto;margin:0}
+  .gain .g-art svg{width:100%;height:60px}
+  .notice{align-items:flex-start;flex-wrap:wrap;padding-left:12px;gap:10px}
+  .notice .n-body{flex-basis:calc(100% - 92px)}
+  .notice .links{display:flex;margin:4px 0 0;gap:0 18px}
+  .notice .links a{min-height:44px;display:inline-flex;align-items:center}
+  .vrow{flex-direction:column;align-items:flex-start;gap:12px}
+  .stops{padding:20px 0 4px 0}
+  .stop-li{padding-left:0;margin-bottom:16px}
+  svg.v-lg{display:none!important}
+  svg.v-sm{display:block!important}
+  .stop{grid-template-columns:40px minmax(0,1fr);column-gap:12px}
+  .snode{width:40px;height:40px}
+  .card{padding:10px 12px}
+  /* 도장 줄: 칸 40px. 완료 칸도 1280px처럼 번호(위)와 작은 체크(아래)를 둔다(글마다 찍는 도장으로 읽히게). 설명은 판 아래 한 줄 */
+  .b-well{clear:both}
+  .well{gap:9px;padding:7px 9px}
+  .cells{gap:6px}
+  .cell{width:40px;height:40px}
+  .w-dest{padding-left:9px}
+  .w-cap{gap:0 6px;font-size:13px}
+  .band{display:block;padding:16px;min-height:0}
+  .band .marker{float:left;margin:0 12px 6px 0;width:36px;height:36px;font-size:14px}
+  .band .marker svg{width:36px;height:36px}
+  .b-art{float:right;width:72px;height:50px;margin:0 0 6px 10px}
+  .b-art .land{--lw:1.4px}
+  .b-name{font-size:20px}
+  .b-desc{clear:left;font-size:14px;text-wrap:pretty}
+  .b-prog{flex-wrap:wrap}
+  .band.pend{padding-left:16px}
+  .pending{padding-left:calc(var(--colx) + 26px)}
+  .pmark{left:calc(var(--colx) - 18px);top:16px}
+  .pmark .marker{width:36px;height:36px;font-size:14px}
+  .pmark .marker svg{width:36px;height:36px}
+  .notes{grid-template-columns:1fr}
+  .boundary{padding-left:calc(var(--colx) + 26px)}
+  .boundary::before{left:calc(var(--colx) - 10px);width:28px}
+  .fab{left:16px;right:16px;bottom:12px;justify-content:center}
+  .route{display:none}
+  .rol{display:block}
+  .rol .grp-in{column-gap:0}
+  .rol .grp-p{flex-basis:100%;padding-left:44px}
+  .rol .g-name{flex-basis:calc(100% - 44px)}
+  .rol .grp-in .chip{margin:2px 0 0 44px}
+  .rol .grp-p .sep{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .lvcard{padding:18px 16px}
+  .lv-big{font-size:36px}
+  .mile{margin:14px 2px 0;height:92px}
+  /* 좁은 화면: 출발점(레벨 1 · 0)의 글자는 화면낭독기에만 남기고, 레벨 2 글자가 겹치지 않게 가운데로 */
+  .m-flag.f1 .ml{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .m-bub{left:auto;right:3px;transform:none}
+  .m-bub::after{left:auto;right:4px;margin-left:0}
+  .m-flag .ml{font-size:12px}
+  .m-flag .ml small{font-size:12px}
+  .mw{display:block}
+  .m-after{margin:4px 0 0;font-size:13px}
+  .lv-nums{grid-template-columns:1fr 1fr;row-gap:14px}
+  .lvn{padding:0 0 0 14px;gap:10px}
+  .lvn:nth-child(3){grid-column:1/-1;padding:14px 0 0;border-left:0;border-top:1px solid var(--line)}
+  .lvn svg{width:34px;height:34px}
+  .stations{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:24px}
+  .stations li:nth-child(3n+1)::before{display:none}
+  .terms{grid-template-columns:1fr 1fr}
+  .nextb{grid-template-columns:1fr}
+  /* 좁은 화면의 사다리: 줄바꿈해 끊기지 않게 세로 길로 세운다(커리큘럼 375px의 세로 길과 같은 문법). 메달 52px, 글은 오른쪽 */
+  .ladder{--bsz:52px;flex-direction:column;flex-wrap:nowrap;row-gap:20px}
+  .ladder>li{width:auto;padding:0;display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:14px;align-items:start;text-align:left}
+  .ladder>li>.bdg{grid-column:1;grid-row:1/span 4;justify-self:center}
+  .ladder>li>.b-n,.ladder>li>.b-s,.ladder>li>.b-c{grid-column:2}
+  .ladder>li>.b-n{margin-top:4px}
+  .ladder>li>.b-s{justify-content:flex-start}
+  .ladder>li::before{display:none}
+  .ladder>li[class*="nx-"]::after{content:"";position:absolute;left:27px;width:2px;top:calc(var(--bsz) + 6px);bottom:-14px;background:var(--path-todo)}
+  .ladder>li.nx-g::after{background:var(--path-read)}
+  .ladder>li.nx-d::after{background:repeating-linear-gradient(to bottom,var(--path-todo) 0 5px,transparent 5px 10px)}
+  .rib{left:auto;right:-8px}
+  .lv-head{gap:16px}
+  .lv-emb{width:80px;height:80px}
+  .j-emb{width:56px;height:56px}
+  .tl li{grid-template-columns:86px 20px minmax(0,1fr)}
+  .crumb{margin-top:10px}
+  .crumb a{display:inline-flex;align-items:center;min-height:44px}
+  h1.at{font-size:26px}
+  .body p{font-size:16px}
+  .dc-sec{padding:18px 16px}
+  .dc-left{flex-direction:column;align-items:flex-start;gap:4px}
+  .dc-path{width:266px;max-width:100%;height:auto;aspect-ratio:266/86}
+  /* 좁은 화면: 방금 얻은 두 물건(72px)을 한 줄에 나란히. 이정표·경험치 표는 그 아래 전체 폭 */
+  .dc-ach{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;row-gap:0}
+  .ach{padding:0;border-left:0}
+  .ach.a-arch{grid-column:1;grid-row:1;padding-right:8px}
+  .ach.a-lv{grid-column:2;grid-row:1;padding-left:8px;border-left:1px solid var(--line)}
+  .ach.a-lvx{grid-column:1/-1;grid-row:2;padding:14px 0 0;border-left:0;align-items:center}
+  .ach.a-xp{grid-column:1/-1;grid-row:3;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+  .hero-art,.flip,.emb-roll{width:72px;height:72px}
+  .roll-win{height:36px;margin-top:-18px;font-size:36px}
+  .hero-art::before{width:150px;height:120px}
+  .ach b.big{font-size:18px;margin-top:8px}
+  .ach .row{flex-wrap:wrap;row-gap:6px}
+  .ach .nxt{margin-top:0;padding-top:12px}
+  .nextc{grid-template-columns:48px minmax(0,1fr) 20px;gap:12px;padding:14px 14px 14px 16px}
+  .nextc .na svg{width:48px;height:36px}
+  .nextc .nt{font-size:17px}
+  .qcard{padding:18px 16px}
+}
+</style>
+</head>
+<body data-auth="in" data-screen="curriculum">
+
+<svg class="defs" aria-hidden="true" focusable="false">
+  <defs id="defs">
+    <linearGradient id="gEarn" x1=".15" y1="0" x2=".85" y2="1"><stop offset="0" stop-color="#2FDC7A"/><stop offset="1" stop-color="#03C75A"/></linearGradient>
+    <radialGradient id="gNode" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#7EF0B0"/><stop offset=".45" stop-color="#2FDC7A"/><stop offset="1" stop-color="#03C75A"/></radialGradient>
+    <linearGradient id="gHi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".30"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gShine" x1="0" y1="0" x2="1" y2=".35"><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".38"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gSample" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#03C75A" stop-opacity=".05"/><stop offset=".3" stop-color="#03C75A" stop-opacity=".18"/><stop offset="1" stop-color="#2FDC7A" stop-opacity=".18"/></linearGradient>
+    <radialGradient id="gGlowDot"><stop offset="0" stop-color="#2FDC7A" stop-opacity=".9"/><stop offset=".35" stop-color="#2FDC7A" stop-opacity=".35"/><stop offset="1" stop-color="#2FDC7A" stop-opacity="0"/></radialGradient>
+    <filter id="soft" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="2.4"/></filter>
+    <filter id="glowTip" x="-4" y="-4" width="9" height="9"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2fdc7a" flood-opacity=".8"/></filter>
+    <!-- 손에 쥐는 물건(도장·메달·표장)의 재질. 진열장 목업에서 가져와 b- 접두어를 붙였다 -->
+    <linearGradient id="b-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F3E7C0"/><stop offset=".04" stop-color="#EEF4F0"/><stop offset=".3" stop-color="#B4C2BA"/><stop offset=".55" stop-color="#7C8A83"/><stop offset=".75" stop-color="#DDE6E1"/><stop offset="1" stop-color="#5F6C66"/>
+    </linearGradient>
+    <linearGradient id="b-metal2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EEF4F0"/><stop offset=".3" stop-color="#B4C2BA"/><stop offset=".55" stop-color="#7C8A83"/><stop offset=".75" stop-color="#DDE6E1"/><stop offset="1" stop-color="#5F6C66"/>
+    </linearGradient>
+    <linearGradient id="b-gmetal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C8FFE0"/><stop offset=".18" stop-color="#7EF0B0"/><stop offset=".4" stop-color="#2FDC7A"/><stop offset=".62" stop-color="#03C75A"/><stop offset=".82" stop-color="#0B5E33"/><stop offset="1" stop-color="#7EF0B0"/>
+    </linearGradient>
+    <linearGradient id="b-gtext" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EFFFF5"/><stop offset=".38" stop-color="#9DF5C2"/><stop offset=".7" stop-color="#2FDC7A"/><stop offset="1" stop-color="#0B8F45"/>
+    </linearGradient>
+    <radialGradient id="b-face" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#173826"/><stop offset=".65" stop-color="#0F1A14"/><stop offset="1" stop-color="#0B140F"/></radialGradient>
+    <!-- 읽은 글 에나멜: 노란 기운을 빼고 초록 쪽 세이지로(금·황동 메달로 읽히지 않게) -->
+    <radialGradient id="b-en-read" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#D6EDD5"/><stop offset=".45" stop-color="#9BCFA0"/><stop offset="1" stop-color="#5D9468"/></radialGradient>
+    <!-- 비로그인 견본의 실루엣 채움: 왼쪽 위에서 빛이 온다 -->
+    <linearGradient id="gSampleObj" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(126 240 176)" stop-opacity=".36"/><stop offset="1" stop-color="rgb(3 199 90)" stop-opacity=".10"/></linearGradient>
+    <radialGradient id="b-en-first" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#D2EEAE"/><stop offset=".45" stop-color="#A6D86B"/><stop offset="1" stop-color="#6E9A3F"/></radialGradient>
+    <radialGradient id="b-en-all" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#A9E6E8"/><stop offset=".45" stop-color="#5CC6CC"/><stop offset="1" stop-color="#358A8F"/></radialGradient>
+    <radialGradient id="b-en-terms" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#EBD6F8"/><stop offset=".45" stop-color="#D2A6F0"/><stop offset="1" stop-color="#9469B3"/></radialGradient>
+    <linearGradient id="b-en-special" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2FDC7A"/><stop offset=".35" stop-color="#7FE0C4"/><stop offset=".6" stop-color="#E9E3B4"/><stop offset=".8" stop-color="#C7F0D8"/><stop offset="1" stop-color="#2FDC7A"/></linearGradient>
+    <radialGradient id="b-glass" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".55" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></radialGradient>
+    <linearGradient id="b-pin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="b-hl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".26"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>
+    <linearGradient id="b-sweepg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <radialGradient id="b-shadow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <filter id="b-ink" x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale=".9" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1.3 1.62" result="m"/>
+      <feComposite in="d" in2="m" operator="in"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="demo" role="region" aria-label="목업 조작">
+  <span class="lbl">목업 조작</span>
+  <div class="grp" role="group" aria-label="화면">
+    <button type="button" data-screen="curriculum">① 커리큘럼 보기</button>
+    <button type="button" data-screen="list">② 목록 보기</button>
+    <button type="button" data-screen="my">③ 나의 학습</button>
+    <button type="button" data-screen="end">④ 글 끝(완료 카드)</button>
+  </div>
+  <div class="grp" role="group" aria-label="사용자">
+    <button type="button" data-auth="in">로그인</button>
+    <button type="button" data-auth="out">비로그인</button>
+  </div>
+  <span class="note">예시 상황: 2026-11-20, 1·2단계 공개, 3~6단계 준비 중</span>
+</div>
+
+<header class="hdr" id="hdr"></header>
+<main id="app"></main>
+<!-- 구현 메모: 새 배지·레벨 알림은 처음부터 비어 있는 role="status" 그릇에, 완료가 기록된 뒤 글자만 넣는다.
+     라이브 영역을 글자와 함께 한꺼번에 만들면 화면낭독기가 읽지 않는 경우가 많다. 초점은 옮기지 않는다. -->
+<div id="live" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+/* ───────── 예시 상황 데이터(constraints.md 4절) ───────── */
+const STC={1:'#5FD3A6',2:'#B7DD6E',3:'#D4A2EA',4:'#5CC6CC',5:'#C9C67C',6:'#DDA3DA'};
+const ST=[
+ {n:1,name:'ETF와 국내 시장 기초',lv:'입문',desc:'ETF가 무엇을 담고 있고 가격과 비용이 어떻게 정해지는지 봅니다.',pub:true,mins:20,arts:[
+  {id:'1-1',t:'섹터와 ETF',q:'반도체에 나눈다는 것은 무엇을 산다는 뜻일까요?',m:5,tm:2,st:'done',lt:2},
+  {id:'1-2',t:'ETF 가격은 왜 지수와 똑같이 움직이지 않을까?',q:'괴리율과 추적오차는 무엇이 다를까요?',m:6,tm:1,st:'done',lt:1},
+  {id:'1-3',t:'분배금을 받으면 돈이 늘어난 걸까?',q:'분배락 날 가격은 왜 내려갈까요?',m:5,tm:1,st:'done',lt:1},
+  {id:'1-4',t:'ETF 보수는 어디로 빠져나갈까?',q:'총보수와 거래비용은 어떻게 다를까요?',m:4,tm:1,st:'reading',lt:0,pct:62}]},
+ {n:2,name:'수익과 위험 읽기',lv:'입문',desc:'수익률, 하락 폭, 회복 기간, 변동성을 읽는 법을 익힙니다.',pub:true,mins:22,arts:[
+  {id:'2-1',t:'수익과 손실',q:'마지막 수익과 중간의 하락은 왜 함께 봐야 할까요?',m:6,tm:1,st:'unread',lt:0},
+  {id:'2-2',t:'같은 수익률인데 왜 느낌이 다를까?',q:'누적 수익률과 연 수익률은 무엇이 다를까요?',m:5,tm:0,st:'unread',lt:0},
+  {id:'2-3',t:'떨어진 뒤 얼마나 걸려 돌아왔을까?',q:'회복 기간은 하락 폭과 어떻게 다를까요?',m:5,tm:1,st:'unread',lt:0},
+  {id:'2-4',t:'변동성은 손실일까?',q:'매일 오르내리면 원금은 어떻게 될까요?',m:6,tm:1,st:'unread',lt:0}]},
+ {n:3,name:'배분 규칙과 설정',lv:'입문~초급',desc:'다섯 가지 배분 규칙과 설정 항목이 결과를 어떻게 바꾸는지 봅니다.',pub:false,old:[
+  {t:'비중과 리밸런싱',q:'처음에 절반씩 나누었는데 왜 다시 비중을 맞추나요?'},
+  {t:'변동성에 따라 나누기',q:'덜 출렁였던 섹터에 더 나누면 무엇이 달라지나요?'},
+  {t:'섹터 모멘텀',q:'과거에 더 올랐던 섹터를 고르는 규칙은 어떻게 동작하나요?'},
+  {t:'최소분산',q:'함께 담았을 때 덜 출렁이는 것은 어떻게 다를까요?'}]},
+ {n:4,name:'백테스트와 비용',lv:'초급',desc:'같은 조건에서 비교하는 법과 거래비용, 회전율의 영향을 봅니다.',pub:false,old:[
+  {t:'백테스트',q:'실제로 투자하지 않고 배분 규칙을 어떻게 비교하나요?'},
+  {t:'거래비용',q:'거래 전 성과가 같아도 남는 금액은 왜 다를까요?'}]},
+ {n:5,name:'함정과 검증',lv:'초급',desc:'좋아 보이는 과거 결과를 믿기 전에 확인할 점을 봅니다.',pub:false,old:[
+  {t:'과거가 미래를 보장하지 않는 이유',q:'과거에 잘 나온 설정을 그대로 쓰면 되는 것 아닌가요?'}]},
+ {n:6,name:'경제환경과 국면',lv:'초급',desc:'시장 흐름의 분야와 비슷했던 때를 찾는 방법을 봅니다.',pub:false,old:[]}
+];
+const TERMS=[
+ {t:'섹터',src:'1-1 섹터와 ETF',s:1},
+ {t:'대표 ETF',src:'1-1 섹터와 ETF',s:1},
+ {t:'괴리율',src:'1-2 ETF 가격은 왜 지수와 똑같이 움직이지 않을까?',s:1},
+ {t:'분배락',src:'1-3 분배금을 받으면 돈이 늘어난 걸까?',s:1}
+];
+const CANBE='받을&nbsp;수&nbsp;있습니다.';
+/* 7일 동안 붙는 '새' 표시: 화면낭독기에는 '새로 받음'으로 읽힌다 */
+const NEWP='<span class="pill-new"><span aria-hidden="true">새</span><span class="sr">새로 받음</span></span>';
+const FAMS=[
+ {k:'level',name:'레벨',items:[
+   {t:'레벨 2',st:'got',date:'2026-11-17',isNew:true,g:'2'},
+   {t:'레벨 3',st:'yet',x:260,y:300,u:'xp',g:'3',crit:'경험치 300에 닿습니다.'},
+   {t:'레벨 4',st:'yet',x:260,y:600,u:'xp',g:'4',crit:'경험치 600에 닿습니다.'}],
+  toks:['레벨 5','레벨 6','레벨 7','레벨 8'],line:`준비 중인 기준: 레벨 5~8. 단계가 더 공개된 뒤 ${CANBE}`},
+ {k:'read',name:'읽은 글',items:[
+   {t:'읽은 글 1편',st:'got',date:'2026-11-06',tier:1,rib:'1편'},
+   {t:'읽은 글 5편',st:'yet',x:3,y:5,u:'편',tier:2,rib:'5편',crit:'글 5편을 완료합니다.'}],
+  toks:['10편','20편','27편'],line:[`준비 중인 기준: 읽은 글 10편, 20편. 단계가 더 공개된 뒤 ${CANBE}`,`읽은 글 27편 · 여섯 단계가 모두 공개된 뒤 ${CANBE}`]},
+ {k:'fa',name:'첫 답 정답',items:[
+   {t:'첫 답 정답 1개',st:'got',date:'2026-11-06',tier:1,rib:'1개'},
+   {t:'첫 답 정답 10개',st:'yet',x:6,y:10,u:'개',tier:2,rib:'10개',crit:'확인 문제를 첫 답에서 10개 맞힙니다.'}],
+  toks:['25개','50개'],line:`준비 중인 기준: 25개, 50개. 단계가 더 공개된 뒤 ${CANBE}`},
+ {k:'ac',name:'모두 맞힘',items:[
+   {t:'모두 맞힘 1편',st:'got',date:'2026-11-09',tier:1,rib:'1편'},
+   {t:'모두 맞힘 5편',st:'yet',x:2,y:5,u:'편',tier:2,rib:'5편',crit:'한 글의 확인 문제를 첫 답에서 모두 맞힌 글이 5편이 됩니다.'}],
+  toks:['15편'],line:`준비 중인 기준: 15편. 단계가 더 공개된 뒤 ${CANBE}`},
+ {k:'stage',name:'단계 완주',noLadder:true,items:[ // 단계 완주는 순서와 상관없이 따로 받으므로 사다리 선을 잇지 않는다
+   {t:'1단계 완주',st:'yet',x:3,y:4,u:'편',stage:1,crit:'1단계의 글 4편을 모두 읽습니다.'},
+   {t:'2단계 완주',st:'yet',x:0,y:4,u:'편',stage:2,crit:'2단계의 글 4편을 모두 읽습니다.'},
+   {t:'3단계 완주',st:'pend',stage:3,crit:'3단계의 글을 모두 읽습니다.',why:`3단계가 공개된 뒤 ${CANBE}`},
+   {t:'4단계 완주',st:'pend',stage:4,crit:'4단계의 글을 모두 읽습니다.',why:`4단계가 공개된 뒤 ${CANBE}`},
+   {t:'5단계 완주',st:'pend',stage:5,crit:'5단계의 글을 모두 읽습니다.',why:`5단계가 공개된 뒤 ${CANBE}`},
+   {t:'6단계 완주',st:'pend',stage:6,crit:'6단계의 글을 모두 읽습니다.',why:`6단계가 공개된 뒤 ${CANBE}`}]},
+ {k:'term',name:'익힌 용어',items:[
+   {t:'익힌 용어 1개',st:'got',date:'2026-11-06',tier:1,rib:'1개'}],
+  toks:['10개','25개','전체'],line:[`준비 중인 기준: 익힌 용어 10개, 25개. 단계가 더 공개된 뒤 ${CANBE}`,`그때 게시된 용어 전체 · 여섯 단계가 모두 공개된 뒤 ${CANBE}`]},
+ {k:'sp',name:'특별',noLadder:true,items:[
+   {t:'끈기',st:'yet',g:'grit',crit:'첫 답에서 하나도 맞히지 못한 글을 다시 풀어 익힘으로 바꿉니다.'},
+   {t:'탐험',st:'pend',g:'explore',crit:'모든 단계에서 한&nbsp;편 이상 읽습니다.',why:`여섯 단계가 모두 공개된 뒤 ${CANBE}`}]}
+];
+/* 확인 문제(가상의 예) */
+const Q1={opts:['살 때 한 번에 냅니다.','해마다 정한 비율을 날마다 나누어 ETF 자산에서 뺍니다.','팔 때 한 번에 냅니다.'],ans:1,pick:1,
+  expl:'총보수는 연 비율로 정하지만 날마다 나누어 ETF 자산에서 빠집니다. 그래서 따로 내지 않아도 가격에 이미 들어가 있습니다.'};
+const Q2={opts:[{v:'O',s:'맞다'},{v:'X',s:'틀리다'}],ans:1,
+  expl:'총보수가 같아도 사고팔 때 드는 거래비용은 ETF마다, 거래할 때마다 다릅니다. 그래서 1년 동안 드는 비용은 같지 않을 수 있습니다.'};
+let Q2PICK=null;
+
+/* ───────── 색과 작은 도우미 ───────── */
+const hx=h=>{h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16))};
+const mix=(a,b,t)=>{const x=hx(a),y=hx(b);return '#'+x.map((v,i)=>Math.round(v*t+y[i]*(1-t)).toString(16).padStart(2,'0')).join('')};
+const rgba=(h,a)=>{const [r,g,b]=hx(h);return `rgb(${r} ${g} ${b} / ${a})`};
+const low=n=>mix(STC[n],'#8b928e',.45);
+let UID=0;
+
+/* ───────── 단계 풍경(2색 선화, 160×110): 기호 하나를 띠·목록·정거장·다음 글 카드에서 다시 쓴다 ─────────
+   색은 currentColor, 면 채움·하이라이트·점선은 쓰는 자리(호스트 svg)의 CSS 변수로 바꾼다. */
+function landInner(n){
+  const VE=' vector-effect="non-scaling-stroke"';
+  const J=' stroke-linecap="round" stroke-linejoin="round"';
+  const L=`fill="none" stroke="currentColor"${J}${VE}`;
+  const A=`fill="currentColor" style="fill-opacity:var(--fa,.18)" stroke="currentColor"${J}${VE}`;
+  const A2=`fill="currentColor" style="fill-opacity:var(--fa2,.10)" stroke="currentColor"${J}${VE}`;
+  const HL=d=>`<path d="${d}" fill="none" stroke="#fff" stroke-width="1.5" style="stroke-opacity:var(--hl,.28);stroke-dasharray:none" stroke-linecap="round"${VE}/>`;
+  if(n===1) return `<path d="M12 100 H148" ${L}/>
+    <path d="M50 42 C50 12 110 12 110 42" ${L}/>
+    <rect x="30" y="42" width="100" height="56" rx="6" ${A2}/>
+    <path d="M63.3 42 V98 M96.6 42 V98 M30 70 H130" ${L}/>
+    <circle cx="46.6" cy="57" r="6.5" ${A}/>
+    <rect x="74.5" y="51" width="11" height="12" rx="2" ${A}/>
+    <circle cx="108" cy="59" r="4.6" ${A}/><circle cx="119.5" cy="60" r="3.2" ${A}/>
+    <rect x="40" y="77" width="13" height="13" rx="2.5" ${A}/>
+    <circle cx="80" cy="84" r="7" ${A}/>
+    <rect x="102.5" y="80" width="10" height="10" rx="2" ${A}/><rect x="115.5" y="80" width="10" height="10" rx="2" ${A}/>
+    ${HL('M55.5 37 C57 28 66 23.5 80 23.5 S 91 25 94 27.5')}`;
+  if(n===2){ // 배와 잔물결: 같은 위상, 세로 간격 7, 길이 120·96·72, 가운데 정렬
+    const w=(x,y,first,halves)=>`<path d="M${x} ${y} q6 ${first} 12 0${' t12 0'.repeat(halves-1)}" ${L}/>`;
+    return `<circle cx="32" cy="28" r="9" ${A}/>
+    <path d="M80 20 V70" ${L}/>
+    <path d="M83 24 L83 66 L111 66 Z" ${A}/>
+    <path d="M77 31 L77 66 L55 66 Z" ${A2}/>
+    <path d="M47 70 H115 L105 83 H57 Z" ${A}/>
+    ${w(20,90,-5,10)}${w(32,97,5,8)}${w(44,104,-5,6)}
+    ${HL('M53 73.5 H88')}`;
+  }
+  if(n===3) return `<path d="M8 48 H50 C57 48 60 51 63 55 C60 59 57 62 50 62 H8 Z" ${A}/>
+    <path d="M63 55 C80 55 86 26 110 26" ${L}/>
+    <path d="M63 55 C82 55 92 57 114 57" ${L}/>
+    <path d="M63 55 C80 55 88 88 110 88" ${L}/>
+    <circle cx="121" cy="26" r="10" ${A}/>
+    <circle cx="131" cy="57" r="16" ${A}/>
+    <circle cx="117" cy="88" r="6.5" ${A}/>
+    <ellipse cx="30" cy="76" rx="8" ry="3.6" ${A2}/><ellipse cx="40" cy="34" rx="6" ry="3" ${A2}/>
+    ${HL('M119.7 52.9 A12 12 0 0 1 137 46.6')}`;
+  if(n===4) return `<path d="M77 37 L16 18 L16 56 Z" fill="currentColor" style="fill-opacity:var(--fb,.09)" stroke="none"/>
+    <path d="M77 37 L16 18 M77 37 L16 56" ${L} opacity=".7"/>
+    <path d="M70 100 L75 46 H93 L98 100 Z" ${A}/>
+    <path d="M73.5 62 H94.5 M71.9 80 H96.1" ${L}/>
+    <rect x="76" y="32" width="16" height="14" rx="2" ${A2}/>
+    <path d="M72 32 L84 20 L96 32 Z" ${A}/>
+    <path d="M81 100 V92 a3 3 0 0 1 6 0 V100" ${L}/>
+    <path d="M44 100 Q57 90 70 100 M98 100 Q113 88 130 100" ${L}/>
+    <path d="M8 104 H152" ${L}/>
+    ${HL('M76.5 30 L84 22.5')}`;
+  if(n===5) return `<path d="M70 106 C70 96 50 94 18 98 M70 106 C70 96 92 94 142 98" ${L}/>
+    <path d="M70 102 V28" ${L}/>
+    <path d="M62 102 H78" ${L}/>
+    <path d="M70 34 H44 L37 41 L44 48 H70 Z" ${A}/>
+    <path d="M70 56 H96 L103 63 L96 70 H70 Z" ${A2}/>
+    <circle cx="122" cy="36" r="13" ${A}/>
+    <path d="M131.5 45.5 L143 57" ${L} style="stroke-width:calc(var(--lw,1.75px) * 1.7)"/>
+    ${HL('M112.6 34.4 A9.5 9.5 0 0 1 125.2 27.1')}`;
+  return `<rect x="20" y="14" width="120" height="80" rx="8" ${A2}/>
+    <rect x="29" y="34" width="102" height="40" rx="5" ${A2}/>
+    <path d="M12 100 H148 M16 94 H144" ${L}/>
+    <circle cx="46" cy="54" r="8" ${A}/>
+    <path d="M46 39.5 V42.5 M46 65.5 V68.5 M31.5 54 H34.5 M57.5 54 H60.5 M36 44 L38 46 M56 44 L54 46" ${L}/>
+    <path d="M68 62 H95 a7 7 0 0 0 0 -14 a10 10 0 0 0 -19 -3 a7.5 7.5 0 0 0 -8 17 Z" ${A}/>
+    <path d="M110 44 l-2 6 M120 42 l-2 6 M115 56 l-2 6 M125 54 l-2 6" ${L}/>
+    ${HL('M26 30 Q26 20 36 20 H72')}`;
+}
+function landMini(n){ // 작은 자리(목록 구분 줄, 정거장)용: 같은 풍경에서 큰 도형만 남긴 판
+  const VE=' vector-effect="non-scaling-stroke"';
+  const J=' stroke-linecap="round" stroke-linejoin="round"';
+  const L=`fill="none" stroke="currentColor"${J}${VE}`;
+  const A=`fill="currentColor" style="fill-opacity:var(--fa,.22)" stroke="currentColor"${J}${VE}`;
+  const A2=`fill="currentColor" style="fill-opacity:var(--fa2,.10)" stroke="currentColor"${J}${VE}`;
+  if(n===1) return `<path d="M48 40 C48 8 112 8 112 40" ${L}/><rect x="24" y="40" width="112" height="60" rx="8" ${A2}/><path d="M61 40 V100 M99 40 V100 M24 70 H136" ${L}/><circle cx="42" cy="55" r="8" ${A}/><rect x="70" y="76" width="20" height="16" rx="3" ${A}/>`;
+  if(n===2) return `<circle cx="30" cy="26" r="11" ${A}/><path d="M80 12 V70" ${L}/><path d="M84 16 L84 66 L118 66 Z" ${A}/><path d="M76 26 L76 66 L50 66 Z" ${A2}/><path d="M40 72 H122 L110 88 H52 Z" ${A}/><path d="M24 101 q14 -9 28 0 t28 0 t28 0 t28 0" ${L}/>`;
+  if(n===3) return `<path d="M6 46 H48 L62 55 L48 64 H6 Z" ${A}/><path d="M62 55 C82 55 86 22 108 22 M62 55 H106 M62 55 C82 55 86 88 108 88" ${L}/><circle cx="122" cy="22" r="13" ${A}/><circle cx="128" cy="55" r="20" ${A}/><circle cx="120" cy="88" r="10" ${A}/>`;
+  if(n===4) return `<path d="M78 36 L14 14 L14 58 Z" fill="currentColor" style="fill-opacity:var(--fb,.12)" stroke="none"/><path d="M66 102 L72 44 H96 L102 102 Z" ${A}/><path d="M68 28 L84 12 L100 28 Z" ${A}/><rect x="74" y="28" width="20" height="16" rx="2" ${A2}/><path d="M8 103 H152" ${L}/>`;
+  if(n===5) return `<path d="M64 104 V20" ${L}/><path d="M64 26 H30 L20 36 L30 46 H64 Z" ${A}/><path d="M64 56 H98 L108 66 L98 76 H64 Z" ${A2}/><circle cx="124" cy="38" r="17" ${A}/><path d="M136 51 L150 66" ${L}/><path d="M30 104 H110" ${L}/>`;
+  return `<rect x="16" y="10" width="128" height="88" rx="10" ${A2}/><circle cx="50" cy="52" r="13" ${A}/><path d="M72 66 H104 a9 9 0 0 0 0 -18 a13 13 0 0 0 -24 -4 a10 10 0 0 0 -8 22 Z" ${A}/><path d="M8 104 H152" ${L}/>`;
+}
+document.getElementById('defs').insertAdjacentHTML('beforeend',[1,2,3,4,5,6].map(n=>`<symbol id="ld-${n}" viewBox="0 0 160 110">${landInner(n)}</symbol><symbol id="ldm-${n}" viewBox="0 0 160 110">${landMini(n)}</symbol>`).join(''));
+function land(n,mode,mini){
+  const pend=mode==='pend';
+  return `<svg class="land${pend?' pend':''}" viewBox="0 0 160 110" focusable="false" aria-hidden="true" style="color:${pend?low(n):STC[n]}"><use href="#${mini?'ldm':'ld'}-${n}"/></svg>`;
+}
+function boatIcon(){
+  const C=STC[2];
+  return `<svg class="ic" viewBox="0 0 28 28" aria-hidden="true"><path d="M14 4 V18" fill="none" stroke="${C}" stroke-width="1.6" stroke-linecap="round"/><path d="M15.6 6 L15.6 17 L22 17 Z" fill="${rgba(C,.2)}" stroke="${C}" stroke-width="1.6" stroke-linejoin="round"/><path d="M5.5 19 H22.5 L19.8 22.6 H8.2 Z" fill="${rgba(C,.2)}" stroke="${C}" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 26 q2.5 -2.4 5 0 t5 0 t5 0 t5 0" fill="none" stroke="${C}" stroke-width="1.4" stroke-linecap="round"/></svg>`;
+}
+
+/* ───────── 손에 쥐는 물건: 도장·메달·표장 ─────────
+   지도와 풍경은 선화로, 손에 쥐는 물건(도장·메달·표장)은 금속·에나멜·도장 잉크로 그린다.
+   두 쪽은 같은 초록 한 줄(#7EF0B0 → #2FDC7A → #03C75A → #0B5E33), 같은 그림자(--obj-shadow),
+   같은 회색 윤곽(1.5px #8b928e), 같은 점선(4 3), 같은 진행 호(3px #2fdc7a)를 쓴다.
+   SVG 안의 굵기는 화면 픽셀 기준이다(u = viewBox 한 칸 ÷ 화면 1px). id는 bm·be 접두어와 일련번호로 겹치지 않게 한다. */
+const R2=n=>Math.round(n*100)/100;
+const bP=p=>R2(p[0])+' '+R2(p[1]);
+const lerp=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+const bmix=(a,b,t)=>{const A=hx(a),B=hx(b);return '#'+A.map((v,i)=>Math.round(Math.max(0,Math.min(255,v+(B[i]-v)*t))).toString(16).padStart(2,'0')).join('');};
+const EN={read:'#9BCFA0',first:'#A6D86B',all:'#5CC6CC',terms:'#D2A6F0'};
+const BK={level:'level',read:'read',fa:'first',ac:'all',stage:'stage',term:'terms',sp:'special'}; // 이 목업의 갈래 키 → 메달 실루엣
+/* 구현 메모: 목업은 clipPath id를 페이지 전역 일련번호(bm·be + BUID)로 만든다. React로 옮길 때는 같은 메달이 여러 번 마운트되거나
+   서버 렌더와 섞여도 어긋나지 않게 useId()로 접두어를 만들거나, 갈래·상태·단계·크기로 정해지는 id(예: med-stage-1-got-76-c)를 쓴다. */
+let BUID=0;
+const CKS=`<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 L5 8.8 L9.6 3.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ARCS=`<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.6" fill="none" stroke="#8b928e" stroke-width="1.4"/><circle cx="6" cy="6" r="4.6" fill="none" stroke="#2fdc7a" stroke-width="2" pathLength="100" stroke-dasharray="62 100" transform="rotate(-90 6 6)" stroke-linecap="round"/></svg>`;
+const DOC=`<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.75 1.25 H7.25 L9.75 3.75 V10.75 H2.75 Z M7 1.25 V4 H9.75" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>`;
+const XS=`<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 2.5 L7.5 7.5 M7.5 2.5 L2.5 7.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+/* 실루엣(0~100 좌표, d = 안쪽으로 줄이는 거리) */
+function rpoly(n,R,rot,rc){
+  const V=[];
+  for(let i=0;i<n;i++){const a=(rot+360*i/n)*Math.PI/180;V.push([50+R*Math.cos(a),50+R*Math.sin(a)]);}
+  const side=Math.hypot(V[1][0]-V[0][0],V[1][1]-V[0][1]);
+  const t=Math.min(rc/side,.45);
+  const pin=i=>lerp(V[i],V[(i-1+n)%n],t),pout=i=>lerp(V[i],V[(i+1)%n],t);
+  let d;
+  if(Math.abs(rot+90)<.01){
+    const m=lerp(lerp(pin(0),V[0],.5),lerp(V[0],pout(0),.5),.5);
+    d='M'+bP(m)+'Q'+bP(lerp(V[0],pout(0),.5))+' '+bP(pout(0));
+    for(let i=1;i<n;i++)d+='L'+bP(pin(i))+'Q'+bP(V[i])+' '+bP(pout(i));
+    d+='L'+bP(pin(0))+'Q'+bP(lerp(pin(0),V[0],.5))+' '+bP(m)+'Z';
+  }else{
+    const m=lerp(V[0],V[1],.5);
+    d='M'+bP(m);
+    for(let k=1;k<=n;k++){const i=k%n;d+='L'+bP(pin(i))+'Q'+bP(V[i])+' '+bP(pout(i));}
+    d+='L'+bP(m)+'Z';
+  }
+  return d;
+}
+function rosette(d,base){
+  const n=16,Rv=(base||40)-d,pts=[];
+  for(let i=0;i<n;i++){const a=(-90-180/n+360/n*i)*Math.PI/180;pts.push([50+Rv*Math.cos(a),50+Rv*Math.sin(a)]);}
+  const c=2*Rv*Math.sin(Math.PI/n),rp=R2(c/2*1.001);
+  let s='M'+bP(pts[0]);
+  for(let i=1;i<=n;i++)s+='A'+rp+' '+rp+' 0 0 1 '+bP(pts[i%n]);
+  return s+'Z';
+}
+function bookmark(d){
+  const x0=R2(17+d),x1=R2(83-d),y0=R2(7+d),yb=R2(93-d),yn=R2(76.5-d*1.25),r=R2(Math.max(9-d*.6,2));
+  return `M50 ${y0}H${R2(x1-r)}Q${x1} ${y0} ${x1} ${R2(y0+r)}V${yb}L50 ${yn}L${x0} ${yb}V${R2(y0+r)}Q${x0} ${y0} ${R2(x0+r)} ${y0}Z`;
+}
+/* 고딕 뾰족 아치 창 + 창턱. d>0(안쪽 면)은 창 몸통만, d<=0(바깥 윤곽·진행 호)은 창턱까지 */
+function arch(d){
+  const x0=R2(18+d),x1=R2(82-d),ya=46,yt=R2(6+d*1.35),hw=50-x0,h=ya-yt;
+  const L=`C${x0} ${R2(ya-.49*h)} ${R2(50-.54*hw)} ${R2(yt+.18*h)} 50 ${yt}`;
+  const Rr=`C${R2(50+.54*hw)} ${R2(yt+.18*h)} ${x1} ${R2(ya-.49*h)} ${x1} ${ya}`;
+  if(d>0){const yb=R2(88-d);return `M${x0} ${yb}V${ya}${L}${Rr}V${yb}Z`;}
+  const st=R2(88+d*.5),sx0=R2(10+d),sx1=R2(90-d),sb=R2(95-d*.8),q=1.6;
+  return `M${x0} ${st}V${ya}${L}${Rr}V${st}H${R2(sx1-q)}Q${sx1} ${st} ${sx1} ${R2(st+q)}V${R2(sb-q)}Q${sx1} ${sb} ${R2(sx1-q)} ${sb}H${R2(sx0+q)}Q${sx0} ${sb} ${sx0} ${R2(sb-q)}V${R2(st+q)}Q${sx0} ${st} ${R2(sx0+q)} ${st}Z`;
+}
+/* 아치의 진행 호: 창턱(받침) 가로선을 빼고 왼쪽 옆면 → 꼭대기 → 오른쪽 옆면만 따라간다(받침을 돌아 나오는 갈고리가 생기지 않게) */
+function archOpen(d){
+  const x0=R2(18+d),x1=R2(82-d),ya=46,yt=R2(6+d*1.35),hw=50-x0,h=ya-yt,st=R2(88+d*.5);
+  return `M${x0} ${st}V${ya}C${x0} ${R2(ya-.49*h)} ${R2(50-.54*hw)} ${R2(yt+.18*h)} 50 ${yt}C${R2(50+.54*hw)} ${R2(yt+.18*h)} ${x1} ${R2(ya-.49*h)} ${x1} ${ya}V${st}`;
+}
+const LEAD='M50 6V28M50 54V88M18 50L37.5 44.5M62.5 44.5L82 50M18 66L50 74L82 66';
+/* 단계 번호 원: 번호가 화면에서 12px 아래로 내려가지 않게 아치가 작을수록 원과 글자를 키운다. 36px 미만은 번호 없이 납선만 */
+function archNum(s){const f=R2(Math.max(17,1200/s));return {f,r:R2(13*f/17)};}
+function leadPath(r,x0,x1,y0,y1){ // 납선: 가운데 번호 원(반지름 r) 둘레에서 끊긴다
+  const sp=(sx)=>{const dx=sx-50,dy=9,L=Math.hypot(dx,dy);return bP([50+r*dx/L,41+r*dy/L]);};
+  const v=r>0?`M50 ${y0}V${R2(41-r)}M50 ${R2(41+r)}V${y1}`:`M50 ${y0}V${y1}`;
+  return `${v}M${x0} 50L${sp(x0)}M${sp(x1)}L${x1} 50M${x0} 66L50 74L${x1} 66`;
+}
+function cardGeo(d){return{x0:R2(15+d),x1:R2(85-d),y0:R2(11+d),y1:R2(89-d),f:R2(20-d*.41),r:R2(Math.max(7-d*.5,2))};}
+function card(d){
+  const g=cardGeo(d);
+  return `M50 ${g.y0}H${R2(g.x1-g.f)}L${g.x1} ${R2(g.y0+g.f)}V${R2(g.y1-g.r)}Q${g.x1} ${g.y1} ${R2(g.x1-g.r)} ${g.y1}H${R2(g.x0+g.r)}Q${g.x0} ${g.y1} ${g.x0} ${R2(g.y1-g.r)}V${R2(g.y0+g.r)}Q${g.x0} ${g.y0} ${R2(g.x0+g.r)} ${g.y0}Z`;
+}
+function bshape(kind,d){
+  d=d||0;
+  switch(kind){
+    case 'level':return rpoly(8,45-d/Math.cos(Math.PI/8),-112.5,Math.max(9-d*.4,2.5));
+    case 'first':return rpoly(6,46-d/Math.cos(Math.PI/6),-90,Math.max(10-d*.45,3));
+    case 'special':return rpoly(4,47-d/Math.cos(Math.PI/4),-90,Math.max(10-d*.45,3));
+    case 'all':return rosette(d);
+    case 'read':return bookmark(d);
+    case 'stage':return arch(d);
+    case 'terms':return card(d);
+  }
+}
+/* 메달 글리프 */
+function bglyph(kind,o,col,sw){
+  const a=`fill="none" stroke="${col}" stroke-width="${R2(sw)}" stroke-linecap="round" stroke-linejoin="round"`;
+  const T=o.tier||1;
+  if(kind==='read'){
+    let s=`<path ${a} d="M50 39C44 34.5 37 34 31 36V61C37 59 44 59.5 50 63.5C56 59.5 63 59 69 61V36C63 34 56 34.5 50 39ZM50 39V63.5"/>`;
+    for(let j=1;j<T;j++){const y=2.9*j;s+=`<path ${a} d="M31 ${R2(61+y)}C37 ${R2(59+y)} 44 ${R2(59.5+y)} 50 ${R2(63.5+y)}C56 ${R2(59.5+y)} 63 ${R2(59+y)} 69 ${R2(61+y)}"/>`;}
+    return s;
+  }
+  if(kind==='first'){
+    let s=`<path ${a} d="M37 34H63Q70 34 70 41V53Q70 60 63 60H47L39 67V60H37Q30 60 30 53V41Q30 34 37 34Z"/>`;
+    if(T<=1)s+=`<path ${a} d="M41.5 47.5L47.5 53L58.5 41.5"/>`;
+    else s+=`<path ${a} d="M34.5 47.5L39 52L47 43.5M51.5 47.5L56 52L64 43.5"/>`;
+    return s;
+  }
+  if(kind==='all'){
+    let s=T>=2?`<path ${a} d="M41 26H62Q68 26 68 32V64" opacity=".7"/>`:'';
+    s+=`<rect ${a} x="35" y="31" width="28" height="40" rx="4"/><path ${a} d="M39.5 41l2.6 2.6 4.4-4.6M39.5 51l2.6 2.6 4.4-4.6M39.5 61l2.6 2.6 4.4-4.6M51 41h8M51 51h8M51 61h8"/>`;
+    return s;
+  }
+  if(kind==='terms'){ // 용어에 밑줄 친 낱말 카드: 가로줄 셋, 첫 줄 아래에 형광펜 띠
+    const op=o.state==='icon'?.42:o.state==='got'?.26:.3;
+    return `<rect x="27" y="37" width="36" height="9" rx="2" fill="${col}" opacity="${op}"/><path fill="none" stroke="${col}" stroke-width="${R2(sw*1.5)}" stroke-linecap="round" d="M31 38H56"/><path ${a} d="M31 53H69M31 63H61"/>`;
+  }
+  if(kind==='special'){
+    if(o.which==='explore')return `<circle cx="50" cy="50" r="15" ${a}/><path ${a} d="M50 37L54 50L50 63L46 50Z"/><path d="M50 37L54 50H46Z" fill="${col}"/>`;
+    return `<path ${a} d="M60.6 41.4A15 15 0 1 0 64.9 53.3"/><path ${a} d="M60.8 57L64.9 52.3L69.2 56.6"/>`;
+  }
+  if(kind==='stage'){
+    const s=o.size||76;
+    if(s<36) return `<path ${a} d="${leadPath(0,18,82,6,88)}" opacity=".6"/>`;
+    const {f,r}=archNum(s);
+    return `<path ${a} d="${leadPath(r,18,82,6,88)}" opacity=".6"/><circle ${a} cx="50" cy="41" r="${r}"/><text x="50" y="41.5" text-anchor="middle" dominant-baseline="central" font-size="${f}" font-weight="800" fill="${col==='#8b928e'?'#b8bfbb':col}">${o.stage}</text>`;
+  }
+  return '';
+}
+/* 단계 완주(받음): 단계 장식 색 유리 조각 + 납선 */
+function stained(stage,id,u,s){
+  const b=STC[stage];
+  const t={a:bmix(b,'#ffffff',.3),b:b,c:bmix(b,'#0d0f0e',.38),d:bmix(b,'#ffffff',.1),e:bmix(b,'#0d0f0e',.2),f:bmix(b,'#ffffff',.62)};
+  const lw=R2(2.5*u);
+  // 36px 미만은 번호 없이 작은 보석 한 알, 그 이상은 화면 12px 이상이 되게 키운 번호 원
+  const big=s>=36,{f,r}=big?archNum(s):{f:0,r:7};
+  return `<g clip-path="url(#${id}c)">
+    <path d="M0 0H50V44.5L0 50Z" fill="${t.a}"/><path d="M50 0H100V50L50 44.5Z" fill="${t.d}"/>
+    <path d="M0 50L50 44.5V74L0 66Z" fill="${t.c}"/><path d="M50 44.5L100 50V66L50 74Z" fill="${t.b}"/>
+    <path d="M0 66L50 74V100H0Z" fill="${t.e}"/><path d="M50 74L100 66V100H50Z" fill="${t.a}"/>
+    <rect width="100" height="100" fill="url(#b-glass)"/>
+    <path d="M27 18L36 30M66 56L76 61M24 80L32 88" stroke="#fff" stroke-opacity=".35" stroke-width="${R2(1.2*u)}" stroke-linecap="round"/>
+    <g fill="none" stroke="#0D0F0E" stroke-width="${lw}" stroke-linejoin="round"><path d="${leadPath(r,0,100,0,100)}"/></g>
+    <circle cx="50" cy="41" r="${r}" fill="${t.f}" stroke="#0D0F0E" stroke-width="${lw}"/>
+    ${big?`<text x="50" y="41.5" text-anchor="middle" dominant-baseline="central" font-size="${f}" font-weight="800" fill="#102016">${stage}</text>`:''}
+  </g>`;
+}
+function sweep(clipId){
+  return `<g clip-path="url(#${clipId})"><g transform="rotate(25 50 50)"><rect class="sweep" x="-84" y="-40" width="46" height="180" fill="url(#b-sweepg)"/></g></g>`;
+}
+/* 메달(레벨 제외 여섯 갈래): 받음 = 은록 금속 테두리 + 에나멜 면, 아직 = 실선 회색 실루엣 + 초록 진행 호, 준비 중 = 점선 실루엣 */
+function medalSVG(kind,o){
+  const s=o.size,u=100/s,id='bm'+(++BUID);
+  const outer=bshape(kind,0);
+  const cls=(o.cls?o.cls+' ':'')+'med';
+  let g=`<svg class="${cls}" viewBox="0 0 100 100" width="${s}" height="${s}" aria-hidden="true" focusable="false" overflow="visible"${o.attrs||''}>`;
+  if(o.state==='got'){
+    const rim=(s>=96?5:s>=72?4:s>=48?3:2)*u;
+    const inner=bshape(kind,rim);
+    g+=`<defs><clipPath id="${id}c"><path d="${inner}"/></clipPath><clipPath id="${id}o"><path d="${outer}"/></clipPath></defs>`;
+    g+=`<ellipse cx="50" cy="97" rx="31" ry="3.4" fill="url(#b-shadow)"/>`;
+    g+=`<path d="${outer}" fill="url(#${kind==='read'?'b-metal2':'b-metal'})"/>`;
+    g+=`<path d="${outer}" fill="none" stroke="#0b0d0c" stroke-opacity=".55" stroke-width="${R2(.8*u)}"/>`;
+    if(kind==='stage'){g+=stained(o.stage,id,u,s);}
+    else{
+      g+=`<path d="${inner}" fill="url(#b-en-${kind})"/>`;
+      if(kind==='terms'){const c=cardGeo(rim);g+=`<path d="M${R2(c.x1-c.f)} ${c.y0}V${R2(c.y0+c.f)}H${c.x1}Z" fill="${bmix(EN.terms,'#ffffff',.45)}" stroke="#102016" stroke-opacity=".5" stroke-width="${R2(.9*u)}" stroke-linejoin="round"/>`;}
+      g+=`<g clip-path="url(#${id}c)">${bglyph(kind,o,'#102016',2*u)}</g>`;
+    }
+    g+=`<g clip-path="url(#${id}c)"><path d="M0 0H100V25L0 44Z" fill="url(#b-hl)"/></g>`;
+    g+=`<path d="${inner}" fill="none" stroke="url(#b-pin)" stroke-width="${R2(1.25*u)}"/>`;
+    if(o.shine)g+=sweep(id+'o');
+  }else if(o.state==='yet'){
+    if(o.back)g+=`<path d="${outer}" fill="${o.back}"/>`;
+    g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}"/>`;
+    if(kind==='terms'){const c=cardGeo(0);g+=`<path d="M${R2(c.x1-c.f)} ${c.y0}V${R2(c.y0+c.f)}H${c.x1}" fill="none" stroke="#8b928e" stroke-width="${R2(1.25*u)}" stroke-linejoin="round"/>`;}
+    g+=bglyph(kind,o,'#8b928e',1.25*u);
+    if(o.p>0)g+=`<path class="${o.anim?'arc-anim':''}" d="${kind==='stage'?archOpen(-4.2*u):bshape(kind,-4.2*u)}" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${o.p} 100"/>`;
+  }else{
+    g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}" stroke-dasharray="${R2(4*u)} ${R2(3*u)}"/>`;
+    if(kind==='stage'){
+      /* 준비 중 단계 완주: 점선 납선으로 그린 '설계 도면'. 번호에만 낮춘 단계 색을 쓴다 */
+      const nc=o.stage?bmix(STC[o.stage],'#8b928e',.55):'#8b928e';
+      if(s>=36){
+        const dash=`stroke-dasharray="${R2(3*u)} ${R2(3*u)}"`,lw=R2(1*u),{f,r}=archNum(s);
+        g+=`<path d="${leadPath(r,18,82,6,88)}" fill="none" stroke="#8b928e" stroke-width="${lw}" stroke-opacity=".55" ${dash}/><circle cx="50" cy="41" r="${r}" fill="none" stroke="#8b928e" stroke-width="${lw}" stroke-opacity=".75" ${dash}/>`;
+        g+=`<text x="50" y="41.5" text-anchor="middle" dominant-baseline="central" font-size="${f}" font-weight="800" fill="${nc}">${o.stage}</text>`;
+      }else if(o.stage){
+        g+=`<text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-size="34" font-weight="800" fill="${nc}">${o.stage}</text>`;
+      }
+    }
+  }
+  return g+'</svg>';
+}
+/* 레벨 표장: 둥근 팔각 초록 금속. 레벨이 올라도 재질은 같고 안쪽 고리·눈금 수만 는다(2 = 고리 2, 3 = 고리 2 + 눈금 12, 4 = 고리 3 + 눈금 24) */
+function emblemSVG(level,o){
+  const s=o.size,u=100/s,id='be'+(++BUID);
+  const small=s<40;
+  const rim=(s>=96?7:s>=72?6:s>=48?4.5:2.5)*u;
+  const outer=bshape('level',0),face=bshape('level',rim);
+  const rings=level>=4?3:2,nt=level>=4?24:(level>=3?12:0);
+  const cls=(o.cls?o.cls+' ':'')+'emb';
+  const fs=small?R2(Math.min(52,12*u)):50;
+  let g=`<svg class="${cls}" viewBox="0 0 100 100" width="${s}" height="${s}" aria-hidden="true" focusable="false" overflow="visible"${o.attrs||''}>`;
+  const ringPaths=(col,w,op)=>small?'':Array.from({length:rings},(_,i)=>`<path d="${bshape('level',rim+4.5+i*4.4)}" fill="none" stroke="${col}" stroke-width="${R2(w)}" opacity="${op}"/>`).join('');
+  const ticks=(col,w,op,tc)=>{
+    if(small||!nt)return '';
+    let t=`<g class="${tc||''}" stroke="${col}" stroke-width="${R2(w)}" stroke-linecap="round" opacity="${op}">`;
+    const r1=23.5,r2=27;
+    for(let i=0;i<nt;i++){const an=(i*360/nt-90)*Math.PI/180;const c=Math.cos(an),sn=Math.sin(an);const rr=(nt===24&&i%2)?r1+1.6:r1;t+=`<line x1="${R2(50+rr*c)}" y1="${R2(51+rr*sn)}" x2="${R2(50+r2*c)}" y2="${R2(51+r2*sn)}"/>`;}
+    return t+'</g>';
+  };
+  const num=(fill)=>o.noNum?'':`<text x="50" y="${small?52:51.5}" text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="800" fill="${fill}">${level}</text>`;
+  if(o.state==='got'){
+    g+=`<defs><clipPath id="${id}f"><path d="${face}"/></clipPath><clipPath id="${id}o"><path d="${outer}"/></clipPath></defs>`;
+    if(!small)g+=`<ellipse cx="50" cy="97" rx="31" ry="3.4" fill="url(#b-shadow)"/>`;
+    g+=`<path d="${outer}" fill="url(#b-gmetal)"/>`;
+    g+=`<path d="${outer}" fill="none" stroke="#04140b" stroke-opacity=".55" stroke-width="${R2(.8*u)}"/>`;
+    g+=`<path d="${face}" fill="url(#b-face)"/>`;
+    g+=ringPaths('url(#b-gmetal)',1.1*u,.7);
+    g+=ticks('#7EF0B0',1.3*u,.85,o.tickCls);
+    g+=num(small?'#C8FFE0':'url(#b-gtext)');
+    g+=`<g clip-path="url(#${id}f)"><path d="M0 0H100V24L0 42Z" fill="#fff" opacity=".12"/></g>`;
+    g+=`<path d="${face}" fill="none" stroke="url(#b-pin)" stroke-width="${R2(1.2*u)}"/>`;
+    if(o.shine)g+=sweep(id+'o');
+  }else if(o.state==='yet'){
+    g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}"/>`;
+    g+=ringPaths('#8b928e',1*u,.55);
+    g+=ticks('#8b928e',1.1*u,.6);
+    g+=num('#b8bfbb');
+    if(o.p>0)g+=`<path class="${o.anim?'arc-anim':''}" d="${bshape('level',-4.2*u)}" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${o.p} 100"/>`;
+  }else{
+    g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}" stroke-dasharray="${R2(4*u)} ${R2(3*u)}"/>`;
+    g+=num('#8b928e');
+  }
+  return g+'</svg>';
+}
+/* 글 도장(44 viewBox). st: done | ing | no | pend | neutral
+   o.size 화면 크기, o.i 기울기 순서, o.p 읽은 비율, o.stage 안쪽 고리의 옅은 단계 색(꾸밈), o.sm 번호 없이 큰 체크,
+   o.fresh 방금 찍힌 도장, o.disc 아래에 까는 종이 원판(색 또는 true), o.tip 진행 호 끝의 빛 점, o.fs 번호 글자 크기 */
+const INK='#2FDC7A';
+function stampSVG(st,no,o){
+  o=o||{};
+  const s=o.size||44,u=44/s,rot=o.fresh?-8:[-4,3,-2,5][(o.i||0)%4];
+  // 도장 번호는 화면에서 12px 아래로 내려가지 않게 viewBox 단위로 키운다(44px 칸 = 12, 40px 칸 = 13.2)
+  const fs=R2(Math.max(o.fs||11,12*u));
+  const head=`<svg class="stp${o.cls?' '+o.cls:''}" viewBox="0 0 44 44" width="${s}" height="${s}" aria-hidden="true" focusable="false" overflow="visible"${o.attrs||''}>`;
+  const disc=o.disc?`<circle cx="22" cy="22" r="21.3" fill="${o.disc===true?(st==='neutral'?'#1f2321':'#161918'):o.disc}"/>`:'';
+  const num=c=>no?`<text x="22" y="22.5" text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="${o.fw||700}" fill="${c}">${no}</text>`:'';
+  if(st==='neutral') // 비로그인: 윤곽선 없이 채운 원판과 안쪽의 눌린 홈, 번호만(상태 모양 없음)
+    return head+disc+`<circle cx="22" cy="22" r="16.6" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="${R2(1.3*u)}"/>`+num(o.nc||'#b8bfbb')+'</svg>';
+  if(st==='done'){
+    // 방금 찍힌 도장(fresh): 속 채움을 진하게, 더 기울이고, 바깥에 옅은 후광 한 겹(그림자 번짐은 쓰지 않는다)
+    const fo=o.fresh?.45:.2,sw=R2((o.fresh?2.6:2.2)*u);
+    const dfs=R2(Math.max(10,12*u));
+    const mark=(o.sm||!no)
+      ?`<path d="M14 22.5l5 4.8 11-10.6" fill="none" stroke="${INK}" stroke-width="${R2(Math.max(2.6,2*u))}" stroke-linecap="round" stroke-linejoin="round"/>`
+      :`<text x="22" y="${R2(16+(dfs-10)*.3)}" text-anchor="middle" dominant-baseline="central" font-size="${dfs}" font-weight="800" fill="${INK}">${no}</text><path d="M18.4 29.6l2.7 2.5 5.3-5.1" fill="none" stroke="${INK}" stroke-width="${R2(Math.max(2,1.6*u))}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const halo=o.fresh?`<circle cx="22" cy="22" r="23.5" fill="none" stroke="#2fdc7a" stroke-opacity=".3" stroke-width="${R2(3*u)}"/>`:'';
+    return head+disc+halo+`<g transform="rotate(${rot} 22 22)" filter="url(#b-ink)"><circle cx="22" cy="22" r="20" fill="${INK}" fill-opacity="${fo}" stroke="${INK}" stroke-width="${sw}"/><circle cx="22" cy="22" r="16.6" fill="none" stroke="${INK}" stroke-width="${R2(u)}"/>${mark}</g></svg>`;
+  }
+  const pend=st==='pend';
+  let g=`<circle cx="22" cy="22" r="20" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}"${pend?` stroke-dasharray="${R2(4*u)} ${R2(3*u)}"`:''}/>`;
+  g+=pend?`<circle cx="22" cy="22" r="16.6" fill="none" stroke="#8b928e" stroke-opacity=".55" stroke-width="${R2(u)}" stroke-dasharray="${R2(3*u)} ${R2(3*u)}"/>`
+         :`<circle cx="22" cy="22" r="16.6" fill="none" stroke="${o.stage?STC[o.stage]:'#8b928e'}" stroke-opacity=".28" stroke-width="${R2(u)}"/>`;
+  g+=num(o.nc||(pend?'#8b928e':'#b8bfbb'));
+  if(st==='ing'){
+    const p=o.p||0;
+    g+=`<circle class="arcp" cx="22" cy="22" r="20" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p} 100" transform="rotate(-90 22 22)"/>`;
+    if(o.tip){const a=(-90+p*3.6)*Math.PI/180,x=R2(22+20*Math.cos(a)),y=R2(22+20*Math.sin(a));
+      g+=`<g class="tip"><circle cx="${x}" cy="${y}" r="${R2(7*u)}" fill="#2fdc7a" opacity=".3" filter="url(#soft)"/><circle cx="${x}" cy="${y}" r="${R2(3.4*u)}" fill="#eafff2" filter="url(#glowTip)"/></g>`;}
+  }
+  return head+disc+g+'</svg>';
+}
+const stKind=a=>a.st==='done'?'done':a.st==='reading'?'ing':'no';
+const stageOf=a=>+String(a.id).split('-')[0];
+
+/* ───────── 노드·표식 ───────── */
+function pebMini(){ // 이어서 읽기 카드의 작은 도장(1-4, 62%)
+  return `<span class="peb-mini" aria-hidden="true">${stampSVG('ing','1-4',{size:44,p:62,stage:1,disc:true})}</span>`;
+}
+/* 넓은 화면 크기(lg)와 좁은 화면 크기(sm)로 같은 그림을 두 번 그려 CSS가 하나만 보인다 */
+const dual=(f,lg,sm)=>f(lg,'v-lg')+f(sm,'v-sm');
+function marker(n,kind){ // 단계 마커 44px(좁은 화면 36px): 글 도장과 같은 문법(실선 회색 칸, 점선 칸, 중립 원판)
+  const one=(size,cls)=>{
+    if(kind==='open') return stampSVG('no','',{size,cls,stage:n,disc:'#161918'});
+    if(kind==='done') return stampSVG('done','',{size,cls,sm:true,disc:'#161918'});
+    if(kind==='neutral') return stampSVG('neutral','',{size,cls,disc:true});
+    return stampSVG('pend','',{size,cls,disc:'#0d0f0e'});
+  };
+  return `<span class="marker ${kind}" aria-hidden="true">${dual(one,44,36)}<span>${kind==='done'?'':n}</span></span>`;
+}
+function sdot(kind){ // 노선표 정거장 점 14px
+  if(kind==='done') return `<span class="sdot" aria-hidden="true"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="url(#gNode)"/><path d="M3.9 7.2 L6.1 9.4 L10.2 4.9" fill="none" stroke="#01170a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  if(kind==='reading') return `<span class="sdot" aria-hidden="true"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6.25" fill="#161918" stroke="#8b928e" stroke-width="1.5"/><circle cx="7" cy="7" r="9.5" fill="none" stroke="#2fdc7a" stroke-width="2" stroke-linecap="round" pathLength="100" stroke-dasharray="62 100" transform="rotate(-90 7 7)"/></svg></span>`;
+  if(kind==='unread') return `<span class="sdot" aria-hidden="true"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6.25" fill="#161918" stroke="#8b928e" stroke-width="1.5"/></svg></span>`;
+  if(kind==='neutral') return `<span class="sdot" aria-hidden="true"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6.5" fill="#3a403d"/></svg></span>`;
+  return '';
+}
+function gmark(n,kind){ // 노선표 단계 구분 줄 표식 24px
+  let c;
+  if(kind==='open') c=`<circle cx="12" cy="12" r="11.25" fill="#161918" stroke="#8b928e" stroke-width="1.5"/>`;
+  else if(kind==='neutral') c=`<circle cx="12" cy="12" r="12" fill="#2c3230"/>`;
+  else c=`<circle cx="12" cy="12" r="11.25" fill="#0d0f0e" stroke="#8b928e" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  return `<span class="gmark" aria-hidden="true"><svg viewBox="0 0 24 24">${c}</svg><span style="${kind==='pend'?'color:#8b928e':''}">${n}</span></span>`;
+}
+
+/* ───────── 배지: 갈래별 메달 ───────── */
+const FD='Geist Variable, Pretendard Variable, Pretendard, sans-serif';
+function medalFor(k,st,o){ // 이 목업의 갈래 키(level·read·fa·ac·stage·term·sp)로 메달 하나
+  if(k==='level') return emblemSVG(+o.g,{size:o.size,cls:o.cls,state:st,p:o.pct,shine:o.shine,anim:o.anim});
+  return medalSVG(BK[k],{size:o.size,cls:o.cls,state:st,p:o.pct,tier:o.tier,stage:o.stage,which:o.g,shine:o.shine,anim:o.anim});
+}
+function heroArch(){ // 완료 카드: 1단계 완주. 실선 회색 윤곽(3/4)이 접히고 민트 스테인드글라스가 펼쳐진다
+  return `<span class="flip">${medalSVG('stage',{state:'yet',size:96,p:75,stage:1,cls:'fa'})}${medalSVG('stage',{state:'got',size:96,stage:1,shine:true,cls:'fb'})}</span>`;
+}
+function heroEmblem(){ // 완료 카드: 레벨 3 표장. 숫자가 2에서 3으로 넘어가고 눈금 12개가 나타난다
+  return `<span class="emb-roll">${emblemSVG(3,{size:96,state:'got',noNum:true,shine:true,tickCls:'ticks-in'})}<span class="roll-win"><span class="roll"><i>2</i><i>3</i></span></span></span>`;
+}
+
+/* ───────── 그림 조각 ───────── */
+function contours(){
+  let p='';
+  for(let k=0;k<6;k++){
+    const rx=150+k*92,ry=58+k*40,cx=430,cy=36;let d='';
+    for(let t=0;t<=120;t++){const a=t/120*Math.PI*2;const w=1+.075*Math.sin(3*a+k*.9)+.045*Math.cos(5*a-k*.7);
+      d+=(t?'L':'M')+(cx+rx*w*Math.cos(a)).toFixed(1)+' '+(cy+ry*w*Math.sin(a)).toFixed(1);}
+    p+=`<path d="${d}Z" fill="none" stroke="rgb(255 255 255 / 5.5%)" stroke-width="1"/>`;
+  }
+  return `<svg viewBox="0 0 1280 360" preserveAspectRatio="xMidYMin slice" aria-hidden="true">${p}</svg>`;
+}
+function miniMile(){ // 요약 패널: 레벨 2(100) → 레벨 3(300), 260에 점
+  const x0=8,x1=200,x=x0+(x1-x0)*.8;
+  return `<svg class="mini-mile" viewBox="0 0 220 30" aria-hidden="true">
+    <path d="M${x0} 22 H${x1}" stroke="#6E716F" stroke-width="3" stroke-linecap="round"/>
+    <path d="M${x0} 22 H${x}" stroke="#2FDC7A" stroke-width="4" stroke-linecap="round"/>
+    <path d="M${x0} 22 V5" stroke="#2FDC7A" stroke-width="2" stroke-linecap="round"/><path d="M${x0+1} 5 L${x0+11} 8.8 L${x0+1} 12.6 Z" fill="url(#b-gmetal)" stroke="#2FDC7A" stroke-width=".8" stroke-linejoin="round"/>
+    <path d="M${x1} 22 V5" stroke="#8b928e" stroke-width="2" stroke-linecap="round"/><path d="M${x1+1} 5 L${x1+11} 8.8 L${x1+1} 12.6 Z" fill="#161918" stroke="#8b928e" stroke-width="1.3" stroke-linejoin="round"/>
+    <circle cx="${x}" cy="22" r="10" fill="url(#gGlowDot)" opacity=".75"/><circle cx="${x}" cy="22" r="5" fill="#2FDC7A"/><circle cx="${x-1.4}" cy="20.6" r="1.6" fill="#e9fff2" opacity=".8"/>
+  </svg>`;
+}
+function sampleArt(){ // 비로그인 견본(세 화면 공통): 시작과 끝 높이가 같은 수평 길 위에 실제 부품(도장·메달·아치)의 실루엣. 숫자·윤곽·상태 모양 없음
+  const G='rgb(3 199 90 / .18)',G2='rgb(3 199 90 / .09)',GR='rgb(0 0 0 / .28)';
+  const road='M16 78 C66 52 116 52 166 78 S 266 104 316 78';
+  // 도장 견본: 윤곽선 없이 채운 원판 + 안쪽의 눌린 홈(실선 회색도 점선도 아니다)
+  const stp=(x,y,a)=>`<ellipse cx="${x}" cy="${y+3.5}" rx="12" ry="12" fill="${G2}"/><circle cx="${x}" cy="${y}" r="12" fill="${a||G}"/><circle cx="${x}" cy="${y}" r="8.6" fill="none" stroke="${GR}" stroke-width="1.2"/><path d="M${x-6.5} ${y-6} A8.5 8.5 0 0 1 ${x+3} ${y-8.4}" fill="none" stroke="rgb(255 255 255 / .16)" stroke-width="1.4" stroke-linecap="round"/>`;
+  // 메달 실루엣: 왼쪽 위에서 빛이 오는 초록 채움(gSampleObj). 윤곽·숫자 없음
+  const sil=(k,x,y,sc)=>`<path d="${bshape(k,0)}" fill="url(#gSampleObj)" transform="translate(${x} ${y}) scale(${sc}) translate(-50 -50)"/>`;
+  return `<svg viewBox="0 0 360 124" focusable="false" aria-hidden="true">
+    <path d="${road}" fill="none" stroke="rgb(255 255 255 / .035)" stroke-width="18" stroke-linecap="round"/>
+    <path d="${road}" fill="none" stroke="url(#gSample)" stroke-width="5" stroke-linecap="round"/>
+    ${stp(66,60.6)}${stp(116,60.6)}${stp(166,78,'rgb(3 199 90 / .11)')}
+    <path d="M216 95.4 V74 M266 95.4 V74" stroke="rgb(3 199 90 / .12)" stroke-width="1.6"/>
+    ${sil('read',216,50,.42)}${sil('first',266,50,.4)}${sil('all',296,22,.32)}${sil('terms',240,14,.32)}
+    <circle cx="322" cy="56" r="26" fill="url(#gGlowDot)" opacity=".35"/>
+    <ellipse cx="322" cy="80" rx="15" ry="2.6" fill="rgb(3 199 90 / .08)"/>
+    <g transform="translate(322 59.5) scale(.42) translate(-50 -50)"><path d="${bshape('stage',0)}" fill="url(#gSampleObj)"/><g fill="none" stroke="${GR}" stroke-width="3.2" stroke-linejoin="round"><path d="${LEAD}"/><circle cx="50" cy="41" r="13"/></g></g>
+  </svg>`;
+}
+function gainGrid(){ // 나의 학습(비로그인): 나의 학습에 쌓이는 것 세 칸. 실루엣에 재질 기운(표장은 초록 금속, 메달은 갈래 에나멜)만 주고 글리프·숫자·윤곽선·점선은 없다(규칙 13)
+  const obj=(k,x,y,sc,fill,face)=>`<g transform="translate(${x} ${y}) scale(${sc}) translate(-50 -50)"><ellipse cx="50" cy="97" rx="31" ry="3.4" fill="url(#b-shadow)"/><path d="${bshape(k,0)}" fill="${fill}" opacity=".55"/>${face?`<path d="${bshape(k,7)}" fill="rgb(13 15 14 / .45)"/>`:''}<path d="${bshape(k,0)}" fill="url(#b-glass)" opacity=".8"/></g>`;
+  const disc=(x,y)=>`<circle cx="${x}" cy="${y+2.5}" r="11" fill="rgb(0 0 0 / .35)"/><circle cx="${x}" cy="${y}" r="11" fill="url(#gSampleObj)"/><circle cx="${x}" cy="${y}" r="7.6" fill="rgb(0 0 0 / .22)"/>`;
+  const items=[
+    {b:'레벨 표장',c:'글을 읽고 확인 문제를 풀면 경험치가 쌓여 레벨이 오릅니다.',
+     svg:`<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${obj('level',50,50,1,'url(#b-gmetal)',true)}</svg>`},
+    {b:'글 도장과 단계 완주 메달',c:'읽은 글마다 도장이 찍히고, 한 단계의 글을 모두 읽으면 그 단계의 메달을 받습니다.',
+     svg:`<svg viewBox="0 0 170 100" aria-hidden="true" focusable="false">${disc(16,66)}${disc(44,66)}${disc(72,66)}${obj('stage',128,50,.96,STC[1])}</svg>`},
+    {b:'배지 일곱 갈래',c:'읽은 글, 첫 답 정답, 익힌 용어처럼 받는 기준을 모두 미리 공개합니다.',
+     svg:`<svg viewBox="0 0 200 100" aria-hidden="true" focusable="false">${obj('read',34,52,.64,'url(#b-en-read)')}${obj('first',100,52,.64,'url(#b-en-first)')}${obj('all',166,52,.64,'url(#b-en-all)')}</svg>`}];
+  return `<section class="gain" aria-labelledby="gainh"><h2 id="gainh">나의 학습에 쌓이는 것</h2><ul>${items.map(it=>`<li><span class="g-art">${it.svg}</span><span class="g-tx"><b>${it.b}</b><span class="g-c">${it.c}</span></span></li>`).join('')}</ul></section>`;
+}
+function orderIcon(){ // 완만한 곡선 위 조약돌 세 개(가운데만 채움, 회색)
+  return `<svg width="38" height="20" viewBox="0 0 38 20" aria-hidden="true"><path d="M4 13 C12 5 26 5 34 13" fill="none" stroke="#6E716F" stroke-width="2" stroke-linecap="round"/><circle cx="5" cy="12.5" r="3.6" fill="#161918" stroke="#8b928e" stroke-width="1.3"/><circle cx="19" cy="7" r="3.8" fill="#8b928e"/><circle cx="33" cy="12.5" r="3.6" fill="#161918" stroke="#8b928e" stroke-width="1.3"/></svg>`;
+}
+function chev(){return `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 L13 10 L7 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+function numIcon(k){ // 나의 학습 숫자 칸: 그 갈래 메달의 실루엣을 초록 선으로(쌓인 것). 40px에서 선 1.6px
+  const C='#2fdc7a',sw=4;
+  if(k==='badge'){ // 받은 배지 전체: 특정 갈래가 아닌 묶음(책갈피·육각·로제트 실루엣을 겹쳐 놓음)
+    const one=(kind,x,y,sc,op)=>`<path d="${bshape(kind,0)}" transform="translate(${x} ${y}) scale(${sc}) translate(-50 -50)" fill="#161918" stroke="${C}" stroke-width="${R2((sw+.5)/sc)}" stroke-linejoin="round" opacity="${op}"/>`;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">${one('read',30,42,.56,.6)}${one('all',70,42,.56,.6)}${one('first',50,60,.66,1)}</svg>`;
+  }
+  const kind=k==='read'?'read':'terms';
+  let g='';
+  if(kind==='read') g=bglyph('read',{tier:1},C,sw);
+  else {const c=cardGeo(0);g=`<path d="M${R2(c.x1-c.f)} ${c.y0}V${R2(c.y0+c.f)}H${c.x1}" fill="none" stroke="${C}" stroke-width="${sw}" stroke-linejoin="round"/>`+bglyph('terms',{state:'icon'},C,sw);}
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${bshape(kind,0)}" fill="rgb(3 199 90 / .10)" stroke="${C}" stroke-width="${sw+.5}" stroke-linejoin="round"/>${g}</svg>`;
+}
+
+/* ───────── 상태 ───────── */
+const S={screen:'curriculum',auth:'in',probe:false,to:null,log:false,noticeOpen:true};
+const IN=()=>S.auth==='in';
+
+/* ───────── 공통 블록 ───────── */
+function header(){
+  const menuIc=`<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 5 H15 M3 9 H15 M3 13 H15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  return `<a class="logo" href="#" aria-label="Thorp 처음 화면">Thorp<b>.</b></a>
+  <div class="navw"><button type="button" class="menu-btn" aria-expanded="false" aria-controls="mnav">${menuIc}<span>메뉴</span></button>
+  <nav class="nav" id="mnav" aria-label="주요 메뉴"><a href="#">전략 진단</a><a href="#">시장 흐름</a><a class="cur" href="#" data-go="curriculum" aria-current="page">배우기</a><a href="#">내 기록</a></nav></div>
+  ${IN()?`<a class="who" href="#"><span class="av" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="5.6" r="2.9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.8 14C3.4 10.9 5.4 9.4 8 9.4S12.6 10.9 13.2 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>새벽 님</a>`:`<a class="who login" href="#">로그인</a>`}`;
+}
+function headBlock(){
+  return `<div class="head"><div class="contours" aria-hidden="true">${contours()}</div>
+    <h1 class="big" tabindex="-1">배우기</h1>
+    <p class="lede">투자 개념과 지표 읽는 법을 여섯 단계로 익힙니다. 글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.</p></div>`;
+}
+function guestSample(tag){
+  const wide=tag==='my';
+  return `<section class="sample${wide?' tall':''}" aria-labelledby="gs-${tag}"><div class="s-row">
+    <div><h2 class="s-t" id="gs-${tag}">로그인하면 학습 기록이 남습니다.</h2></div><a class="btn-go" href="#">로그인</a></div>
+    <div aria-hidden="true">${sampleArt()}</div></section>`;
+}
+function resumeInner(btn){
+  return `<div class="resume">${pebMini()}<div style="min-width:0"><span class="j-cap">이어서 읽기</span><span class="r-t">1-4 ETF 보수는 어디로 빠져나갈까?</span><span class="r-p">62% 읽는 중</span></div>${btn?`<a class="btn-go" href="#">이어서 읽기</a>`:''}</div>`;
+}
+function journal(){
+  if(!IN()) return guestSample(S.screen);
+  return `<section class="journal" aria-labelledby="jh-${S.screen}">
+    <div class="j-top"><h2 id="jh-${S.screen}">나의 학습</h2><a class="lnk" href="#" data-go="my">모두 보기</a></div>
+    <div class="j-grid">
+      <div class="j-cell c1"><span class="j-emb" aria-hidden="true">${emblemSVG(2,{size:64,state:'got'})}</span><div class="j-lvw"><div class="j-lv">레벨 2 ${NEWP}</div>${miniMile()}<span class="j-sub">다음 레벨까지 <b>40</b></span></div></div>
+      <div class="j-cell c2"><span class="j-cap">읽은 글</span><span class="j-num">3<small>편</small></span></div>
+      <div class="j-cell c3"><span class="j-cap">익힌 용어</span><span class="j-num">4<small>개</small></span></div>
+      <div class="j-cell c4">${resumeInner(true)}</div>
+    </div></section>`;
+}
+function notice(){ // 공개일부터 7일 동안 로그인 여부와 상관없이 보인다. 비로그인에게는 기록 문장을 뺀다. 닫기는 그 탭에서만
+  if(!S.noticeOpen) return '';
+  const rec=IN()?' 지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.':'';
+  return `<div class="notice" id="notice">${boatIcon()}<div class="n-body">
+    <p>2단계 '수익과 위험 읽기'를 공개했습니다. 새 글 3편과 다시 쓴 글 1편입니다.${rec}<span class="links"><a href="#" data-scroll="stage-2">2단계 보기</a><a href="#" data-openlog>변경 기록</a></span></p></div>
+    <button type="button" class="x" aria-label="공개 안내 닫기" data-close-notice>닫기</button></div>`;
+}
+function vtoggle(cur){
+  return `<div class="vtoggle" role="group" aria-label="보기"><button type="button" aria-pressed="${cur==='curriculum'}" data-go="curriculum">커리큘럼</button><button type="button" aria-pressed="${cur==='list'}" data-go="list">목록</button></div>`;
+}
+function vrow(cur){return `<div class="vrow">${vtoggle(cur)}<p class="order">${orderIcon()}<span>읽는 순서를 제안합니다. 공개된 글은 어느 것이든 바로 열 수 있습니다.</span></p></div>`}
+function logBlock(){
+  return `<details class="log" id="log"${S.log?' open':''}><summary>변경 기록</summary><ol class="tl">
+    <li><time datetime="2026-11-19">2026-11-19</time><span class="dot" aria-hidden="true"></span><span>2단계 공개 · 새 글 3편, 다시 쓴 글 1편('수익과 손실')</span></li>
+    <li><time datetime="2026-11-05">2026-11-05</time><span class="dot" aria-hidden="true"></span><span>1단계 공개 · 새 글 3편, 다시 쓴 글 1편('섹터와 ETF')</span></li>
+  </ol></details>`;
+}
+function statusChip(a){
+  if(a.st==='done') return `<span class="chip ok">${CKS}완료</span>`;
+  if(a.st==='reading') return `<span class="chip ing">${ARCS}${a.pct}% 읽는 중</span>`;
+  return `<span class="chip no">안 읽음</span>`;
+}
+const oldChip=()=>`<span class="chip old">${DOC}이전 판</span>`;
+function termMeta(a){ // 로그인: 익힌 수/전체(+화면낭독기 풀이). 비로그인: 그 글의 용어 개수(단위를 붙여 글의 속성임을 밝힘)
+  if(!a.tm) return '';
+  if(!IN()) return `<span class="meta">용어 ${a.tm}개</span>`;
+  return `<span class="meta"><span aria-hidden="true">용어 ${a.lt}/${a.tm}</span><span class="sr">용어 ${a.tm}개 중 ${a.lt}개 익힘</span></span>`;
+}
+
+/* ───────── ① 커리큘럼 보기 ───────── */
+function stop(a,i){
+  const xs=[0,64,96,64];
+  const L=IN(),k=!L?'n':(a.st==='done'?'g':'s');
+  const now=L&&a.st==='reading';
+  const sk=L?stKind(a):'neutral';
+  // 길 위의 글 도장(48px, 좁은 화면 40px): 종이 원판 위에 완료는 초록 잉크 도장과 큰 체크(번호는 바로 옆 카드에 있다),
+  // 읽는 중은 실선 회색 칸 + 초록 진행 호(끝에 빛 점) + 번호, 안 읽음은 실선 회색 칸 + 번호
+  const svg=dual((size,cls)=>stampSVG(sk,a.id,{size,cls,i,p:a.pct,stage:stageOf(a),disc:true,tip:now,sm:sk==='done'}),48,40);
+  const node=`<span class="snode${sk==='done'?' press':''}" style="--d:${i}" data-road="${k}" aria-hidden="true">${svg}</span>`;
+  return `<li class="stop-li" style="--x:${xs[i%4]}px"><a class="stop${now?' now':''}" href="#"${a.id==='1-4'?' data-go="end"':''}>${node}<span class="card">
+    <span class="c-main"><span class="c-no">${a.id}</span><span class="c-t">${a.t}</span><span class="c-q">${a.q}</span></span>
+    <span class="chips${L?'':' g'}">${L?statusChip(a):''}<span class="meta">약 ${a.m}분</span>${termMeta(a)||'<span aria-hidden="true"></span>'}${now?`<span class="go-hint">이어서 읽기 <span aria-hidden="true">→</span></span>`:''}</span></span></a></li>`;
+}
+function stampWell(st){ // 단계 머리의 도장 줄: 글 도장 칸(어느 칸이든 읽은 글의 칸에 찍힌다) | 단계 완주 아치 메달
+  const read=st.arts.filter(a=>a.st==='done').length,all=st.arts.length;
+  const cells=st.arts.map((a,i)=>{const sk=stKind(a),o={i,p:a.pct,stage:st.n};
+    return `<span class="cell">${dual((size,cls)=>stampSVG(sk,a.id,{...o,size,cls}),44,40)}</span>`;}).join('');
+  const pct=Math.round(read/all*100);
+  return `<div class="b-well"><div class="well" aria-hidden="true"><span class="cells">${cells}</span>
+      <span class="w-dest">${dual((size,cls)=>medalSVG('stage',{state:'yet',size,cls,p:pct,stage:st.n}),48,44)}</span></div>
+    <p class="w-cap"><b>${all}편 중 ${read}편 읽음</b><span class="dot" aria-hidden="true">·</span><span><span aria-hidden="true">${st.n}단계 완주 · ${read}/${all}</span><span class="sr">${st.n}단계 완주 배지까지 ${all}편 중 ${read}편</span></span></p></div>`;
+}
+function regionPub(st,first){
+  const L=IN();
+  const read=st.arts.filter(a=>a.st==='done').length,all=st.arts.length;
+  const mk=!L?marker(st.n,'neutral'):(read===all?marker(st.n,'done'):marker(st.n,'open'));
+  const k=!L?'n':'s';
+  const prog=L?stampWell(st):`<div class="b-prog"><span>${all}편 · 약 ${st.mins}분</span></div>`;
+  // 단계 끝: 길이 단계 기둥으로 돌아오는 꺾임점만 둔다. 단계 완주 아치는 단계 머리의 도장 줄에만 둔다(길 위에 세우면 지나야 하는 문처럼 읽히고, 같은 정보가 두 번 나온다)
+  const dest=`<div class="dest" aria-hidden="true"><i class="ra" style="top:12px" data-road="${k}"></i></div>`;
+  return `<section class="region" id="stage-${st.n}" style="--stage:var(--s${st.n})" aria-labelledby="sh${st.n}">
+    <div class="band">${mk}<div class="b-art" aria-hidden="true">${land(st.n,'pub')}</div>
+      <div class="b-text"><h3 id="sh${st.n}"><span class="b-kick">${st.n}단계 · ${st.lv}</span><span class="b-name">${st.name}</span></h3>
+      <p class="b-desc">${st.desc}</p>${prog}</div>
+      <i class="ra" data-road="${first?'start':k}"></i></div>
+    <ol class="stops" aria-label="${st.n}단계 글">${st.arts.map(stop).join('')}</ol>
+    ${dest}
+  </section>`;
+}
+function regionPend(st){
+  const olds=st.old.length?`<div class="olds"><h4>다시 쓰기 전의 글 <span class="nw">${st.old.length}편 ·</span> <span class="nw">나의 학습에 기록하지 않습니다</span></h4>
+    <ul class="notes" style="list-style:none;margin:0;padding:0">${st.old.map(o=>`<li><a class="note" href="#"><span class="note-paper">
+      <span class="n-t">${o.t}</span><span class="n-q">${o.q}</span>
+      <span class="chips">${oldChip()}<span class="meta">약 2분</span></span>
+      <span class="sr">다시 쓰기 전의 글입니다. 나의 학습에 기록하지 않습니다.</span></span></a></li>`).join('')}</ul></div>`:'';
+  return `<section class="region pending" id="stage-${st.n}" style="--stage:var(--s${st.n})" aria-labelledby="sh${st.n}">
+    <div class="pmark">${marker(st.n,'pend')}<i class="ra" style="left:50%;top:50%" data-road="d"></i></div>
+    <div class="band pend"><div class="b-art" aria-hidden="true">${land(st.n,'pend')}</div>
+      <div class="b-text"><h3 id="sh${st.n}"><span class="b-kick">${st.n}단계 · ${st.lv}</span><span class="b-tagrow"><span class="b-name">${st.name}</span><span class="chip pend">준비 중</span></span></h3>
+      <span class="sr">아직 공개되지 않은 단계입니다.</span>
+      <p class="b-desc">${st.desc}</p><p class="b-reason">이 단계의 글을 모두 준비하면 한&nbsp;번에 공개합니다.</p></div></div>
+    ${olds}
+  </section>`;
+}
+function mapBlock(){
+  const pub=ST.filter(s=>s.pub),pend=ST.filter(s=>!s.pub);
+  // 공개된 길은 2단계 끝 깃발에서 끝난다(끝 표시). 준비 중 점선 길은 경계 문장 뒤에서 새로 시작한다.
+  return `<h2 class="sr">단계별 글</h2><div class="map" id="map"><svg class="road" id="road" aria-hidden="true" focusable="false"></svg>
+    ${pub.map((s,i)=>regionPub(s,i===0)).join('')}
+    <p class="boundary region"><i class="ra" style="top:100%" data-road="d" data-gap></i>지금 공개된 단계는 1·2단계입니다. 3~6단계는 준비 중입니다.</p>
+    ${pend.map(regionPend).join('')}
+  </div>`;
+}
+function refBlock(){
+  if(!IN()) return `<section class="ref" aria-labelledby="refh"><h2 id="refh">참고: 목록에서 '읽는 중' 글을 열었을 때</h2><p style="margin:0">비로그인 사용자에게는 이 줄이 없습니다.</p></section>`;
+  return `<section class="ref" aria-labelledby="refh"><h2 id="refh">참고: 목록에서 '읽는 중' 글을 열었을 때</h2>
+    <div class="artbar"><span class="a-l">${pebMini()}<span>62%까지 읽었습니다 <span aria-hidden="true">·</span></span></span><a class="lnk" href="#">이어서 읽기</a></div>
+    <p>글은 맨 위에서 열리고, 이 한 줄을 누르면 읽던 곳으로 갑니다. '이어서 읽기' 단추로 열면 바로 읽던 곳에서 열립니다.</p></section>`;
+}
+function fab(){
+  return `<a class="fab" href="#"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10.5" fill="rgb(1 23 10 / .18)"/><circle cx="13" cy="13" r="10.5" fill="none" stroke="#01170a" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="62 100" transform="rotate(-90 13 13)"/></svg><span>이어서 읽기 1-4</span></a>`;
+}
+function scrCurriculum(){
+  return `<div class="view on"><div class="wrap">${headBlock()}${journal()}${notice()}${vrow('curriculum')}${mapBlock()}${logBlock()}${refBlock()}</div>${IN()?fab():''}</div>`;
+}
+
+/* ───────── ② 목록 보기(노선표) ───────── */
+function listRows(){
+  const rows=[];
+  ST.forEach(st=>{
+    rows.push({type:'grp',st});
+    if(st.pub) st.arts.forEach(a=>rows.push({type:'art',st,a}));
+    else st.old.forEach(o=>rows.push({type:'old',st,o}));
+  });
+  const into=r=>{
+    if(!r.st.pub) return 'd';
+    if(!IN()) return 'n';
+    return (r.type==='art'&&r.a.st==='done')?'g':'s';
+  };
+  rows.forEach((r,i)=>{r.top=i?into(r):'';r.bot=i<rows.length-1?into(rows[i+1]):'';});
+  return rows;
+}
+const railCls=r=>`rail${r.top?' t'+r.top:''}${r.bot?' b'+r.bot:''}`;
+function grpText(st){
+  const L=IN(),D='<span class="sep">·</span>';
+  const ico=`<span class="lico" aria-hidden="true">${land(st.n,st.pub?'pub':'pend',true)}</span>`;
+  const nm=`<span class="g-name">${st.n}단계${D}${st.name}${D}${st.lv}</span>`;
+  if(st.pub){
+    const read=st.arts.filter(a=>a.st==='done').length;
+    return `<span class="grp-in">${ico}${nm}<span class="grp-p">${D}${L?`${st.arts.length}편 중 ${read}편 읽음`:`${st.arts.length}편 · 약 ${st.mins}분`}</span></span>`;
+  }
+  return `<span class="grp-in">${ico}${nm}<span class="chip pend">준비 중</span></span><span class="grp-sub">이 단계의 글을 모두 준비하면 한&nbsp;번에 공개합니다.</span><span class="sr">아직 공개되지 않은 단계입니다.</span>`;
+}
+function dotKind(r){
+  if(r.type!=='art') return '';
+  if(!IN()) return 'neutral';
+  return r.a.st;
+}
+function termCell(a){
+  if(!a.tm) return '';
+  return IN()?`<span aria-hidden="true">${a.lt}/${a.tm}</span><span class="sr">${a.tm}개 중 ${a.lt}개 익힘</span>`:`${a.tm}개`;
+}
+function listTable(rows){
+  const L=IN(),cols=L?5:4;
+  let h=`<table class="route"><caption class="sr">배우기 글 목록. 읽는 순서대로 번호, 제목과 질문${L?', 상태':''}, 읽기 시간, ${L?'익힌 용어':'그 글의 용어 개수'}를 보입니다.</caption>
+    <thead><tr><td class="rail" aria-hidden="true"></td><th scope="col">번호</th><th scope="col">제목과 질문</th>${L?'<th scope="col">상태</th>':''}<th scope="col">읽기</th><th scope="col">${L?'용어':'이 글의 용어'}</th></tr></thead>`;
+  let open=false;
+  rows.forEach(r=>{
+    if(r.type==='grp'){
+      if(open) h+='</tbody>';
+      h+=`<tbody data-sa="${r.st.n}" class="${r.st.pub?'':'pend'}" style="--stage:var(--s${r.st.n})"><tr class="grow"><td class="${railCls(r)}" aria-hidden="true">${gmark(r.st.n,!r.st.pub?'pend':(L?'open':'neutral'))}</td><th colspan="${cols}" scope="rowgroup">${grpText(r.st)}</th></tr>`;
+      open=true;return;
+    }
+    if(r.type==='art'){
+      const a=r.a;
+      h+=`<tr><td class="${railCls(r)}" aria-hidden="true">${sdot(dotKind(r))}</td><td class="no">${a.id}</td>
+        <td class="tt"><a href="#"${a.id==='1-4'?' data-go="end"':''}>${a.t}</a><span class="q">${a.q}</span></td>
+        ${L?`<td>${statusChip(a)}</td>`:''}<td class="mn">약 ${a.m}분</td><td class="mn">${termCell(a)}</td></tr>`;
+    } else {
+      const o=r.o;
+      h+=`<tr class="oldr"><td class="${railCls(r)}" aria-hidden="true"></td><td class="no"></td>
+        <td class="tt"><span class="tt-l"><a href="#">${o.t}</a>${oldChip()}</span><span class="q">${o.q}</span><span class="sr">다시 쓰기 전의 글입니다. 나의 학습에 기록하지 않습니다.</span></td>
+        ${L?'<td></td>':''}<td class="mn">약 2분</td><td class="mn"></td></tr>`;
+    }
+  });
+  return h+'</tbody></table>';
+}
+function listOl(rows){
+  const L=IN();let h='<ol class="rol" aria-label="배우기 글 목록">';let open=false;
+  rows.forEach(r=>{
+    if(r.type==='grp'){
+      if(open) h+='</ol></li>';
+      h+=`<li data-sa="${r.st.n}" class="${r.st.pub?'':'pend'}" style="--stage:var(--s${r.st.n})"><div class="grp-head"><span class="${railCls(r)}" aria-hidden="true">${gmark(r.st.n,!r.st.pub?'pend':(L?'open':'neutral'))}</span><h3>${grpText(r.st)}</h3></div><ol style="list-style:none;margin:0;padding:0">`;
+      open=true;return;
+    }
+    if(r.type==='art'){
+      const a=r.a;
+      h+=`<li><a class="rrow" href="#"${a.id==='1-4'?' data-go="end"':''}><span class="${railCls(r)}" aria-hidden="true">${sdot(dotKind(r))}</span>
+        <span class="r-t"><span class="c-no" style="display:inline;margin-right:6px">${a.id}</span>${a.t}</span><span class="r-q">${a.q}</span>
+        <span class="chips">${L?statusChip(a):''}<span class="meta">약 ${a.m}분</span>${termMeta(a)}</span></a></li>`;
+    } else {
+      const o=r.o;
+      h+=`<li><a class="rrow" href="#"><span class="${railCls(r)}" aria-hidden="true"></span><span class="r-t">${o.t}</span><span class="r-q">${o.q}</span>
+        <span class="chips">${oldChip()}<span class="meta">약 2분</span></span><span class="sr">다시 쓰기 전의 글입니다. 나의 학습에 기록하지 않습니다.</span></a></li>`;
+    }
+  });
+  return h+'</ol></li></ol>';
+}
+function scrList(){
+  const rows=listRows();
+  return `<div class="view on"><div class="wrap">${headBlock()}${journal()}${notice()}${vrow('list')}
+    <h2 class="sr">글 목록</h2>${listTable(rows)}${listOl(rows)}${logBlock()}</div></div>`;
+}
+
+/* ───────── ③ 나의 학습 ───────── */
+function flagMini(got){
+  const c=got?'#2FDC7A':'#8b928e';
+  // 지나온 문턱 깃발은 레벨 표장과 같은 초록 금속, 아직인 문턱은 회색 윤곽
+  return `<svg viewBox="0 0 20 28" aria-hidden="true"><path d="M1 1 V27" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M2 1.5 L14 6 L2 10.5 Z" fill="${got?'url(#b-gmetal)':'#161918'}" stroke="${c}" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+}
+function levelCard(){
+  const P=v=>(v/750*100).toFixed(3); // 600 = 80% 지점, 그 뒤 20%는 점선
+  const flags=[{lv:1,xp:0,got:1},{lv:2,xp:100,got:1},{lv:3,xp:300},{lv:4,xp:600}];
+  // FR-020 순서(레벨 → 숫자 줄 → 단계별 진행 → 이어서 읽기 → 익힌 용어 → 배지 → 변경 기록). 숫자 줄은 레벨 카드 안 아래 줄로 합쳤다.
+  return `<section class="lvcard" aria-labelledby="lvh">
+    <div class="lv-head"><span class="lv-emb" aria-hidden="true">${emblemSVG(2,{size:112,state:'got'})}</span>
+      <div class="lv-top"><h2 id="lvh" class="lv-big">레벨 2 ${NEWP}</h2><span class="lv-sub">경험치 <b>260</b> · 다음 레벨까지 <b>40</b></span></div></div>
+    <div class="mw"><div class="mile">
+      <div class="m-trk" aria-hidden="true"><i class="md" style="left:0;width:${P(260)}%"></i><i class="mt" style="left:${P(260)}%;width:${(P(600)-P(260)).toFixed(3)}%"></i><i class="mp" style="left:80%;right:0"></i></div>
+      ${flags.map(f=>`<span class="m-flag f${f.lv}${f.lv===1?' first':''}" style="left:${P(f.xp)}%">${flagMini(f.got)}<span class="ml">레벨 ${f.lv}<small>${f.xp.toLocaleString('ko-KR')}</small></span></span>`).join('')}
+      <span class="m-dot" style="left:${P(260)}%" aria-hidden="true"><span class="m-bub">260</span></span>
+    </div><p class="m-after">레벨 5부터는 단계가 더 공개된 뒤 닿을 수 있습니다.</p></div>
+    <div class="lv-nums">
+      <div class="lvn">${numIcon('read')}<div><span class="cap">읽은 글</span><b>3<small>편</small></b><span class="ex">지금 공개된 글은 8편입니다.</span></div></div>
+      <div class="lvn">${numIcon('term')}<div><span class="cap">익힌 용어</span><b>4<small>개</small></b><span class="ex">지금 공개된 용어는 8개입니다.</span></div></div>
+      <div class="lvn">${numIcon('badge')}<div><span class="cap">받은 배지</span><b>5<small>개</small></b><span class="ex">기준은 모두 아래에 있습니다.</span></div></div>
+    </div>
+  </section>`;
+}
+function stationsBlock(){
+  return `<ol class="stations">${ST.map(st=>{
+    const read=st.pub?st.arts.filter(a=>a.st==='done').length:0;
+    let svg;
+    if(st.pub){
+      let segs='';for(let k=0;k<4;k++) segs+=`<circle cx="32" cy="32" r="29.5" fill="none" stroke="${k<read?'#2FDC7A':'#6E716F'}" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="19.5 80.5" stroke-dashoffset="${-(25*k+2.75)}" transform="rotate(-90 32 32)"/>`;
+      // 정거장 원도 글 도장과 같은 문법: 실선 회색 칸 + 안쪽 옅은 단계 색 고리(꾸밈), 바깥 4마디 호 = 읽은 편수
+      svg=`<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24" fill="#161918" stroke="#8b928e" stroke-width="1.5"/><circle cx="32" cy="32" r="20" fill="none" stroke="${STC[st.n]}" stroke-opacity=".28" stroke-width="1"/>${segs}</svg>`;
+    } else svg=`<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="24" fill="#0d0f0e" stroke="#8b928e" stroke-width="1.5" stroke-dasharray="4 3"/><circle cx="32" cy="32" r="20" fill="none" stroke="#8b928e" stroke-opacity=".55" stroke-width="1" stroke-dasharray="3 3"/></svg>`;
+    const inner=`${svg}<span aria-hidden="true">${st.n}</span>`;
+    const node=st.pub?`<a class="station" href="#" data-go="curriculum" data-to="stage-${st.n}"><span class="sr">${st.n}단계 커리큘럼에서 보기</span>${inner}</a>`:`<span class="station pend">${inner}</span>`;
+    const sub=st.pub?`<span class="st-s">${st.arts.length}편 중 ${read}편 읽음</span>`:`<span class="chip pend">준비 중</span>`;
+    return `<li class="${st.n>=3?'dl':''}">${node}<span class="st-ico" aria-hidden="true">${land(st.n,st.pub?'pub':'pend',true)}</span><span class="st-k">${st.n}단계</span><b>${st.name}</b>${sub}</li>`;
+  }).join('')}</ol>`;
+}
+function bcard(k,it,conn,nx){ // conn: 앞 메달과 잇는 선(넓은 화면), nx: 다음 메달로 잇는 선(좁은 화면 세로 길)
+  const pct=it.x!=null?Math.round(it.x/it.y*100):0;
+  const svg=dual((size,cls)=>medalFor(k,it.st,{size,cls,g:it.g,stage:it.stage,tier:it.tier,pct,shine:it.isNew}),76,52);
+  const rib=it.rib&&it.st!=='pend'?`<span class="rib ${it.st}" style="--en:${EN[BK[k]]||'#8b928e'}" aria-hidden="true">${it.rib}</span>`:'';
+  let chip;
+  if(it.st==='got') chip=`<span class="chip got">받음 ${it.date}</span>${it.isNew?NEWP:''}`;
+  else if(it.st==='yet'){
+    if(it.x!=null){const sx=it.u==='xp'?`경험치 ${it.y} 중 ${it.x}`:`${it.y}${it.u} 중 ${it.x}${it.u}`;
+      chip=`<span class="chip no"><span aria-hidden="true">아직 받지 않음 · ${it.x}/${it.y}</span><span class="sr">아직 받지 않음, ${sx}</span></span>`;}
+    else chip=`<span class="chip no">아직 받지 않음</span>`;
+  } else chip=`<span class="chip pend">준비 중</span>`;
+  return `<li class="${conn}${nx?' nx-'+nx:''}"><span class="bdg ${it.st}">${svg}${rib}</span><span class="b-n">${it.t}</span><span class="b-s">${chip}</span>${it.crit&&it.st!=='got'?`<span class="b-c">${it.crit}</span>`:''}${it.why?`<span class="b-c">${it.why}</span>`:''}</li>`;
+}
+function famBlock(f){
+  let lis='';
+  const cn=it=>it.st==='got'?'g':(it.st==='pend'?'d':'s');
+  f.items.forEach((it,i)=>{const conn=(f.noLadder||i===0)?'':(it.st==='got'?'cg':(it.st==='pend'?'cd':''));
+    const nxt=f.items[i+1],nx=(f.noLadder||!nxt)?'':cn(nxt);lis+=bcard(f.k,it,conn,nx);});
+  // 준비 중 기준은 작은 점선 실루엣 묶음과 한 줄로 줄인다(회색 벽 방지)
+  const toks=f.toks?`<div class="toks" aria-hidden="true">${f.toks.map((t,i)=>`<span class="tk">${f.k==='level'?emblemSVG(5+i,{size:32,state:'pend'}):medalSVG(BK[f.k],{size:32,state:'pend'})}<small>${t}</small></span>`).join('')}</div>`:'';
+  return `<section class="fam${f.k==='stage'?' wide':''}" aria-labelledby="fam-${f.k}"><h3 id="fam-${f.k}">${f.name}</h3><ul class="ladder${f.noLadder?' nol':''}">${lis}</ul>${toks}${[].concat(f.line||[]).map(l=>`<p class="pline"><span>${l}</span></p>`).join('')}</section>`;
+}
+function scrMy(){
+  const back=`<a class="back" href="#" data-go="curriculum"><span aria-hidden="true">←</span> 배우기</a><h1 class="mh" tabindex="-1">나의 학습</h1>`;
+  if(!IN()) return `<div class="view on"><div class="wrap">${back}<div style="margin-top:22px">${guestSample('my')}</div>${gainGrid()}</div></div>`;
+  const NB=[
+    {t:'1단계 완주',p:'3/4 · 1편 남음',sr:'4편 중 3편, 1편 남음',c:'1단계의 글 4편을 모두 읽습니다.',svg:medalSVG('stage',{state:'yet',size:56,p:75,stage:1,anim:true})},
+    {t:'레벨 3',p:'260/300 · 40 남음',sr:'경험치 300 중 260, 40 남음',c:'경험치 300에 닿습니다.',svg:emblemSVG(3,{state:'yet',size:56,p:87,anim:true})},
+    {t:'읽은 글 5편',p:'3/5 · 2편 남음',sr:'5편 중 3편, 2편 남음',c:'글 5편을 완료합니다.',svg:medalSVG('read',{state:'yet',size:56,p:60,tier:2,anim:true})}];
+  return `<div class="view on"><div class="wrap my">${back}
+    ${levelCard()}
+    <h2 class="sec">단계별 진행</h2>${stationsBlock()}
+    <div class="rcard">${resumeInner(true)}</div>
+    <h2 class="sec">익힌 용어<small>누르면 그 용어를 설명하는 글로 갑니다</small></h2>
+    <div class="terms">${TERMS.map(t=>`<a class="term" href="#" style="--stage:var(--s${t.s})"><i aria-hidden="true"></i><span style="min-width:0"><b>${t.t}</b><small>${t.src}</small></span></a>`).join('')}</div>
+    <p class="terms-c">글의 확인 문제를 하나 이상 맞히면 그 글의 용어를 익힌 것으로 셉니다.</p>
+    <h2 class="sec">배지<small>받은 배지 5개 · 기준은 모두 공개합니다</small></h2>
+    <p class="nb-k">다음 배지</p>
+    <div class="nextb">${NB.map(b=>`<div class="nb">${b.svg}<div style="min-width:0"><b>${b.t}</b><span><span aria-hidden="true">${b.p}</span><span class="sr">${b.sr}</span></span><span class="c">${b.c}</span></div></div>`).join('')}</div>
+    <div class="fams">${FAMS.map(famBlock).join('')}</div>
+    ${logBlock()}
+  </div></div>`;
+}
+
+/* ───────── ④ 글 끝(완료 카드) ───────── */
+function dcPath(){ // 1단계 미니 길: 1-1~1-4 도장 + 끝에 놓이는 1단계 완주 아치(민트 유리)
+  const xs=[22,76,130,184],y=40,S=32,h=S/2;
+  let s=`<svg viewBox="0 0 266 86" aria-hidden="true" focusable="false" overflow="visible">
+    <path d="M${xs[0]} ${y} H222" stroke="#2FDC7A" stroke-width="4" stroke-linecap="round"/>`;
+  xs.slice(0,3).forEach((x,i)=>{s+=stampSVG('done','',{size:S,i,sm:true,disc:true,attrs:` x="${x-h}" y="${y-h}"`});});
+  const x=xs[3];
+  // 1-4: 62%였던 호가 끝까지 차고(.d4a), 그 칸에 방금 찍힌 진한 도장이 놓인다(.d4b)
+  s+=`<g class="dc4"><g class="d4a">${stampSVG('ing','',{size:S,p:62,stage:1,disc:true,attrs:` x="${x-h}" y="${y-h}"`})}</g>
+    <g class="d4b">${stampSVG('done','',{size:S,i:3,sm:true,fresh:true,disc:true,attrs:` x="${x-h}" y="${y-h}"`})}</g></g>`;
+  // 방금 끝낸 1-4만 초록 굵은 글자(오늘 한 일)
+  ['1-1','1-2','1-3','1-4'].forEach((t,i)=>{const f=i===3;s+=`<text x="${xs[i]}" y="${y+37}" text-anchor="middle" font-size="13" font-weight="${f?800:700}" fill="${f?'#2fdc7a':'#8b928e'}" font-family="${FD}">${t}</text>`;});
+  // 아치는 길 끝에 선다: 창턱 아랫면이 길 선보다 14px 아래, 가운데 x=242
+  s+=`<ellipse cx="242" cy="${y+14}" rx="20" ry="3" fill="rgb(0 0 0 / .55)"/>
+    <g class="plant"><g class="cloth">${medalSVG('stage',{state:'got',size:54,stage:1,attrs:` x="215" y="${R2(y+14-54*.95)}"`})}</g></g></svg>`;
+  return s;
+}
+function mm2(){
+  const X=v=>+(10+(v-100)*.44).toFixed(1);
+  const a=X(260),b=X(360),l3=X(300);
+  const fl=(x,got,cls)=>`<g class="${cls||''}"><path class="fl" d="M${x} 24 V6" stroke="${got?'#2FDC7A':'#8b928e'}" stroke-width="2" stroke-linecap="round"/><path class="fl ff" d="M${x+1} 6.5 L${x+11} 10.3 L${x+1} 14.1 Z" fill="${got?'url(#b-gmetal)':'#161918'}" stroke="${got?'#2FDC7A':'#8b928e'}" stroke-width="1.3" stroke-linejoin="round"/></g>`;
+  const T=(x,t,anc)=>`<text x="${x}" y="47" text-anchor="${anc}" font-size="15.5" font-weight="650" fill="#8b928e" font-family="Pretendard Variable, Pretendard, sans-serif">${t}</text>`;
+  return `<svg class="mm2" viewBox="0 0 250 54" aria-hidden="true" focusable="false">
+    <path d="M10 24 H230" stroke="#6E716F" stroke-width="3" stroke-linecap="round"/>
+    <path class="mvbar" style="--sx:${((a-10)/(b-10)).toFixed(3)}" d="M10 24 H${b}" stroke="#2FDC7A" stroke-width="4" stroke-linecap="round"/>
+    ${fl(10,true)}${fl(l3,true,'f3')}${fl(230,false)}
+    ${T(8,'레벨 2','start')}${T(l3,'레벨 3','middle')}${T(240,'레벨 4','end')}
+    <g class="mv" style="--from:${(a-b).toFixed(1)}px"><circle cx="${b}" cy="24" r="10" fill="url(#gGlowDot)" opacity=".75"/><circle cx="${b}" cy="24" r="5" fill="#2FDC7A"/><circle cx="${b-1.4}" cy="22.6" r="1.6" fill="#e9fff2" opacity=".85"/></g>
+  </svg>`;
+}
+function answered(labels,texts,ans,pick){ // 답한 문제: 단추 대신 정적 목록. 고른 답·맞음·정답·틀린 보기를 글자로 둔다
+  return `<ol class="opts done">${texts.map((t,i)=>{
+    const right=i===ans,picked=i===pick;
+    const tags=(picked?'<span class="chip pick">고른 답</span>':'')+(right?`<span class="chip ok">${CKS}${picked?'맞음':'정답'}</span>`:`<span class="chip wrong">${XS}틀린 보기</span>`);
+    return `<li class="opt${right?' right':''}${picked&&!right?' picked':''}"><span class="on" aria-hidden="true">${labels[i]}</span><span class="ot"><span class="sr">${labels[i]}. </span>${t}</span><span class="tags">${tags}</span></li>`;
+  }).join('')}</ol>`;
+}
+function q2Body(){
+  const head=`<p class="qt" id="q2t"><span class="qn">문제 2</span><span>총보수가 같은 두 ETF는 1년 동안 드는 비용도 언제나 같습니다.</span></p>`;
+  // 한 번만 답하는 선택이라 라디오가 아니라 묶음 안의 일반 단추 두 개로 둔다
+  if(Q2PICK===null) return head+`<div class="ox" role="group" aria-labelledby="q2t" aria-describedby="q2h">${Q2.opts.map((o,i)=>`<button type="button" class="opt free" data-q2="${i}"><b>${o.v}</b><small>${o.s}</small></button>`).join('')}</div><p class="qhint" id="q2h">고르면 바로 답이 됩니다.</p>`;
+  const n=1+(Q2PICK===Q2.ans?1:0),ok=Q2PICK===Q2.ans;
+  // 답한 뒤 초점은 풀이로만 옮긴다. 고른 답과 맞음 여부는 풀이 안에서 한 번만 읽힌다(따로 알리지 않는다)
+  return head+answered(Q2.opts.map(o=>o.v),Q2.opts.map(o=>o.s),Q2.ans,Q2PICK)+`<p class="expl" id="ex2" tabindex="-1"><span class="sr">고른 답 ${Q2.opts[Q2PICK].v}, ${ok?'맞음':'틀린 보기'}. </span><b>풀이</b>${Q2.expl}</p><p class="qsum">2문제 중 ${n}개를 맞혔습니다.</p>`;
+}
+function quiz(L){
+  return `<div class="qhead"><h3 id="qh">확인 문제</h3><span class="vtag">가상의 예</span></div>
+  <div class="q"><p class="qt" id="q1t"><span class="qn">문제 1</span>${L?'<span class="fa">첫 답</span>':''}<span>ETF의 총보수는 언제, 어떻게 빠져나갈까요?</span></p>
+    ${answered(['1','2','3'],Q1.opts,Q1.ans,Q1.pick)}
+    <p class="expl" id="ex1"><b>풀이</b>${Q1.expl}</p></div>
+  <div class="q" id="q2">${q2Body()}</div>`;
+}
+function nextCard(){
+  return `<a class="nextc" href="#"><span class="na" aria-hidden="true">${land(2,'pub')}</span><span style="min-width:0">
+    <span class="nk">다음 글 · 2단계 · 수익과 위험 읽기</span><span class="nt"><span>2-1</span>수익과 손실</span>
+    <span class="nq">마지막 수익과 중간의 하락은 왜 함께 봐야 할까요?</span><span class="nm">약 6분</span></span><span class="arr">${chev()}</span></a>`;
+}
+const DONE_MSG='1단계 글 4편을 모두 읽었습니다. 새 배지: 1단계 완주. 레벨 3이 되었습니다. 다음 레벨까지 240, 다음 배지(읽은 글 5편)까지 1편입니다.';
+function doneCard(){
+  const dot=`<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="rgb(47 220 122 / .18)"/><circle cx="7" cy="7" r="3" fill="#2FDC7A"/></svg>`;
+  return `<section class="done-card" aria-labelledby="dch">
+    <div class="dc-sec dc-head">
+      <h2 id="dch" class="dc-date">완료 · 2026-11-20</h2>
+      <div class="dc-left"><div class="dc-path">${dcPath()}</div><span class="dc-prog"><span aria-hidden="true">1단계 4/4</span><span class="sr">1단계 글 4편 중 4편을 읽었습니다</span></span></div>
+    </div>
+    <div class="dc-sec">
+      <div class="dc-ach">
+        <div class="ach hero a-arch rise" style="--d:0"><span class="k">새 배지</span><span class="hero-art" aria-hidden="true">${heroArch()}</span>
+          <b class="big">1단계 완주</b><div class="row"><span class="chip got">받음 2026-11-20</span>${NEWP}</div>
+          <p class="nxt">${medalSVG('read',{state:'yet',size:36,p:80,tier:2})}<span><b>다음 배지</b><span class="nw">읽은 글 5편 · <span aria-hidden="true">4/5</span><span class="sr">5편 중 4편</span></span></span></p></div>
+        <div class="ach hero a-lv rise" style="--d:1"><span class="k">레벨</span><span class="hero-art" aria-hidden="true">${heroEmblem()}</span>
+          <b class="big">레벨 3</b><div class="row"><span class="chip got">받음 2026-11-20</span>${NEWP}</div></div>
+        <div class="ach a-lvx rise" style="--d:1">${mm2()}
+          <div class="xpnow">경험치 <span class="xpn" aria-hidden="true"></span><span class="sr">360</span> · 다음 레벨까지 <b style="color:var(--fg)">240</b></div></div>
+        <div class="ach a-xp rise" style="--d:2"><span class="k">이번에 받은 경험치</span><ul class="xp">
+          <li><span>글 완료</span><span>+20</span></li><li><span>1단계 완주</span><span>+50</span></li><li><span>첫 문제 정답</span><span>+30</span></li>
+          <li class="sum"><span>합계</span><span>+100</span></li></ul></div>
+      </div>
+      <p class="status">${dot}<span>1단계 글 4편을 모두 읽었습니다. <span class="nw">새 배지: 1단계 완주.</span> <span class="nw">레벨 3이 되었습니다.</span> <span class="nw">다음 레벨까지 240,</span> <span class="nw">다음 배지(읽은 글 5편)까지</span> 1편입니다.</span></p>
+    </div>
+    <div class="dc-sec">
+      <div class="termrow"><span>이 글에서 익힐 용어</span><span class="tpill">총보수 <em>· 익힘</em></span></div>
+      ${quiz(true)}
+    </div>
+    <div class="dc-sec">${nextCard()}</div>
+  </section>`;
+}
+function scrEnd(){
+  const L=IN();
+  const pebIc=`<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="#8b928e" stroke-width="1.3"/><circle cx="8" cy="8" r="4.4" fill="none" stroke="#8b928e" stroke-width="1"/></svg>`;
+  const ref=L
+    ?`<section class="ref" aria-labelledby="refe"><h2 id="refe">참고: 목업 동작</h2><p style="margin:0">문제 2의 O·X를 누르면 답한 모습을 볼 수 있습니다. 목업은 경험치와 배지 숫자를 다시 계산하지 않습니다.</p></section>`
+    :`<section class="ref" aria-labelledby="refe"><h2 id="refe">참고: 목업 동작</h2><p style="margin:0">문제 1은 이 탭에서 방금 답한 모습입니다. 비로그인 사용자의 답은 기록하지 않으므로, 글을 다시 열면 두 문제 모두 답하지 않은 상태로 보입니다.</p></section>`;
+  return `<div class="view on"><div class="wrap read">
+    ${L?'<div class="rbar" role="progressbar" aria-label="읽은 정도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i></i></div>':''}
+    <nav class="crumb" aria-label="경로"><a href="#" data-go="curriculum">배우기</a><span class="sep" aria-hidden="true">›</span><a href="#" data-go="curriculum" data-to="stage-1">1단계 · ETF와 국내 시장 기초</a></nav>
+    <span class="a-no">1-4</span><h1 class="at" tabindex="-1">ETF 보수는 어디로 빠져나갈까?</h1><div class="a-meta">약 4분</div>
+    <div class="body">
+      <p class="omit">본문 앞부분 생략</p>
+      <h2>두 비용은 빠지는 때가 다릅니다</h2>
+      <p>거래비용은 사고팔 때마다 생기는 비용입니다. 매매 수수료와 사고파는 가격의 차이가 여기에 들어가고, 거래하지 않는 날에는 생기지 않습니다. 총보수는 거래하지 않아도 들고 있는 동안 날마다 조금씩 빠집니다.</p>
+      <p>총보수는 청구서가 따로 오지 않아 잊기 쉽습니다. 그래서 같은 지수를 따르는 ETF끼리 비교할 때는 가격보다 총보수와 거래비용을 함께 봅니다.</p>
+    </div>
+    <div class="endmark">${pebIc}<span>본문 끝</span></div>
+    ${L?doneCard():`<section class="qcard" aria-labelledby="qh">${quiz(false)}</section><div class="guestend">${nextCard()}</div><div style="margin-top:16px">${guestSample('end')}</div>`}
+    ${ref}
+  </div></div>`;
+}
+
+/* ───────── 라우터·길 그리기 ───────── */
+const SCREENS={curriculum:scrCurriculum,list:scrList,my:scrMy,end:scrEnd};
+const TITLES={curriculum:'배우기',list:'배우기 · 목록 보기',my:'나의 학습 · 배우기',end:'ETF 보수는 어디로 빠져나갈까? · 배우기'};
+let FOCUS=null; // 다음 render 뒤 초점: 'toggle' | 'h1' | 'to' | 'none'
+function readHash(){
+  const p=new URLSearchParams(location.hash.replace(/^#/,''));
+  const sc=p.get('screen');S.screen=['curriculum','list','my','end'].includes(sc)?sc:'curriculum';
+  S.auth=p.get('auth')==='out'?'out':'in';
+  S.probe=p.get('probe')==='1';S.to=p.get('to');S.log=p.get('log')==='1';
+}
+function go(screen,auth,to,focus){
+  if(screen===S.screen&&auth===S.auth&&!to) return; // 지금 보기와 같으면 아무 일도 하지 않는다
+  FOCUS=focus||'h1';
+  let h='screen='+screen+'&auth='+auth;if(to) h+='&to='+to;if(S.probe) h+='&probe=1';
+  if(location.hash.replace(/^#/,'')===h) render(); else location.hash=h;
+}
+let roadSig='',ro=null;
+function drawRoad(){
+  const map=document.getElementById('map'),svg=document.getElementById('road');
+  if(!map||!svg||!map.getClientRects().length) return;
+  const mr=map.getBoundingClientRect();
+  const pts=[...map.querySelectorAll('[data-road]')].map(el=>{const r=el.getBoundingClientRect();
+    return {x:+(r.left+r.width/2-mr.left).toFixed(1),y:+(r.top+r.height/2-mr.top).toFixed(1),k:el.dataset.road,gap:el.hasAttribute('data-gap')};});
+  if(pts.length<2) return;
+  const groups=[],ends=[];let cur=null,bed='';
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    if(b.gap){ if(a.k!=='d') ends.push(a); cur=null; continue; } // 길을 끊고 끝 표시
+    const k=b.k,ym=((a.y+b.y)/2).toFixed(1);
+    const seg=` C${a.x} ${ym} ${b.x} ${ym} ${b.x} ${b.y}`;
+    if(!cur||cur.k!==k){cur={k,d:`M${a.x} ${a.y}`};groups.push(cur);}
+    cur.d+=seg;if(k!=='d') bed+=`M${a.x} ${a.y}`+seg;
+  }
+  svg.setAttribute('width',mr.width.toFixed(1));svg.setAttribute('height',mr.height.toFixed(1));
+  svg.setAttribute('viewBox',`0 0 ${mr.width.toFixed(1)} ${mr.height.toFixed(1)}`);
+  const sig=groups.map(g=>g.k).join(',')+'|'+ends.map(e=>e.k).join(',');
+  if(sig===roadSig&&svg.childElementCount===groups.length+ends.length+1){
+    const ps=svg.children;ps[0].setAttribute('d',bed);groups.forEach((g,i)=>ps[i+1].setAttribute('d',g.d));
+    ends.forEach((e,i)=>{const c=ps[groups.length+1+i];c.setAttribute('cx',e.x);c.setAttribute('cy',e.y);});return;
+  }
+  roadSig=sig;
+  svg.innerHTML=`<path class="bed" d="${bed}"/>`+groups.map(g=>`<path class="${g.k}${g.k==='d'?'':' draw'}"${g.k==='d'?'':' pathLength="1"'} d="${g.d}"/>`).join('')
+    +ends.map(e=>`<circle class="end ${e.k}" cx="${e.x}" cy="${e.y}" r="5.5"/>`).join('');
+}
+const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+function findAnchor(id){
+  const n=(String(id).match(/\d+$/)||[''])[0];
+  const c=[document.getElementById(id),...document.querySelectorAll(`[data-sa="${n}"]`)].filter(Boolean);
+  return c.find(el=>el.getClientRects().length)||null;
+}
+function flash(t){
+  const b=t&&t.querySelector?t.querySelector('.band'):null;if(!b||reduced()) return;
+  b.classList.add('flash');setTimeout(()=>b.classList.remove('flash'),600);
+}
+function focusEl(el){ if(!el) return; if(!el.matches('a,button,summary,[tabindex]')) el.setAttribute('tabindex','-1'); el.focus({preventScroll:true}); }
+function anchorHead(t){ return t.querySelector('h3, th[scope=rowgroup]')||t; }
+function applyTo(doFocus,doFlash){
+  const t=findAnchor(S.to);if(!t) return;
+  t.scrollIntoView({block:'start'});
+  if(doFlash) flash(t);
+  if(doFocus) focusEl(anchorHead(t));
+}
+/* 떠 있는 '이어서 읽기'는 요약 패널의 '이어서 읽기' 단추가 화면에 보이는 동안 숨긴다 */
+let fio=null;
+function setupFab(){
+  if(fio){fio.disconnect();fio=null;}
+  const f=document.querySelector('.fab');if(!f) return;
+  const anchor=document.querySelector('.journal .btn-go');
+  if(!anchor||!('IntersectionObserver' in window)){f.classList.add('show');return;}
+  fio=new IntersectionObserver(es=>{const e=es[es.length-1];f.classList.toggle('show',!e.isIntersecting);});
+  fio.observe(anchor);
+}
+/* 조작 띠가 sticky일 때 그 높이만큼 스크롤·초점 이동 위치를 내린다 */
+const demo=document.querySelector('.demo');
+function setSticky(){ const st=getComputedStyle(demo).position==='sticky'; document.documentElement.style.setProperty('--sticky-h',(st?demo.offsetHeight:0)+'px'); }
+if('ResizeObserver' in window) new ResizeObserver(setSticky).observe(demo);
+setSticky();
+const live=document.getElementById('live');
+let liveT=null;
+function announce(t,delay){ clearTimeout(liveT); live.textContent=''; if(t) liveT=setTimeout(()=>{live.textContent=t;},delay||250); }
+function probe(){ if(!S.probe) return; requestAnimationFrame(()=>requestAnimationFrame(()=>{document.title='sw='+document.documentElement.scrollWidth;})); }
+function render(){
+  Q2PICK=null;
+  document.body.dataset.auth=S.auth;document.body.dataset.screen=S.screen;
+  document.title=TITLES[S.screen];
+  document.querySelectorAll('.demo button[data-screen]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.screen===S.screen)));
+  document.querySelectorAll('.demo button[data-auth]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.auth===S.auth)));
+  document.getElementById('hdr').className='hdr';
+  document.getElementById('hdr').innerHTML=header();
+  document.getElementById('app').innerHTML=SCREENS[S.screen]();
+  roadSig='';drawRoad();
+  if(ro){ro.disconnect();ro=null;}
+  const map=document.getElementById('map');
+  if(map&&'ResizeObserver' in window){ro=new ResizeObserver(()=>drawRoad());ro.observe(map);}
+  setupFab();
+  // 완료 알림: 비어 있던 상태 알림 그릇에 완료 카드를 그린 뒤 글자만 넣는다(초점 이동 없음)
+  announce(S.screen==='end'&&IN()?DONE_MSG:'');
+  const f=FOCUS;FOCUS=null;
+  if(S.to) applyTo(f==='to'||f==='h1',true); else window.scrollTo(0,0);
+  // React로 옮길 때: 보기 전환 단추는 다시 마운트되지 않게 key를 고정한다
+  if(f==='toggle') focusEl(document.querySelector('.vtoggle [aria-pressed="true"]'));
+  else if(f==='h1'&&!S.to) focusEl(document.querySelector('#app h1'));
+  probe();
+}
+function closeMenu(ret){
+  const h=document.getElementById('hdr'),b=h.querySelector('.menu-btn');
+  if(!h.classList.contains('open')) return;
+  h.classList.remove('open');if(b){b.setAttribute('aria-expanded','false');if(ret) b.focus();}
+}
+document.addEventListener('click',e=>{
+  const mb=e.target.closest('.menu-btn');
+  if(mb){const h=document.getElementById('hdr');const o=!h.classList.contains('open');h.classList.toggle('open',o);mb.setAttribute('aria-expanded',String(o));return;}
+  if(!e.target.closest('#mnav')) closeMenu(false);
+  const db=e.target.closest('.demo button[data-screen]');if(db){go(db.dataset.screen,S.auth,null,'none');return;}
+  const da=e.target.closest('.demo button[data-auth]');if(da){go(S.screen,da.dataset.auth,null,'none');return;}
+  if(e.target.closest('[data-close-notice]')){S.noticeOpen=false;const n=document.getElementById('notice');if(n) n.remove();drawRoad();
+    focusEl(document.querySelector('.vtoggle [aria-pressed="true"]'));return;}
+  const sc=e.target.closest('[data-scroll]');
+  if(sc){e.preventDefault();const t=findAnchor(sc.dataset.scroll);if(t){t.scrollIntoView({behavior:reduced()?'auto':'smooth',block:'start'});flash(t);focusEl(anchorHead(t));}return;}
+  if(e.target.closest('[data-openlog]')){e.preventDefault();const l=document.getElementById('log');if(l){l.open=true;l.scrollIntoView({behavior:reduced()?'auto':'smooth',block:'start'});focusEl(l.querySelector('summary'));}return;}
+  const qb=e.target.closest('[data-q2]');
+  if(qb){Q2PICK=+qb.dataset.q2;const box=document.getElementById('q2');box.innerHTML=q2Body();focusEl(document.getElementById('ex2'));return;}
+  const g=e.target.closest('[data-go]');
+  if(g){e.preventDefault();closeMenu(false);const fo=g.closest('.vtoggle')?'toggle':(g.dataset.to?'to':'h1');go(g.dataset.go,S.auth,g.dataset.to,fo);return;}
+  if(e.target.closest('a[href="#"]')) e.preventDefault();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeMenu(true);return;}
+});
+window.addEventListener('hashchange',()=>{readHash();if(FOCUS===null) FOCUS='h1';render();});
+window.addEventListener('resize',()=>{drawRoad();setSticky();});
+readHash();render();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{drawRoad();if(S.to) applyTo(false,false);probe();});
+</script>
+</body>
+</html>
