@@ -32,9 +32,9 @@ export function fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promis
 | `termId` | `string` | ✓ | 가리킬 용어 |
 | `label` | `string` | ✓ | 트리거 버튼의 접근 가능한 이름(`${label} 도움말`)에 쓴다. 설명을 불러오기 전에도 버튼이 이름을 가져야 한다 |
 | `returnTo` | `LearningReturnState` | **(2판)** 선택 | 글로 이동했다가 돌아올 자리. 보통 현재 화면의 경로다(§3). 배우기 글 안에서는 그 글이 받은 `learningReturn`을 그대로 넘기고, 없으면 넘기지 않는다 |
-| `note` | `ReactNode` | 선택 | 9월 판. 003이 축 도움말 문장을 붙일 때 쓴다 |
+| `note` | `ReactNode` | 선택 | 9월 판. 003이 축 도움말 문장을 붙일 때 쓴다. 모든 상태에서 보인다. **(2판)** `fallbackMeaning`과 함께 쓰면 뜻 문장을 뺀 나머지 안내만 담는다(§5) |
 | `on` | `'click'` \| `'hover'` | 선택 | 9월 판. 여는 방식 |
-| `fallbackMeaning` **(2판)** | `string` | 선택 | `notReady`일 때 '설명 준비 중' 대신 보일 문장. 설정 항목 네 개에서 003 등록표의 뜻 문장을 넘긴다(§5) |
+| `fallbackMeaning` **(2판)** | `string` | 선택 | `notReady`일 때 '설명 준비 중' 대신 보일 뜻 문장. `notReady`에서만 보인다. 설정 항목 네 개에서 003 등록표의 뜻 문장 하나만 넘긴다(§5) |
 | `articleLinkLabel` **(2판)** | `string` | 선택 | 글 연결 문구. 기본은 1판 구현의 `‘{articleTitle}’ 글 읽기`이며 spec이 '해당 주제 글로 이동'이라고 부르는 연결이 이것이다. 설정 항목은 '이 설정을 설명하는 글 보기' |
 
 ### 상태와 표시
@@ -87,7 +87,7 @@ navigate(`/learn/${articleId}`, {
 
 1. `location.state.learningReturn.path`가 문자열이다.
 2. `normalizeReturnTarget(path)`의 결과가 입력 `path`와 같다(014 `frontend/src/auth/returnTarget.ts`). 쿼리 문자열이 붙은 경로도 받는다.
-3. 그 경로의 pathname이 위 표에 든다.
+3. 그 경로의 pathname이 위 표에 든다. `/results/`(뒤에 한 글자 이상)와 `/regime-link`(그 자체와 `/regime-link/` 아래)만 앞부분으로 맞추고, 나머지는 정확히 같아야 한다(예: `/strategy-x`는 들지 않는다).
 
 하나라도 어긋나면 연결을 보이지 않는다. 배우기 메뉴·외부 링크·새로고침으로 state가 없는 경우가 여기에 든다(spec Edge Cases).
 
@@ -124,11 +124,15 @@ navigate('/diagnosis/sectors', {
 
 | 그 용어의 상태 | 도움말 창 |
 |---|---|
-| 게시됨(`ready`) | 013 용어의 뜻 문장 + '이 설정을 설명하는 글 보기'. 등록표의 뜻 문장은 보이지 않는다. 허용 범위·기본값·상한 처리 안내는 지금처럼 003 등록표가 보인다 |
-| 게시 전·게시 취소(`notReady`) | 등록표의 뜻 문장(`fallbackMeaning`). 글 연결 없음 |
-| 불러오지 못함(`failed`) | 불러오지 못했다는 문장과 다시 시도. 허용 범위 안내는 그대로 보인다 |
+| 게시됨(`ready`) | 013 용어 이름과 뜻 문장, `note`(상한 처리 안내 등), '이 설정을 설명하는 글 보기' 순서. 등록표의 뜻 문장(`fallbackMeaning`)은 보이지 않는다. 허용 범위·기본값·상한 처리 안내는 지금처럼 003 등록표가 보인다 |
+| 게시 전·게시 취소(`notReady`) | 등록표의 뜻 문장(`fallbackMeaning`), `note` 순서. '설명 준비 중'과 글 연결 없음 |
+| 불러오지 못함(`failed`) | 불러오지 못했다는 문장과 다시 시도, 그리고 `note`. 등록표의 뜻 문장은 보이지 않는다. 허용 범위 안내는 그대로 보인다 |
 
-013은 `TermHelp`의 두 선택 prop을 제공한다(B10). 003 등록표의 `termId` 변경과 `DetailSettingsPanel`의 prop 사용은 003의 별도 MR이다.
+`TermHelp`는 `fallbackMeaning`을 받으면 창 안을 뜻 자리, `note`, 글 연결 순서로 둔다. 뜻 자리는 `ready`면 용어 이름과 013 뜻 문장, `notReady`면 `fallbackMeaning`, `failed`면 불러오지 못했다는 문장과 다시 시도, 여는 중이면 불러오는 중이라는 문장이다. 글 연결은 `ready`에만 있다. `note`는 모든 상태에서 보이고 `fallbackMeaning`은 `notReady`에서만 보인다. `fallbackMeaning`이 없으면 9월 판 그대로 `note`를 맨 앞에 두고, `note`가 있으면 `notReady`에서 '설명 준비 중'을 덧붙이지 않는다(003의 다른 축).
+
+설정 항목 네 개에서 003은 등록표의 뜻 문장 하나만 `fallbackMeaning`으로, 그 밖의 안내(상한 처리 안내, 003 화면이 덧붙이는 평가 범위 문장 등)만 `note`로 넘긴다. 같은 문장을 두 prop에 함께 넘기면 뜻 문장이 둘 보인다(FR-008). 지금 등록표는 뜻 문장과 나머지 안내를 `description` 한 필드에 담는다(예: `parameter-registry.yml`의 모멘텀 `maxWeight` 축). 둘을 어떻게 나눌지는 003이 정한다.
+
+013은 `TermHelp`의 두 선택 prop과 위 표시 규칙을 제공한다(B10). 003 등록표의 `termId` 변경, 뜻 문장과 나머지 안내의 분리, `DetailSettingsPanel`의 prop 사용은 003의 별도 MR이다.
 
 ## 6. 화면별 할 일
 
