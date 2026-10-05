@@ -15,7 +15,7 @@
 - 관리 권한을 줄 로그인 계정 하나. 그 계정의 사용자 ID를 `THORP_LEARNING_ADMIN_USER_IDS`로 넘긴다([research](research.md) R5)
 - **(2판)** 나의 학습을 확인할 일반 계정 둘(A·B). B는 기록이 쌓인 계정으로 쓴다(SC-005 관찰용 시험 계정과 같은 방식)
 
-**로컬 프로필 주의**: `application-local.yml`은 Flyway를 끄고 Hibernate가 스키마를 만든다. 이 상태에서는 마이그레이션이 넣는 **초기 자리(9월 판 아홉 글·열네 용어, 2판 여섯 단계·새 글 18편)가 생기지 않는다.** 초기 자리를 확인하려면 아래처럼 Flyway를 켠다.
+**로컬 프로필 주의**: `application-local.yml`은 Flyway를 끄고 Hibernate가 스키마를 만든다. 이 상태에서는 마이그레이션이 넣는 **초기 자리(9월 판 아홉 글·열네 용어, 2판 여섯 단계·새 글 18편)가 생기지 않는다.** 초기 자리를 확인하려면 아래처럼 Flyway를 켠다. **(2판)** 나의 학습 네 테이블(`learning_progress`·`learning_answer`·`learning_exp_entry`·`learning_badge_award`)은 JPA 엔티티 없이 JdbcTemplate으로만 쓰므로 이 상태에서는 테이블 자체가 생기지 않아 `/learning/me`가 실패한다. 그래서 §6 이후의 2판 확인은 아래 명령으로 Flyway를 켜고 한다.
 
 ```bash
 SPRING_PROFILES_ACTIVE=local SPRING_FLYWAY_ENABLED=true SPRING_JPA_HIBERNATE_DDL_AUTO=validate SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=never THORP_LEARNING_ADMIN_USER_IDS=1 ./gradlew bootRun
@@ -52,7 +52,7 @@ cd backend && ./gradlew spotlessApply build
 
 | 무엇 | 확인 | 근거 | 묶음 |
 |---|---|---|---|
-| 2판 마이그레이션 | 여섯 단계, 27편의 단계 배치(§13-3), 기존 게시 글의 공개 배치, 새 CHECK(공개 배치·`mastered_via`·`released_*`), 부분 유일 색인 둘 | [data-model](data-model.md) §3·§11·§13 | B07·B08·B09 |
+| 2판 마이그레이션 | 여섯 단계, 27편의 단계 배치(§13-3), 기존 게시 글의 공개 배치, 새 CHECK(공개 배치·`mastered_via`·`released_*`), 부분 유일 색인 둘, 나의 학습 네 테이블의 유일 제약(기본키 포함)과 `users` 외래키 `ON DELETE CASCADE` | [data-model](data-model.md) §3·§11·§13 | B07·B08·B09 |
 | 형식별 저장 | V1 초안에 V2 요소, V2 초안에 `sentence`·`sources`를 넣으면 400. LEGACY 판 없는 글을 V1로 되돌리면 409 | R16 | B07 |
 | 게시 방식 | §10-1 표의 네 경우 | R16 | B07 |
 | 게시 전 검사 v2 | 열일곱 검사가 각각 걸리는 초안, 금지 표현·숫자 예외 자리(오해의 `wrong`, 틀린 보기, `(예: …)`), 모두 통과하는 초안 | [data-model](data-model.md) §8-2 | B07 |
@@ -75,7 +75,7 @@ cd frontend && npm run lint && npm run build && npm test
 
 새 테스트 파일 경로가 `vite.config.ts`의 `test.include`에 걸리는지 확인한다. 걸리지 않으면 실패하지 않고 조용히 빠진다([frontend/CLAUDE.md](../../frontend/CLAUDE.md)). **(2판)** `src/components/learning/**/*.test.ts`(예: `firstOccurrences.test.ts`, `richTextSyntax.test.ts`, `returnTargets.test.ts`)는 지금 `include`에 없으므로 더한다. `testCollection.guard.test.tsx`가 빠진 파일을 잡는다.
 
-**(2판)** 9월 판 화면 테스트 가운데 "진도·완료 문구가 없다"와 "브라우저 저장소에 쓰지 않는다"는 2판 spec과 맞지 않는다. 지우지 않고 "비로그인 사용자에게는 학습 기록 문구가 없다", "학습 기록을 저장소에 쓰지 않고 `thorp.learning.view`·`thorp.learning.dismissedNotices`만 쓴다"로 바꾼다(FR-020, FR-023, FR-031).
+**(2판)** 9월 판 화면 테스트 가운데 "진도·완료 문구가 없다"와 "브라우저 저장소에 쓰지 않는다"는 2판 spec과 맞지 않는다. 지우지 않고 "비로그인 사용자에게는 학습 기록 문구가 없다", "학습 기록을 저장소에 쓰지 않고 `thorp.learning.view`·`thorp.learning.dismissedNotices`만 쓴다"로 바꾼다(FR-020, FR-023, FR-031). 로그인 연결을 누르는 경우만 014 `thorp.auth.returnTarget`이 더해진다(R34).
 
 ## 2. 공개 조회 (비로그인, 9월 판 회귀)
 
@@ -310,7 +310,7 @@ curl -s localhost:8080/learning/articles/returns-and-losses
 
 `volatility-is-not-loss`가 공개된 뒤(§8-4) 계정 A가 q1·q2에 답한 상태에서 관리 화면으로 고친다: q1은 질문 글자만, q2는 정답 보기를 다른 보기로 바꾸고 게시한다.
 
-**기대**: 게시 응답의 `renamedQuestions`에 q2만 있다. 계정 A의 글 화면에서 q1은 첫 답 결과 그대로, q2 자리에는 새 식별자의 답하지 않은 문제가 보인다. 계정 A의 경험치는 줄지 않는다.
+**기대**: 게시 응답의 `renamedQuestions`에 q2만 있다. 계정 A의 글 화면에서 q1은 첫 답 결과 그대로, q2 자리에는 새 식별자의 답하지 않은 문제가 보인다. 계정 A의 경험치는 줄지 않는다. 게시 직후 같은 편집 화면에서 q1의 질문 글자를 한 번 더 고쳐 저장하면 거절 없이 저장되고, 저장 요청의 q2 자리 식별자는 `renamedQuestions`의 새 식별자다.
 
 ### 7-6. '확인 필요' (R37)
 
@@ -481,6 +481,7 @@ curl -s localhost:8080/learning/articles/returns-and-losses
 | 로그아웃 누름 | 그 즉시 나의 학습이 사라지고 브라우저 저장소에 남지 않는다 |
 | 서버 세션 만료 뒤 글 완료 | '기록되지 않았습니다'와 '다시 시도', 014 FR-012의 재로그인 안내. 다시 로그인하면 보던 배우기 화면으로 돌아온다 |
 | 비로그인으로 글을 열고 확인 문제에 답한 뒤 다른 탭에서 로그인 | 그 글의 글 끝과 머문 시간이 처음부터 다시 시작한다. 로그인 전 답은 계정에 없고, 계정에서 답하지 않은 문제는 답하지 않은 문제로 보인다 |
+| 로그인한 채 글 화면(확인 문제에 답한 뒤)이나 배우기 목록을 열어 두고 다른 탭에 갔다 돌아옴 | 확인하는 동안 나의 학습·완료 카드·확인 문제가 보이지 않다가 같은 계정으로 확인되면 답한 결과·완료 카드·요약 패널이 그대로 다시 보인다. 나의 학습을 다시 요청하지 않고, 머문 시간을 처음부터 세지 않으며, 화면이 밀리지 않는다 |
 | 배우기 목록의 '로그인' 연결로 로그인 | 로그인 뒤 그 배우기 화면으로 돌아온다 |
 
 ### 10-11. 비로그인은 아무것도 남지 않는다 (SC-009, SC-010)
@@ -506,7 +507,7 @@ curl -s localhost:8080/learning/articles/returns-and-losses
 
 ### 11-3. 요약 패널과 떠 있는 단추 (FR-020)
 
-**기대**: 로그인 사용자의 목록 위에 레벨 표장·다음 레벨까지 남은 경험치·'읽은 글 3편'·'익힌 용어 4개'(분모 없음)·'이어서 읽기'·'모두 보기'. 커리큘럼 보기에서 패널의 '이어서 읽기'가 화면 밖으로 나가면 오른쪽 아래에 떠 있는 '이어서 읽기'가 나타나고, 깜빡이지 않는다. 기록을 불러오지 못했거나 공개된 글을 모두 읽었으면 단추가 없다.
+**기대**: 로그인 사용자의 목록 위에 레벨 표장·다음 레벨까지 남은 경험치·'읽은 글 3편'·'익힌 용어 4개'(분모 없음)·'이어서 읽기'·'모두 보기'. 커리큘럼 보기에서 패널의 '이어서 읽기'가 화면 밖으로 나가면 오른쪽 아래에 떠 있는 '이어서 읽기'가 나타나고, 깜빡이지 않는다. 목록 보기에는 떠 있는 단추가 없다. 기록을 불러오지 못했거나 공개된 글을 모두 읽었으면 단추가 없다. 레벨에 닿은 지 7일 안이면 패널의 레벨 옆에 '새'가 있고, 받은 지 7일 안의 배지(레벨 갈래 제외)가 있으면 '새 배지: 1단계 완주'처럼 한 줄과 '새'가 있으며, 없으면 그 줄이 없다.
 
 ### 11-4. 기록을 불러오지 못함 (FR-020, SC-007)
 

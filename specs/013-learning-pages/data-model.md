@@ -37,7 +37,7 @@ users ─┬─ learning_progress    (사용자 × 글: 읽은 위치·완료·�
 | `termId` | 같은 형식, 2~64자 | 바뀌지 않는다. 다른 글로는 넘기기(R24)로만 옮긴다 | R4, FR-008 |
 | `stageKey` **(2판)** | `articleId`와 같은 형식, 3~64자 | 바뀌지 않는다. 마이그레이션만 만든다 | R14, FR-023 |
 | `questionId`·`choiceId` **(2판)** | `^q[1-9][0-9]{0,3}$`·`^c[1-9][0-9]{0,3}$`, 글 안에서 유일 | 서버가 주고 바뀌지 않는다. 같은 문제 판정(§6-3)에서 새 문제가 되면 새 식별자를 받는다 | R21 |
-| `badgeKey` **(2판)** | `articleId`와 같은 형식 | 바뀌지 않는다. 코드 `BadgeCatalog`가 정한다 | R30 |
+| `badgeKey` **(2판)** | `articleId`와 같은 형식, 3~70자(가장 긴 키는 `stage-{stageKey}`로 6자 + 최대 64자) | 바뀌지 않는다. 코드 `BadgeCatalog`가 정한다 | R30 |
 | 변경 기록 `entryKey` **(2판)** | `stage:{stageKey}` 또는 `article:{articleId}` | 바뀌지 않는다 | R27 |
 
 - `articleId`는 모든 글 안에서 유일하다. 소유 중인 `termId`는 **모든 글의 초안 용어 전체**에서 유일하다.
@@ -342,6 +342,8 @@ O/X 문제는 보기 두 개로 쓴다. 관리 화면의 원고 가져오기는 
 | 정답 보기 식별자가 다르거나 보기가 더해지거나 빠졌다 | 새 문제. 서버가 새 `questionId`를 주어 판에 넣고 초안의 그 문제도 같은 식별자로 바꾼다(초안 번호는 그대로). 옛 식별자의 첫 답과 경험치는 남고 화면에서만 사라진다 |
 | 가장 최근 판에 없다 | 새 문제 |
 
+초안 번호를 올리지 않으므로 게시 전에 읽은 초안에는 옛 식별자가 남는다. 그 초안을 그대로 저장하면 옛 식별자는 지금 초안에 없는 식별자라 §6-1에 따라 400이다. 넘겨받기를 마친 글의 `transferFrom`도 게시가 비우므로 옛 값으로 저장하면 409다(§7-2). 그래서 관리 화면은 게시에 성공하면 초안을 다시 읽고, 이 탭에 보관한 편집 내용은 게시·단계 공개 응답의 `renamedQuestions`·`transferredTerms`대로 고친다([learning-admin-api](contracts/learning-admin-api.md) §6·§11).
+
 보기의 글자를 고쳐 뜻을 바꾸지 않는다는 규칙(정답 보기와 틀린 보기의 글자를 맞바꾸는 일 포함)은 원고 MR 검토로 확인한다(spec Edge Cases).
 
 ## 7. 용어 설명 **(2판)**
@@ -405,6 +407,8 @@ O/X 문제는 보기 두 개로 쓴다. 관리 화면의 원고 가져오기는 
 
 v1의 숫자 검사는 `hypothetical` 블록 **밖**의 텍스트(제목·질문·`heading`·`paragraph`·용어 이름과 문장)를 본다. `REQUIRED_FIELDS`의 "문단 없음"은 `text`가 공백뿐인 `paragraph`를 문단으로 세지 않는다.
 
+v1 검사는 V1 초안만 받는다(§10-1 게시 방식 표). V1 초안에는 V1 블록만 있고(§5-1) 문단과 가상의 계산 예는 글자 조각 하나로 담기므로(§14), v1 검사는 그 조각의 글자를 9월 판의 `text`로 보고 판정과 결과를 1판과 같게 둔다. v1 검사가 V2 초안이나 V2에만 있는 블록을 받으면 호출하는 쪽의 오류로 보고 예외를 던진다. 건너뛰어 통과로 세지 않는다(원칙 VI).
+
 ### 8-2. v2 검사 **(2판, V2 글마다 게시와 단계 공개)**
 
 `backend/src/main/resources/learning/publish-checks-v2.yml`. 열일곱 검사를 모두 실행하고 걸린 항목을 전부 돌려준다. 결과는 아래 순서, 같은 검사 안에서는 제목·질문·예시·블록·용어·확인 문제 순서다.
@@ -451,6 +455,8 @@ quiz:
   questionsRange: [2, 3]
   choicesRange: [2, 5]
 ```
+
+`reading` 값으로 계산하는 식은 [research](research.md) R20이다. 반올림 전 예상 읽기 초 = 본문 글자 수 ÷ `charsPerMinute` × 60이고, 최소 머문 시간 = max(`minDwellFloorSeconds`, 올림(반올림 전 예상 읽기 초 ÷ `minDwellDivisor`))이다.
 
 ### 8-4. 검사 결과의 위치
 
@@ -584,7 +590,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 | 컬럼 | 형 | 제약 | 뜻 |
 |---|---|---|---|
 | `user_id` | `BIGINT` | PK 일부, FK | |
-| `badge_key` | `VARCHAR(48)` | PK 일부 | §12-4의 `badgeKey` |
+| `badge_key` | `VARCHAR(70)` | PK 일부 | §12-4의 `badgeKey`(§2, 3~70자) |
 | `earned_at` | `TIMESTAMPTZ` | NOT NULL | 획득 날짜 |
 
 추가만 한다. 콘텐츠가 바뀌어도 지우지 않는다(FR-024).
@@ -629,6 +635,8 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 | `ALL_CORRECT` | 20 | 처음 모든 문제에 답한 순간 그 문제를 모두 첫 답에서 맞혔을 때 |
 | `STAGE_COMPLETED` | 50 | 비어 있지 않은 공개 단계의 공개된 글을 모두 완료했을 때(정산, §12-5) |
 
+**익힘**(FR-022): 첫 답이 맞은 순간 그 글이 아직 익힘이 아니면 `mastered_at`을 지금으로, `mastered_via`를 `FIRST_ANSWER`로 둔다. 모든 문제에 답하기 전이어도 하나를 맞히면 익힘이다. 공개 판의 문제에 모두 답했고 그 첫 답이 하나도 맞지 않았으며 아직 익힘이 아닌 글만 다시 풀기를 받고, 다시 풀기의 답이 맞으면 `RETRY`로 익힘이 된다. 다시 풀기는 답을 저장하지 않고(§11-2) 경험치 장부 줄도 만들지 않는다(FR-028). 익힘은 문제가 바뀌거나 글이 게시 취소되어도 비우지 않고 '학습 초기화'로만 지운다(FR-020, spec Edge Cases).
+
 레벨 문턱(FR-029):
 
 | 레벨 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 이상 |
@@ -656,7 +664,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 | `persistence` | 특별 | 끈기 | `mastered_via = RETRY`인 글이 하나 이상 |
 | `exploration` | 특별 | 탐험 | 여섯 단계가 모두 공개되었고, 비어 있지 않은 공개 단계가 하나 이상이며, 그 단계마다 완료한 글이 하나 이상 |
 
-**상태와 '준비 중' 사유**: 받은 배지는 `EARNED`다. 받지 않은 배지는 아래 표로 `PREPARING`인지 정하고, 아니면 `NOT_YET`(기준과 진행 n/m)이다.
+**상태와 '준비 중' 사유**: 받은 배지는 `EARNED`다. 받지 않은 배지는 아래 표로 `PREPARING`인지 정하고, 아니면 `NOT_YET`(기준과 진행 n/m)이다. 배지의 `PREPARING`은 '지금 공개된 콘텐츠로는 받을 수 없음'이다. 커리큘럼·나의 학습의 단계 상태 `PREPARING`(단계 공개 전)과 이름만 같고, 단계가 공개된 뒤에도 배지는 `PREPARING`일 수 있다(예: `STAGE_EMPTY`, `MORE_ARTICLES`).
 
 | 배지 | `PREPARING` 조건 | 사유 코드 |
 |---|---|---|
@@ -783,12 +791,12 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 | `LearnerOverview`, `LearnerArticleRecord`, `CompletionResult`, `AnswerResult`, `BadgeView`, `LevelView`, `PreparingReason` **(2판)** | `frontend/src/types/learningMe.ts` | 나의 학습 응답과 1:1 |
 | `AdminLearningArticleSummary`, `AdminLearningArticle`, `PublishCheckFailure` | `frontend/src/types/learningAdmin.ts` | 관리 응답과 1:1. **(2판)** `format`, 배치, 확인 문제 초안, `StageAdminView`, `StageReadiness`, `ManuscriptFile` |
 | `LearningReturnState` | `frontend/src/types/learning.ts` | navigation state `learningReturn: { path, label }` (R11). **(2판)** `label`은 더 쓰지 않고 문구는 `returnTargets.ts` 표가 정한다(R35). 모양은 호환을 위해 그대로 둔다 |
-| `learningResume` **(2판)** | navigation state | '이어서 읽기'로 연 글은 기록된 위치로 간다(FR-020) |
+| `learningResume` **(2판)** | navigation state | '이어서 읽기'로 연 글은 기록된 위치로 간다(FR-020). 값은 `true`이고, `continueReading.kind`가 `RESUME`일 때 완료 카드·요약 패널·떠 있는 '이어서 읽기'·'나의 학습' 화면의 '이어서 읽기'가 싣는다. 글 화면은 받은 글 기록의 `percent` 위치로 간다 |
 | `thorp.learning.adminDraft.{articleId}` | `sessionStorage` | 저장하지 않은 관리 편집 내용(R12). **(2판)** 내용 버전 2(형식·배치·확인 문제 포함) |
 | `thorp.learning.view` **(2판)** | `sessionStorage` | 고른 보기(`curriculum`·`list`). 로그인 여부와 관계없다(FR-023) |
 | `thorp.learning.dismissedNotices` **(2판)** | `sessionStorage` | 닫은 공개 안내의 `entryKey` 목록(FR-031, R27) |
 
-일반 사용자 화면이 브라우저에 쓰는 것은 위 두 화면 상태뿐이다. 학습 기록(완료·위치·답·경험치·배지)은 브라우저 저장소에 쓰지 않는다. 로그인 사용자의 기록은 서버에만 있고, 비로그인 사용자의 기록은 어디에도 남기지 않는다(FR-020, constitution '기록·개인정보·보관').
+일반 사용자 화면이 브라우저에 쓰는 것은 위 두 화면 상태뿐이다. 예외로 로그인 연결을 누르면 014의 `useLoginReturn`이 돌아올 위치를 014 키 `thorp.auth.returnTarget`에 쓴다(R34). 013이 만드는 키가 아니고 학습 기록도 아니다. 학습 기록(완료·위치·답·경험치·배지)은 브라우저 저장소에 쓰지 않는다. 로그인 사용자의 기록은 서버에만 있고, 비로그인 사용자의 기록은 어디에도 남기지 않는다(FR-020, constitution '기록·개인정보·보관').
 
 ## 16. 요구사항 추적
 
