@@ -1,9 +1,13 @@
+/* 표시의 자리. 누름 영역과 출처 이름 상자는 이 자리(본문 글자 높이)를 기준으로 놓인다. */
+.sourceSlot {
+  position: relative;
+}
+
 /*
   '(*출처)'는 인용한 글자 바로 옆의 작은 표시다. 글자 크기를 한 단계 줄이고 위로 올려 본문 흐름을 끊지 않는다.
   출처 이름은 마우스를 올리거나 초점을 두면 표시 위에 뜬다(013 FR-026).
 */
 .source {
-  position: relative;
   margin-inline-start: 2px;
   color: var(--thorp-accent-soft);
   font-size: 0.78em;
@@ -41,7 +45,8 @@
   text-decoration: none;
   vertical-align: baseline;
   white-space: normal;
-  transform: translateX(-50%);
+  /* 화면 가장자리에 걸리면 SourceLink가 --tooltip-shift로 안쪽으로 민다. */
+  transform: translateX(calc(-50% + var(--tooltip-shift, 0px)));
   pointer-events: none;
 }
 
@@ -51,21 +56,31 @@
 }
 
 /*
-  누르는 곳은 44×44px 이상이다(design-notes §6). 글자 사이에 놓인 '(*출처)'와 도움말 '?'는 보이는 크기를 그대로
-  두고, 가운데에 44px 정사각형의 보이지 않는 누름 영역을 덧댄다. 도움말 '?'는 003 설정 화면과 같은 부품이라 글
-  안에서만 넓힌다.
+  글자 사이에 놓인 '(*출처)'와 도움말 '?'의 누름 영역. 보이는 크기는 그대로 두고 폭을 44px로 넓힌다(design-notes §6).
+  높이는 그 줄 안에서만 넓힌다. 44px로 세우면 줄 높이(약 29~31px)를 넘어 윗줄 글자를 누른 것이 링크로 가로채이므로,
+  문장 안 연결은 줄 높이를 넘지 않는다(WCAG 2.5.8의 문장 안 예외). 도움말 '?'는 003 설정 화면과 같은 부품이라
+  글 안에서만 넓힌다.
 */
-.source::after,
-.help > button::after {
+.source::after {
   content: '';
   position: absolute;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   left: 50%;
   width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .help > button {
   position: relative;
+}
+
+.help > button::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 50%;
+  width: 44px;
+  transform: translateX(-50%);
 }

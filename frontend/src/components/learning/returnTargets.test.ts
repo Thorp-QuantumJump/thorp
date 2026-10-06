@@ -40,6 +40,10 @@ describe('resolveReturnTarget', () => {
     ['learningReturn 없음', { other: true }],
     ['경로가 문자열이 아님', withReturn(42)],
     ['외부 주소', withReturn('https://evil.example/')],
+    // 경로 부분이 표에 있는 외부 주소. 표만으로는 막히지 않고 normalizeReturnTarget 비교가 막는다.
+    ['경로가 표에 있는 외부 주소', withReturn('https://evil.example/strategy')],
+    ['경로가 표에 있는 다른 외부 주소', withReturn('https://evil.example/market-flow')],
+    ['경로가 표에 있는 프로토콜 상대 주소', withReturn('//evil.example/strategy')],
     ['프로토콜 상대 주소', withReturn('//evil.example')],
     ['인증 화면', withReturn('/login')],
     ['역슬래시', withReturn('/results/\\evil.example')],

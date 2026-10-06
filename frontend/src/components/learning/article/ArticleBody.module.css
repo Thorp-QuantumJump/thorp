@@ -11,6 +11,14 @@
   letter-spacing: -0.02em;
 }
 
+/*
+  새 기준 글의 소제목. Tailwind 기본 규칙이 h2를 본문 굵기로 되돌리므로, 상자 이름(650)과 '확인 문제'(750)보다
+  가볍게 보이지 않게 목업 '글 끝'(.body h2)처럼 750으로 둔다. 9월 판 글은 지금 모습 그대로라 건드리지 않는다(FR-031).
+*/
+.headingCurrent {
+  font-weight: 750;
+}
+
 .paragraph {
   margin: 0;
   color: var(--thorp-copy);
@@ -127,6 +135,7 @@
   background: var(--thorp-surface);
 }
 
+/* Tailwind 기본 규칙이 목록 표시를 지우므로 글머리 기호를 되살린다. */
 .summary ul {
   display: grid;
   gap: 6px;
@@ -134,6 +143,7 @@
   padding-left: 1.2em;
   color: var(--thorp-copy);
   line-height: 1.7;
+  list-style: disc;
 }
 
 .boxHead {
@@ -214,6 +224,15 @@
   line-height: 1.8;
 }
 
+/* Tailwind 기본 규칙이 목록 표시를 지우므로 되살린다. 번호 목록과 글머리 목록이 눈으로 구분돼야 한다. */
+ol.list {
+  list-style: decimal;
+}
+
+ul.list {
+  list-style: disc;
+}
+
 .tableFigure {
   margin: 0;
 }
@@ -228,13 +247,20 @@
   overflow-wrap: anywhere;
 }
 
+/*
+  표 제목은 표 위에 놓이는 table-caption 그대로 둔다. caption 자체에 display를 주면 표 안의 이름 없는 행으로 감싸여
+  머리 행 아래 첫 칸에 끼어 그려진다. 꼬리표와 제목 사이 간격은 안쪽 줄(.captionRow)이 맡는다.
+*/
 .table caption {
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.captionRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  margin-bottom: 8px;
-  text-align: left;
 }
 
 .caption {
