@@ -42,7 +42,8 @@ class LearningArticleTest {
                 draftVersion,
                 List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "")),
                 List.of(),
-                0);
+                0,
+                null);
     }
 
     private static DraftContent v1Content(
@@ -221,7 +222,8 @@ class LearningArticleTest {
                 0,
                 List.of(),
                 List.of(),
-                0);
+                0,
+                null);
     }
 
     private static LearningArticle saveWithBlocks(List<ArticleBlock> blocks) {

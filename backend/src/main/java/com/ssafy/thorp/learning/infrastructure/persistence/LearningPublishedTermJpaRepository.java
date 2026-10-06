@@ -72,6 +72,29 @@ public interface LearningPublishedTermJpaRepository
             nativeQuery = true)
     Optional<String> findOwnerArticleKey(@Param("termKey") String termKey);
 
+    /** 글마다 공개 용어 수. {@link #findPublishedIn}과 같은 규칙으로 센다. */
+    interface TermCountRow {
+        String getArticleId();
+
+        Long getTermCount();
+    }
+
+    @Query(
+            "select a.articleKey as articleId, count(t) as termCount"
+                    + " from LearningPublishedTermJpaEntity t, LearningArticleJpaEntity a"
+                    + " where a.id = t.articleId"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED"
+                    + " and a.publishedRevisionId = t.revisionId"
+                    + " group by a.articleKey")
+    List<TermCountRow> countPublishedByArticle();
+
+    /** 벌크 삭제로 즉시 지운다. 넘겨받는 글의 색인 행을 곧바로 넣으므로 flush 순서에 맡기지 않는다. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+            "delete from LearningPublishedTermJpaEntity t"
+                    + " where t.articleId = :articleId and t.termKey = :termKey")
+    int deleteTermInBulk(@Param("articleId") Long articleId, @Param("termKey") String termKey);
+
     /** 벌크 삭제로 즉시 지운다. 같은 {@code term_key}를 곧바로 다시 넣으므로 flush 순서에 맡기지 않는다. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from LearningPublishedTermJpaEntity t where t.articleId = :articleId")

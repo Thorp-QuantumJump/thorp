@@ -14,7 +14,16 @@ public interface LearningTermJpaRepository extends JpaRepository<LearningTermJpa
     /** 모든 글의 용어. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */
     List<LearningTermJpaEntity> findAllByOrderByIdAsc();
 
-    Optional<LearningTermJpaEntity> findByTermKey(String termKey);
+    /** 이 용어를 소유 중인 행. 소유 중인 행은 {@code term_key}마다 하나다({@code uq_learning_term_key_owned}). */
+    Optional<LearningTermJpaEntity> findByTermKeyAndTransferFromArticleIdIsNull(String termKey);
+
+    /**
+     * 이 용어를 넘겨받는 중인 행. 넘겨받는 중인 행은 {@code term_key}마다 하나다({@code uq_learning_term_key_incoming}).
+     */
+    Optional<LearningTermJpaEntity> findByTermKeyAndTransferFromArticleIdIsNotNull(String termKey);
+
+    /** 이 글에서 넘겨받는 중인 행. */
+    List<LearningTermJpaEntity> findByArticleIdAndTransferFromArticleIdIsNotNull(Long articleId);
 
     @Query("select t.termKey from LearningTermJpaEntity t")
     List<String> findAllTermKeys();
@@ -26,4 +35,14 @@ public interface LearningTermJpaRepository extends JpaRepository<LearningTermJpa
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from LearningTermJpaEntity t where t.articleId = :articleId")
     int deleteByArticleIdInBulk(@Param("articleId") Long articleId);
+
+    /**
+     * 이 글이 소유한 용어 행 하나를 벌크 삭제로 즉시 지운다. 넘겨받는 글의 행이 바로 뒤에 소유 행이 되므로 flush 순서에 맡기지 않는다({@code
+     * uq_learning_term_key_owned}).
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+            "delete from LearningTermJpaEntity t where t.articleId = :articleId"
+                    + " and t.termKey = :termKey and t.transferFromArticleId is null")
+    int deleteOwnedInBulk(@Param("articleId") Long articleId, @Param("termKey") String termKey);
 }

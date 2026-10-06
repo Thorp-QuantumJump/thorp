@@ -86,7 +86,8 @@ class PublishCheckTest {
                 3,
                 terms,
                 List.of(),
-                0);
+                0,
+                null);
     }
 
     private static LearningArticle passingDraft() {
@@ -318,7 +319,8 @@ class PublishCheckTest {
                         0,
                         List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "")),
                         List.of(),
-                        0);
+                        0,
+                        null);
 
         assertThat(PublishCheck.run(empty, RULES, OPEN_MAP).failures())
                 .extracting(PublishCheckFailure::check)

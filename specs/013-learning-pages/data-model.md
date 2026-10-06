@@ -467,6 +467,7 @@ quiz:
 | `block` | `index`(0부터), `field`(선택. 예: `lines[1]`, `wrong`, `items[2]`, `rows[0][1]`, `description`) | 본문 블록. 본문 전체를 가리킬 때(소제목 수, 읽기 시간 등)는 `index`가 없다 |
 | `term` | `termId`, `field`(선택) | 용어 설명 |
 | `quiz` **(2판)** | `questionId`(새 문제면 `index`), `choiceId`(선택), `field`(선택. 문제 안의 `prompt`·`explanation`) | 확인 문제. 질문과 풀이에 같은 표현이 있으면 `field`로 갈라 둘 다 싣는다 |
+| `article` **(2판)** | 없음 | 글 전체. 단계 공개와 그 미리 검사의 `FORMAT`(V1 초안)·`PLACEMENT`(초안을 다른 단계로 옮김) 항목만 쓴다. 용어 소유 항목(`TERM_TRANSFER`·`TERM_ID_TAKEN`)은 `term` 위치다 |
 
 ## 9. 예시(`example`)
 

@@ -51,4 +51,16 @@ public interface PublishedTermRepository {
 
     /** 이 글의 색인 행을 모두 지운다(게시 취소). */
     void deleteForArticle(ArticleId articleId);
+
+    /**
+     * 이 글의 색인 행 하나만 지운다. 넘기기가 옛 소유 글의 그 용어 행을 지울 때 쓴다(data-model §3-6, research R24). 행이 없으면 아무것도
+     * 하지 않는다.
+     */
+    void deleteTerm(ArticleId articleId, TermId termId);
+
+    /**
+     * 글마다 공개 용어 수(커리큘럼의 {@code termCount}). {@link #findPublished}처럼 글의 공개 판과 색인 행의 판이 같은 행만 센다. 공개
+     * 용어가 없는 글은 결과에 없다.
+     */
+    Map<ArticleId, Integer> countPublishedByArticle();
 }

@@ -163,12 +163,15 @@ public class LearningAdminController {
     }
 
     /**
-     * 용어 식별자의 UNIQUE 제약 위반이면 어느 글이 가져갔는지 새로 읽어 409로 바꾼다. 그 사이 먼저 커밋한 요청이 되돌려져 겹치는 글이 없으면 원래 예외를 그대로
-     * 둔다. 판정할 수 없는 충돌을 409로 꾸며 내지 않는다.
+     * 용어 식별자의 UNIQUE 제약 위반이면 어느 글이 가져갔는지(넘겨받는 중인지) 새로 읽어 409로 바꾼다. 그 사이 먼저 커밋한 요청이 되돌려져 겹치는 글이 없으면
+     * 원래 예외를 그대로 둔다. 판정할 수 없는 충돌을 409로 꾸며 내지 않는다.
      */
     private RuntimeException termConflictOr(
             DataIntegrityViolationException violation, String articleId, List<LearningTerm> terms) {
-        if (UniqueConstraintViolations.violates(violation, UniqueConstraintViolations.TERM_KEY)
+        if (UniqueConstraintViolations.violates(
+                        violation, UniqueConstraintViolations.TERM_KEY_OWNED)
+                || UniqueConstraintViolations.violates(
+                        violation, UniqueConstraintViolations.TERM_KEY_INCOMING)
                 || UniqueConstraintViolations.violates(
                         violation, UniqueConstraintViolations.PUBLISHED_TERM_KEY)) {
             adminService.requireTermIdsAvailable(articleId, terms);

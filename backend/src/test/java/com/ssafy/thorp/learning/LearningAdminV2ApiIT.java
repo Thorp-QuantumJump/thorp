@@ -41,9 +41,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * <p>{@code publish-check-failed-v2.json}·{@code admin-preview.json}은 JSON 동치, {@code
  * admin-article-v2.json}은 키 구성으로 대조한다({@code docs/specs/learning-api/README.md}).
  *
- * <p>단계 공개 유스케이스(B08) 전이라 공개된 단계는 {@link LearningSeeds#markStageReleased}로 표시한다. 넘겨받기(B08)도 아직 없어,
- * V2 초안이 기존 용어 {@code volatility}를 쓰는 경우 옛 소유 글({@code inverse-volatility})의 초안에서 그 용어를 먼저
- * 뺀다({@link #freeVolatilityTerm}).
+ * <p>글마다 게시의 경우를 따로 보려고 공개된 단계는 {@link LearningSeeds#markStageReleased}로 표시한다. 단계 공개는 {@code
+ * LearningStageReleaseIT}가 본다. V2 초안이 기존 용어 {@code volatility}를 쓰는 경우는 넘겨받기를 거치지 않도록 옛 소유 글({@code
+ * inverse-volatility})의 초안에서 그 용어를 먼저 뺀다({@link #freeVolatilityTerm}). 넘겨받기는 {@code
+ * LearningTermTransferIT}가 본다.
  *
  * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@link IntegrationTestSupport}의 설정을 그대로 물려받는다. 관리 계정 7은 {@code
  * PostgresTestSupport}가 준다.
@@ -137,7 +138,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         return fields;
     }
 
-    /** 넘겨받기(B08) 전이라 옛 소유 글의 초안에서 {@code volatility}를 빼 둔다. {@link LearningSeeds#reset()}이 되돌린다. */
+    /** 넘겨받기를 거치지 않도록 옛 소유 글의 초안에서 {@code volatility}를 빼 둔다. {@link LearningSeeds#reset()}이 되돌린다. */
     private void freeVolatilityTerm() {
         jdbcTemplate.update("DELETE FROM learning_term WHERE term_key = 'volatility'");
     }
@@ -151,7 +152,10 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
 
     // --- 요청 본문 ---
 
-    /** {@code admin-article-v2.json}의 초안을 저장 요청으로 바꾼다. 문제·보기 식별자는 서버가 주므로 비우고, 넘겨받기는 뺀다. */
+    /**
+     * {@code admin-article-v2.json}의 초안을 저장 요청으로 바꾼다. 문제·보기 식별자는 서버가 주므로 비우고, 넘겨받기는 뺀다(넘겨받기는 {@code
+     * LearningTermTransferIT}).
+     */
     private ObjectNode fixtureDraft(int expectedDraftVersion) throws Exception {
         ObjectNode body = (ObjectNode) example("admin-article-v2.json").get("draft").deepCopy();
         body.put("expectedDraftVersion", expectedDraftVersion);
@@ -791,22 +795,6 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                                 Integer.class,
                                 V2_ARTICLE))
                 .isEqualTo(7);
-    }
-
-    @Test
-    @DisplayName("넘겨받기(B08) 전에는 transferFrom이 있는 용어 저장을 그 자리로 400 한다")
-    void transferFromIsNotAcceptedYet() throws Exception {
-        freeVolatilityTerm();
-        ObjectNode body = fixtureDraft(0);
-        ((ObjectNode) body.at("/terms/0")).put("transferFrom", "inverse-volatility");
-
-        assertThat(fieldsOf(adminError(save(V2_ARTICLE, body), 400)))
-                .containsExactly("terms[0].transferFrom");
-        assertThat(
-                        adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200)
-                                .get("draftVersion")
-                                .asInt())
-                .isZero();
     }
 
     @Test
