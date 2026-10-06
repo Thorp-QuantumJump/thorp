@@ -162,8 +162,8 @@ function QuizItem({ number, question, chosen, onChoose, explanationRef }: QuizIt
             <span className="sr-only">
               고른 답 {pickedIndex + 1}번, {pickedCorrect ? '맞음' : '틀린 보기'}.{' '}
             </span>
-            <b>풀이</b>
-            {question.explanation}
+            {/* 이름표와 풀이 사이에 실제 띄어쓰기를 둔다. 여백만 두면 읽기·복사에서 '풀이합성…'처럼 붙는다. */}
+            <b>풀이</b> {question.explanation}
           </p>
         </>
       )}

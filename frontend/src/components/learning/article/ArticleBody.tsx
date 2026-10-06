@@ -129,7 +129,7 @@ function CurrentBlock({
     case 'keySummary':
       return <KeySummary lines={block.lines} blockIndex={blockIndex} />
     case 'heading':
-      return <h2 className={styles.heading}>{block.text}</h2>
+      return <h2 className={`${styles.heading} ${styles.headingCurrent}`}>{block.text}</h2>
     case 'paragraph':
       return (
         <p className={styles.paragraph}>

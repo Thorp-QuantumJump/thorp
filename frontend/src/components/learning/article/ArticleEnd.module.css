@@ -46,6 +46,16 @@
   font-size: var(--thorp-text-body, 0.9rem);
 }
 
+/*
+  '로그인'은 같은 줄의 안내 문장 바로 뒤에 놓인다. 두 글자의 밝기가 거의 같아 색만으로는 연결인지 알 수 없으므로
+  밑줄과 굵기로도 구분한다(WCAG 1.4.1).
+*/
+.loginLink {
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .nextLink:focus-visible,
 .listLink:focus-visible,
 .loginLink:focus-visible {

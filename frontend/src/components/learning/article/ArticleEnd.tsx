@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useLoginReturn } from '@/auth/useLoginReturn'
 import type { CurrentLearningArticle, LearningReturnState } from '@/types/learning'
 import { QuizPanel } from './QuizPanel'
+import { useRestoreFocusAfterConceal } from './useRestoreFocusAfterConceal'
 import styles from './ArticleEnd.module.css'
 
 interface ArticleEndProps {
@@ -32,9 +34,11 @@ interface ArticleEndProps {
 export function ArticleEnd({ article, guest, concealed, learningReturn }: ArticleEndProps) {
   const rememberReturn = useLoginReturn()
   const carried = learningReturn ? { learningReturn } : undefined
+  const endRef = useRef<HTMLDivElement>(null)
+  useRestoreFocusAfterConceal(endRef, concealed)
 
   return (
-    <div className={styles.end}>
+    <div ref={endRef} className={styles.end}>
       {/* 숨길 때도 같은 자리에 같은 부품을 둔다. 감싸는 요소를 바꾸면 확인 문제가 다시 그려져 답을 잃는다. */}
       {guest ? (
         <div className={concealed ? styles.concealed : undefined}>

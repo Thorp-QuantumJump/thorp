@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useRef, type ReactNode } from 'react'
 import { TermHelp } from '@/components/learning/TermHelp'
 import type { LearningReturnState, NoteSource, Run } from '@/types/learning'
 import {
@@ -39,27 +39,56 @@ interface SourceLinkProps {
   source: NoteSource
 }
 
+/** 출처 이름 상자가 화면 가장자리에서 띄울 거리(px). */
+const TOOLTIP_EDGE = 8
+
 /**
  * 출처 표시 '(*출처)'(013 FR-007, FR-026).
  *
  * <p><b>인용한 글자는 링크가 아니다.</b> 그 글자 바로 옆의 이 표시만 링크이고 새 탭에서 연다. 마우스를
  * 올리거나 초점을 두면 출처 이름이 보인다. 스크린 리더는 출처 이름과 새 탭에서 여는 외부 링크임을 읽는다.
+ *
+ * <p><b>출처 이름은 화면 안에 들인다.</b> 이름 상자는 표시 위 가운데에 뜨는데, 줄 끝이나 줄 처음의 표시라면
+ * 화면 밖으로 나가 잘린다. 열릴 때 상자의 자리를 재서 가장자리 안쪽으로 민다.
  */
 export function SourceLink({ source }: SourceLinkProps) {
   const name = source.label || source.url
+  const nameRef = useRef<HTMLSpanElement>(null)
+
+  const keepNameInside = () => {
+    const tooltip = nameRef.current
+    if (!tooltip) return
+    tooltip.style.setProperty('--tooltip-shift', '0px')
+    // 마우스·초점 상태가 반영되어 상자가 보인 뒤에 잰다.
+    requestAnimationFrame(() => {
+      const rect = tooltip.getBoundingClientRect()
+      if (rect.width === 0) return
+      const viewport = document.documentElement.clientWidth
+      let shift = 0
+      if (rect.left < TOOLTIP_EDGE) shift = TOOLTIP_EDGE - rect.left
+      else if (rect.right > viewport - TOOLTIP_EDGE) shift = viewport - TOOLTIP_EDGE - rect.right
+      tooltip.style.setProperty('--tooltip-shift', `${Math.round(shift)}px`)
+    })
+  }
+
   return (
-    <a
-      className={styles.source}
-      href={source.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`출처: ${name} (외부 링크, 새 탭에서 열림)`}
-    >
-      (*출처)
-      <span className={styles.sourceName} aria-hidden="true">
-        {name}
-      </span>
-    </a>
+    // 누름 영역과 이름 상자는 이 자리를 기준으로 놓는다. 위첨자로 올린 표시가 아니라 본문 글자 높이에 맞춘다.
+    <span className={styles.sourceSlot}>
+      <a
+        className={styles.source}
+        href={source.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`출처: ${name} (외부 링크, 새 탭에서 열림)`}
+        onMouseEnter={keepNameInside}
+        onFocus={keepNameInside}
+      >
+        (*출처)
+        <span ref={nameRef} className={styles.sourceName} aria-hidden="true">
+          {name}
+        </span>
+      </a>
+    </span>
   )
 }
 
