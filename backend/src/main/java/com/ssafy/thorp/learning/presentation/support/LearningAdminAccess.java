@@ -2,9 +2,8 @@ package com.ssafy.thorp.learning.presentation.support;
 
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.common.security.SessionUser;
 import com.ssafy.thorp.learning.application.port.LearningAdminPolicy;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -40,16 +39,7 @@ public class LearningAdminAccess {
     }
 
     private static long requireUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
-        }
-        try {
-            return Long.parseLong(authentication.getName());
-        } catch (NumberFormatException notOurSession) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
-        }
+        return SessionUser.idOf(SecurityContextHolder.getContext().getAuthentication())
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED));
     }
 }

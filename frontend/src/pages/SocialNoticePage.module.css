@@ -1,0 +1,37 @@
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset);
+}
+
+.notice p {
+  margin: 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  flex: none;
+  color: var(--thorp-warning);
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.textLink {
+  justify-self: center;
+  color: var(--thorp-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.textLink:focus-visible {
+  outline: var(--thorp-focus-outline);
+  outline-offset: var(--thorp-focus-offset);
+}

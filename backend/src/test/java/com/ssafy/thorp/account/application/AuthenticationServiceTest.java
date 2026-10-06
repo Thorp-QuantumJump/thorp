@@ -81,6 +81,7 @@ class AuthenticationServiceTest {
                         securityContextRepository,
                         sessionAuthenticationStrategy,
                         csrfTokenRepository,
+                        new InMemoryPendingSocialLoginStore(),
                         Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -248,6 +249,87 @@ class AuthenticationServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).getErrorCode())
                 .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);
+    }
+
+    @Test
+    @DisplayName("소셜로만 가입해 비밀번호가 없는 계정은 비교기에 닿지 않고 같은 오류로 거절한다(spec 014 T067)")
+    void passwordlessAccountIsRejectedWithoutTouchingTheStoredHash() {
+        User passwordless =
+                new User(
+                        42L,
+                        CANONICAL_EMAIL,
+                        null,
+                        "회원",
+                        "01012345678",
+                        null,
+                        UserStatus.ACTIVE,
+                        false,
+                        false,
+                        false,
+                        null,
+                        NOW,
+                        NOW,
+                        null);
+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.of(passwordless));
+
+        assertThatThrownBy(
+                        () ->
+                                authenticationService.login(
+                                        new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD),
+                                        request,
+                                        response))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+
+        // 응답 시간을 맞추려고 버리는 hash와는 대조하지만, null hash를 비교기에 넘기지는 않는다.
+        verify(passwordEncoder).matches(RAW_PASSWORD, ABSENT_ACCOUNT_HASH);
+        verify(passwordEncoder, never()).matches(any(), org.mockito.ArgumentMatchers.isNull());
+        verifyNothingWasAuthenticated();
+    }
+
+    @Test
+    @DisplayName("이름이 숫자여도 로그인이 넣은 종류의 인증이 아니면 사용자로 보지 않는다(spec 014 analyze G1)")
+    void currentUserRejectsForeignAuthenticationWithNumericName() {
+        // 소셜 로그인 필터가 잠깐 넣는 token의 이름은 제공자 사용자 식별자다. 카카오는 숫자라 users.id로 읽히면 남의 계정이 된다.
+        Authentication foreign =
+                new org.springframework.security.authentication.TestingAuthenticationToken(
+                        "42", null, "ROLE_USER");
+
+        assertThatThrownBy(() -> authenticationService.currentUser(foreign))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).getErrorCode())
+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("로그인하면 같은 브라우저에 남은 소셜 가입·연결 대기 상태를 버린다(공용 PC)")
+    void loginDropsLeftoverPendingSocialState() {
+        InMemoryPendingSocialLoginStore store = new InMemoryPendingSocialLoginStore();
+        store.save(
+                com.ssafy.thorp.account.domain.model.PendingSocialLogin.start(
+                        com.ssafy.thorp.account.domain.model.SocialProvider.KAKAO,
+                        "kakao-1",
+                        "someone@example.com",
+                        true,
+                        null,
+                        NOW));
+        AuthenticationService service =
+                new AuthenticationService(
+                        userRepository,
+                        passwordEncoder,
+                        securityContextRepository,
+                        sessionAuthenticationStrategy,
+                        csrfTokenRepository,
+                        store,
+                        Clock.fixed(NOW, ZoneOffset.UTC));
+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.of(activeUser(42L)));
+        when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
+
+        service.login(new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD), request, response);
+
+        assertThat(store.current()).isNull();
     }
 
     private void verifyNothingWasAuthenticated() {

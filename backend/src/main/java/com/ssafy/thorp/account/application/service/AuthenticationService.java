@@ -3,6 +3,7 @@ package com.ssafy.thorp.account.application.service;
 import com.ssafy.thorp.account.application.AuthenticatedPrincipal;
 import com.ssafy.thorp.account.application.EmailNormalizer;
 import com.ssafy.thorp.account.application.command.LoginCommand;
+import com.ssafy.thorp.account.application.port.PendingSocialLoginStore;
 import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;
 import com.ssafy.thorp.account.domain.model.User;
@@ -54,6 +55,7 @@ public class AuthenticationService {
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
     private final CsrfTokenRepository csrfTokenRepository;
+    private final PendingSocialLoginStore pendingSocialLoginStore;
     private final Clock clock;
 
     /** 세션 무효화와 {@code SecurityContext} 비우기. 세션이 없으면 아무 일도 하지 않으므로 로그아웃의 멱등성이 여기서 나온다. */
@@ -73,12 +75,14 @@ public class AuthenticationService {
             SecurityContextRepository securityContextRepository,
             SessionAuthenticationStrategy sessionAuthenticationStrategy,
             CsrfTokenRepository csrfTokenRepository,
+            PendingSocialLoginStore pendingSocialLoginStore,
             Clock clock) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.securityContextRepository = securityContextRepository;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
         this.csrfTokenRepository = csrfTokenRepository;
+        this.pendingSocialLoginStore = pendingSocialLoginStore;
         this.clock = clock;
         this.absentAccountPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
@@ -90,7 +94,23 @@ public class AuthenticationService {
         String email = EmailNormalizer.normalize(command.email());
         User user = verifyCredentials(email, command.password());
 
+        return startSession(user, request, response);
+    }
+
+    /**
+     * 확인을 마친 계정으로 현재 요청의 세션을 인증 상태로 바꾼다.
+     *
+     * <p>이메일 로그인과 소셜 가입·연결·로그인(spec 014 FR-020)이 모두 이 경로를 지난다. 그래서 세션 식별자 교체(FR-018)·인증 주체의 형태·CSRF
+     * 교체가 로그인 수단마다 갈라지지 않는다. 호출하는 쪽이 계정 상태와 자격 증명을 이미 확인했어야 한다.
+     */
+    @Transactional
+    public AuthenticatedUserResult startSession(
+            User user, HttpServletRequest request, HttpServletResponse response) {
         userRepository.updateLastLoginAt(user.getId(), clock.instant());
+
+        // 같은 브라우저에 남아 있던 소셜 가입·연결 대기 상태는 이제 아무의 것도 아니다. 남겨 두면 공용 PC에서 다음 사람이 그 연결 화면에
+        // 자기 비밀번호를 넣어 앞사람의 소셜 계정을 자기 계정에 붙일 수 있다(2026-10-01 security review).
+        pendingSocialLoginStore.clear();
 
         Authentication authentication =
                 UsernamePasswordAuthenticationToken.authenticated(
@@ -107,6 +127,32 @@ public class AuthenticationService {
         rotateCsrfToken(request, response);
 
         return projectionOf(user);
+    }
+
+    /**
+     * 판정을 마친 계정 식별자로 세션을 시작한다. 소셜 콜백 처리기가 쓴다.
+     *
+     * <p>판정과 세션 시작 사이에 계정이 정지되면 로그인시키지 않는다. 이 경우 호출하는 쪽은 인증을 지우고 일반 실패 안내로 보낸다.
+     */
+    @Transactional
+    public Optional<AuthenticatedUserResult> startSession(
+            Long userId, HttpServletRequest request, HttpServletResponse response) {
+        return userRepository
+                .findById(userId)
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                .map(user -> startSession(user, request, response));
+    }
+
+    /**
+     * 현재 요청과 세션에서 인증을 지운다. 세션 자체와 그 안의 다른 값(소셜 가입 대기 상태)은 남긴다.
+     *
+     * <p>소셜 콜백은 Spring Security 필터가 제공자 인증을 세션에 먼저 저장한 뒤 처리기로 온다. 로그인이 아닌 판정(가입·연결 대기, 거절)에서는 그 인증을
+     * 남기면 안 된다 — {@code .authenticated()}만 보는 경로가 그대로 통과시킨다(spec 014 analyze G1).
+     */
+    public void dropAuthentication(HttpServletRequest request, HttpServletResponse response) {
+        SecurityContext empty = SecurityContextHolder.createEmptyContext();
+        SecurityContextHolder.setContext(empty);
+        securityContextRepository.saveContext(empty, request, response);
     }
 
     /**
@@ -173,6 +219,14 @@ public class AuthenticationService {
         }
 
         User user = found.get();
+
+        // 소셜로만 가입한 계정은 비밀번호가 없다(spec 014). 비교기에 null hash를 넘기면 경고 로그를 남기므로 먼저 거른다.
+        // 밖으로는 다른 거절과 같은 코드다 — 이 이메일이 소셜 계정이라는 사실도 드러내지 않는다.
+        if (!user.hasPassword()) {
+            passwordEncoder.matches(password, absentAccountPasswordHash);
+            log.warn("Login rejected: reason=NO_PASSWORD, userId={}", user.getId());
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             log.warn("Login rejected: reason=PASSWORD_MISMATCH, userId={}", user.getId());

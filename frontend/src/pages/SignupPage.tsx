@@ -10,6 +10,7 @@ import {
 import { ApiClientError, normalizeApiError } from '@/api/client'
 import { AuthField } from '@/components/auth/AuthField'
 import { AuthStatus } from '@/components/auth/AuthStatus'
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import {
   clearSignupProgress,
   readSignupProgress,
@@ -25,13 +26,11 @@ type StatusMessage = { message: string; tone: 'info' | 'success' | 'error' }
 type SignupStep = 1 | 2
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const phonePattern = /^01[016789]\d{7,8}$/
 const authFieldNames: AuthFieldName[] = [
   'email',
   'verificationCode',
   'password',
   'nickname',
-  'phoneNumber',
 ]
 
 function emailError(email: string): string | undefined {
@@ -42,18 +41,20 @@ function emailError(email: string): string | undefined {
 }
 
 function fieldFromMessage(message: string): AuthFieldName | undefined {
-  const field = message.match(/^(email|verificationCode|password|nickname|phoneNumber)\s*:/)?.[1]
+  const field = message.match(/^(email|verificationCode|password|nickname)\s*:/)?.[1]
   return authFieldNames.find((fieldName) => fieldName === field)
 }
 
 function fieldFromApiError(error: ApiClientError, fallback: AuthFieldName): AuthFieldName {
   const mapped: Partial<Record<NonNullable<ApiClientError['code']>, AuthFieldName>> = {
     DUPLICATE_EMAIL: 'email',
-    DUPLICATE_PHONE: 'phoneNumber',
     EMAIL_VERIFICATION_REQUIRED: 'verificationCode',
     EMAIL_VERIFICATION_NOT_FOUND: 'verificationCode',
     EMAIL_VERIFICATION_INVALID: 'verificationCode',
     EMAIL_VERIFICATION_EXPIRED: 'verificationCode',
+    // 대조 상한·재발송 간격(spec 014, 2026-10-01). 번호를 다 틀렸으면 번호 칸, 너무 자주 받으면 이메일 칸에 안내한다.
+    EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED: 'verificationCode',
+    EMAIL_VERIFICATION_RESEND_TOO_SOON: 'email',
   }
 
   return (error.code && mapped[error.code]) || fieldFromMessage(error.message) || fallback
@@ -69,7 +70,6 @@ export function SignupPage() {
   const passwordRef = useRef<HTMLInputElement>(null)
   const passwordConfirmRef = useRef<HTMLInputElement>(null)
   const nicknameRef = useRef<HTMLInputElement>(null)
-  const phoneNumberRef = useRef<HTMLInputElement>(null)
   const mountedRef = useRef(true)
   const pendingRef = useRef<Record<ActionName, boolean>>({
     send: false,
@@ -87,7 +87,6 @@ export function SignupPage() {
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [nickname, setNickname] = useState(() => restored?.nickname ?? '')
-  const [phoneNumber, setPhoneNumber] = useState(() => restored?.phoneNumber ?? '')
   const [step, setStep] = useState<SignupStep>(() => restored?.step ?? 1)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [requestedEmail, setRequestedEmail] = useState<string | null>(
@@ -119,12 +118,12 @@ export function SignupPage() {
     아무것도 없으면 지운다 — 입력을 지운 사람에게 다음 방문에 옛 값을 되살려 주지 않는다.
   */
   useEffect(() => {
-    if (!email && !nickname && !phoneNumber && requestedEmail === null) {
+    if (!email && !nickname && requestedEmail === null) {
       clearSignupProgress()
       return
     }
-    saveSignupProgress({ email, requestedEmail, verifiedEmail, step, nickname, phoneNumber })
-  }, [email, requestedEmail, verifiedEmail, step, nickname, phoneNumber])
+    saveSignupProgress({ email, requestedEmail, verifiedEmail, step, nickname })
+  }, [email, requestedEmail, verifiedEmail, step, nickname])
 
   const focusField = (field: AuthFieldName | 'passwordConfirm') => {
     const refs = {
@@ -133,7 +132,6 @@ export function SignupPage() {
       password: passwordRef,
       passwordConfirm: passwordConfirmRef,
       nickname: nicknameRef,
-      phoneNumber: phoneNumberRef,
     }
     refs[field].current?.focus()
   }
@@ -300,7 +298,11 @@ export function SignupPage() {
     } catch (error) {
       if (!isCurrentRequest('confirm', request.id)) return
       const normalizedError = normalizeApiError(error)
-      if (normalizedError.code === 'EMAIL_VERIFICATION_EXPIRED') {
+      // 다 틀린 번호는 만료된 번호처럼 더 쓸 수 없다. 새 번호를 받는 처음 단계로 돌린다.
+      if (
+        normalizedError.code === 'EMAIL_VERIFICATION_EXPIRED' ||
+        normalizedError.code === 'EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED'
+      ) {
         setRequestedEmail(null)
         setVerificationCode('')
       }
@@ -330,9 +332,6 @@ export function SignupPage() {
 
     if (nickname.trim().length < 2 || nickname.trim().length > 20) {
       nextErrors.nickname = '닉네임은 2~20자로 입력해 주세요.'
-    }
-    if (!phonePattern.test(phoneNumber)) {
-      nextErrors.phoneNumber = '하이픈 없이 올바른 국내 휴대폰 번호를 입력해 주세요.'
     }
 
     return nextErrors
@@ -434,7 +433,6 @@ export function SignupPage() {
           email: canonicalEmail,
           password,
           nickname: nickname.trim(),
-          phoneNumber,
         },
         request.controller.signal,
       )
@@ -671,24 +669,6 @@ export function SignupPage() {
                       setFieldErrors((current) => ({ ...current, nickname: undefined }))
                     }}
                   />
-                  <AuthField
-                    ref={phoneNumberRef}
-                    label="휴대폰 번호"
-                    type="tel"
-                    name="phoneNumber"
-                    autoComplete="tel-national"
-                    inputMode="numeric"
-                    maxLength={11}
-                    placeholder="01012345678"
-                    value={phoneNumber}
-                    hint="하이픈 없이 숫자만 입력해 주세요."
-                    error={fieldErrors.phoneNumber}
-                    disabled={isAnyPending}
-                    onChange={(event) => {
-                      setPhoneNumber(event.target.value.replace(/\D/g, '').slice(0, 11))
-                      setFieldErrors((current) => ({ ...current, phoneNumber: undefined }))
-                    }}
-                  />
                 </div>
               </>
             )}
@@ -722,6 +702,8 @@ export function SignupPage() {
               </div>
             )}
           </form>
+
+          <SocialLoginButtons dividerLabel="또는 소셜 계정으로 가입" disabled={isAnyPending} />
 
           <p className={styles.loginPrompt}>
             이미 계정이 있나요? <Link to="/login">로그인</Link>

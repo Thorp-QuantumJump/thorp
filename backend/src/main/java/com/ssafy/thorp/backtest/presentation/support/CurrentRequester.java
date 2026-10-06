@@ -2,9 +2,8 @@ package com.ssafy.thorp.backtest.presentation.support;
 
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
+import com.ssafy.thorp.common.security.SessionUser;
 import java.util.Optional;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -30,17 +29,7 @@ public class CurrentRequester {
      * 경로는 없다고 막을 근거가 없다.
      */
     public Optional<Long> findRequesterId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Long.valueOf(authentication.getName()));
-        } catch (NumberFormatException e) {
-            return Optional.empty();
-        }
+        return SessionUser.idOf(SecurityContextHolder.getContext().getAuthentication());
     }
 
     public long requireRequesterId() {

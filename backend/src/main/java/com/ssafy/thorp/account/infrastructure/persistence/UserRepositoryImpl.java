@@ -65,4 +65,9 @@ public class UserRepositoryImpl implements UserRepository {
     public boolean existsByPhoneNumber(String phoneNumber) {
         return userJpaRepository.existsByPhoneNumber(phoneNumber);
     }
+
+    @Override
+    public Optional<User> findByPhoneNumber(String phoneNumber) {
+        return userJpaRepository.findByPhoneNumber(phoneNumber).map(UserMapper::toDomain);
+    }
 }

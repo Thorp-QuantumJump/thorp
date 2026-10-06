@@ -1,12 +1,13 @@
 import { ArrowLeft, LogIn } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { normalizeEmail } from '@/api/auth'
 import { ApiClientError } from '@/api/client'
 import { useAuth } from '@/auth/auth-context'
 import { clearLoginEmail, readLoginEmail, saveLoginEmail } from '@/auth/loginEmail'
 import { AuthField } from '@/components/auth/AuthField'
 import { AuthStatus } from '@/components/auth/AuthStatus'
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons'
 import formStyles from '@/components/auth/AuthForm.module.css'
 import styles from './LoginPage.module.css'
 import pageStyles from './SignupPage.module.css'
@@ -19,6 +20,18 @@ function readSignupEmail(state: unknown): string {
 }
 
 type LoginErrors = Partial<Record<'email' | 'password', string>>
+
+/**
+ * 소셜 로그인 콜백이 붙여 보낸 결과(`?social=`)의 안내 문구.
+ *
+ * <p>취소는 오류가 아니라 취소로 알린다(FR-026). 그 밖의 실패는 원인을 나누지 않는다 — 정지·탈퇴 계정도
+ * 같은 문구라 계정 상태가 드러나지 않는다(spec Edge Cases).
+ */
+function socialNotice(value: string | null): string {
+  if (value === 'cancelled') return '소셜 로그인을 취소했습니다. 다른 방법으로 로그인할 수 있습니다.'
+  if (value === 'error') return '소셜 로그인을 마치지 못했습니다. 처음부터 다시 시도해 주세요.'
+  return ''
+}
 
 /** 이메일·비밀번호 로그인 요청을 전역 인증 상태와 연결한다. */
 export function LoginPage() {
@@ -34,12 +47,22 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<LoginErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [statusMessage, setStatusMessage] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [statusMessage, setStatusMessage] = useState(() => socialNotice(searchParams.get('social')))
 
   // 쳐 둔 주소를 적어 둔다. 비밀번호는 넣지 않는다(`loginEmail` 참고).
   useEffect(() => {
     saveLoginEmail(email)
   }, [email])
+
+  // 안내는 한 번만 띄우고 주소에서 지운다. 새로고침이나 뒤로 가기로 같은 안내가 다시 뜨지 않게 한다.
+  useEffect(() => {
+    if (searchParams.has('social')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('social')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -182,6 +205,8 @@ export function LoginPage() {
               {isSubmitting ? '로그인 중…' : '로그인'}
             </button>
           </form>
+
+          <SocialLoginButtons dividerLabel="또는 간편 로그인" disabled={isSubmitting} />
 
           <p className={pageStyles.loginPrompt}>
             계정이 없나요? <Link to="/signup">회원가입</Link>

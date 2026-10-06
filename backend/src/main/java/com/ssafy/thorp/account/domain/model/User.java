@@ -4,6 +4,11 @@ import java.time.Instant;
 
 public class User {
 
+    /** 하이픈·공백 없는 국내 휴대폰 번호(FR-001). 요청 검증과 서비스 검사가 같은 식을 쓴다. */
+    public static final String PHONE_NUMBER_REGEX = "^01[016789]\\d{7,8}$";
+
+    public static final String PHONE_NUMBER_MESSAGE = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678";
+
     private final Long id;
     private final String email;
 
@@ -73,6 +78,20 @@ public class User {
                 null,
                 null,
                 null);
+    }
+
+    /**
+     * 소셜 계정으로 가입한다(spec 014 FR-023). 비밀번호는 없다.
+     *
+     * <p>이메일은 제공자가 확인했거나 Thorp 인증번호로 확인한 값이라 이메일 가입과 같이 바로 활성 상태다.
+     */
+    public static User registerSocial(String email, String nickname, String phoneNumber) {
+        return register(email, null, nickname, phoneNumber);
+    }
+
+    /** 이메일·비밀번호로 로그인할 수 있는 계정인가. 소셜로만 가입한 계정은 {@code false}다. */
+    public boolean hasPassword() {
+        return passwordHash != null && !passwordHash.isEmpty();
     }
 
     public Long getId() {

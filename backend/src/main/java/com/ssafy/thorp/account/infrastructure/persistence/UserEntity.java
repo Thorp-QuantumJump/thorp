@@ -15,13 +15,15 @@ public class UserEntity {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, unique = false, length = 255)
+    // 소셜로만 가입한 계정은 비밀번호가 없다(spec 014 FR-023).
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
     @Column(name = "nickname", nullable = false, length = 100)
     private String nickname;
 
-    @Column(name = "phone_number", nullable = false, unique = true, length = 20)
+    // 가입에서 묻지 않아 비어 있을 수 있다(spec 014 2026-10-02). 있으면 고유하다 — PostgreSQL UNIQUE는 NULL끼리 겹쳐도 된다.
+    @Column(name = "phone_number", unique = true, length = 20)
     private String phoneNumber;
 
     @Column(name = "profile_image_url", columnDefinition = "TEXT")

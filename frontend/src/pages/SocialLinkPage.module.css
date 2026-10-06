@@ -1,0 +1,46 @@
+.options {
+  display: grid;
+  gap: 20px;
+}
+
+.target {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset);
+}
+
+.target span {
+  color: var(--thorp-muted);
+  font-size: 0.85rem;
+}
+
+.target strong {
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.explain {
+  margin: 0;
+  color: var(--thorp-muted);
+  overflow-wrap: anywhere;
+}
+
+.method {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.method h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.method p {
+  margin: 0;
+  color: var(--thorp-muted);
+}

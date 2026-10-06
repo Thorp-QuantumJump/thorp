@@ -44,3 +44,4 @@ npm run lint && npm run build && npm test
 - 값의 오르내림(수익률 부호 등)은 `--thorp-up`·`--thorp-down`(상승 빨강·하락 파랑)을 쓴다. `--thorp-positive`·
   `--thorp-negative`는 성공·오류 상태 색이다. 시장 지표의 `tone`은 오르내림이 아니라 판단(좋음·나쁨)이라 여기에 섞지 않는다.
 - `sessionStorage` 키: `thorp.strategySettings`(003 설정값), `thorp.diagnosis.sectorSelection`(002 인계 계약). 둘 다 탭 수명이며, 003은 002의 `diagnosis/selectionStorage`를 통해 섹터 선택을 읽는다. 이전 대역 키 `thorp.sectorSelection`은 사용하지 않는다.
+- 소셜 로그인(spec 014) 시작은 `api/socialAuth.ts`의 `startSocialLogin`(브라우저 전체 이동)이다. 콜백 뒤 화면(`/auth/social/*`, `/signup/social`)은 대기 상태를 `GET /auth/social/pending`으로 읽어 **메모리에만** 두고 저장소에 쓰지 않는다. 가입·연결이 끝나면 `recheck`가 아니라 `completeSignIn(user)`로 로그인 상태를 정한다 — `recheck`는 `checking`을 거쳐 `AuthEntryGuard`가 복귀 위치 대신 기본 화면으로 보낸다. 제공자 버튼은 `GET /auth/social/providers`가 켠 것만 그린다

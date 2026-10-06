@@ -74,7 +74,6 @@ describe('auth API', () => {
       email: ' NEW.USER@EXAMPLE.COM ',
       password: 'safe-password',
       nickname: '새사용자',
-      phoneNumber: '01012345678',
     })
 
     expect(result).toEqual(signupSuccess.data)
@@ -114,7 +113,6 @@ describe('auth API', () => {
       email: 'new.user@example.com',
       password: 'password1234',
       nickname: '새사용자',
-      phoneNumber: '01012345678',
     }).catch((caught: unknown) => caught)
 
     expect(error).toMatchObject({ kind: 'unexpected', code: null })
