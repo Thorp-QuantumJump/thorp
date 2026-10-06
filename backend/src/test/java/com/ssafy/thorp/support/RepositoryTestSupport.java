@@ -13,6 +13,7 @@ import com.ssafy.thorp.learning.infrastructure.persistence.LearningStageReposito
 import com.ssafy.thorp.learning.infrastructure.persistence.LearningTermRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.PublicationEventRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.PublishedTermRepositoryImpl;
+import com.ssafy.thorp.learning.infrastructure.persistence.StageDirectory;
 import com.ssafy.thorp.marketflow.infrastructure.persistence.MarketFlowFieldSummaryRepositoryImpl;
 import com.ssafy.thorp.myrecord.infrastructure.persistence.MyRecordRepositoryImpl;
 import com.ssafy.thorp.myrecord.infrastructure.persistence.RegimeSearchLogWriterImpl;
@@ -55,6 +56,7 @@ import org.springframework.context.annotation.Import;
     ArticleRevisionRepositoryImpl.class,
     PublicationEventRepositoryImpl.class,
     PublishedTermRepositoryImpl.class,
+    StageDirectory.class,
     MarketFlowFieldSummaryRepositoryImpl.class,
     ParamSearchRepositoryImpl.class,
     SearchCandidateRepositoryImpl.class,

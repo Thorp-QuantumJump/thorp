@@ -66,8 +66,19 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
     }
 
     @Override
-    public Optional<ArticleId> findOwnerArticleKey(TermId termId) {
-        return publishedTermJpaRepository.findOwnerArticleKey(termId.value()).map(ArticleId::new);
+    public Map<TermId, ArticleId> findOwnerArticleKeys(Collection<TermId> termIds) {
+        Map<TermId, ArticleId> owners = new HashMap<>();
+        if (termIds.isEmpty()) {
+            return owners;
+        }
+        publishedTermJpaRepository
+                .findOwners(termIds.stream().map(TermId::value).distinct().toList())
+                .forEach(
+                        row ->
+                                owners.put(
+                                        new TermId(row.getTermKey()),
+                                        new ArticleId(row.getArticleKey())));
+        return owners;
     }
 
     @Override

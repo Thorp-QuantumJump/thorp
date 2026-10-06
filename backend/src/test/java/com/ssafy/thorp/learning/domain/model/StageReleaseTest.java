@@ -203,6 +203,49 @@ class StageReleaseTest {
                         new ArticleId("same-return-different-feel"));
     }
 
+    @Test
+    @DisplayName("넘겨주는 글을 넘겨받는 글보다 먼저 게시하고, 그 밖에는 공개 집합 순서다")
+    void publishOrderPutsGiversFirst() {
+        LearningArticle receiver =
+                v2With("recovery-period", incoming("max-drawdown", "returns-and-losses"));
+        LearningArticle giver = v2With("returns-and-losses", owned("net-total-return"));
+        LearningArticle other = v2With("same-return-different-feel", owned("path-dependence"));
+
+        assertThat(StageRelease.publishOrder(List.of(receiver, other, giver)))
+                .extracting(article -> article.articleId().value())
+                .containsExactly(
+                        "same-return-different-feel", "returns-and-losses", "recovery-period");
+    }
+
+    @Test
+    @DisplayName("고리는 고리 안의 글 하나로 끊고, 고리의 글에게서 넘겨받는 고리 밖의 글은 계속 그 글 다음이다")
+    void publishOrderBreaksACycleInsideTheCycle() {
+        // A와 B는 서로 넘겨줄 용어를 이미 초안에서 뺀 채 맞바꾼다(판정을 통과하는 고리). C는 A에게서 넘겨받는다.
+        LearningArticle a =
+                v2With(
+                        "returns-and-losses",
+                        incoming("path-dependence", "same-return-different-feel"));
+        LearningArticle b =
+                v2With(
+                        "same-return-different-feel",
+                        incoming("max-drawdown", "returns-and-losses"));
+        LearningArticle c =
+                v2With("recovery-period", incoming("net-total-return", "returns-and-losses"));
+
+        List<String> order =
+                StageRelease.publishOrder(List.of(c, a, b)).stream()
+                        .map(article -> article.articleId().value())
+                        .toList();
+
+        assertThat(order)
+                .hasSize(3)
+                .first()
+                .isIn("returns-and-losses", "same-return-different-feel");
+        assertThat(order.indexOf("recovery-period"))
+                .as("고리 밖의 받는 글은 옛 소유 글 다음이다")
+                .isGreaterThan(order.indexOf("returns-and-losses"));
+    }
+
     // --- 변경 기록 ---
 
     @Test

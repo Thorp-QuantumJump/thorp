@@ -5,7 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 단계 대리키 ↔ {@code stageKey}. 단계는 여섯 행뿐이라 저장소 호출마다 한 번에 읽어 둔다. 글 행은 단계를 대리키로 가리키고 도메인은 고정 식별자로 가리킨다.
+ * 단계 대리키 ↔ {@code stageKey}. 글 행은 단계를 대리키로 가리키고 도메인은 고정 식별자로 가리킨다. 저장소는 {@link StageDirectory}가 한 번
+ * 읽어 둔 것을 쓴다.
  */
 final class StageLookup {
 

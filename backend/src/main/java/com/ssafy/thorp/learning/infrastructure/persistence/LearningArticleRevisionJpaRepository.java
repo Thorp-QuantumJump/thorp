@@ -121,6 +121,64 @@ public interface LearningArticleRevisionJpaRepository
     Optional<PublishedRevisionRow> findCurrentlyPublishedWithPlacement(
             @Param("articleKey") String articleKey);
 
+    /** 커리큘럼 한 줄. native alias는 따옴표로 감싼다. */
+    interface PublishedEntryRow {
+        String getArticleId();
+
+        String getEdition();
+
+        String getStageKey();
+
+        Integer getPosition();
+
+        String getTitle();
+
+        String getQuestion();
+
+        /** {@code LEGACY} 판에는 읽기 값이 없어 null이다. */
+        Integer getReadingMinutes();
+
+        Boolean getHasExample();
+    }
+
+    /**
+     * 공개 중인 글 전부의 커리큘럼 값. 공개 배치의 단계 번호, 단계 안 순서, {@code article_key} 순서다({@link
+     * #findCurrentInReadingOrder}와 같은 순서라 커리큘럼 번호와 글 화면 번호가 같다). 판 JSON에서 제목·질문·읽기 분·예시 유무만 꺼내고 본문은
+     * 읽지 않는다. 본문 하나가 깨져도 커리큘럼은 나간다.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT a.article_key AS "articleId",
+                           r.edition AS "edition",
+                           s.stage_key AS "stageKey",
+                           CAST(a.published_stage_position AS INTEGER) AS "position",
+                           r.snapshot ->> 'title' AS "title",
+                           r.snapshot ->> 'question' AS "question",
+                           CAST(r.snapshot -> 'reading' ->> 'readingMinutes' AS INTEGER)
+                               AS "readingMinutes",
+                           COALESCE(jsonb_typeof(r.snapshot -> 'example') = 'object', FALSE)
+                               AS "hasExample"
+                    FROM learning_article a
+                    JOIN learning_article_revision r ON r.id = a.published_revision_id
+                    JOIN learning_stage s ON s.id = a.published_stage_id
+                    WHERE a.status = 'PUBLISHED'
+                    ORDER BY s.number, a.published_stage_position, a.article_key
+                    """,
+            nativeQuery = true)
+    List<PublishedEntryRow> findPublishedEntries();
+
+    /** 이 글들의 공개 중인 판과 공개 배치. 한 문장으로 읽는다. */
+    @Query(
+            "select new com.ssafy.thorp.learning.infrastructure.persistence.PublishedRevisionRow("
+                    + "a.articleKey, r, a.publishedStageId, a.publishedStagePosition)"
+                    + " from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"
+                    + " where a.publishedRevisionId = r.id"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED"
+                    + " and a.articleKey in :articleKeys")
+    List<PublishedRevisionRow> findCurrentlyPublishedIn(
+            @Param("articleKeys") Collection<String> articleKeys);
+
     /** 공개 중인 판 전부. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */
     @Query(
             "select new com.ssafy.thorp.learning.infrastructure.persistence.PublishedRevisionRow("

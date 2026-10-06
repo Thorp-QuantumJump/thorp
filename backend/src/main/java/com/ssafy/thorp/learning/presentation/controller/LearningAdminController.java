@@ -168,12 +168,7 @@ public class LearningAdminController {
      */
     private RuntimeException termConflictOr(
             DataIntegrityViolationException violation, String articleId, List<LearningTerm> terms) {
-        if (UniqueConstraintViolations.violates(
-                        violation, UniqueConstraintViolations.TERM_KEY_OWNED)
-                || UniqueConstraintViolations.violates(
-                        violation, UniqueConstraintViolations.TERM_KEY_INCOMING)
-                || UniqueConstraintViolations.violates(
-                        violation, UniqueConstraintViolations.PUBLISHED_TERM_KEY)) {
+        if (UniqueConstraintViolations.violatesTermKey(violation)) {
             adminService.requireTermIdsAvailable(articleId, terms);
         }
         return violation;

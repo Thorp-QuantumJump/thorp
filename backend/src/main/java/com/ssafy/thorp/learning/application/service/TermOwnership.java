@@ -12,8 +12,11 @@ import com.ssafy.thorp.learning.domain.model.PublishCheckFailure.Check;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,6 +31,9 @@ import org.springframework.stereotype.Component;
  *   <li>넘겨받는 용어: {@code transferFrom}이 지금 소유 글이 아니거나(소유 글이 없거나 자기 글인 경우 포함), 다른 글이 이미 그 용어를 넘겨받는
  *       중이면 {@code TERM_TRANSFER}
  * </ul>
+ *
+ * <p>게시와 단계 공개는 넘겨줄 옛 소유 글을 잠근 뒤 판정한다({@link ArticlePublisher#lockWithGivers}). 옛 글의 소유는 그 글을 잠가야만
+ * 바뀌므로, 판정한 뒤 넘기기까지 소유 글이 바뀌지 않는다.
  */
 @Component
 public class TermOwnership {
@@ -78,14 +84,27 @@ public class TermOwnership {
     }
 
     /**
-     * 이 글의 용어 가운데 소유가 맞지 않는 것. 용어 순서다. 아무것도 쓰지 않는다.
+     * 이 글의 용어 가운데 소유가 맞지 않는 것. 용어 순서다. 아무것도 쓰지 않는다. 용어가 몇 개든 세 문장으로 읽는다.
      *
      * @param articleId 용어를 쓰려는 글
      */
     public List<Violation> violations(ArticleId articleId, List<LearningTerm> terms) {
+        if (terms.isEmpty()) {
+            return List.of();
+        }
+        List<TermId> termIds = terms.stream().map(LearningTerm::termId).toList();
+        Map<TermId, ArticleId> draftOwners = termRepository.findOwnerArticleKeys(termIds);
+        Map<TermId, ArticleId> indexOwners = publishedTermRepository.findOwnerArticleKeys(termIds);
+        Map<TermId, ArticleId> incoming = termRepository.findIncomingArticleKeys(termIds);
         List<Violation> violations = new ArrayList<>();
         for (LearningTerm term : terms) {
-            violation(articleId, term).ifPresent(violations::add);
+            violation(
+                            articleId,
+                            term,
+                            Optional.ofNullable(draftOwners.get(term.termId())),
+                            Optional.ofNullable(indexOwners.get(term.termId())),
+                            Optional.ofNullable(incoming.get(term.termId())))
+                    .ifPresent(violations::add);
         }
         return violations;
     }
@@ -101,10 +120,20 @@ public class TermOwnership {
         }
     }
 
-    private Optional<Violation> violation(ArticleId articleId, LearningTerm term) {
+    /** 언급 조각이 가리킬 수 있는 용어: 모든 글의 초안 용어와 게시 용어 색인의 합집합(data-model §8-2 #13). */
+    public Set<TermId> knownTermIds() {
+        Set<TermId> known = new HashSet<>(termRepository.findAllTermIds());
+        known.addAll(publishedTermRepository.findAllTermIds());
+        return known;
+    }
+
+    private static Optional<Violation> violation(
+            ArticleId articleId,
+            LearningTerm term,
+            Optional<ArticleId> draftOwner,
+            Optional<ArticleId> indexOwner,
+            Optional<ArticleId> incoming) {
         TermId termId = term.termId();
-        Optional<ArticleId> draftOwner = termRepository.findOwnerArticleKey(termId);
-        Optional<ArticleId> indexOwner = publishedTermRepository.findOwnerArticleKey(termId);
         if (!term.transferring()) {
             return draftOwner
                     .filter(owner -> !owner.equals(articleId))
@@ -118,10 +147,7 @@ public class TermOwnership {
                         && owner.get().equals(from)
                         && !from.equals(articleId)
                         && indexOwner.map(from::equals).orElse(true)
-                        && termRepository
-                                .findIncomingArticleKey(termId)
-                                .map(articleId::equals)
-                                .orElse(true);
+                        && incoming.map(articleId::equals).orElse(true);
         return valid
                 ? Optional.empty()
                 : Optional.of(new Violation(Check.TERM_TRANSFER, termId, owner.orElse(null)));
