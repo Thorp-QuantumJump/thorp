@@ -66,6 +66,9 @@ export type SourceRun = { source: { label: string; url: string } }
 
 export type Run = TextRun | TermMentionRun | SourceRun
 
+/** 가상 도식의 종류(data-model §5-3). */
+export type DiagramKind = 'bar' | 'line'
+
 /** 가상 도식의 계열 하나. `values` 길이는 `categories` 길이와 같다(서버 저장 검사). */
 export type DiagramSeries = { name: string; values: number[] }
 
@@ -97,7 +100,11 @@ export type CurrentArticleBlock =
   | { type: 'table'; caption: string; columns: string[]; rows: Run[][][] }
   | {
       type: 'diagram'
-      kind: 'bar' | 'line'
+      /**
+       * 이 화면이 모르는 종류면 null이다. 서버가 종류를 더해도 글 전체를 실패로 두지 않고, 화면은 그림 대신
+       * 설명 문장만 보인다(FR-026)
+       */
+      kind: DiagramKind | null
       title: string
       unit: string
       categories: string[]

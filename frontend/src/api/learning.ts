@@ -229,15 +229,17 @@ function readCurrentBlock(value: unknown): CurrentArticleBlock | null {
     }
     case 'diagram': {
       const series = readAll(value.series, readDiagramSeries)
+      // 모르는 종류는 null로 받아 그림만 빼고 설명 문장을 보인다. 모르는 블록 종류를 통과시키는 것과 같은
+      // 원칙이다. 종류가 글자가 아니면 계약 위반이다.
       return series &&
-        (value.kind === 'bar' || value.kind === 'line') &&
+        isString(value.kind) &&
         isString(value.title) &&
         isString(value.unit) &&
         isStringArray(value.categories) &&
         isString(value.description)
         ? {
             type: 'diagram',
-            kind: value.kind,
+            kind: value.kind === 'bar' || value.kind === 'line' ? value.kind : null,
             title: value.title,
             unit: value.unit,
             categories: value.categories,

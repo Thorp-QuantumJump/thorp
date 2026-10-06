@@ -5,6 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import type { LearningArticleResult } from '@/api/learning'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'
+import { cssDeclarations } from '@/test/cssRule'
 import {
   currentArticle,
   harborArticle,
@@ -362,6 +363,15 @@ describe('LearningArticlePage', () => {
     expect(screen.queryByText('다음 단계는 준비 중입니다.')).toBeNull()
   })
 
+  it('로그인 연결은 같은 줄의 안내 문장과 색만이 아니라 밑줄과 굵기로도 구분된다', () => {
+    const declarations = cssDeclarations(
+      'components/learning/article/ArticleEnd.module.css',
+      '.loginLink',
+    )
+    expect(declarations).toMatch(/text-decoration:\s*underline/)
+    expect(declarations).toMatch(/font-weight:\s*650/)
+  })
+
   it('로그인 연결은 지금 글 주소만 014 키에 적고 로그인 화면으로 간다', async () => {
     const user = userEvent.setup()
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
@@ -384,6 +394,40 @@ describe('LearningArticlePage', () => {
     expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
   })
 
+  it('다시 확인하느라 숨긴 동안 빠진 초점을 확인이 끝나면 풀이로 되돌린다', async () => {
+    const user = userEvent.setup()
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading')
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+    const explanation = screen.getByText('합성 풀이 하나다.', { exact: false })
+    expect(document.activeElement).toBe(explanation)
+
+    setAuth(checkingAuth)
+    // 브라우저는 숨긴 요소의 초점을 문서 몸통으로 옮긴다. jsdom은 그러지 않으므로 직접 흉내 낸다.
+    explanation.blur()
+    expect(document.activeElement).toBe(document.body)
+
+    setAuth(anonymousAuthContext)
+    expect(document.activeElement).toBe(explanation)
+  })
+
+  it('사용자가 다른 곳을 눌러 옮긴 초점은 확인이 끝나도 되돌리지 않는다', async () => {
+    const user = userEvent.setup()
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading')
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+    const explanation = screen.getByText('합성 풀이 하나다.', { exact: false })
+
+    await user.click(screen.getByRole('heading', { level: 1, name: '너울 읽기' }))
+    explanation.blur()
+    setAuth(checkingAuth)
+    setAuth(anonymousAuthContext)
+
+    expect(document.activeElement).not.toBe(explanation)
+  })
+
   it('로그인 상태를 다시 확인하는 동안 확인 문제를 숨기기만 하고, 비로그인으로 돌아오면 고른 답이 그대로다', async () => {
     const user = userEvent.setup()
     loaded(currentArticle)
@@ -396,6 +440,10 @@ describe('LearningArticlePage', () => {
     setAuth(checkingAuth)
     const quiz = screen.getByText('합성 질문 하나다.').closest('section')!
     expect(quiz.parentElement?.className).toMatch(/concealed/)
+    // 이름만 보면 규칙이 지워져도 통과하므로, 숨김 규칙이 실제로 자리를 둔 채 감추는지 함께 본다(R33).
+    expect(
+      cssDeclarations('components/learning/article/ArticleEnd.module.css', '.concealed'),
+    ).toMatch(/visibility:\s*hidden/)
     expect(screen.getByText('로그인하면 학습 기록이 남습니다.').closest('p')?.className).toMatch(
       /concealed/,
     )

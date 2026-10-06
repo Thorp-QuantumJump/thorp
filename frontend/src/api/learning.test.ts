@@ -274,6 +274,28 @@ describe('배우기 글 하나 조회 — 판별 블록', () => {
     ).resolves.toMatchObject({ status: 'loaded' })
   })
 
+  it('모르는 도식 종류는 글 전체를 실패로 만들지 않고 종류를 null로 받는다', async () => {
+    const future = {
+      ...currentArticle,
+      blocks: [
+        {
+          type: 'diagram',
+          kind: 'area',
+          title: '',
+          unit: '',
+          categories: ['가', '나'],
+          series: [{ name: '가', values: [1, 2] }],
+          description: '설명 문장',
+        },
+      ],
+    }
+
+    await expect(read(future)).resolves.toMatchObject({
+      status: 'loaded',
+      article: { blocks: [{ type: 'diagram', kind: null, description: '설명 문장' }] },
+    })
+  })
+
   it('모양이 틀린 글자 조각은 문장을 비워 그리지 않고 failed다', async () => {
     const broken = {
       ...currentArticle,

@@ -21,8 +21,10 @@ export function ComparisonTable({ caption, columns, rows, blockIndex }: Comparis
     <figure className={styles.tableFigure}>
       <table className={styles.table}>
         <caption>
-          <span className={styles.tag}>가상의 예</span>
-          {caption ? <span className={styles.caption}>{caption}</span> : null}
+          <span className={styles.captionRow}>
+            <span className={styles.tag}>가상의 예</span>
+            {caption ? <span className={styles.caption}>{caption}</span> : null}
+          </span>
         </caption>
         <thead>
           <tr>
