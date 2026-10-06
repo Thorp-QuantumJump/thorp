@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LearningListResult } from '@/api/learning'
 import { articleSummaries } from '@/test/learningFixtures'
+import { AuthContext } from '@/auth/auth-context'
+import { anonymousAuthContext } from '@/test/authFixtures'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import { LearningListPage } from './LearningListPage'
 
@@ -25,6 +27,19 @@ const failed: LearningListResult = {
 
 const progressWords = /학습 완료|수강|진도|완료율|숙련도|설문/
 
+/**
+ * 2판 배우기 화면은 `useAuth`를 부르므로 실제 앱처럼 인증 제공자 안에서 그린다. 기본은 비로그인이다
+ * (013 T104).
+ */
+function renderList() {
+  return renderWithRouter(
+    <AuthContext.Provider value={anonymousAuthContext}>
+      <LearningListPage />
+    </AuthContext.Provider>,
+    { initialEntries: ['/learn'] },
+  )
+}
+
 describe('LearningListPage', () => {
   beforeEach(() => {
     apiMocks.fetchLearningArticles.mockReset()
@@ -40,7 +55,7 @@ describe('LearningListPage', () => {
       articles: articleSummaries,
     } satisfies LearningListResult)
 
-    renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    renderList()
 
     const list = await screen.findByRole('list')
     const links = within(list).getAllByRole('link')
@@ -56,7 +71,7 @@ describe('LearningListPage', () => {
   it('목록을 불러오는 동안에도 상태를 알리고, 진단 진입은 화면 안에 따로 두지 않는다', async () => {
     apiMocks.fetchLearningArticles.mockReturnValue(new Promise(() => {}))
 
-    renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    renderList()
 
     expect(await screen.findByRole('status')).not.toBeNull()
     expect(screen.queryByRole('link', { name: /바로 전략 진단하기/ })).toBeNull()
@@ -65,7 +80,7 @@ describe('LearningListPage', () => {
   it('게시된 글이 없으면 경고가 아닌 한 문장을 보인다', async () => {
     apiMocks.fetchLearningArticles.mockResolvedValue({ status: 'empty' })
 
-    renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    renderList()
 
     expect(await screen.findByText('아직 게시된 글이 없습니다.')).not.toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
@@ -76,7 +91,7 @@ describe('LearningListPage', () => {
   it('불러오지 못하면 빈 목록과 다르게 경고와 다시 시도를 보인다', async () => {
     apiMocks.fetchLearningArticles.mockResolvedValue(failed)
 
-    renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    renderList()
 
     expect((await screen.findByRole('alert')).textContent).toBe('글 목록을 만들지 못했습니다.')
     expect(screen.getByRole('button', { name: '다시 시도' })).not.toBeNull()
@@ -89,7 +104,7 @@ describe('LearningListPage', () => {
     apiMocks.fetchLearningArticles.mockResolvedValueOnce(failed)
     apiMocks.fetchLearningArticles.mockResolvedValueOnce({ status: 'empty' })
 
-    renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    renderList()
 
     const retry = await screen.findByRole('button', { name: '다시 시도' })
     expect(apiMocks.fetchLearningArticles).toHaveBeenCalledTimes(1)
@@ -108,7 +123,7 @@ describe('LearningListPage', () => {
       message: '서버에 연결할 수 없습니다.',
     } satisfies LearningListResult)
 
-    renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    renderList()
 
     expect((await screen.findByRole('alert')).textContent).toBe('배우기 글을 불러오지 못했습니다.')
   })
@@ -120,7 +135,7 @@ describe('LearningListPage', () => {
       articles: articleSummaries,
     } satisfies LearningListResult)
 
-    const { unmount } = renderWithRouter(<LearningListPage />, { initialEntries: ['/learn'] })
+    const { unmount } = renderList()
     await screen.findByRole('list')
     unmount()
 

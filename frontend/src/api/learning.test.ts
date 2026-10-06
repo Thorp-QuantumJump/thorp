@@ -2,7 +2,13 @@ import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
 import type { LearningArticle, LearningArticleList } from '@/types/learning'
-import { articleSummaries, harborArticle, tideArticle } from '@/test/learningFixtures'
+import {
+  articleSummaries,
+  currentArticle,
+  harborArticle,
+  previousTideArticle,
+  tideArticle,
+} from '@/test/learningFixtures'
 import { apiClient } from './client'
 import { fetchLearningArticle, fetchLearningArticles } from './learning'
 
@@ -180,5 +186,100 @@ describe('배우기 글 하나 조회', () => {
     const result = await fetchLearningArticle('tide-reading')
 
     expect(result.status).toBe('loaded')
+  })
+})
+
+/** 013 T134. 판(`edition`)으로 블록 모양을 가르는지 본다(계약 §3, quickstart 9-1). */
+describe('배우기 글 하나 조회 — 판별 블록', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  async function read(body: unknown) {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success(body)))
+    return fetchLearningArticle('any-article')
+  }
+
+  it('CURRENT 응답의 새 기준 블록과 조각을 그대로 loaded로 받는다', async () => {
+    await expect(read(currentArticle)).resolves.toEqual({
+      status: 'loaded',
+      article: currentArticle,
+    })
+  })
+
+  it.each([
+    ['PRE_RELEASE', tideArticle],
+    ['PREVIOUS', previousTideArticle],
+  ])('%s 응답의 9월 판 블록을 loaded로 받는다', async (_, article) => {
+    await expect(read(article)).resolves.toEqual({ status: 'loaded', article })
+  })
+
+  it('CURRENT 응답에 text만 있는 paragraph가 오면 failed다', async () => {
+    const mixed = { ...currentArticle, blocks: [{ type: 'paragraph', text: '9월 판 문단' }] }
+
+    await expect(read(mixed)).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('9월 판 응답에 content만 있는 paragraph가 오면 failed다', async () => {
+    const mixed = {
+      ...tideArticle,
+      blocks: [{ type: 'paragraph', content: [{ text: '새 기준 문단' }] }],
+    }
+
+    await expect(read(mixed)).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('example이 null이면 CURRENT 글은 loaded이고 9월 판 글은 failed다', async () => {
+    await expect(read({ ...currentArticle, example: null })).resolves.toMatchObject({
+      status: 'loaded',
+      article: { example: null },
+    })
+    await expect(read({ ...tideArticle, example: null })).resolves.toMatchObject({
+      status: 'failed',
+      kind: 'unexpected',
+    })
+  })
+
+  it('CURRENT 글의 예시가 객체면 9월 판처럼 검사한다', async () => {
+    await expect(read({ ...currentArticle, example: tideArticle.example })).resolves.toMatchObject({
+      status: 'loaded',
+      article: { example: tideArticle.example },
+    })
+    await expect(read({ ...currentArticle, example: { available: 'yes' } })).resolves.toMatchObject({
+      status: 'failed',
+    })
+  })
+
+  it.each([
+    ['없음', undefined],
+    ['모르는 값', 'DRAFT'],
+  ])('edition이 %s이면 failed다', async (_, edition) => {
+    const { edition: _drop, ...rest } = tideArticle
+    void _drop
+
+    await expect(read({ ...rest, edition })).resolves.toMatchObject({
+      status: 'failed',
+      kind: 'unexpected',
+    })
+  })
+
+  it('모르는 블록 종류는 두 판 모두 글 전체를 실패로 만들지 않는다', async () => {
+    const future = { type: 'timeline', items: [] }
+
+    await expect(
+      read({ ...currentArticle, blocks: [future, ...currentArticle.blocks] }),
+    ).resolves.toMatchObject({ status: 'loaded' })
+    await expect(
+      read({ ...tideArticle, blocks: [future, ...tideArticle.blocks] }),
+    ).resolves.toMatchObject({ status: 'loaded' })
+  })
+
+  it('모양이 틀린 글자 조각은 문장을 비워 그리지 않고 failed다', async () => {
+    const broken = {
+      ...currentArticle,
+      blocks: [{ type: 'paragraph', content: [{ term: 'ebb-gap', text: '썰물 간격' }] }],
+    }
+
+    await expect(read(broken)).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
   })
 })

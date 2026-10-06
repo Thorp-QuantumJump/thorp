@@ -1,0 +1,39 @@
+/* '이전 판'은 번호·상태 모양 없이 얇은 실선 태그다(design-notes §4). 점선은 '준비 중'에만 쓴다. */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  font-weight: 500;
+}
+
+.end {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: var(--thorp-pad-inset, 16px 18px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 12px);
+}
+
+.end p {
+  margin: 0;
+  color: var(--thorp-copy);
+  line-height: 1.7;
+}
+
+.listLink {
+  display: inline-flex;
+  align-items: center;
+  /* 누르는 곳은 44×44px 이상이다(design-notes §6). */
+  min-height: 44px;
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.listLink:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
