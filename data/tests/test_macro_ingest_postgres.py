@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
-from data_pipeline.macro import ingest
+from data_pipeline.macro import ingest, registry
+from data_pipeline.macro.config import SourceConfig, load_source_config
 from data_pipeline.macro.registry import INDICATORS
 from data_pipeline.macro.sources.base import SourceObservation, TransientSourceError
 from data_pipeline.macro.versioning import (
@@ -42,6 +43,23 @@ class StubFetcher:
         headers: dict[str, str] | None = None,
     ) -> str:
         return self._body
+
+
+def _configs_without_backoff(
+    indicators: tuple[registry.IndicatorDefinition, ...],
+) -> dict[str, SourceConfig]:
+    """운영 설정 그대로이되 재시도 대기만 없앤다.
+
+    늘 실패하는 원천으로 돌리면 요청마다 재시도 대기 1·2초를 실제로 잔다(테스트 하나에 45초). 시도
+    횟수는 운영 값을 그대로 두므로 재시도를 다 쓴 뒤 실패로 기록되는 경로는 같다. 원천별 호출
+    간격(0.2초)은 그대로라 2초 남짓은 남는다.
+
+    원천은 넘기는 지표에서 고른다. 빠진 원천은 수집이 운영 설정으로 돌아가 조용히 다시 느려진다.
+    """
+    return {
+        source_id: replace(load_source_config(source_id), backoff_seconds=0.0)
+        for source_id in registry.used_sources(indicators)
+    }
 
 
 @pytest.fixture
@@ -201,6 +219,7 @@ def test_failed_indicator_keeps_its_error_class(
         data_root=tmp_path,
         mode="regular",
         today=date(2026, 7, 15),
+        configs=_configs_without_backoff(seeded_indicators),
     )
 
     assert report.failed, "전부 실패했는데 실패로 안 잡혔다"
@@ -237,6 +256,7 @@ def test_publication_is_held_but_records_still_land(
         data_root=tmp_path,
         mode="initial",
         today=date(2026, 7, 15),
+        configs=_configs_without_backoff(seeded_indicators),
     )
 
     assert not report.published

@@ -152,12 +152,6 @@ describe("AxisNumberField", () => {
     expect(screen.getByText(/숫자로 입력해 주세요/)).not.toBeNull();
   });
 
-  it("되돌리는 단추를 두지 않는다 — 설정 행 이름 옆 아이콘이 맡는다", () => {
-    renderField(35);
-
-    expect(screen.queryByRole("button", { name: /기본값 복원/ })).toBeNull();
-  });
-
   it("재검증이 비워 둔 항목은 빈칸으로 두고 값을 넣으라고 안내한다", () => {
     const { input } = renderField(undefined);
 

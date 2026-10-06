@@ -2,11 +2,18 @@ package com.ssafy.thorp.learning.infrastructure.persistence;
 
 import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
+import com.ssafy.thorp.learning.domain.model.ArticleFormat;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -39,13 +46,40 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
                                                 row.getArticleTitle(), "title")));
     }
 
+    /** 공개 판 포인터와 색인 행의 판이 같은 행만 읽는다. {@link #findPublished}와 같은 규칙이다. */
+    @Override
+    public Map<TermId, List<String>> findPublishedAliases(Collection<TermId> termIds) {
+        Map<TermId, List<String>> aliases = new LinkedHashMap<>();
+        if (termIds.isEmpty()) {
+            return aliases;
+        }
+        for (LearningPublishedTermJpaEntity row :
+                publishedTermJpaRepository.findPublishedIn(
+                        termIds.stream().map(TermId::value).distinct().toList())) {
+            aliases.put(
+                    new TermId(row.getId()),
+                    List.copyOf(
+                            LearningContentJson.required(
+                                    row.getAliases(), "learning_published_term.aliases")));
+        }
+        return aliases;
+    }
+
     @Override
     public Optional<ArticleId> findOwnerArticleKey(TermId termId) {
         return publishedTermJpaRepository.findOwnerArticleKey(termId.value()).map(ArticleId::new);
     }
 
     @Override
-    public void replaceForArticle(ArticleId articleId, long revisionId, List<LearningTerm> terms) {
+    public Set<TermId> findAllTermIds() {
+        Set<TermId> termIds = new LinkedHashSet<>();
+        publishedTermJpaRepository.findAllTermKeys().forEach(key -> termIds.add(new TermId(key)));
+        return termIds;
+    }
+
+    @Override
+    public void replaceForArticle(
+            ArticleId articleId, long revisionId, List<LearningTerm> terms, ArticleFormat format) {
         Long articleInternalId =
                 PersistenceLookups.requireArticleId(articleJpaRepository, articleId);
         publishedTermJpaRepository.deleteByArticleIdInBulk(articleInternalId);
@@ -58,7 +92,8 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
                                                 articleInternalId,
                                                 revisionId,
                                                 term.label(),
-                                                term.sentence()))
+                                                term.helpSentence(format),
+                                                term.aliases()))
                         .toList());
     }
 
@@ -66,5 +101,22 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
     public void deleteForArticle(ArticleId articleId) {
         publishedTermJpaRepository.deleteByArticleIdInBulk(
                 PersistenceLookups.requireArticleId(articleJpaRepository, articleId));
+    }
+
+    @Override
+    public void deleteTerm(ArticleId articleId, TermId termId) {
+        publishedTermJpaRepository.deleteTermInBulk(
+                PersistenceLookups.requireArticleId(articleJpaRepository, articleId),
+                termId.value());
+    }
+
+    @Override
+    public Map<ArticleId, Integer> countPublishedByArticle() {
+        Map<ArticleId, Integer> counts = new HashMap<>();
+        for (LearningPublishedTermJpaRepository.TermCountRow row :
+                publishedTermJpaRepository.countPublishedByArticle()) {
+            counts.put(new ArticleId(row.getArticleId()), Math.toIntExact(row.getTermCount()));
+        }
+        return counts;
     }
 }

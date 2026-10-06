@@ -31,12 +31,6 @@ public interface BacktestResultRepository {
     void save(SaveBacktestResultCommand command);
 
     /**
-     * 요약에 필요한 스칼라만 읽는다. {@code portfolio_series}와 벤치마크 시계열은 읽지 않는다.
-     *
-     * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면
-     * 정상이고, {@code COMPLETED}·{@code FAILED}면 저장 트랜잭션이 깨진 데이터 손상이다.
-     */
-    /**
      * 결과 행이 있는지만 본다. JSON 컬럼을 읽지도 파싱하지도 않는다.
      *
      * <p>{@code /trades}는 {@code backtest_trade} 행만 읽어서 결과 행 유실을 스스로 알아채지 못한다 — 거래가 0건이면 빈 페이지를, 거래
@@ -45,6 +39,13 @@ public interface BacktestResultRepository {
      */
     boolean exists(Long runId);
 
+    /**
+     * 요약에 필요한 컬럼만 읽는다. 오류·시각 스칼라와 성과·실행·비용·청산·분석·의존성 JSON이고, {@code portfolio_series}와 {@code
+     * benchmark}는 읽지 않는다.
+     *
+     * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면
+     * 정상이다. 최종 상태에서는 시작 전 취소와 워커 산출물 없이 끝난 실패만 정상이고, 그 밖에는 저장 트랜잭션이 깨진 데이터 손상이다.
+     */
     Optional<BacktestResultSummary> findSummary(Long runId);
 
     /**
@@ -88,8 +89,7 @@ public interface BacktestResultRepository {
      * <p>Spring {@code Page}가 content 쿼리와 count 쿼리를 함께 처리한다. 포트에 프레임워크 타입이 보이지만 application은 이미
      * {@code @Service}·{@code @Transactional}로 Spring에 의존하고, 계층 규칙은 {@code
      * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.
-     */
-    /**
+     *
      * @param visibleBefore null = 제한 없음. 먼저 취소한 요청은 스냅샷 다음 날 0시(거래소 현지) 전에 <b>청산된</b> 거래만 본다 —
      *     가로지르는 거래와 OPEN 거래는 저장된 값이 실행 종료 시점이라 경계 시점 상태가 아니다(R-04)
      */

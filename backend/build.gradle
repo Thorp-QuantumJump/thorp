@@ -137,4 +137,28 @@ tasks.named('test') {
     inputs.dir(file('../worker/examples/three_etf_24m'))
             .withPropertyName('workerThreeEtfFixture')
             .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 그 뒤에 생긴 계약 시험들이 읽는 예시. 하나라도 빠지면 그 예시만 고친 변경을 로컬 :test가 건너뛴다.
+    inputs.dir(file('../docs/specs/assistant-api/examples'))
+            .withPropertyName('assistantApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/result-api/examples'))
+            .withPropertyName('resultApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/strategy-registry-api/examples'))
+            .withPropertyName('strategyRegistryApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/regime-link-messaging/examples'))
+            .withPropertyName('regimeLinkMessagingFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(file('../docs/specs/regime-link-api/examples'))
+            .withPropertyName('regimeLinkApiFixtures')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 뉴스 계약(spec 012)은 openapi.yaml과 examples를 함께 읽는다.
+    inputs.dir(file('../specs/012-market-news-digest/contracts'))
+            .withPropertyName('marketNewsContracts')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    // 워커 의존성 잠금 파일. EngineVersionFingerprintTest가 백엔드에 적힌 엔진 버전과 대조한다.
+    inputs.file(file('../worker/uv.lock'))
+            .withPropertyName('workerLockFile')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
 }

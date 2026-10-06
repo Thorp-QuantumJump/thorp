@@ -12,6 +12,8 @@ import com.ssafy.thorp.assistant.application.result.Evidence;
 import com.ssafy.thorp.assistant.application.result.ModelDraft;
 import com.ssafy.thorp.assistant.application.result.ModelDraft.AnswerPart;
 import com.ssafy.thorp.assistant.application.result.ModelTurn;
+import com.ssafy.thorp.assistant.application.result.PageKind;
+import com.ssafy.thorp.assistant.application.result.ToolArgument;
 import com.ssafy.thorp.assistant.application.result.ToolCall;
 import com.ssafy.thorp.assistant.application.result.ToolRequests;
 import com.ssafy.thorp.assistant.application.result.ToolResult;
@@ -42,6 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 public class OpenAiChatCompletionsClient implements AssistantModelPort {
     static final String PROMPT_RESOURCE = "assistant/prompts/answer-ko.txt";
+    static final String TERM_PROMPT_RESOURCE = "assistant/prompts/term-ko.txt";
     static final String RESPONSE_SCHEMA_NAME = "assistant_answer";
     static final String UNPARSED_ARGUMENTS_KEY = "_unparsed";
     private static final Logger log = LoggerFactory.getLogger(OpenAiChatCompletionsClient.class);
@@ -50,6 +53,7 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
     private final ObjectMapper mapper;
     private final String model;
     private final String prompt;
+    private final String termPrompt;
     private final JsonNode responseFormat;
 
     public OpenAiChatCompletionsClient(
@@ -58,6 +62,7 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
         this.mapper = mapper;
         this.model = properties.getModel().strip();
         this.prompt = loadResource(PROMPT_RESOURCE);
+        this.termPrompt = loadResource(TERM_PROMPT_RESOURCE);
         this.responseFormat = responseFormat(mapper);
     }
 
@@ -88,7 +93,7 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
         body.put("model", model);
         body.put("store", false);
         ArrayNode messages = body.putArray("messages");
-        messages.addObject().put("role", "developer").put("content", prompt);
+        messages.addObject().put("role", "developer").put("content", promptFor(conversation));
         messages.addObject()
                 .put("role", "user")
                 .put(
@@ -121,6 +126,11 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
         }
         body.set("response_format", responseFormat);
         return body;
+    }
+
+    /** 결과 화면은 015 프롬프트, 진단 화면 두 종류는 용어 프롬프트(017 research R6). */
+    private String promptFor(Conversation conversation) {
+        return conversation.kind() == PageKind.RESULT ? prompt : termPrompt;
     }
 
     /** 이력의 도구 결과로 들어온 근거는 {@code tool} 메시지에 이미 있으므로 사용자 메시지에는 처음 팩만 싣는다. */
@@ -187,9 +197,16 @@ public class OpenAiChatCompletionsClient implements AssistantModelPort {
         ObjectNode parameters = function.putObject("parameters").put("type", "object");
         ObjectNode properties = parameters.putObject("properties");
         ArrayNode required = parameters.putArray("required");
-        for (String argument : spec.dateArguments()) {
-            properties.putObject(argument).put("type", "string").put("description", "YYYY-MM-DD");
-            required.add(argument);
+        for (ToolArgument argument : spec.arguments()) {
+            ObjectNode property = properties.putObject(argument.name()).put("type", "string");
+            switch (argument.type()) {
+                case DATE -> property.put("description", "YYYY-MM-DD");
+                case ENUM -> {
+                    ArrayNode values = property.putArray("enum");
+                    argument.allowedValues().forEach(values::add);
+                }
+            }
+            required.add(argument.name());
         }
         parameters.put("additionalProperties", false);
         return definition;

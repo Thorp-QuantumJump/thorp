@@ -19,7 +19,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CostProfileServiceTest {
 
-    private static final String DEFAULT = "PROVISIONAL-DEMO-1";
+    /**
+     * 서버 기본 비용 조건. PD-07 확정값이다(application.yml {@code thorp.backtest.default-cost-profile}, T021).
+     */
+    private static final String DEFAULT = "KR-ETF-2026-09";
 
     @Mock private CostProfileRepository repository;
 
@@ -27,25 +30,27 @@ class CostProfileServiceTest {
         return new CostProfileService(repository, DEFAULT);
     }
 
-    private static CostProfile demo() {
+    /** V20260919193708이 넣은 확정 비용 행 그대로다. */
+    private static CostProfile confirmed() {
         return new CostProfile(
                 DEFAULT,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
+                new BigDecimal("1.5"),
+                new BigDecimal("3"),
                 new BigDecimal("5"),
                 BigDecimal.ZERO,
                 null,
-                true,
-                "ADR-0004 데모 값 재사용");
+                false,
+                "PD-07 확정 2026-09-17");
     }
 
     @Test
-    @DisplayName("버전을 비우면 서버 기본값을 쓰고, 그 값은 임시로 표시돼 있다")
-    void blankVersionFallsBackToProvisionalDefault() {
-        when(repository.find(DEFAULT)).thenReturn(Optional.of(demo()));
+    @DisplayName("버전을 비우면 서버 기본값을 쓴다")
+    void blankVersionFallsBackToServerDefault() {
+        CostProfile confirmed = confirmed();
+        when(repository.find(DEFAULT)).thenReturn(Optional.of(confirmed));
 
-        assertThat(service().resolve(null).provisional()).isTrue();
-        assertThat(service().resolve("  ").version()).isEqualTo(DEFAULT);
+        assertThat(service().resolve(null)).isSameAs(confirmed);
+        assertThat(service().resolve("  ")).isSameAs(confirmed);
     }
 
     @Test

@@ -1,6 +1,13 @@
-import { render } from '@testing-library/react'
-import { useMemo } from 'react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { act, render } from '@testing-library/react'
+import { type RefObject, createRef, useEffect, useMemo } from 'react'
+import {
+  MemoryRouter,
+  type NavigateFunction,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
 import type { AssistantAnswer } from '@/types/assistant'
 import { AssistantProvider, AssistantWidget } from './AssistantWidget'
 import { useAssistantPageContext } from './assistantPageContext'
@@ -19,15 +26,17 @@ export const answered: AssistantAnswer = {
 }
 
 /** 결과 화면 대역. 실제 `ResultPage`처럼 자기 맥락을 등록한다. */
-export function FakeResultPage({ token }: { token: string }) {
+function FakeResultPage({ token }: { token: string }) {
   const page = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])
   useAssistantPageContext(page)
   return <main>결과 {token.slice(0, 4)}</main>
 }
 
 export function renderAssistant({ path = `/results/${TOKEN}` }: { path?: string } = {}) {
-  return render(
+  const navigateRef = createRef<NavigateFunction>()
+  const view = render(
     <MemoryRouter initialEntries={[path]}>
+      <NavigationHandle navigateRef={navigateRef} />
       <AssistantProvider>
         <Routes>
           <Route path="/results/:token" element={<RouteResult />} />
@@ -39,11 +48,30 @@ export function renderAssistant({ path = `/results/${TOKEN}` }: { path?: string 
       </AssistantProvider>
     </MemoryRouter>,
   )
+  return {
+    ...view,
+    /** 트리를 내리지 않고 경로만 바꾼다. 실제 앱의 라우트 전환처럼 제공자와 버튼은 그대로 남는다. */
+    navigate: async (to: string) => {
+      await act(async () => {
+        await navigateRef.current?.(to)
+      })
+    },
+  }
+}
+
+/** 라우터의 이동 함수를 테스트가 쥐게 한다. */
+function NavigationHandle({ navigateRef }: { navigateRef: RefObject<NavigateFunction | null> }) {
+  const navigate = useNavigate()
+  useEffect(() => {
+    navigateRef.current = navigate
+  }, [navigate, navigateRef])
+  return null
 }
 
 function RouteResult() {
-  // 경로에 토큰이 없으면(로그인·관리 화면 대역) 결과 하나를 등록한 채로 그 경로에 있는 상황을 흉내 낸다.
-  const token = window.location.pathname.includes('/results/') ? TOKEN : TOKEN
+  // 경로의 토큰으로 맥락을 등록한다. 토큰이 없으면(로그인·관리 화면 대역) 결과 하나를 등록한 채로 그 경로에
+  // 있는 상황을 흉내 낸다.
+  const { token = TOKEN } = useParams()
   return <FakeResultPage token={token} />
 }
 

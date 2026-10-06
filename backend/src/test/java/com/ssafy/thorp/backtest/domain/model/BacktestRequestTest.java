@@ -145,7 +145,7 @@ class BacktestRequestTest {
     void publicExpiryBoundary() {
         BacktestRequest request = anonymous(EXPIRES);
 
-        assertThat(request.isAnonymous()).isTrue();
+        assertThat(request.getRequesterId()).isNull();
         assertThat(request.isPublicExpired(EXPIRES.minusNanos(1))).isFalse();
         assertThat(request.isPublicExpired(EXPIRES)).isTrue();
         assertThat(request.isPublicExpired(EXPIRES.plusSeconds(1))).isTrue();
@@ -156,7 +156,7 @@ class BacktestRequestTest {
     void loggedInRequestNeverExpires() {
         BacktestRequest request = joined();
 
-        assertThat(request.isAnonymous()).isFalse();
+        assertThat(request.getRequesterId()).isEqualTo(99L);
         assertThat(request.getPublicTokenExpiresAt()).isNull();
         assertThat(request.isPublicExpired(Instant.MAX)).isFalse();
     }

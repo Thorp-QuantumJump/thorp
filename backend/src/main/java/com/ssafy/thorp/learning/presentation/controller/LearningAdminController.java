@@ -7,18 +7,16 @@ import com.ssafy.thorp.learning.application.command.SaveDraftCommand;
 import com.ssafy.thorp.learning.application.command.UnpublishCommand;
 import com.ssafy.thorp.learning.application.exception.ArticleIdTakenException;
 import com.ssafy.thorp.learning.application.service.LearningAdminService;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleSource;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
-import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
-import com.ssafy.thorp.learning.domain.vo.TermId;
+import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.presentation.request.CreateArticleRequest;
 import com.ssafy.thorp.learning.presentation.request.PublishRequest;
 import com.ssafy.thorp.learning.presentation.request.SaveDraftRequest;
 import com.ssafy.thorp.learning.presentation.response.AdminAccessResponse;
 import com.ssafy.thorp.learning.presentation.response.AdminArticleListResponse;
 import com.ssafy.thorp.learning.presentation.response.AdminArticleResponse;
+import com.ssafy.thorp.learning.presentation.response.LearningArticleResponse;
 import com.ssafy.thorp.learning.presentation.response.PublishResponse;
 import com.ssafy.thorp.learning.presentation.response.UnpublishResponse;
 import com.ssafy.thorp.learning.presentation.support.LearningAdminAccess;
@@ -74,7 +72,7 @@ public class LearningAdminController {
                 ApiResponse.ok(AdminArticleListResponse.from(adminService.list())));
     }
 
-    /** 글 만들기. 새 글은 본문이 빈 초안이다. */
+    /** 글 만들기. 새 글은 본문이 빈 V2 초안이고 단계에 속한다. */
     @PostMapping("/articles")
     public ResponseEntity<ApiResponse<AdminArticleResponse>> createArticle(
             @Valid @RequestBody CreateArticleRequest request) {
@@ -83,7 +81,8 @@ public class LearningAdminController {
                 new CreateArticleCommand(
                         new ArticleId(request.articleId()),
                         request.title(),
-                        request.readingOrder());
+                        new StageKey(request.stageKey()),
+                        request.stagePosition());
         AdminArticleResponse created;
         try {
             created = AdminArticleResponse.from(adminService.create(command));
@@ -112,7 +111,7 @@ public class LearningAdminController {
     public ResponseEntity<ApiResponse<AdminArticleResponse>> saveDraft(
             @PathVariable String articleId, @Valid @RequestBody SaveDraftRequest request) {
         adminAccess.requireAdminUserId();
-        SaveDraftCommand command = toCommand(request);
+        SaveDraftCommand command = DraftCommands.toCommand(request);
         try {
             return ResponseEntity.ok(
                     ApiResponse.ok(
@@ -142,6 +141,15 @@ public class LearningAdminController {
         }
     }
 
+    /** 미리 보기. 지금 초안을 독자 화면과 같은 모양으로 돌려준다(§8). 검사하지 않고 아무것도 쓰지 않는다. 공개 조회와 나의 학습은 바뀌지 않는다. */
+    @GetMapping("/articles/{articleId}/preview")
+    public ResponseEntity<ApiResponse<LearningArticleResponse>> preview(
+            @PathVariable String articleId) {
+        adminAccess.requireAdminUserId();
+        return ResponseEntity.ok(
+                ApiResponse.ok(LearningArticleResponse.from(adminService.preview(articleId))));
+    }
+
     /** 게시 취소. 본문이 없다. 이미 초안이면 아무것도 바꾸지 않고 200이다. */
     @PostMapping("/articles/{articleId}/unpublish")
     public ResponseEntity<ApiResponse<UnpublishResponse>> unpublish(
@@ -155,58 +163,19 @@ public class LearningAdminController {
     }
 
     /**
-     * 용어 식별자의 UNIQUE 제약 위반이면 어느 글이 가져갔는지 새로 읽어 409로 바꾼다. 그 사이 먼저 커밋한 요청이 되돌려져 겹치는 글이 없으면 원래 예외를 그대로
-     * 둔다. 판정할 수 없는 충돌을 409로 꾸며 내지 않는다.
+     * 용어 식별자의 UNIQUE 제약 위반이면 어느 글이 가져갔는지(넘겨받는 중인지) 새로 읽어 409로 바꾼다. 그 사이 먼저 커밋한 요청이 되돌려져 겹치는 글이 없으면
+     * 원래 예외를 그대로 둔다. 판정할 수 없는 충돌을 409로 꾸며 내지 않는다.
      */
     private RuntimeException termConflictOr(
             DataIntegrityViolationException violation, String articleId, List<LearningTerm> terms) {
-        if (UniqueConstraintViolations.violates(violation, UniqueConstraintViolations.TERM_KEY)
+        if (UniqueConstraintViolations.violates(
+                        violation, UniqueConstraintViolations.TERM_KEY_OWNED)
+                || UniqueConstraintViolations.violates(
+                        violation, UniqueConstraintViolations.TERM_KEY_INCOMING)
                 || UniqueConstraintViolations.violates(
                         violation, UniqueConstraintViolations.PUBLISHED_TERM_KEY)) {
             adminService.requireTermIdsAvailable(articleId, terms);
         }
         return violation;
-    }
-
-    private static SaveDraftCommand toCommand(SaveDraftRequest request) {
-        return new SaveDraftCommand(
-                request.expectedDraftVersion(),
-                request.title(),
-                request.question(),
-                request.readingOrder(),
-                request.blocks().stream().map(LearningAdminController::toBlock).toList(),
-                request.example() == null
-                        ? null
-                        : new ExampleAllocation(
-                                request.example().sectors().stream()
-                                        .map(
-                                                sector ->
-                                                        new ExampleAllocation.SectorWeight(
-                                                                sector.code(),
-                                                                sector.weightTenths()))
-                                        .toList()),
-                request.sources().stream()
-                        .map(source -> new ArticleSource(source.label(), source.url()))
-                        .toList(),
-                request.terms().stream()
-                        .map(
-                                term ->
-                                        new LearningTerm(
-                                                new TermId(term.termId()),
-                                                term.label(),
-                                                term.sentence()))
-                        .toList());
-    }
-
-    private static ArticleBlock toBlock(SaveDraftRequest.Block block) {
-        return switch (block) {
-            case SaveDraftRequest.Heading heading -> new ArticleBlock.HeadingBlock(heading.text());
-            case SaveDraftRequest.Paragraph paragraph ->
-                    new ArticleBlock.ParagraphBlock(paragraph.text());
-            case SaveDraftRequest.TermBlock term ->
-                    new ArticleBlock.TermBlock(new TermId(term.termId()));
-            case SaveDraftRequest.Hypothetical hypothetical ->
-                    new ArticleBlock.HypotheticalBlock(hypothetical.text());
-        };
     }
 }

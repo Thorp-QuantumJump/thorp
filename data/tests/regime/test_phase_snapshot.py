@@ -16,12 +16,11 @@ from conftest import make_registry, make_series, write_phase_config
 
 from data_pipeline.macro.registry import INDICATORS
 from data_pipeline.regime.context import ContextEvent, events_within
-from data_pipeline.regime.explain import format_pair
+from data_pipeline.regime.explain import format_pair, format_value
 from data_pipeline.regime.macro.types import format_month
 from data_pipeline.regime.phase import DEFAULT_CONFIG, build_phase_model, load_config, phase_inputs
 from data_pipeline.regime.phase_snapshot import (
     CASE_UNUSUAL_SENTENCE,
-    format_phase_value,
     residual_threshold,
     subject_of,
 )
@@ -179,19 +178,6 @@ class TestPair:
 
 class TestFormat:
     @pytest.mark.parametrize(
-        ("value", "text"),
-        [
-            (0.30000000000000004, "0.3"),
-            (12.3456, "12.3"),
-            (12.35, "12.4"),
-            (-0.04, "0"),
-            (2.0, "2"),
-        ],
-    )
-    def test_값은_소수_첫째_자리까지다(self, value: float, text: str) -> None:
-        assert format_phase_value(value) == text
-
-    @pytest.mark.parametrize(
         ("name", "label", "subject"),
         [
             ("건설기성액(불변)", "", "건설기성액(불변)은"),
@@ -268,7 +254,7 @@ class TestDisplay:
         config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])
         value, unit = config.display_of("trade_balance", 24_137_983_294.0)
         assert unit == "억 달러"
-        assert format_phase_value(value) == "241.4"
+        assert format_value(value) == "241.4"
 
 
 class TestThreshold:

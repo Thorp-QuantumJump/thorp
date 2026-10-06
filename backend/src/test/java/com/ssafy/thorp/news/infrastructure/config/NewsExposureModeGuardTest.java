@@ -8,9 +8,12 @@ import com.ssafy.thorp.news.domain.vo.NewsExposureMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.mock.env.MockEnvironment;
 
 /**
@@ -76,11 +79,19 @@ class NewsExposureModeGuardTest {
     }
 
     @Test
-    @DisplayName("프로필이 없어도 공개 모드가 기본이다")
+    @DisplayName("노출 모드 설정을 빠뜨리면 공개 모드가 기본이라 운영 프로필에서도 뜬다")
     void 기본값은_공개() {
-        assertThat(properties(NewsExposureMode.PUBLIC).isPublic())
+        // record를 직접 만들면 @DefaultValue를 지나지 않는다. 설정 없이 바인딩해 실제 기본값을 읽는다.
+        NewsProperties defaults =
+                new Binder(new MapConfigurationPropertySource(Map.of()))
+                        .bindOrCreate("thorp.news", NewsProperties.class);
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod");
+
+        assertThat(defaults.exposureMode())
                 .as("설정을 빠뜨렸을 때 닫히는 쪽으로 틀려야 한다")
-                .isTrue();
-        assertThatCode(() -> guard(NewsExposureMode.INTERNAL).verify()).doesNotThrowAnyException();
+                .isEqualTo(NewsExposureMode.PUBLIC);
+        assertThatCode(() -> new NewsExposureModeGuard(defaults, environment).verify())
+                .doesNotThrowAnyException();
     }
 }

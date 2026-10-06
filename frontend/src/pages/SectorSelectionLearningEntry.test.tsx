@@ -27,6 +27,16 @@ vi.mock('@/api/sectors', async () => {
   return { ...actual, ...apiMocks }
 })
 
+// 뉴스 구역이 목록 아래에 서지만 이 검사가 보는 것이 아니다. 실제 요청을 내지 않게 빈 응답으로 막는다.
+// vi.fn이 아니라 그냥 함수라 각 검사의 mock 초기화에 지워지지 않는다.
+vi.mock('@/api/marketNews', () => ({
+  fetchNewsSectors: async () => [],
+  fetchMarketNewsDigests: async () => ({
+    context: 'CURRENT', state: 'EMPTY', sectorId: null, from: null, to: null,
+    lastUpdatedAt: null, stale: false, statusMessage: null, digests: [],
+  }),
+}))
+
 function sector(
   code: string,
   name: string,

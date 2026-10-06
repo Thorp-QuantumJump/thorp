@@ -3,7 +3,10 @@ package com.ssafy.thorp.news.application.repository;
 import com.ssafy.thorp.news.domain.model.NewsDigest;
 import com.ssafy.thorp.news.domain.vo.NewsDigestId;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -23,6 +26,22 @@ public interface NewsDigestRepository {
 
     /** 그 섹터에 연결된 묶음. 섹터 식별자는 spec 001이 소유하는 외부 값이다(spec FR-005). */
     List<NewsDigest> findRecentBySector(Instant since, String sectorId);
+
+    /**
+     * 섹터 여럿 가운데 하나 이상에 연결된 현재 뉴스 후보 묶음(spec FR-001 ③, 2026-10-02). 한 묶음은 한 번만 들어간다.
+     *
+     * <p>기본 구현은 섹터마다 {@link #findRecentBySector}를 불러 합친다. 결과는 같지만 섹터 수만큼 질의가 나가므로 영속 구현은 한 번의 질의로
+     * 바꿔 쓴다. 정렬과 개수 제한은 조회 서비스가 주요도 규칙으로 한다.
+     */
+    default List<NewsDigest> findRecentInSectors(Instant since, Collection<String> sectorIds) {
+        Map<String, NewsDigest> byDigestId = new LinkedHashMap<>();
+        for (String sectorId : sectorIds) {
+            for (NewsDigest digest : findRecentBySector(since, sectorId)) {
+                byDigestId.putIfAbsent(digest.getDigestId().value(), digest);
+            }
+        }
+        return List.copyOf(byDigestId.values());
+    }
 
     /** 발행 시각이 확인됐고 구간 안인 기사로 이뤄진 묶음(spec FR-006). */
     List<NewsDigest> findVerifiedBetween(Instant from, Instant to, String sectorId);

@@ -16,7 +16,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Setter
 @ConfigurationProperties(prefix = "thorp.assistant")
 public class AssistantProperties {
-    /** 켜진 화면 종류 이름(쉼표 목록). 1차는 {@code RESULT}. */
+    /**
+     * 켜진 화면 종류 이름(쉼표 목록). {@code RESULT}·{@code SECTOR_SELECTION}·{@code STRATEGY_SETTINGS}, 종류마다
+     * 따로 켠다.
+     */
     private List<String> enabledScopes = new ArrayList<>();
 
     private final Limits limits = new Limits();
@@ -33,6 +36,12 @@ public class AssistantProperties {
         private int maxRounds = 2;
         private int maxFacts = 60;
         private int maxFactsPerRound = 30;
+
+        /** 진단 화면 종류별 IP 분당(017 FR-011). */
+        private int perPagePerIpPerMinute = 5;
+
+        /** 진단 화면 처음 팩 상한(017 계약 §4). */
+        private int termInitialFacts = 40;
     }
 
     @Getter

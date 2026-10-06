@@ -59,6 +59,11 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  /* 누르는 곳은 44×44px 이상이다(013 design-notes §6). */
+  min-height: 44px;
   color: var(--thorp-accent);
 }
 
@@ -70,6 +75,7 @@
 
 .retry,
 .close {
+  position: relative;
   padding: 4px 10px;
   border: 1px solid var(--thorp-line);
   border-radius: 999px;
@@ -82,4 +88,21 @@
 
 .close {
   justify-self: end;
+  /* 넓힌 누름 영역(위아래 9px씩)이 바로 위의 다시 시도·글 연결과 겹치지 않게 띄운다. 간격 8px + 10px = 18px. */
+  margin-top: 10px;
+}
+
+/*
+  누르는 곳은 44×44px 이상이다(013 design-notes §6). 창 안의 작은 알약 모양은 그대로 두고 보이지 않는 누름 영역만
+  44px 높이로 넓힌다. 창 안에는 이 둘과 글 연결 말고 누를 것이 없어 다른 조작과 겹치지 않는다.
+*/
+.retry::after,
+.close::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 44px;
+  transform: translateY(-50%);
 }

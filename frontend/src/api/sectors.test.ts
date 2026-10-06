@@ -1,11 +1,12 @@
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
-import type { InstrumentProfile, PriceSeries, SectorCatalog } from '@/types/sector'
+import type { InstrumentProfile, LatestPrices, PriceSeries, SectorCatalog } from '@/types/sector'
 import { apiClient } from './client'
 import {
   fetchEvaluationWindow,
   fetchInstrumentProfile,
+  fetchLatestPrices,
   fetchPriceSeries,
   fetchSectorCatalog,
   readEvaluationWindow,
@@ -77,18 +78,6 @@ describe('섹터 목록 조회', () => {
 
     const calledPaths = getSpy.mock.calls.map((call) => call[0])
     expect(calledPaths).not.toContain('/sectors/evaluation-window')
-  })
-
-  it('봉투 안의 data를 목록으로 읽는다', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(catalogSuccess))
-
-    const result = await fetchSectorCatalog()
-
-    expect(result.status).toBe('loaded')
-    if (result.status !== 'loaded') return
-    expect(result.catalog.mapVersion).toBe('SEM-2026-09-10-001')
-    expect(result.catalog.isSample).toBe(true)
-    expect(result.catalog.sectors[0].representativeEtf.name).toBe('KODEX 반도체')
   })
 
   it('409 SECTOR_MAP_NOT_READY를 예외가 아니라 상태 값으로 돌려준다', async () => {
@@ -441,7 +430,7 @@ describe('공통 평가 기간 조회(T042)', () => {
     ).rejects.toMatchObject({ kind: 'api', code: 'RESOURCE_NOT_FOUND' })
   })
 
-  it('합의한 필드 셋이 없는 응답(지금 001 계약의 모양)은 읽지 못한 것으로 거부한다', async () => {
+  it('합의한 필드 셋이 없는 응답(001 계약이 넓어지기 전의 옛 모양)은 읽지 못한 것으로 거부한다', async () => {
     const legacy = omitKeys(
       windowBody,
       'warmupBaseDate',
@@ -604,5 +593,81 @@ describe('가격 흐름 조회', () => {
     const result = await fetchPriceSeries('CONSTRUCTION')
 
     expect(result).toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+})
+
+describe('최근 가격 조회(002 FR-018)', () => {
+  const latest: LatestPrices = {
+    mapVersion: 'SEM-2026-09-10-001',
+    datasetId: 'KRX_DAILY_20260922',
+    dataDeadline: '2026-09-22T06:30:00Z',
+    isSample: true,
+    prices: [
+      {
+        sectorCode: 'CONSTRUCTION',
+        instrumentId: '117700.XKRX',
+        name: 'KODEX 건설',
+        date: '2026-09-18',
+        adjustedClose: '10500.00000000',
+        tradingSuspended: false,
+        priceCarriedForward: false,
+        previousDate: '2026-09-17',
+        previousAdjustedClose: '10250.50000000',
+      },
+    ],
+    missingSectorCodes: ['BANK'],
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('공용 apiClient로 한 번 부르고 받은 그대로 옮긴다', async () => {
+    const getSpy = vi
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue(axiosResponse({ success: true, data: latest, error: null }))
+    const controller = new AbortController()
+
+    const result = await fetchLatestPrices(controller.signal)
+
+    expect(getSpy).toHaveBeenCalledWith('/sectors/latest-prices', { signal: controller.signal })
+    expect(result).toEqual({ status: 'loaded', latest })
+  })
+
+  it('직전 값이 둘 다 비어 있으면 그대로 null로 둔다', async () => {
+    const first = { ...latest.prices[0], previousDate: null, previousAdjustedClose: null }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: { ...latest, prices: [first] }, error: null }),
+    )
+
+    const result = await fetchLatestPrices()
+
+    expect(result).toEqual({ status: 'loaded', latest: { ...latest, prices: [first] } })
+  })
+
+  it('직전 날짜와 가격 중 하나만 있으면 응답을 읽지 못한 것으로 다룬다', async () => {
+    const broken = { ...latest.prices[0], previousAdjustedClose: null }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: { ...latest, prices: [broken] }, error: null }),
+    )
+
+    expect(await fetchLatestPrices()).toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('숫자로 읽히지 않는 가격이 오면 응답을 읽지 못한 것으로 다룬다', async () => {
+    const broken = { ...latest.prices[0], adjustedClose: 'N/A' }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: { ...latest, prices: [broken] }, error: null }),
+    )
+
+    expect(await fetchLatestPrices()).toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('어느 섹터에도 가격이 없다는 409는 준비 중 상태로 돌려준다', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValue(
+      axiosFailure(409, errorEnvelope('PRICE_SERIES_NOT_READY', '가격 자료 준비 중')),
+    )
+
+    expect(await fetchLatestPrices()).toEqual({ status: 'notReady', message: '가격 자료 준비 중' })
   })
 })

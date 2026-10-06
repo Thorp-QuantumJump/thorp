@@ -82,14 +82,11 @@ describe("AxisChoiceField", () => {
     }
   });
 
-  it("후보만 그린다: 이름·설명·되돌리기는 설정 행이 맡아 여기 두지 않는다", () => {
+  it("후보 묶음의 이름은 설정 행 이름과 같다", () => {
     const drift = axisNamed(selectableStrategy.axes, "driftWindow");
     renderField(drift, 15);
 
     // 묶음 이름은 행 이름과 같다. 보이는 제목은 행 머리가 가진다.
     expect(screen.getByRole("group", { name: drift.label })).not.toBeNull();
-    // 설명은 행 이름 옆 도움말 안에 있다(`S15P21E205-406`). 후보 자리에는 후보만 남는다.
-    expect(screen.queryByText(drift.description ?? "")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
   });
 });

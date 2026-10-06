@@ -21,7 +21,7 @@ public class EquityRangeTool implements AssistantTool {
 
     @Override
     public ToolSpec spec() {
-        return new ToolSpec(NAME, "구간(최대 1년)의 첫날·마지막 날·자산가치 최고일·최저일 점", List.of("from", "to"));
+        return ToolSpec.dates(NAME, "구간(최대 1년)의 첫날·마지막 날·자산가치 최고일·최저일 점", List.of("from", "to"));
     }
 
     @Override

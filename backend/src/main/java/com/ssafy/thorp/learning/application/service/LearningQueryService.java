@@ -2,40 +2,55 @@ package com.ssafy.thorp.learning.application.service;
 
 import com.ssafy.thorp.learning.application.exception.ArticleUnavailableException;
 import com.ssafy.thorp.learning.application.exception.TermNotReadyException;
+import com.ssafy.thorp.learning.application.port.PublishCheckRulesPort;
 import com.ssafy.thorp.learning.application.port.SectorMapPort;
-import com.ssafy.thorp.learning.application.port.SectorMapPort.SectorMapView;
 import com.ssafy.thorp.learning.application.repository.LearningArticleRepository;
+import com.ssafy.thorp.learning.application.repository.LearningStageRepository;
 import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
+import com.ssafy.thorp.learning.application.repository.ReleaseLogRepository;
+import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
+import com.ssafy.thorp.learning.application.result.CurriculumResult;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.LogLine;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.OpenArticle;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.PreviousArticle;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.StageStatus;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.StageView;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.Block;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.Example;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.ExampleSector;
+import com.ssafy.thorp.learning.application.result.LearningArticleResult.NextArticle;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.Source;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.UnavailableReason;
+import com.ssafy.thorp.learning.application.result.LearningArticleResult.StageRef;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.HypotheticalBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.TermBlock;
+import com.ssafy.thorp.learning.application.result.PublishedArticleView;
+import com.ssafy.thorp.learning.application.service.ArticleViewAssembler.Mode;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.ArticleSnapshot;
-import com.ssafy.thorp.learning.domain.model.LearningTerm;
+import com.ssafy.thorp.learning.domain.model.Edition;
+import com.ssafy.thorp.learning.domain.model.LearningStage;
+import com.ssafy.thorp.learning.domain.model.ReadingEstimate;
+import com.ssafy.thorp.learning.domain.model.ReleaseLogEntry;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
-import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
+import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 배우기 공개 조회 유스케이스(US1·US3 서버, learning-public-api).
  *
- * <p><b>공개 중인 판과 게시 용어 색인만 읽는다.</b> 초안 작업본({@code learning_article}의 본문 컬럼, {@code
- * learning_term})으로 응답을 만들지 않는다. 게시 뒤 초안을 고쳐도 공개 내용이 바뀌지 않아야 한다(SC-006).
+ * <p><b>공개 중인 판, 공개 상태(단계의 공개 여부, 글의 공개 배치)와 게시 용어 색인만 읽는다.</b> 초안 작업본({@code learning_article}의 본문
+ * 컬럼, {@code learning_term})으로 응답을 만들지 않는다. 게시 뒤 초안을 고쳐도 공개 내용이 바뀌지 않아야 한다(SC-006).
  *
  * <p>사용자를 식별하지 않고 조회를 사용자별로 남기지 않는다(FR-012).
  */
@@ -43,21 +58,37 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class LearningQueryService {
 
+    /** 공개 안내를 보이는 기간. 변경 기록 가운데 지금부터 이 기간 안의 줄이다(FR-031, research R27). */
+    static final Duration NOTICE_PERIOD = Duration.ofDays(7);
+
     private final LearningArticleRepository articleRepository;
     private final PublishedTermRepository publishedTermRepository;
+    private final LearningStageRepository stageRepository;
+    private final ReleaseLogRepository releaseLogRepository;
     private final SectorMapPort sectorMapPort;
+    private final PublishCheckRulesPort rulesPort;
+    private final Clock clock;
 
     public LearningQueryService(
             LearningArticleRepository articleRepository,
             PublishedTermRepository publishedTermRepository,
-            SectorMapPort sectorMapPort) {
+            LearningStageRepository stageRepository,
+            ReleaseLogRepository releaseLogRepository,
+            SectorMapPort sectorMapPort,
+            PublishCheckRulesPort rulesPort,
+            Clock clock) {
         this.articleRepository = articleRepository;
         this.publishedTermRepository = publishedTermRepository;
+        this.stageRepository = stageRepository;
+        this.releaseLogRepository = releaseLogRepository;
         this.sectorMapPort = sectorMapPort;
+        this.rulesPort = rulesPort;
+        this.clock = clock;
     }
 
     /**
-     * 공개 중인 글. 판의 {@code readingOrder}, {@code articleId} 오름차순이다.
+     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로가 쓴다
+     * (learning-public-api §2). 017의 글 열거도 이 조회를 쓴다.
      *
      * @return 게시된 글이 없으면 빈 목록. 빈 목록은 정상 화면이다(spec Edge Cases)
      */
@@ -66,15 +97,115 @@ public class LearningQueryService {
     }
 
     /**
-     * 공개 중인 글 하나.
+     * 커리큘럼(learning-public-api §1). 여섯 단계와 공개 상태, 공개된 단계의 공개된 글(읽는 순서·번호), 공개 전 단계에 남은 이전 판 글, 변경
+     * 기록과 지난 7일의 공개 안내다.
+     *
+     * <p><b>공개되지 않은 단계의 새 글은 어떤 필드로도 내보내지 않는다</b>(SC-017). 공개 전 단계에는 이전 판(LEGACY) 글만 싣고, 그것도 첫 단계를
+     * 공개한 뒤에만 싣는다. 첫 단계를 공개하기 전에는 9월 판 목록과 같은 {@code preReleaseArticles}만 채운다(FR-031 "지금 모습 그대로").
+     *
+     * <p>단계·판·공개 배치·색인·변경 기록을 여러 문장으로 읽으므로 한 스냅숏({@code REPEATABLE_READ})에서 읽는다. 그사이 단계 공개가 커밋되면
+     * 단계는 공개됐는데 글이 없는 응답이 된다.
+     *
+     * @return 게시된 글이 없어도 정상 응답이다(spec Edge Cases)
+     */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public CurriculumResult curriculum() {
+        List<LearningStage> stages = stageRepository.findAllOrdered();
+        int releasedStageCount = (int) stages.stream().filter(LearningStage::released).count();
+        Map<String, List<PublishedArticleView>> currentByStage = new HashMap<>();
+        Map<String, List<PublishedArticleView>> legacyByStage = new HashMap<>();
+        for (PublishedArticleView view : articleRepository.findAllPublished()) {
+            (view.revision().edition() == Edition.CURRENT ? currentByStage : legacyByStage)
+                    .computeIfAbsent(view.placement().stageKey().value(), key -> new ArrayList<>())
+                    .add(view);
+        }
+        Map<ArticleId, Integer> termCounts =
+                currentByStage.isEmpty()
+                        ? Map.of()
+                        : publishedTermRepository.countPublishedByArticle();
+        int charsPerMinute = rulesPort.v2().reading().charsPerMinute();
+
+        List<StageView> views = new ArrayList<>();
+        for (LearningStage stage : stages) {
+            String key = stage.stageKey().value();
+            List<OpenArticle> open = List.of();
+            List<PreviousArticle> previous = List.of();
+            StageStatus status;
+            if (stage.released()) {
+                List<PublishedArticleView> current = inReadingOrder(currentByStage.get(key));
+                List<OpenArticle> numbered = new ArrayList<>();
+                for (int index = 0; index < current.size(); index++) {
+                    ArticleSnapshot snapshot = current.get(index).revision().snapshot();
+                    numbered.add(
+                            new OpenArticle(
+                                    snapshot.articleId().value(),
+                                    stage.number() + "-" + (index + 1),
+                                    snapshot.title(),
+                                    snapshot.question(),
+                                    snapshot.reading().readingMinutes(),
+                                    termCounts.getOrDefault(snapshot.articleId(), 0),
+                                    snapshot.example() != null));
+                }
+                open = numbered;
+                status = open.isEmpty() ? StageStatus.REPREPARING : StageStatus.OPEN;
+            } else {
+                status = StageStatus.PREPARING;
+                // 첫 단계를 공개하기 전에는 모든 글이 preReleaseArticles에 있다. 단계에 다시 싣지 않는다.
+                if (releasedStageCount > 0) {
+                    previous =
+                            inReadingOrder(legacyByStage.get(key)).stream()
+                                    .map(view -> previousArticle(view, charsPerMinute))
+                                    .toList();
+                }
+            }
+            views.add(
+                    new StageView(
+                            key,
+                            stage.number(),
+                            stage.name(),
+                            stage.levelLabel(),
+                            stage.summary(),
+                            status,
+                            stage.releasedAt(),
+                            open,
+                            previous));
+        }
+
+        Map<StageKey, LearningStage> stagesByKey = new HashMap<>();
+        stages.forEach(stage -> stagesByKey.put(stage.stageKey(), stage));
+        List<LogLine> changeLog =
+                releaseLogRepository.findAllLatestFirst().stream()
+                        .map(entry -> logLine(entry, stagesByKey))
+                        .toList();
+        Instant noticeFrom = clock.instant().minus(NOTICE_PERIOD);
+        return new CurriculumResult(
+                releasedStageCount,
+                releasedStageCount == stages.size(),
+                views,
+                releasedStageCount == 0 ? articleRepository.findPublishedOrdered() : null,
+                changeLog.stream().filter(line -> !line.occurredAt().isBefore(noticeFrom)).toList(),
+                changeLog);
+    }
+
+    /**
+     * 공개 중인 글 하나(learning-public-api §3).
+     *
+     * <p>{@code edition}은 판의 종류와 단계 공개 상태로 정한다. {@code CURRENT} 판은 {@code CURRENT}, {@code LEGACY}
+     * 판은 공개된 단계가 하나도 없으면 {@code PRE_RELEASE}(지금 모습 그대로), 있으면 {@code PREVIOUS}(이전 판)다(R16). {@code
+     * LEGACY} 판의 블록은 9월 판 모양 그대로다.
+     *
+     * <p>판·공개 배치·읽는 순서·게시 색인을 여러 문장으로 읽으므로 한 스냅숏({@code REPEATABLE_READ})에서 읽는다. 기본 격리 수준이면 그 사이에
+     * 커밋된 게시 취소가 공개 배치를 비워 404가 아닌 500이 되거나, 다시 게시한 글의 옛 판과 새 배치가 짝지어진다.
      *
      * @throws ArticleUnavailableException 없는 글, 게시되지 않은 글, 형식이 틀린 식별자. 셋을 가르지 않는다
      */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public LearningArticleResult getPublished(String articleId) {
-        ArticleRevision revision =
+        PublishedArticleView view =
                 parseArticleId(articleId)
-                        .flatMap(articleRepository::findPublishedRevision)
+                        .flatMap(articleRepository::findPublished)
                         .orElseThrow(ArticleUnavailableException::new);
+        ArticleRevision revision = view.revision();
         ArticleSnapshot snapshot = revision.snapshot();
         // 공개 판 포인터가 다른 글의 판을 가리키면 그 글의 본문을 이 주소로 내보내게 된다.
         // 스키마가 막지 않는 관계라 여기서 확인하고, 어긋나면 조용히 보이지 않고 실패시킨다.
@@ -85,17 +216,80 @@ public class LearningQueryService {
                             + " belongs to another article: "
                             + snapshot.articleId());
         }
+        List<LearningStage> stages = stageRepository.findAllOrdered();
+        LearningStage stage = stage(stages, view);
+        boolean current = revision.edition() == Edition.CURRENT;
+
+        String number = null;
+        NextArticle next = null;
+        Integer stageArticleCount = null;
+        if (current) {
+            List<CurrentArticleEntry> order = articleRepository.findCurrentInReadingOrder();
+            int position = indexOf(order, articleId);
+            CurrentArticleEntry self = order.get(position);
+            number = number(order, self);
+            if (position + 1 < order.size()) {
+                CurrentArticleEntry following = order.get(position + 1);
+                next =
+                        new NextArticle(
+                                following.articleId(), number(order, following), following.title());
+            }
+            stageArticleCount =
+                    (int)
+                            order.stream()
+                                    .filter(entry -> entry.stageKey().equals(self.stageKey()))
+                                    .count();
+        }
+
+        Set<TermId> foreign =
+                current
+                        ? ArticleViewAssembler.foreignMentions(
+                                snapshot.bodyBlocks(), snapshot.terms())
+                        : Set.of();
+        Map<TermId, List<String>> foreignAliases =
+                foreign.isEmpty()
+                        ? Map.of()
+                        : publishedTermRepository.findPublishedAliases(foreign);
         return new LearningArticleResult(
                 snapshot.articleId().value(),
+                current
+                        ? "CURRENT"
+                        : stages.stream().anyMatch(LearningStage::released)
+                                ? "PREVIOUS"
+                                : "PRE_RELEASE",
                 snapshot.title(),
                 snapshot.question(),
                 snapshot.readingOrder(),
-                snapshot.bodyBlocks().stream().map(block -> toBlock(snapshot, block)).toList(),
-                judgeExample(snapshot),
+                new StageRef(stage.stageKey().value(), stage.number(), stage.name()),
+                number,
+                current
+                        ? snapshot.reading().readingMinutes()
+                        : ReadingEstimate.minutes(
+                                ReadingEstimate.bodyChars(snapshot.bodyBlocks(), snapshot.terms()),
+                                rulesPort.v2().reading().charsPerMinute()),
+                current ? snapshot.reading().minDwellSeconds() : null,
+                ArticleViewAssembler.blocks(
+                        snapshot.articleId(),
+                        snapshot.format(),
+                        snapshot.bodyBlocks(),
+                        snapshot.terms(),
+                        foreignAliases,
+                        Mode.PUBLISHED),
+                ArticleViewAssembler.quiz(snapshot.quiz(), Mode.PUBLISHED),
+                ArticleViewAssembler.example(
+                        snapshot.articleId(),
+                        snapshot.format(),
+                        snapshot.example(),
+                        sectorMapPort::currentMap,
+                        Mode.PUBLISHED),
                 snapshot.sources().stream()
                         .map(source -> new Source(source.label(), source.url()))
                         .toList(),
-                revision.publishedAt());
+                next,
+                stageArticleCount,
+                stages.stream().anyMatch(candidate -> !candidate.released()),
+                revision.publishedAt(),
+                false);
     }
 
     /**
@@ -109,74 +303,87 @@ public class LearningQueryService {
                 .orElseThrow(TermNotReadyException::new);
     }
 
-    /**
-     * 블록을 응답 모양으로 옮긴다. {@code term} 블록의 이름·문장은 <b>같은 판</b>의 용어에서 채운다.
-     *
-     * <p>판에 없는 용어를 가리키면 실패시킨다. 게시 전 검사({@code TERM_BLOCKS_MATCH})가 막는 상태라 여기 오면 저장 데이터가 깨졌다는 뜻이고, 빈
-     * 문장으로 채우면 없는 설명을 만들어 내게 된다(원칙 VI).
-     */
-    private static Block toBlock(ArticleSnapshot snapshot, ArticleBlock block) {
-        return switch (block) {
-            case HeadingBlock heading -> Block.text("heading", heading.text());
-            case ParagraphBlock paragraph -> Block.text("paragraph", paragraph.text());
-            case HypotheticalBlock hypothetical -> Block.text("hypothetical", hypothetical.text());
-            case TermBlock termBlock -> {
-                LearningTerm term =
-                        snapshot.term(termBlock.termId())
-                                .orElseThrow(
-                                        () ->
-                                                new IllegalStateException(
-                                                        "published revision of "
-                                                                + snapshot.articleId()
-                                                                + " has a term block without its term: "
-                                                                + termBlock.termId()));
-                yield Block.term(term.termId().value(), term.label(), term.sentence());
-            }
-        };
+    /** 단계 안 읽는 순서: 공개 배치의 단계 안 순서, {@code articleId}(data-model §12-2). */
+    private static List<PublishedArticleView> inReadingOrder(List<PublishedArticleView> views) {
+        if (views == null) {
+            return List.of();
+        }
+        return views.stream()
+                .sorted(
+                        Comparator.comparingInt(
+                                        (PublishedArticleView view) -> view.placement().position())
+                                .thenComparing(
+                                        view -> view.revision().snapshot().articleId().value()))
+                .toList();
+    }
+
+    /** 이전 판 글의 읽기 분은 판에 없으므로 조회 때 계산한다. 글 하나 조회와 같은 식이다. */
+    private static PreviousArticle previousArticle(PublishedArticleView view, int charsPerMinute) {
+        ArticleSnapshot snapshot = view.revision().snapshot();
+        return new PreviousArticle(
+                snapshot.articleId().value(),
+                snapshot.title(),
+                snapshot.question(),
+                ReadingEstimate.minutes(
+                        ReadingEstimate.bodyChars(snapshot.bodyBlocks(), snapshot.terms()),
+                        charsPerMinute));
+    }
+
+    private static LogLine logLine(ReleaseLogEntry entry, Map<StageKey, LearningStage> stages) {
+        LearningStage stage = stages.get(entry.stageKey());
+        if (stage == null) {
+            throw new IllegalStateException(
+                    "release log points to a missing stage: " + entry.entryKey());
+        }
+        return new LogLine(
+                entry.entryKey(),
+                entry.kind(),
+                stage.number(),
+                stage.name(),
+                entry.occurredAt(),
+                entry.newCount(),
+                entry.rewrittenCount(),
+                entry.rewrittenTitles(),
+                entry.articleTitle());
     }
 
     /**
-     * 조회 시점의 열린 대응표로 예시를 판정한다(research R8). 판정 결과를 저장하지 않고 판의 예시 값도 바꾸지 않는다.
-     *
-     * <p>대응표는 이 조회에서 한 번만 읽는다. 판에 예시가 없으면 실패시킨다. 게시 전 검사({@code EXAMPLE_PRESENT})가 막는 상태다.
+     * 글 번호 {@code {단계 번호}-{그 단계의 공개된 글 가운데 읽는 순서 순번}}(data-model §12-2). {@code order}는 읽는 순서라 같은
+     * 단계 글이 이어져 있다.
      */
-    private Example judgeExample(ArticleSnapshot snapshot) {
-        ExampleAllocation example = snapshot.example();
-        if (example == null) {
-            throw new IllegalStateException(
-                    "published revision of " + snapshot.articleId() + " has no example");
+    private static String number(List<CurrentArticleEntry> order, CurrentArticleEntry entry) {
+        int ordinal = 0;
+        for (CurrentArticleEntry candidate : order) {
+            if (candidate.stageKey().equals(entry.stageKey())) {
+                ordinal++;
+            }
+            if (candidate.articleId().equals(entry.articleId())) {
+                return entry.stageNumber() + "-" + ordinal;
+            }
         }
-        Optional<SectorMapView> map = sectorMapPort.currentMap();
-        if (map.isEmpty()) {
-            return new Example(
-                    false,
-                    example.sectors().stream()
-                            .map(
-                                    sector ->
-                                            new ExampleSector(
-                                                    sector.code(), null, sector.weightTenths()))
-                            .toList(),
-                    List.of(),
-                    UnavailableReason.SECTOR_MAP_NOT_READY);
+        throw new IllegalStateException("article is not in the reading order: " + entry);
+    }
+
+    /** CURRENT 판이 게시 중인 글이면 읽는 순서에 있다. 없으면 글 행과 판이 어긋난 것이라 실패시킨다. */
+    private static int indexOf(List<CurrentArticleEntry> order, String articleId) {
+        for (int index = 0; index < order.size(); index++) {
+            if (order.get(index).articleId().equals(articleId)) {
+                return index;
+            }
         }
-        Map<String, String> names = map.get().sectorNamesByCode();
-        List<ExampleSector> sectors =
-                example.sectors().stream()
-                        .map(
-                                sector ->
-                                        new ExampleSector(
-                                                sector.code(),
-                                                names.get(sector.code()),
-                                                sector.weightTenths()))
-                        .toList();
-        List<String> missing =
-                example.sectors().stream()
-                        .map(ExampleAllocation.SectorWeight::code)
-                        .filter(code -> !names.containsKey(code))
-                        .toList();
-        return missing.isEmpty()
-                ? new Example(true, sectors, List.of(), null)
-                : new Example(false, sectors, missing, UnavailableReason.SECTOR_NOT_IN_MAP);
+        throw new IllegalStateException(
+                "current article is missing from the reading order: " + articleId);
+    }
+
+    private static LearningStage stage(List<LearningStage> stages, PublishedArticleView view) {
+        return stages.stream()
+                .filter(stage -> stage.stageKey().equals(view.placement().stageKey()))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "published placement points to a missing stage: "
+                                                + view.placement()));
     }
 
     private static Optional<ArticleId> parseArticleId(String raw) {

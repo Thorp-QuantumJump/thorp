@@ -100,6 +100,11 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {
     }
 
     @Override
+    public List<NewsDigest> findRecentInSectors(Instant since, Collection<String> sectorIds) {
+        return loadAll(digestRepository.findRecentInSectors(since, sectorIds));
+    }
+
+    @Override
     public List<NewsDigest> findVerifiedBetween(Instant from, Instant to, String sectorId) {
         return loadAll(
                 sectorId == null

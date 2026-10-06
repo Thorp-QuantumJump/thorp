@@ -48,9 +48,9 @@ def production_sources() -> list[Path]:
 def macro_source(request: pytest.FixtureRequest) -> MacroIndicatorSource:
     """계약 시험이 쓰는 구현체.
 
-    008 구현체는 DB 를 읽으므로 컨테이너를 띄우고 표를 채운 뒤 만든다. 팩터리(`create_source`)를
-    쓰지 않는 이유는 그쪽이 환경변수의 `DATABASE_URL` 로 접속하기 때문이다 — 시험이 개발자의
-    DB 에 붙으면 안 된다.
+    008 구현체는 DB 를 읽으므로 `postgres_engine` 이 넘긴 새 데이터베이스에 표를 채운 뒤
+    만든다. 팩터리(`create_source`)를 쓰지 않는 이유는 그쪽이 환경변수의 `DATABASE_URL` 로
+    접속하기 때문이다 — 시험이 개발자의 DB 에 붙으면 안 된다.
     """
     engine = request.getfixturevalue("postgres_engine")
     macro_seed.seed(engine)

@@ -1,0 +1,123 @@
+{
+  "articleId": "volatility-is-not-loss",
+  "edition": "CURRENT",
+  "title": "변동성은 손실일까?",
+  "question": "값이 크게 오르내렸다는 것은 돈을 잃었다는 뜻일까?",
+  "readingOrder": 204,
+  "stage": { "stageKey": "returns-and-risk", "number": 2, "name": "수익과 위험 읽기" },
+  "number": "2-4",
+  "readingMinutes": 5,
+  "minDwellSeconds": 100,
+  "blocks": [
+    {
+      "type": "keySummary",
+      "lines": [
+        [ { "text": "계약 형식을 보이는 합성 요약 첫 줄이다." } ],
+        [ { "text": "계약 형식을 보이는 합성 요약 둘째 줄이다." } ],
+        [ { "text": "계약 형식을 보이는 합성 요약 셋째 줄이다." } ]
+      ]
+    },
+    { "type": "heading", "text": "오르내림은 무엇을 재나" },
+    {
+      "type": "paragraph",
+      "content": [
+        { "text": "계약 형식을 보이는 합성 문단이다. " },
+        { "term": "volatility", "text": "변동성", "owned": true, "aliases": ["volatility"] },
+        { "text": "은 " },
+        { "term": "max-drawdown", "text": "가장 크게 줄었던 폭", "owned": false, "aliases": ["최대 낙폭", "MDD", "maximum drawdown"] },
+        { "text": "과 다르고 " },
+        { "term": "rebalancing", "text": "리밸런싱", "owned": false, "aliases": [] },
+        { "text": "과도 다르다." },
+        { "source": { "label": "합성 출처", "url": "https://example.com/source" } }
+      ]
+    },
+    {
+      "type": "term",
+      "termId": "volatility",
+      "label": "변동성",
+      "aliases": ["volatility"],
+      "meaning": "계약 형식을 보이는 합성 뜻 문장이다.",
+      "reading": "계약 형식을 보이는 합성 읽는 법 문장이다.",
+      "caveat": "계약 형식을 보이는 합성 한계 문장이다."
+    },
+    { "type": "heading", "text": "오르내림과 손실은 어떻게 다른가" },
+    {
+      "type": "hypothetical",
+      "content": [
+        { "text": "100만 원이 80만 원까지 내려갔다가 다시 100만 원으로 돌아오면 " },
+        { "term": "volatility", "text": "변동성", "owned": true, "aliases": ["volatility"] },
+        { "text": "은 컸지만 시작 금액 대비 손실은 0%다." }
+      ]
+    },
+    {
+      "type": "misconception",
+      "wrong": [ { "text": "크게 오르내렸으니 그만큼 잃었다." } ],
+      "correction": [ { "text": "오르내린 폭과 시작 금액 대비 손익은 따로 본다." } ]
+    },
+    { "type": "heading", "text": "읽을 때 함께 볼 것" },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        [ { "text": "시작 값과 끝 값" } ],
+        [ { "text": "가장 크게 줄었던 폭" }, { "source": { "label": "합성 목록 출처", "url": "https://example.com/list" } } ]
+      ]
+    },
+    {
+      "type": "table",
+      "caption": "가상의 두 경우",
+      "columns": ["구분", "가", "나"],
+      "rows": [
+        [ [ { "text": "오르내림" } ], [ { "text": "크다" } ], [ { "text": "작다" } ] ],
+        [ [ { "text": "끝 값" } ], [ { "text": "같다" } ], [ { "text": "같다" } ] ]
+      ]
+    },
+    {
+      "type": "diagram",
+      "kind": "line",
+      "title": "가상의 값 흐름",
+      "unit": "만 원",
+      "categories": ["1월", "2월", "3월"],
+      "series": [
+        { "name": "가", "values": [100, 92.5, 104] },
+        { "name": "나", "values": [100, 101, 104] }
+      ],
+      "description": "가는 크게 오르내리고 나는 거의 그대로지만 둘 다 104에서 끝난다."
+    },
+    {
+      "type": "institutionNote",
+      "content": [ { "text": "계약 형식을 보이는 합성 제도 안내 문장이다." } ],
+      "asOf": "2026-07-01",
+      "source": { "label": "합성 제도 출처", "url": "https://example.com/rule" }
+    }
+  ],
+  "quiz": [
+    {
+      "questionId": "q1",
+      "prompt": "계약 형식을 보이는 합성 질문 하나다.",
+      "choices": [
+        { "choiceId": "c2", "text": "합성 보기 가" },
+        { "choiceId": "c3", "text": "합성 보기 나" }
+      ],
+      "correctChoiceId": "c3",
+      "explanation": "계약 형식을 보이는 합성 풀이다."
+    },
+    {
+      "questionId": "q4",
+      "prompt": "계약 형식을 보이는 합성 질문 둘이다.",
+      "choices": [
+        { "choiceId": "c5", "text": "합성 보기 다" },
+        { "choiceId": "c6", "text": "합성 보기 라" },
+        { "choiceId": "c7", "text": "합성 보기 마" }
+      ],
+      "correctChoiceId": "c5",
+      "explanation": "계약 형식을 보이는 합성 풀이 둘이다."
+    }
+  ],
+  "example": null,
+  "sources": [],
+  "next": { "articleId": "weights-and-rebalancing", "number": "3-1", "title": "비중과 리밸런싱" },
+  "stageArticleCount": 4,
+  "hasUnreleasedStages": true,
+  "publishedAt": "2026-11-19T01:00:00Z"
+}

@@ -1,0 +1,17 @@
+/* 보조 연결이다. 글 화면의 행동 버튼('이 예시로 전략 진단하기')과 같은 모양으로 두지 않는다(원칙 II). */
+.link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  /* 누르는 곳은 44×44px 이상이다(design-notes §6). */
+  min-height: 44px;
+  margin-bottom: 20px;
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.link:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}

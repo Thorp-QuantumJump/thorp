@@ -1,7 +1,7 @@
 import type {
-  LearningArticle,
+  CurrentLearningArticle,
   LearningArticleSummary,
-  LearningTermEntry,
+  LegacyLearningArticle,
 } from '@/types/learning'
 import type {
   AdminLearningArticle,
@@ -36,12 +36,25 @@ export const harborSummary: LearningArticleSummary = {
 /** 서버가 준 순서 그대로다. 화면이 다시 정렬하는지 보려고 `readingOrder`와 반대로 둔다. */
 export const articleSummaries: LearningArticleSummary[] = [harborSummary, tideSummary]
 
-/** 네 블록 종류를 모두 갖고 예시로 바로 진단을 시작할 수 있는 글. */
-export const tideArticle: LearningArticle = {
+/**
+ * 9월 판 네 블록 종류를 모두 갖고 예시로 바로 진단을 시작할 수 있는 글.
+ *
+ * <p>첫 단계 공개 전 글(`PRE_RELEASE`)이다. 9월 판 블록이므로 2판 필드는 기록하지 않는 글의 값이다.
+ */
+export const tideArticle: LegacyLearningArticle = {
   articleId: 'tide-reading',
+  edition: 'PRE_RELEASE',
   title: '물때 읽기',
   question: '물이 빠지는 속도는 왜 들어오는 속도와 다른가?',
   readingOrder: 2,
+  stage: { stageKey: 'harbor-basics', number: 1, name: '항구 기초' },
+  number: null,
+  readingMinutes: 1,
+  minDwellSeconds: null,
+  quiz: [],
+  next: null,
+  stageArticleCount: null,
+  hasUnreleasedStages: true,
   blocks: [
     { type: 'heading', text: '물이 가장 낮았던 때' },
     { type: 'paragraph', text: '합성 문단이다. 화면이 받은 문장을 그대로 그리는지 본다.' },
@@ -70,11 +83,20 @@ export const tideArticle: LearningArticle = {
 }
 
 /** 예시 섹터 하나가 지금 대응표에 없어 진단으로 넘길 수 없는 글. */
-export const harborArticle: LearningArticle = {
+export const harborArticle: LegacyLearningArticle = {
   articleId: 'harbor-notes',
+  edition: 'PRE_RELEASE',
   title: '항구 기록',
   question: '같은 배가 다른 항구에서 다르게 보이는 이유는?',
   readingOrder: 5,
+  stage: { stageKey: 'harbor-basics', number: 1, name: '항구 기초' },
+  number: null,
+  readingMinutes: 1,
+  minDwellSeconds: null,
+  quiz: [],
+  next: null,
+  stageArticleCount: null,
+  hasUnreleasedStages: true,
   blocks: [{ type: 'paragraph', text: '합성 문단이다.' }],
   example: {
     available: false,
@@ -89,12 +111,147 @@ export const harborArticle: LearningArticle = {
   publishedAt: '2026-09-21T01:00:00Z',
 }
 
-export const ebbGapTerm: LearningTermEntry = {
-  termId: 'ebb-gap',
-  label: '썰물 간격',
-  sentence: '합성 용어 문장이다. 줄이거나 바꾸지 않고 보여야 한다.',
-  articleId: 'tide-reading',
-  articleTitle: '물때 읽기',
+/** 첫 단계 공개 뒤 공개되지 않은 단계에 남은 같은 글(이전 판). 블록 모양은 9월 판 그대로다. */
+export const previousTideArticle: LegacyLearningArticle = {
+  ...tideArticle,
+  edition: 'PREVIOUS',
+  stage: { stageKey: 'tide-tables', number: 3, name: '물때표 읽기' },
+}
+
+/**
+ * 새 기준 블록 열 종류를 모두 갖고 예시가 없는 글(`CURRENT`).
+ *
+ * <p>처음 나오는 자리를 보려고 용어를 두 번씩 쓴다. 이 글이 소유한 `swell-height`(다른 이름 있음)는
+ * 용어 블록보다 핵심 요약에 먼저 나오고, 다른 글이 소유한 `ebb-gap`(다른 이름 있음)은 문단과 가상의 계산
+ * 예에, 게시되지 않은 다른 글의 `moor-knot`(다른 이름 없음)는 문단과 오해 상자에 나온다.
+ */
+export const currentArticle: CurrentLearningArticle = {
+  articleId: 'swell-reading',
+  edition: 'CURRENT',
+  title: '너울 읽기',
+  question: '높은 너울은 배가 가라앉는다는 뜻일까?',
+  readingOrder: 203,
+  stage: { stageKey: 'swell-and-risk', number: 2, name: '너울과 위험' },
+  number: '2-3',
+  readingMinutes: 4,
+  minDwellSeconds: 80,
+  blocks: [
+    {
+      type: 'keySummary',
+      lines: [
+        [
+          { term: 'swell-height', text: '너울 높이', owned: true, aliases: ['파고', 'swell'] },
+          { text: '는 합성 요약 첫 줄이다.' },
+        ],
+        [{ text: '합성 요약 둘째 줄이다.' }],
+        [{ text: '합성 요약 셋째 줄이다.' }],
+      ],
+    },
+    { type: 'heading', text: '너울은 무엇을 재나' },
+    {
+      type: 'paragraph',
+      content: [
+        { text: '합성 문단이다. ' },
+        { term: 'ebb-gap', text: '썰물 간격', owned: false, aliases: ['물 빠짐 폭', 'ebb'] },
+        { text: '과 ' },
+        { term: 'moor-knot', text: '계류 매듭', owned: false, aliases: [] },
+        { text: '은 다르다.' },
+        { source: { label: '합성 항만 자료', url: 'https://example.com/harbor' } },
+      ],
+    },
+    {
+      type: 'term',
+      termId: 'swell-height',
+      label: '너울 높이',
+      aliases: ['파고', 'swell'],
+      meaning: '합성 뜻 문장이다.',
+      reading: '합성 읽는 법 문장이다.',
+      caveat: '합성 한계 문장이다.',
+    },
+    {
+      type: 'hypothetical',
+      content: [
+        { text: '가상의 항구에서 ' },
+        { term: 'ebb-gap', text: '썰물 간격', owned: false, aliases: ['물 빠짐 폭', 'ebb'] },
+        { text: '이 3칸이었다고 해 보자.' },
+      ],
+    },
+    {
+      type: 'misconception',
+      wrong: [{ text: '너울이 높으면 배가 가라앉는다.' }],
+      correction: [
+        { term: 'moor-knot', text: '계류 매듭', owned: false, aliases: [] },
+        { text: '과 함께 따로 본다.' },
+      ],
+    },
+    {
+      type: 'list',
+      ordered: true,
+      items: [
+        [{ text: '합성 목록 첫 항목' }],
+        [
+          { text: '합성 목록 둘째 항목' },
+          { source: { label: '합성 목록 자료', url: 'https://example.com/list' } },
+        ],
+      ],
+    },
+    {
+      type: 'table',
+      caption: '가상의 두 항구',
+      columns: ['구분', '가 항구', '나 항구'],
+      rows: [
+        [[{ text: '너울' }], [{ text: '높다' }], [{ text: '낮다' }]],
+        [[{ text: '물때' }], [{ text: '같다' }], [{ text: '같다' }]],
+      ],
+    },
+    {
+      type: 'diagram',
+      kind: 'line',
+      title: '가상의 너울 흐름',
+      unit: 'm',
+      categories: ['1일', '2일', '3일'],
+      series: [
+        { name: '가 항구', values: [1, 2.5, 1.5] },
+        { name: '나 항구', values: [1, 1.2, 1.5] },
+      ],
+      description: '가 항구는 크게 오르내리고 나 항구는 거의 그대로지만 둘 다 1.5에서 끝난다.',
+    },
+    {
+      type: 'institutionNote',
+      content: [{ text: '합성 제도 안내 문장이다.' }],
+      asOf: '2026-07-01',
+      source: { label: '합성 제도 자료', url: 'https://example.com/rule' },
+    },
+  ],
+  quiz: [
+    {
+      questionId: 'q1',
+      prompt: '합성 질문 하나다.',
+      choices: [
+        { choiceId: 'c1', text: '합성 보기 가' },
+        { choiceId: 'c2', text: '합성 보기 나' },
+      ],
+      correctChoiceId: 'c2',
+      explanation: '합성 풀이 하나다.',
+    },
+    {
+      questionId: 'q3',
+      prompt: '합성 질문 둘이다.',
+      choices: [
+        { choiceId: 'c4', text: '합성 보기 다' },
+        { choiceId: 'c5', text: '합성 보기 라' },
+        { choiceId: 'c6', text: '합성 보기 마' },
+      ],
+      correctChoiceId: 'c4',
+      explanation: '합성 풀이 둘이다.',
+    },
+  ],
+  example: null,
+  sources: [],
+  next: { articleId: 'tide-reading', number: '2-4', title: '물때 읽기' },
+  stageArticleCount: 4,
+  hasUnreleasedStages: true,
+  publishedAt: '2026-11-19T01:00:00Z',
 }
 
 /**

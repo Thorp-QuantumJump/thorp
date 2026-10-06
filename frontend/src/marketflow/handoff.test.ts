@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCaseId,
   buildRegimeLinkStartPath,
+  buildCompositeSearchPath,
   buildSimilarPeriodHandoff,
 } from './handoff'
 
@@ -71,5 +72,11 @@ describe('011 시작 주소 (진입 계약 §2)', () => {
   // 010 사례 상세에서 들어오는 길은 섹터를 알 수 없다. 빈 값을 주소에 남기지 않는다.
   it('섹터가 없으면 인자를 만들지 않는다', () => {
     expect(buildRegimeLinkStartPath({ caseId: 'K~2012-03', sectorCode: null })).not.toContain('sector')
+  })
+})
+
+describe('종합 비교를 010에서 이어 보는 주소 (009 FR-018)', () => {
+  it('종합 비교가 선택된 상태로 연다', () => {
+    expect(buildCompositeSearchPath()).toBe('/regime-search?mode=composite')
   })
 })

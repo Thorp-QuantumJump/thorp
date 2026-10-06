@@ -1,4 +1,3 @@
-import { StrictMode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,10 +12,8 @@ import {
   resultToken,
 } from '@/test/resultFixtures'
 import { registryFixture } from '@/test/strategyRegistryFixtures'
-import type { PublicResultDetail } from '@/types/result'
 import { ResultPage } from './ResultPage'
 
-const targetToken = 'b41e0c9a7d2f35618ce4a09b7f1d2c63'
 const api = vi.hoisted(() => ({
   detail: vi.fn(),
   series: vi.fn(),
@@ -66,39 +63,16 @@ function ResultRoute({ search = '' }: { search?: string }) {
   )
 }
 
-function renderResult({ strict = false, search }: { strict?: boolean; search?: string } = {}) {
-  const route = <ResultRoute search={search} />
-  return render(strict ? <StrictMode>{route}</StrictMode> : route)
-}
-
-function targetResult(overrides: Partial<PublicResultDetail> = {}): PublicResultDetail {
-  return {
-    ...resultDetailCompleted,
-    publicToken: targetToken,
-    config: {
-      ...resultDetailCompleted.config,
-      scenario: 'TARGET_RISK',
-      scenarioParams: { targetVolatility: '0.1200' },
-    },
-    summary: resultDetailCompleted.summary && {
-      ...resultDetailCompleted.summary,
-      netTotalReturn: '0.123456',
-      maxDrawdown: '-0.032100',
-      totalTradingCost: '23456.78',
-    },
-    ...overrides,
-  }
+function renderResult({ search }: { search?: string } = {}) {
+  return render(<ResultRoute search={search} />)
 }
 
 describe('결과 보조 보기 (B08)', () => {
   beforeEach(() => {
     Object.values(api).forEach((mock) => mock.mockReset())
-    api.detail.mockImplementation(async (token: string) =>
-      token === resultToken ? resultDetailCompleted : targetResult(),
-    )
+    api.detail.mockResolvedValue(resultDetailCompleted)
     api.series.mockResolvedValue(resultTimeseries)
     api.registry.mockResolvedValue(registryFixture)
-    api.create.mockResolvedValue({ publicToken: targetToken, status: 'QUEUED' })
     // 탭 묶음이 첫 화면에서 섹터 목록을 받고, 결과 분석 탭을 고르면 예외 기록을 받는다(T098)
     api.exceptions.mockResolvedValue(resultExceptions)
     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })

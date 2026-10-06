@@ -3,6 +3,8 @@ package com.ssafy.thorp.learning.infrastructure.persistence;
 import com.ssafy.thorp.learning.application.repository.PublicationEventRepository;
 import com.ssafy.thorp.learning.domain.model.PublicationEvent;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -48,6 +50,16 @@ public class PublicationEventRepositoryImpl implements PublicationEventRepositor
                                 eventJpaRepository.findFirstByArticleIdOrderByIdDesc(
                                         article.getId()))
                 .map(entity -> toDomain(articleId, entity));
+    }
+
+    @Override
+    public Map<ArticleId, PublicationEvent> findLastForEachArticle() {
+        Map<ArticleId, PublicationEvent> events = new HashMap<>();
+        for (KeyedEventRow row : eventJpaRepository.findLastForEachArticle()) {
+            ArticleId articleId = new ArticleId(row.articleKey());
+            events.put(articleId, toDomain(articleId, row.event()));
+        }
+        return events;
     }
 
     private static PublicationEvent toDomain(

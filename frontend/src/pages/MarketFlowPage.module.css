@@ -22,11 +22,16 @@
 .heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: var(--thorp-text-body, .84rem); line-height: 1.65; word-break: keep-all; }
 .heroAside p span { display: block; }
 .heroAside > span { color: var(--thorp-copy); font-size: var(--thorp-text-caption, .72rem); }
+/* 중간 폭에서 안내 문장이 접힐 때 끝 낱말 하나만 아랫줄로 떨어지지 않게 한다. */
+.heroAside p span { text-wrap: pretty; }
 /* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }
 .fieldRail { min-width: 0; }
-/* 분야 수만큼 같은 폭의 칸으로 나눈다. 좁아지면 네 칸, 두 칸으로 줄인다(아래 분기). */
-.fieldList { display: grid; grid-template-columns: repeat(var(--field-count, 7), minmax(0, 1fr)); gap: 8px; }
+/*
+  분야 수만큼 같은 폭의 칸으로 나누고, 끝의 'Thorp 종합 비교' 칸(009 FR-019)은 이름이 길어 조금 넓게 둔다.
+  좁아지면 네 칸, 두 칸으로 줄인다(아래 분기). 여덟 칸이라 어느 폭에서도 빈 칸 없이 채워진다.
+*/
+.fieldList { display: grid; grid-template-columns: repeat(var(--field-count, 7), minmax(0, 1fr)) minmax(0, 1.35fr); gap: 8px; }
 .detailPanel { min-width: 0; min-height: 490px; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }
 .detailPanel:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }
@@ -92,15 +97,4 @@
 }
 @media (max-width: 800px) {
   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }
-}
-
-.context {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
-  align-items: stretch;
-  gap: var(--thorp-flow-gap, 22px);
-  margin-top: var(--thorp-flow-gap, 22px);
-}
-@media (max-width: 1180px) {
-  .context { grid-template-columns: minmax(0, 1fr); }
 }

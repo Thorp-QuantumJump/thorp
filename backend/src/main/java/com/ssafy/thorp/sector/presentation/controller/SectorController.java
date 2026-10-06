@@ -8,6 +8,7 @@ import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;
 import com.ssafy.thorp.sector.application.service.SectorService;
 import com.ssafy.thorp.sector.presentation.response.EvaluationWindowResponse;
 import com.ssafy.thorp.sector.presentation.response.InstrumentProfileResponse;
+import com.ssafy.thorp.sector.presentation.response.LatestPricesResponse;
 import com.ssafy.thorp.sector.presentation.response.PriceSeriesResponse;
 import com.ssafy.thorp.sector.presentation.response.SectorListResponse;
 import java.util.List;
@@ -78,6 +79,19 @@ public class SectorController {
             @PathVariable String code) {
         return ResponseEntity.ok(
                 ApiResponse.ok(PriceSeriesResponse.from(sectorService.getPriceSeries(code))));
+    }
+
+    /**
+     * 섹터마다 대표 ETF의 마지막 거래일 수정종가와 그 직전 값. 투자 대상 고르기의 '지금 국내 시장' 띠가 쓴다.
+     *
+     * <p>일부 섹터에 가격이 없으면 그 섹터 코드를 {@code missingSectorCodes}에 싣고 200이다. 대응표 미발행은 409 {@code
+     * SECTOR_MAP_NOT_READY}, 어느 섹터에도 가격이 없으면 409 {@code PRICE_SERIES_NOT_READY}다({@link
+     * SectorExceptionHandler}).
+     */
+    @GetMapping("/latest-prices")
+    public ResponseEntity<ApiResponse<LatestPricesResponse>> getLatestPrices() {
+        return ResponseEntity.ok(
+                ApiResponse.ok(LatestPricesResponse.from(sectorService.getLatestPrices())));
     }
 
     /**

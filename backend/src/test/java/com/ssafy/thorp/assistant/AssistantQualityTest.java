@@ -256,7 +256,7 @@ class AssistantQualityTest {
     static List<CountingTool> fixtureTools(List<String> order) {
         return List.of(
                 new CountingTool(
-                        new ToolSpec("getEquityOn", "특정 날짜의 시계열 점", List.of("date")),
+                        ToolSpec.dates("getEquityOn", "특정 날짜의 시계열 점", List.of("date")),
                         args -> {
                             LocalDate date = LocalDate.parse(args.get("date"));
                             return List.of(
@@ -266,7 +266,7 @@ class AssistantQualityTest {
                         },
                         order),
                 new CountingTool(
-                        new ToolSpec("getEquityRange", "구간의 첫·끝·최고·최저 점", List.of("from", "to")),
+                        ToolSpec.dates("getEquityRange", "구간의 첫·끝·최고·최저 점", List.of("from", "to")),
                         args -> {
                             LocalDate from = LocalDate.parse(args.get("from"));
                             LocalDate to = LocalDate.parse(args.get("to"));
@@ -304,7 +304,7 @@ class AssistantQualityTest {
                         },
                         order),
                 new CountingTool(
-                        new ToolSpec("getTradesBetween", "구간의 거래 첫 페이지", List.of("from", "to")),
+                        ToolSpec.dates("getTradesBetween", "구간의 거래 첫 페이지", List.of("from", "to")),
                         args -> {
                             LocalDate from = LocalDate.parse(args.get("from"));
                             return List.of(
@@ -323,7 +323,7 @@ class AssistantQualityTest {
                         },
                         order),
                 new CountingTool(
-                        new ToolSpec("getPositionsOn", "특정 날짜의 보유", List.of("date")),
+                        ToolSpec.dates("getPositionsOn", "특정 날짜의 보유", List.of("date")),
                         args -> {
                             LocalDate date = LocalDate.parse(args.get("date"));
                             return List.of(
@@ -337,7 +337,7 @@ class AssistantQualityTest {
                         },
                         order),
                 new CountingTool(
-                        new ToolSpec("getDeepestDrawdownWindow", "하락 폭이 가장 낮은 구간", List.of()),
+                        ToolSpec.dates("getDeepestDrawdownWindow", "하락 폭이 가장 낮은 구간", List.of()),
                         args ->
                                 List.of(
                                         fact(
@@ -377,7 +377,7 @@ class AssistantQualityTest {
                                 .findFirst()
                                 .orElseThrow();
                 Map<String, String> args = new LinkedHashMap<>();
-                for (String arg : spec.dateArguments()) {
+                for (String arg : spec.argumentNames()) {
                     args.put(arg, dateArgument(c, arg, turn.facts()));
                 }
                 return new ToolRequests(List.of(new ToolCall("call-" + (done + 1), name, args)));

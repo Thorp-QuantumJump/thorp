@@ -22,7 +22,7 @@ npm run lint && npm run build && npm test
 
 - 결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009).
 - 해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(spec 005 SC-004). 문장을 컴포넌트에서 짓지 않는다.
-- 용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문과 013이 소유하는 용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015).
+- 용어 도움말은 `components/learning/TermHelp.tsx` 하나를 쓴다. 필수 prop은 `termId`·`label`이고 나머지(`returnTo`·`note`·`on`·`fallbackMeaning`·`articleLinkLabel`)는 선택이다(013 term-help-ui §2). 글 본문과 013이 소유하는 용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015).
 - 013이 소유하지 않는 설명(지표 계산식, 그 화면에서만 쓰는 구분, 조작 안내)은 `components/common/InlineHelp.tsx`에 담아 물음표 뒤로 내린다. TermHelp와 달리 설명을 props로 받는다. 013이 그 용어를 소유하게 되면 TermHelp로 옮기고 화면에서 문장을 지운다(013 FR-015).
 - FR이 표시를 요구하는 문장은 도움말로 내리지 않는다. 002 FR-016(0% 섹터의 뜻)과 003 FR-004(기본값은 편의용 출발점)가 그 예다. spec이 도움말 자리를 따로 정한 문장만 예외다. 002 FR-009(선택 섹터의 두 가지 뜻)는 2026-09-29부터 002 화면에 표시하지 않는다.
 - `sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`는 관리 화면의 저장하지 않은 편집 내용과 그 기반 `draftVersion`을 보관한다. 저장 성공 시 지우며, 복원할 때는 보관한 판 번호를 유지한다. 일반 사용자 배우기 화면은 저장소에 쓰지 않는다.

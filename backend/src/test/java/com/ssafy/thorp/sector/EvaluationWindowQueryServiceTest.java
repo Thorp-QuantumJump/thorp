@@ -11,6 +11,8 @@ import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository
 import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;
 import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;
 import com.ssafy.thorp.sector.application.result.EvaluationWindowView;
+import com.ssafy.thorp.sector.application.result.LatestPricesResult;
+import com.ssafy.thorp.sector.application.result.PriceSeriesResult;
 import com.ssafy.thorp.sector.application.result.SectorListResult;
 import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;
 import com.ssafy.thorp.sector.application.service.EvaluationWindowService;
@@ -29,6 +31,7 @@ import com.ssafy.thorp.strategy.application.port.WarmupRule;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -414,8 +417,18 @@ class EvaluationWindowQueryServiceTest {
     }
 
     private static PriceSeriesRepository stubPriceSeriesRepository() {
-        return (mapVersion, instrumentId) -> {
-            throw new UnsupportedOperationException("평가 기간 조회는 가격 흐름을 읽지 않는다");
+        return new PriceSeriesRepository() {
+            @Override
+            public Optional<PriceSeriesResult> findCurrentSeries(
+                    String mapVersion, String instrumentId) {
+                throw new UnsupportedOperationException("평가 기간 조회는 가격 흐름을 읽지 않는다");
+            }
+
+            @Override
+            public Optional<LatestPricesResult.Snapshot> findLatestPrices(
+                    String mapVersion, Collection<String> instrumentIds) {
+                throw new UnsupportedOperationException("평가 기간 조회는 최근 가격을 읽지 않는다");
+            }
         };
     }
 
