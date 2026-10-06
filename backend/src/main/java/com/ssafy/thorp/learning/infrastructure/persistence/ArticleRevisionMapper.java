@@ -16,13 +16,15 @@ final class ArticleRevisionMapper {
                 revision.checkVersion(),
                 revision.sectorMapVersion(),
                 revision.publishedByUserId(),
-                revision.publishedAt());
+                revision.publishedAt(),
+                revision.edition());
     }
 
     static ArticleRevision toDomain(LearningArticleRevisionJpaEntity entity) {
         return new ArticleRevision(
                 entity.getId(),
                 entity.getRevisionNo(),
+                entity.getEdition(),
                 LearningContentJson.snapshotFromJson(entity.getSnapshot()),
                 entity.getCheckVersion(),
                 entity.getSectorMapVersion(),

@@ -94,6 +94,10 @@ thorp:
     # 비어 있으면 관리자가 없다 — 관리 경로가 모두 404 다. 014 가 역할을 주면 ConfiguredLearningAdminPolicy
     # 한 클래스만 바꾼다. 운영(application-prod.yml)은 기본값 없이 THORP_LEARNING_ADMIN_USER_IDS 를 읽는다.
     admin-user-ids: ${THORP_LEARNING_ADMIN_USER_IDS:}
+    # 공개 판의 제도 안내 기준 시점이 이 일수보다 오래되면 관리 목록에 '확인 필요'(needsReview)를 보인다(research R37).
+    # 세법·거래소 규정은 대개 1월·7월에 바뀐다. 반년마다 한 번 확인하면 개정을 한 번 넘기기 전에 운영자가 본다.
+    # 표시는 확인을 요청할 뿐 게시를 바꾸지 않는다. LearningProperties가 읽고 필수다(@NotNull).
+    institution-note-review-days: 180
   ops:
     # 운영자 경로(/internal/**)의 임시 문(spec 004 T012). 요청 헤더 X-Ops-Token 이 이 값과 같아야 열린다.
     # 비어 있으면 그 경로는 404 다 — 로그인(spec 014)이 붙기 전까지의 통로이고, 운영은 THORP_OPS_TOKEN 으로 넣는다.

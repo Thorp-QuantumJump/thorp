@@ -247,11 +247,11 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     // --- §2 목록 ---
 
     @Test
-    @DisplayName("목록은 초기 자리 아홉이고 모두 DRAFT, 기록 없음이며 예시 파일과 키 구성이 같다")
-    void listShowsNineDrafts() throws Exception {
+    @DisplayName("목록은 초기 자리 27편이고 모두 DRAFT, 기록 없음이며 예시 파일과 키 구성이 같다")
+    void listShowsTwentySevenDrafts() throws Exception {
         JsonNode data = adminData(get("/admin/learning/articles"), 200);
 
-        assertThat(data.get("articles")).hasSize(9);
+        assertThat(data.get("articles")).hasSize(27);
         assertThat(data.get("articles"))
                 .allSatisfy(
                         item -> {
@@ -262,19 +262,39 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                             assertThat(item.get("needsUpdate").asBoolean()).isFalse();
                             assertThat(item.get("lastPublication").isNull()).isTrue();
                         });
+        // 순서는 초안 단계 번호 → 단계 안 순서 → articleId다(learning-admin-api §2).
         assertThat(data.get("articles"))
-                .extracting(item -> item.get("readingOrder").asInt())
-                .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9);
+                .extracting(
+                        item ->
+                                item.at("/stage/number").asInt()
+                                        + "-"
+                                        + item.get("stagePosition").asInt())
+                .startsWith("1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4", "3-1")
+                .endsWith("5-3", "6-1", "6-2");
+        assertThat(data.get("articles").get(0).get("articleId").asText())
+                .isEqualTo("sectors-and-etf");
+        assertThat(data.get("articles"))
+                .allSatisfy(
+                        item -> {
+                            assertThat(item.at("/stage/released").asBoolean()).isFalse();
+                            assertThat(item.get("publishedEdition").isNull()).isTrue();
+                            assertThat(item.get("needsReview").isNull()).isTrue();
+                            assertThat(item.get("pendingTransfers").asInt()).isZero();
+                        });
+        assertThat(data.get("articles"))
+                .filteredOn(item -> "V1".equals(item.get("format").asText()))
+                .hasSize(9);
         assertSameShape(data, example("admin-articles-list.json"), "$");
     }
 
     // --- §3 만들기 ---
 
     @Test
-    @DisplayName("만들기는 201 빈 초안이고, 같은 articleId는 409, 형식이 틀리면 400이다")
+    @DisplayName("만들기는 201 빈 V2 초안이고, 같은 articleId는 409, 형식이 틀리면 400이다")
     void createArticle() throws Exception {
         String body =
-                "{\"articleId\":\"equal-weight-basics\",\"title\":\"똑같이 나누면\",\"readingOrder\":10}";
+                "{\"articleId\":\"equal-weight-basics\",\"title\":\"똑같이 나누면\","
+                        + "\"stageKey\":\"etf-market-basics\",\"stagePosition\":5}";
 
         JsonNode created =
                 adminData(
@@ -289,7 +309,12 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertThat(created.at("/draft/example").isNull()).isTrue();
         assertThat(created.at("/draft/blocks")).isEmpty();
         assertThat(created.get("publishedRevisionNo").isNull()).isTrue();
-        assertSameShape(created, example("admin-article.json"), "$");
+        assertThat(created.at("/draft/format").asText()).isEqualTo("V2");
+        assertThat(created.at("/draft/stageKey").asText()).isEqualTo("etf-market-basics");
+        assertThat(created.at("/draft/stagePosition").asInt()).isEqualTo(5);
+        // 읽는 순서 값은 단계 번호 × 100 + 단계 안 순서다(learning-admin-api §3).
+        assertThat(created.at("/draft/readingOrder").asInt()).isEqualTo(105);
+        assertSameShape(created, example("admin-article-v2.json"), "$");
 
         JsonNode taken =
                 adminError(
@@ -304,7 +329,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
-                                        "{\"articleId\":\"Bad_Key\",\"title\":\"t\",\"readingOrder\":10}"),
+                                        "{\"articleId\":\"Bad_Key\",\"title\":\"t\","
+                                                + "\"stageKey\":\"etf-market-basics\",\"stagePosition\":5}"),
                         400);
         assertThat(invalid.get("code").asText()).isEqualTo("INVALID_INPUT");
         assertThat(invalid.at("/details/fields"))
@@ -558,6 +584,11 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         JsonNode published = adminData(publish(1), 200);
 
         assertSameShape(published, example("publish-success.json"), "$");
+        // V1 초안·공개 전 단계 → 이전 판 고치기(LEGACY), v1 검사(research R16).
+        assertThat(published.get("edition").asText()).isEqualTo("LEGACY");
+        assertThat(published.get("checkVersion").asText()).isEqualTo("learning-publish-checks-v1");
+        assertThat(published.get("renamedQuestions")).isEmpty();
+        assertThat(published.get("transferredTerms")).isEmpty();
         assertThat(published.get("articleId").asText()).isEqualTo(ARTICLE);
         assertThat(published.get("status").asText()).isEqualTo("PUBLISHED");
         assertThat(published.get("revisionNo").asInt()).isEqualTo(1);
@@ -706,8 +737,9 @@ class LearningAdminApiIT extends IntegrationTestSupport {
             holder.createStatement()
                     .executeUpdate(
                             "INSERT INTO learning_article (article_key, title, question, reading_order,"
-                                    + " status, created_at, updated_at)"
-                                    + " VALUES ('race-article', '먼저 만든 글', '', 10, 'DRAFT', now(), now())");
+                                    + " status, format, stage_id, stage_position, created_at, updated_at)"
+                                    + " SELECT 'race-article', '먼저 만든 글', '', 105, 'DRAFT', 'V2', id, 5,"
+                                    + " now(), now() FROM learning_stage WHERE stage_key = 'etf-market-basics'");
             Future<JsonNode> late =
                     executor.submit(
                             () ->
@@ -715,7 +747,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                                             post("/admin/learning/articles")
                                                     .contentType(MediaType.APPLICATION_JSON)
                                                     .content(
-                                                            "{\"articleId\":\"race-article\",\"title\":\"늦은 글\",\"readingOrder\":10}"),
+                                                            "{\"articleId\":\"race-article\",\"title\":\"늦은 글\","
+                                                                    + "\"stageKey\":\"etf-market-basics\",\"stagePosition\":5}"),
                                             409));
 
             awaitBlockedBy(holder, watcher);

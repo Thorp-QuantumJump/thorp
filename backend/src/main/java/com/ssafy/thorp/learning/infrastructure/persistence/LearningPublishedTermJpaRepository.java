@@ -1,5 +1,7 @@
 package com.ssafy.thorp.learning.infrastructure.persistence;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -44,6 +46,19 @@ public interface LearningPublishedTermJpaRepository
                     """,
             nativeQuery = true)
     Optional<PublishedTermRow> findPublished(@Param("termKey") String termKey);
+
+    /** 여러 용어의 색인 행. {@link #findPublished}처럼 글의 공개 판 포인터와 색인 행의 판이 같은 행만 읽는다. */
+    @Query(
+            "select t from LearningPublishedTermJpaEntity t, LearningArticleJpaEntity a"
+                    + " where a.id = t.articleId"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED"
+                    + " and a.publishedRevisionId = t.revisionId"
+                    + " and t.termKey in :termKeys")
+    List<LearningPublishedTermJpaEntity> findPublishedIn(
+            @Param("termKeys") Collection<String> termKeys);
+
+    @Query("select t.termKey from LearningPublishedTermJpaEntity t")
+    List<String> findAllTermKeys();
 
     /** 이 용어의 색인 행이 속한 글. */
     @Query(
