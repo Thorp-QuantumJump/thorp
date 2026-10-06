@@ -230,7 +230,7 @@ PUT /admin/learning/articles/{articleId}
 
 | 응답 | 조건 |
 |---|---|
-| `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`·조각 키, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `url`이 `http`·`https`가 아님, **(2판)** 형식 모양 위반, 지어 낸 문제·보기 식별자. `error.details.fields`에 위반 위치를 싣는다 |
+| `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`·조각 키, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `url`이 `http`·`https`가 아님, **(2판)** 형식 모양 위반, 지어 낸 문제·보기 식별자, 식별자를 모두 쓴 글의 새 문제·보기([data-model](../data-model.md) §6-2). `error.details.fields`에 위반 위치를 싣는다 |
 | `404 LEARNING_ARTICLE_NOT_FOUND` | 없는 글 |
 | `404 LEARNING_STAGE_NOT_FOUND` **(2판)** | 없는 `stageKey` |
 | `409 LEARNING_DRAFT_CHANGED` | `expectedDraftVersion`이 서버 값과 다르다(R12). `error.details.currentDraftVersion`을 싣는다 |
@@ -331,6 +331,7 @@ POST /admin/learning/articles/{articleId}/publish
 | `409 LEARNING_TERM_ID_TAKEN` | 이 글의 `termId`를 다른 글이 게시 중이고 `transferFrom`이 없다 |
 | `409 LEARNING_TERM_TRANSFER_INVALID` **(2판)** | `transferFrom`이 지금 소유 글과 다르다(그사이 소유가 바뀌었다) |
 | `409 LEARNING_STAGE_NOT_RELEASED` · `409 LEARNING_FORMAT_OUTDATED` **(2판)** | 위 게시 방식 표 |
+| `400 INVALID_INPUT` **(2판)** | 정답이 바뀐 문제에 줄 새 식별자가 남지 않았다([data-model](../data-model.md) §6-2). `error.details.fields`에 `quiz`를 싣고 아무것도 바꾸지 않는다 |
 
 ## 7. 게시 취소
 

@@ -21,6 +21,9 @@ import java.util.Set;
  */
 public final class QuizIdentity {
 
+    /** 식별자 형식({@code q}·{@code c} 뒤 1~4자리, data-model §2)이 담을 수 있는 가장 큰 카운터 값. */
+    public static final int MAX_SEQUENCE = 9999;
+
     private QuizIdentity() {}
 
     /** 식별자를 채운 문제 목록과 오른 카운터. */
@@ -98,14 +101,17 @@ public final class QuizIdentity {
         for (QuizQuestion question : requested) {
             QuestionId questionId = question.questionId();
             if (questionId == null) {
-                questionId = QuestionId.of(++sequence);
+                sequence = next(sequence);
+                questionId = QuestionId.of(sequence);
             }
             List<QuizChoice> choices = new ArrayList<>();
             for (QuizChoice choice : question.choices()) {
-                choices.add(
-                        choice.choiceId() == null
-                                ? choice.withId(ChoiceId.of(++sequence))
-                                : choice);
+                if (choice.choiceId() == null) {
+                    sequence = next(sequence);
+                    choices.add(choice.withId(ChoiceId.of(sequence)));
+                } else {
+                    choices.add(choice);
+                }
             }
             assigned.add(question.withIds(questionId, choices));
         }
@@ -138,11 +144,33 @@ public final class QuizIdentity {
                 reconciled.add(question);
                 continue;
             }
-            QuestionId fresh = QuestionId.of(++sequence);
+            sequence = next(sequence);
+            QuestionId fresh = QuestionId.of(sequence);
             renamed.add(new Renamed(question.questionId(), fresh));
             reconciled.add(question.withIds(fresh, question.choices()));
         }
         return new Reconciled(reconciled, renamed, sequence);
+    }
+
+    /**
+     * 카운터의 다음 값. 형식이 담을 수 없는 값이면 위치({@code quiz})와 함께 거절한다. 지운 번호를 다시 쓰지 않으므로 이 글에는 더 줄 식별자가 없다.
+     * 그대로 두면 식별자 형식 오류가 사유 없이 400으로 나간다.
+     *
+     * @throws InvalidDraftException 카운터가 {@link #MAX_SEQUENCE}를 넘는다
+     */
+    private static int next(int sequence) {
+        if (sequence >= MAX_SEQUENCE) {
+            throw new InvalidDraftException(
+                    List.of(
+                            new FieldViolation(
+                                    "quiz",
+                                    "이 글의 문제·보기 식별자를 모두 썼습니다(q"
+                                            + MAX_SEQUENCE
+                                            + "·c"
+                                            + MAX_SEQUENCE
+                                            + "까지). 새 문제·보기를 더하거나 정답이 바뀐 문제를 게시할 수 없습니다.")));
+        }
+        return sequence + 1;
     }
 
     private static boolean sameQuestion(QuizQuestion previous, QuizQuestion next) {

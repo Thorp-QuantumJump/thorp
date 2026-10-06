@@ -68,10 +68,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -141,13 +141,38 @@ public class LearningAdminService {
      */
     @Transactional(readOnly = true)
     public List<AdminArticleSummaryResult> list() {
-        Optional<Set<String>> openSectorCodes = openSectorCodes(sectorMapPort.currentMap());
-        Map<StageKey, LearningStage> stages = stagesByKey();
-        LocalDate today = today();
+        Map<ArticleId, PublicationEvent> lastEvents = eventRepository.findLastForEachArticle();
+        ListContext context =
+                new ListContext(
+                        stagesByKey(),
+                        openSectorCodes(sectorMapPort.currentMap()),
+                        today(),
+                        articleRepository.findPublishedRevisions(),
+                        lastEvents,
+                        revisionRepository.findRevisionNos(
+                                lastEvents.values().stream()
+                                        .map(PublicationEvent::revisionId)
+                                        .filter(Objects::nonNull)
+                                        .toList()));
         return articleRepository.findAllOrdered().stream()
-                .map(article -> summarize(article, stages, openSectorCodes, today))
+                .map(article -> summarize(article, context))
                 .toList();
     }
+
+    /**
+     * 관리 목록이 글마다 쓰는 값. 글마다 따로 조회하지 않도록 목록 앞에서 한 번씩 읽어 둔다.
+     *
+     * @param published 공개 중인 판(글 → 판)
+     * @param lastEvents 글마다 마지막 게시 기록
+     * @param revisionNos 마지막 기록이 가리키는 판의 번호
+     */
+    private record ListContext(
+            Map<StageKey, LearningStage> stages,
+            Optional<Set<String>> openSectorCodes,
+            LocalDate today,
+            Map<ArticleId, ArticleRevision> published,
+            Map<ArticleId, PublicationEvent> lastEvents,
+            Map<Long, Integer> revisionNos) {}
 
     /**
      * 새 글은 본문이 빈 V2 초안이다. 읽는 순서 값은 단계 번호 × 100 + 단계 안 순서(999를 넘으면 999)다. V2 글에서는 쓰지 않지만 테이블 CHECK를
@@ -221,9 +246,7 @@ public class LearningAdminService {
         ArticleFormat format = command.format() == null ? article.format() : command.format();
         boolean hasLegacyRevision = false;
         if (article.format() == ArticleFormat.V2 && format == ArticleFormat.V1) {
-            hasLegacyRevision =
-                    revisionRepository.findByArticleId(id).stream()
-                            .anyMatch(revision -> revision.edition() == Edition.LEGACY);
+            hasLegacyRevision = revisionRepository.existsByArticleIdAndEdition(id, Edition.LEGACY);
             if (!hasLegacyRevision) {
                 throw new FormatOutdatedException();
             }
@@ -254,10 +277,8 @@ public class LearningAdminService {
                                 command.terms(),
                                 quiz),
                         hasLegacyRevision);
-        // 용어를 먼저 바꾼다. 글 저장이 저장된 용어로 글을 다시 만들므로, 형식을 바꿀 때 옛 형식의 용어가 남아 있으면 새 형식에 맞지 않아 실패한다.
-        // 용어를 먼저 바꾼다. 글 저장은 저장된 용어로 글을 다시 만들므로, 형식을 바꿀 때 옛 형식의 용어가 남아 있으면 새 형식에 맞지 않아 실패한다.
-        termRepository.replaceForArticle(id, command.terms());
         articleRepository.save(saved);
+        termRepository.replaceForArticle(id, command.terms());
         LearningArticle reloaded =
                 articleRepository
                         .findByArticleKey(id)
@@ -319,17 +340,14 @@ public class LearningAdminService {
         requireTermsNotPublishedElsewhere(id, article.terms());
 
         Instant now = now();
-        List<ArticleRevision> revisions = revisionRepository.findByArticleId(id);
-        int revisionNo =
-                revisions.stream().mapToInt(ArticleRevision::revisionNo).max().orElse(0) + 1;
+        // 다음 판 번호와 같은 문제 판정의 기준은 가장 최근 판 하나로 정한다. 옛 판 본문을 모두 읽지 않는다.
+        Optional<ArticleRevision> latest = revisionRepository.findLatestByArticleId(id);
+        int revisionNo = latest.map(ArticleRevision::revisionNo).orElse(0) + 1;
         List<RenamedQuestion> renamed = List.of();
         ArticleSnapshot snapshot;
         if (mode == PublishMode.CURRENT) {
             List<QuizQuestion> latestQuiz =
-                    revisions.stream()
-                            .max(Comparator.comparingInt(ArticleRevision::revisionNo))
-                            .map(latest -> latest.snapshot().quiz())
-                            .orElse(List.of());
+                    latest.map(revision -> revision.snapshot().quiz()).orElse(List.of());
             QuizIdentity.Reconciled reconciled =
                     QuizIdentity.reconcile(article.quiz(), latestQuiz, article.quizSeq());
             article = article.withReconciledQuiz(reconciled);
@@ -510,14 +528,10 @@ public class LearningAdminService {
                 true);
     }
 
-    private AdminArticleSummaryResult summarize(
-            LearningArticle article,
-            Map<StageKey, LearningStage> stages,
-            Optional<Set<String>> openSectorCodes,
-            LocalDate today) {
+    private AdminArticleSummaryResult summarize(LearningArticle article, ListContext context) {
         Optional<ArticleRevision> published =
                 article.status() == ArticleStatus.PUBLISHED
-                        ? articleRepository.findPublishedRevision(article.articleId())
+                        ? Optional.ofNullable(context.published().get(article.articleId()))
                         : Optional.empty();
         boolean hasUnpublishedChanges =
                 published
@@ -529,24 +543,22 @@ public class LearningAdminService {
         Boolean needsUpdate =
                 published.isEmpty()
                         ? Boolean.FALSE
-                        : needsUpdate(published.get().snapshot().example(), openSectorCodes);
+                        : needsUpdate(
+                                published.get().snapshot().example(), context.openSectorCodes());
         LastPublication lastPublication =
-                eventRepository
-                        .findLastByArticleId(article.articleId())
+                Optional.ofNullable(context.lastEvents().get(article.articleId()))
                         .map(
                                 event ->
                                         new LastPublication(
                                                 event.action(),
                                                 event.revisionId() == null
                                                         ? null
-                                                        : revisionRepository
-                                                                .findById(event.revisionId())
-                                                                .map(ArticleRevision::revisionNo)
-                                                                .orElse(null),
+                                                        : context.revisionNos()
+                                                                .get(event.revisionId()),
                                                 event.actorUserId(),
                                                 event.occurredAt()))
                         .orElse(null);
-        LearningStage stage = stages.get(article.placement().stageKey());
+        LearningStage stage = context.stages().get(article.placement().stageKey());
         if (stage == null) {
             throw new IllegalStateException(
                     "draft placement points to a missing stage: " + article.placement());
@@ -564,7 +576,7 @@ public class LearningAdminService {
                 new StageSummary(stage.stageKey().value(), stage.number(), stage.released()),
                 article.placement().position(),
                 published.map(ArticleRevision::edition).orElse(null),
-                published.map(revision -> needsReview(revision, today)).orElse(null),
+                published.map(revision -> needsReview(revision, context.today())).orElse(null),
                 0);
     }
 

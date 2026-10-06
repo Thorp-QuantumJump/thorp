@@ -12,8 +12,7 @@ final class PersistenceLookups {
      */
     static Long requireArticleId(LearningArticleJpaRepository repository, ArticleId articleId) {
         return repository
-                .findByArticleKey(articleId.value())
-                .map(LearningArticleJpaEntity::getId)
+                .findIdByArticleKey(articleId.value())
                 .orElseThrow(() -> new IllegalArgumentException("article not found: " + articleId));
     }
 }

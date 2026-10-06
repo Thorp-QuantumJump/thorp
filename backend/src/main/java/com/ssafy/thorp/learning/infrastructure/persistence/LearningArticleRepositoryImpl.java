@@ -9,7 +9,10 @@ import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.model.Placement;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import jakarta.persistence.EntityManager;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -56,11 +59,21 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                         });
     }
 
+    /** 용어는 모든 글 것을 한 번에 읽어 글마다 나눈다. 글마다 따로 읽지 않는다. */
     @Override
     public List<LearningArticle> findAllOrdered() {
         StageLookup stages = StageLookup.load(stageJpaRepository);
+        Map<Long, List<LearningTermJpaEntity>> termsByArticle = new HashMap<>();
+        for (LearningTermJpaEntity term : termJpaRepository.findAllByOrderByIdAsc()) {
+            termsByArticle.computeIfAbsent(term.getArticleId(), key -> new ArrayList<>()).add(term);
+        }
         return articleJpaRepository.findAllInStageOrder().stream()
-                .map(entity -> withTerms(entity, stages))
+                .map(
+                        entity ->
+                                LearningArticleMapper.toDomain(
+                                        entity,
+                                        termsByArticle.getOrDefault(entity.getId(), List.of()),
+                                        stages))
                 .toList();
     }
 
@@ -86,36 +99,35 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                 .map(ArticleRevisionMapper::toDomain);
     }
 
-    /**
-     * 판과 공개 배치를 두 문장으로 읽는다. 둘이 같은 순간의 값이려면 호출하는 트랜잭션이 한 스냅숏이어야 한다({@code
-     * LearningQueryService.getPublished}). 공개 배치가 비어 있으면 테이블 CHECK가 막는 상태라 실패시킨다.
-     */
+    @Override
+    public Map<ArticleId, ArticleRevision> findPublishedRevisions() {
+        Map<ArticleId, ArticleRevision> revisions = new HashMap<>();
+        for (PublishedRevisionRow row : revisionJpaRepository.findAllCurrentlyPublished()) {
+            revisions.put(
+                    new ArticleId(row.articleKey()),
+                    ArticleRevisionMapper.toDomain(row.revision()));
+        }
+        return revisions;
+    }
+
+    /** 판과 공개 배치를 한 문장으로 읽는다. 공개 배치가 비어 있으면 테이블 CHECK가 막는 상태라 실패시킨다. */
     @Override
     public Optional<PublishedArticleView> findPublished(ArticleId articleId) {
         return revisionJpaRepository
-                .findCurrentlyPublished(articleId.value())
+                .findCurrentlyPublishedWithPlacement(articleId.value())
                 .map(
-                        revision -> {
-                            LearningArticleJpaEntity article =
-                                    articleJpaRepository
-                                            .findByArticleKey(articleId.value())
-                                            .orElseThrow(
-                                                    () ->
-                                                            new IllegalStateException(
-                                                                    "published article vanished: "
-                                                                            + articleId));
-                            StageLookup stages = StageLookup.load(stageJpaRepository);
-                            return new PublishedArticleView(
-                                    ArticleRevisionMapper.toDomain(revision),
-                                    new Placement(
-                                            stages.keyOf(
-                                                    LearningContentJson.required(
-                                                            article.getPublishedStageId(),
-                                                            "published_stage_id")),
-                                            LearningContentJson.required(
-                                                    article.getPublishedStagePosition(),
-                                                    "published_stage_position")));
-                        });
+                        row ->
+                                new PublishedArticleView(
+                                        ArticleRevisionMapper.toDomain(row.revision()),
+                                        new Placement(
+                                                StageLookup.load(stageJpaRepository)
+                                                        .keyOf(
+                                                                LearningContentJson.required(
+                                                                        row.publishedStageId(),
+                                                                        "published_stage_id")),
+                                                LearningContentJson.required(
+                                                        row.publishedStagePosition(),
+                                                        "published_stage_position"))));
     }
 
     @Override
@@ -132,24 +144,28 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                 .toList();
     }
 
+    /**
+     * 돌려주는 값은 넘겨받은 글에 대리키를 채운 것이다. 저장된 용어 행으로 글을 다시 만들면, 형식을 바꾸는 저장에서 용어를 아직 바꾸기 전에 옛 용어가 새 형식에 맞지
+     * 않아 실패한다.
+     */
     @Override
     public LearningArticle save(LearningArticle article) {
         StageLookup stages = StageLookup.load(stageJpaRepository);
-        LearningArticleJpaEntity entity;
         if (article.id() == null) {
-            entity = articleJpaRepository.save(LearningArticleMapper.toEntity(article, stages));
-        } else {
-            entity =
-                    articleJpaRepository
-                            .findById(article.id())
-                            .orElseThrow(
-                                    () ->
-                                            new IllegalArgumentException(
-                                                    "article not found: id=" + article.id()));
-            LearningArticleMapper.apply(entity, article, stages);
-            entity = articleJpaRepository.saveAndFlush(entity);
+            LearningArticleJpaEntity created =
+                    articleJpaRepository.save(LearningArticleMapper.toEntity(article, stages));
+            return article.withId(created.getId());
         }
-        return withTerms(entity, stages);
+        LearningArticleJpaEntity entity =
+                articleJpaRepository
+                        .findById(article.id())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "article not found: id=" + article.id()));
+        LearningArticleMapper.apply(entity, article, stages);
+        articleJpaRepository.saveAndFlush(entity);
+        return article;
     }
 
     @Override
