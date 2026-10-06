@@ -168,7 +168,7 @@ Task 완료는 constitution의 구현·테스트·리뷰·MR 병합·문서 수�
 - 자동 테스트는 제공자 서버 대신 WireMock 또는 `MockMvc`의 `oauth2Login()` 지원으로 사용자 정보 응답을 흉내 낸다.
 - 로컬 DB는 Hibernate `ddl-auto=update`가 스키마를 만들어 **기존 컬럼의 NOT NULL을 풀지 않는다.** 소셜 가입 전에
   `ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;`을 직접 적용하거나 볼륨을 지우고 다시 만든다. 안 하면
-  가입 시 "이미 사용 중인 이메일 또는 전화번호"로 보이는 NOT NULL 위반이 난다(운영은 `V20261001120000`이 푼다).
+  가입 시 "이미 사용 중인 이메일 또는 전화번호"로 보이는 NOT NULL 위반이 난다(운영은 `V20261006190000`이 푼다).
 
 ### Scenario F: 소셜 신규 가입과 재로그인 (US6)
 

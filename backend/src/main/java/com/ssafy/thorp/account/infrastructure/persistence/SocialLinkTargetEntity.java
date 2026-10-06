@@ -7,7 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
-/** {@code social_link_targets}. 마이그레이션은 {@code V20261001170000__social_link_targets.sql}. */
+/** {@code social_link_targets}. 마이그레이션은 {@code V20261006192000__social_link_targets.sql}. */
 @Entity
 @Table(name = "social_link_targets")
 public class SocialLinkTargetEntity {
