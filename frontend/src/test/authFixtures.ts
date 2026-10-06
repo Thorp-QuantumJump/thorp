@@ -55,4 +55,7 @@ export const anonymousAuthContext: AuthContextValue = {
   updateNickname: async () => {
     throw new Error('비로그인 픽스처로는 닉네임을 바꾸지 않는다.')
   },
+  completeSignIn: () => {
+    throw new Error('비로그인 픽스처로는 로그인 상태를 정하지 않는다.')
+  },
 }
