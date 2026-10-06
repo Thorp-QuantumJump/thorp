@@ -883,3 +883,12 @@ Task: "T188 QuizPanel 로그인 모드" → "T189 글 화면 연결" → "T190 �
 - 테스트가 먼저 실패하는 것을 확인한 뒤 구현한다. 태스크 하나 또는 논리적 묶음마다 커밋한다
 - 피할 것: 판·이벤트·변경 기록·장부·답·배지를 고치는 저장소 메서드, 초안을 읽어 공개 응답을 만드는 경로(미리 보기 T159 제외), 학습 기록을 브라우저 저장소에 쓰는 코드, 배우기 밖 화면의 경험치·배지 알림, 조용한 재시도
 - 1판 Notes의 규칙(모호한 태스크, 같은 파일 충돌, 스토리 독립성을 깨는 교차 의존 피하기)도 그대로 따른다
+
+---
+
+## Phase 27: Convergence
+
+**Purpose**: B10 converge(2026-10-06)에서 찾은 빈자리 가운데 다른 묶음에 속하는 것. B10 MR에 있어야 했던 빈자리는 B10 브랜치(`feat(fe)/learning-article-v2`)에서 바로 채웠다. 아래 두 태스크는 B11 묶음(`feat(fe)/learning-curriculum`)에 담는다.
+
+- [ ] T202 [US6] (FE) `frontend/src/components/learning/article/ArticleEnd.tsx`의 비로그인 글 끝에 있는 '로그인하면 학습 기록이 남습니다.' 한 줄과 로그인 연결을 T140이 만드는 `frontend/src/components/learning/me/GuestSample.tsx`(견본 그림·한 줄·로그인 연결)로 바꾼다. 확인 문제 → 다음 글 → 견본 순서와, 로그인 상태를 다시 확인하는 동안 부품을 내리지 않고 숨기기만 하는 처리(`concealed`, research R33)를 그대로 둔다. `frontend/src/pages/LearningArticlePage.test.tsx`에 비로그인 글 끝의 견본(그림은 `aria-hidden`, 숫자·상태 모양 없음)을 더한다 per design-notes §3.5, 목업 '글 끝'의 `guestSample('end')`, FR-031 (missing) ‹B11›
+- [ ] T203 [US1] (FE) `frontend/src/pages/LearningArticlePage.tsx` 글 머리 경로의 단계 연결('n단계 · 이름', B10에서는 `/learn`으로 간다)을 커리큘럼 보기의 그 단계 자리로 잇고, 받은 `learningReturn`을 그대로 싣는다. 단계 자리를 가리키는 방식은 T139의 '○단계 보기' 연결과 같게 한다 per 목업 '글 끝'의 경로(`data-to="stage-n"`), FR-031 (partial) ‹B11›
