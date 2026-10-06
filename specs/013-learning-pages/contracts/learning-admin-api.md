@@ -279,10 +279,12 @@ POST /admin/learning/articles/{articleId}/publish
 |---|---|
 | `edition` **(2판)** | 새 판의 `LEGACY`·`CURRENT` |
 | `renamedQuestions` **(2판)** | 같은 문제 판정으로 새 식별자를 받은 문제 `[{ "from": "q2", "to": "q7" }]`([data-model](../data-model.md) §6-3). 운영자에게 "이 문제는 이미 답한 사용자에게도 새 문제로 보입니다"를 알린다 |
-| `transferredTerms` **(2판)** | 넘겨받은 용어 `[{ "termId": "volatility", "fromArticleId": "inverse-volatility" }]` |
+| `transferredTerms` **(2판)** | 넘겨받은 용어 `[{ "termId": "volatility", "fromArticleId": "inverse-volatility", "toArticleId": "volatility-is-not-loss" }]`. §11과 같은 모양이며 `toArticleId`는 게시한 이 글이다 |
 | `sectorMapVersion` | 예시가 없는 V2 글은 `NOT_CHECKED`([data-model](../data-model.md) §3-4) |
 
 게시가 끝나면 같은 트랜잭션 안에서 공개 조회(글·용어 설명·커리큘럼)가 새 판을 본다.
+
+**(2판) 게시는 초안도 바꾼다.** `renamedQuestions`의 문제는 초안에서도 새 식별자가 되고, `transferredTerms`의 용어는 이 글 초안의 `transferFrom`이 비워진다. `draftVersion`은 그대로다([data-model](../data-model.md) §6-3·§7-2). 그래서 게시 전에 읽은 초안을 그대로 저장하면 옛 식별자는 400 `INVALID_INPUT`, 옛 `transferFrom`은 409 `LEARNING_TERM_TRANSFER_INVALID`다. 관리 화면은 게시에 성공하면 초안(§4)을 다시 읽고, 이 탭에 보관한 이 글의 편집 내용은 두 필드대로 고친다.
 
 ### 응답 422 `LEARNING_PUBLISH_CHECK_FAILED`
 
@@ -488,6 +490,8 @@ POST /admin/learning/stages/{stageKey}/release
 ```
 
 한 트랜잭션에서 모든 글을 게시하고 단계 공개일·변경 기록을 쓴다([data-model](../data-model.md) §10-3). 공개일은 이 요청의 시각 하나다.
+
+글마다 §6처럼 초안의 문제 식별자와 `transferFrom`이 바뀔 수 있고 초안 번호는 그대로다. 관리 화면은 `published[].renamedQuestions`와 `transferredTerms`(`toArticleId`로 글을 가른다)로 이 탭에 보관한 그 글들의 편집 내용을 고친다.
 
 ### 응답 422 `LEARNING_STAGE_CHECK_FAILED`
 
