@@ -23,8 +23,8 @@ function renderHeader(status: AuthContextValue['status']) {
 }
 
 describe('authentication status accessibility', () => {
-  it('360px에서도 확인 중 상태를 live status로 전달한다', () => {
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 360 })
+  // jsdom은 미디어 질의를 적용하지 않고 머리글도 창 폭을 읽지 않는다. 폭과 무관한 상태 전달만 본다.
+  it('확인 중 상태를 live status로 전달한다', () => {
     renderHeader('checking')
     expect(screen.getByRole('status').textContent).toContain('확인 중')
   })

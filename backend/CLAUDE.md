@@ -74,8 +74,8 @@ common: 모든 계층에서 참조 가능
 ## 규칙
 
 - `result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 9). 비로그인 요청은 `requester_id`가 NULL이고 `public_token_expires_at`이 필수다.
-- 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다.
-- 배우기 게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지운다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003).
+- 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)·변경 기록(`learning_release_log`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다. 단계 공개일(`learning_stage.released_at`)과 글의 첫 공개 시각(`learning_article.first_released_at`)은 한 번 쓰고 비우지 않는다(단계 공개는 되돌리지 않는다).
+- 배우기 게시·게시 취소·용어 넘기기·단계 공개는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지우며, 넘기기는 옛 소유 글의 그 용어 행을 지운 뒤 새 글의 행을 쓴다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003).
 - 배우기 관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고, 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다.
 - DTO는 record 우선, 요청 DTO에 `@Valid` 검증 필수
 - 포맷은 Spotless(google-java-format AOSP)가 강제 — CI에서 spotlessCheck 실패 시 빌드 실패
@@ -157,7 +157,7 @@ common: 모든 계층에서 참조 가능
   - `common/persistence/MigrationFileConventionTest` 파일명 규칙과 버전 중복. **Docker 없이 돈다**
   - `common/persistence/FlywayMigrationTest`·`paramsearch/.../ParamSearchMigrationTest` 빈 DB 적용과 스키마 구조
   - `infra/scripts/check-migration-version.sh` 기준 브랜치 대비 버전 역전(out-of-order). 빈 DB 테스트로는 잡히지 않아 CI가 따로 돌린다. 타임스탬프 버전에서는 이 검사가 중복 검사보다 중요하다 — 파일명이 겹치지 않으니 Git이 조용히 병합하고, 낮은 버전이 뒤늦게 머지되면 운영에서만 기동이 막힌다
-- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다
+- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다. **예외는 Spring 컨텍스트 없이 Flyway API로 마이그레이션만 적용한 DB를 보는 테스트다**: 스키마 제약만 보는 `EtfMarketDataSchemaIT`(공용 컨테이너의 커넥션 여유가 없다)와, 특정 마이그레이션 직전 버전까지 적용한 DB에 나머지를 올려 보는 `LearningStagesMigrationUpgradeIT`(시나리오마다 Flyway `target`을 정한다). 이들은 전용 컨테이너를 띄우고 커넥션을 하나만 열며, 같은 skip 규칙(`@Testcontainers(disabledWithoutDocker = true)`)을 따른다. 버전 번호가 필요하면 이 경우에도 `support/MigrationFiles`로 찾는다
 
 - **내 기록(`myrecord`)은 계산 결과를 복제하지 않고 `backtest_request`·`param_search`·`regime_search_log`를 가리킨다. 삭제는 `my_record.deleted_at`만 바꾼다.** 상태(완료·실패·진행 중)는 컬럼이 아니라 읽을 때 원본을 조인해 파생하고(`MyRecordViewQuery`), 목록 응답에 수익률·하락 폭·비용을 싣지 않는다(원칙 III). 항목 생성은 004·007 접수 이벤트(`BacktestRequestAccepted`·`ParamSearchAccepted`)를 `MyRecordRegistrar`가 듣는 방식이라 접수 서비스가 006을 부르지 않는다 — 방향은 `myrecord → paramsearch` 하나다(ArchUnit 규칙 11). 탐색 묶음 저장 상한은 `SaveSlotGuard` 포트로 접수 직전에 판정하고 409 `RECORD_LIMIT_REACHED`다. 시간 기반 자동 삭제 배치를 만들지 않는다(spec 006 PD-13)
 - **소셜 로그인(spec 014)은 `account/infrastructure/oauth`에 있다.** 제공자 차이는 `SocialProviderAdapter` 구현 하나에서 끝나고 판정은 `SocialLoginService`가 한다. 자격 증명은 `thorp.auth.social.*`(환경 변수)이며 client id·secret이 둘 다 있는 제공자만 켜진다 — `spring.security.oauth2.client.*`를 쓰지 않는다(값이 비면 기동 실패). 콜백 성공 처리기는 판정마다 세션 인증을 직접 정한다: 로그인이면 이메일 로그인과 같은 `startSession`, 그 밖은 `dropAuthentication`. 필터가 먼저 저장한 OAuth2 인증을 남기면 `.authenticated()` 경로가 가입 대기 사용자를 통과시킨다. 가입·연결 대기 상태는 세션 속성(`PendingSocialLogin`)이고 제공자 token은 저장하지 않는다

@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GlossaryLookup } from '@/api/learningGlossary'
 import { TermHelp } from './TermHelp'
+import type { ComponentProps } from 'react'
 
 /**
  * 용어 도움말의 세 상태와 키보드 조작(013 term-help-ui §2, 003 FR-016·NFR-001).
@@ -182,5 +183,110 @@ describe('TermHelp', () => {
 
     expect(screen.queryByText('설명 준비 중')).toBeNull()
     expect(document.activeElement).toBe(trigger)
+  })
+})
+
+/** 013 T150. 2판 선택 prop(term-help-ui §2·§5, quickstart 12-2 컴포넌트 부분). */
+describe('TermHelp — 2판 선택 prop', () => {
+  function renderWith(props: Partial<ComponentProps<typeof TermHelp>>) {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/strategy']}>
+        <Routes>
+          <Route
+            path="/strategy"
+            element={<TermHelp termId="synthetic-term" label="합성 용어" {...props} />}
+          />
+          <Route path="/learn/:articleId" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    return { user, trigger: screen.getByRole('button', { name: '합성 용어 도움말' }) }
+  }
+
+  /** 창 안의 글자를 순서대로 모은다. 순서를 문서 위치로 비교한다. */
+  function inOrder(...texts: string[]) {
+    const nodes = texts.map((text) => screen.getByText(text))
+    for (let index = 1; index < nodes.length; index += 1) {
+      const relation = nodes[index - 1].compareDocumentPosition(nodes[index])
+      expect(relation & Node.DOCUMENT_POSITION_FOLLOWING, `${texts[index - 1]} → ${texts[index]}`).toBeTruthy()
+    }
+  }
+
+  const fallback = { fallbackMeaning: '등록표의 합성 뜻 문장이다.', note: '합성 상한 처리 안내다.' }
+
+  it('ready면 013 뜻 문장·note·글 연결 순서이고 등록표 뜻 문장은 없다', async () => {
+    fetchGlossaryEntry.mockResolvedValue(ready)
+    const { user, trigger } = renderWith(fallback)
+
+    await user.click(trigger)
+    await screen.findByText('합성 용어를 설명하는 한 문장이다.')
+
+    expect(screen.queryByText('등록표의 합성 뜻 문장이다.')).toBeNull()
+    inOrder('합성 용어', '합성 용어를 설명하는 한 문장이다.', '합성 상한 처리 안내다.', '‘합성 글’ 글 읽기')
+  })
+
+  it('notReady면 등록표 뜻 문장·note 순서이고 설명 준비 중과 연결이 없다', async () => {
+    fetchGlossaryEntry.mockResolvedValue({ status: 'notReady' })
+    const { user, trigger } = renderWith(fallback)
+
+    await user.click(trigger)
+    await screen.findByText('등록표의 합성 뜻 문장이다.')
+
+    inOrder('등록표의 합성 뜻 문장이다.', '합성 상한 처리 안내다.')
+    expect(screen.queryByText('설명 준비 중')).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  it('failed면 다시 시도와 note이고 등록표 뜻 문장은 없다', async () => {
+    fetchGlossaryEntry.mockResolvedValue({ status: 'failed' })
+    const { user, trigger } = renderWith(fallback)
+
+    await user.click(trigger)
+    await screen.findByRole('alert')
+
+    inOrder('설명을 불러오지 못했습니다.', '다시 시도', '합성 상한 처리 안내다.')
+    expect(screen.queryByText('등록표의 합성 뜻 문장이다.')).toBeNull()
+  })
+
+  it('note만 주면 9월 판 그대로 note가 맨 앞이고 notReady에서 설명 준비 중을 덧붙이지 않는다', async () => {
+    fetchGlossaryEntry.mockResolvedValueOnce({ status: 'notReady' })
+    const { user, trigger } = renderWith({ note: '합성 축 안내다.' })
+
+    await user.click(trigger)
+    await screen.findByText('합성 축 안내다.')
+    await act(async () => {})
+
+    expect(screen.queryByText('설명 준비 중')).toBeNull()
+  })
+
+  it('note만 주고 ready면 note가 용어 이름보다 앞이다', async () => {
+    fetchGlossaryEntry.mockResolvedValue(ready)
+    const { user, trigger } = renderWith({ note: '합성 축 안내다.' })
+
+    await user.click(trigger)
+    await screen.findByText('합성 용어를 설명하는 한 문장이다.')
+
+    inOrder('합성 축 안내다.', '합성 용어', '합성 용어를 설명하는 한 문장이다.')
+  })
+
+  it('articleLinkLabel을 주면 글 연결 문구가 바뀐다', async () => {
+    fetchGlossaryEntry.mockResolvedValue(ready)
+    const { user, trigger } = renderWith({ articleLinkLabel: '이 설정을 설명하는 글 보기' })
+
+    await user.click(trigger)
+
+    const link = await screen.findByRole('link', { name: '이 설정을 설명하는 글 보기' })
+    expect(link.getAttribute('href')).toBe('/learn/synthetic-article')
+  })
+
+  it('returnTo가 없으면 글 연결에 state를 싣지 않는다', async () => {
+    fetchGlossaryEntry.mockResolvedValue(ready)
+    const { user, trigger } = renderWith({})
+
+    await user.click(trigger)
+    await user.click(await screen.findByRole('link', { name: /합성 글/ }))
+
+    expect(screen.getByTestId('location').textContent).toBe('/learn/synthetic-article|null')
   })
 })

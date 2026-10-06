@@ -7,6 +7,8 @@
 > 이 tasks 문서 작업은 [S15P21E205-289](https://ssafy.atlassian.net/browse/S15P21E205-289) · branch `docs(fe)/289-spec-013-tasks`다.
 > plan([S15P21E205-273](https://ssafy.atlassian.net/browse/S15P21E205-273))이 dev에 병합된 판(`8717a9e`)을 기준으로 썼다.
 > 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다.
+>
+> **2판(2026-10-05)**: spec 2026-10-02~05 개정을 구현할 task T098~T200은 문서 끝 [2판](#2판-2026-10-05) 절에 있다. 2판 묶음은 B07~B16이고 브랜치 이름은 Jira 번호 없이 [plan.md](plan.md) "작업 묶음"을 따른다. 아래 1판 절(T001~T097)은 구현 기록으로 그대로 둔다.
 
 **Tests**: 포함한다. constitution "완료의 정의" 조건 2가 "테스트 또는 동작 확인 완료"를 Task 완료 조건으로 두고 있고, plan.md "Testing"이 검증 방식 셋(계약 픽스처 대조·`PostgresTestSupport` 통합 테스트·ArchUnit)을 이미 정했다. 각 테스트 태스크는 [quickstart.md](quickstart.md)의 확인 항목 번호를 적는다.
 
@@ -467,3 +469,426 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 ## Phase 17: Convergence
 
 - [ ] T097 (DOCS) [validation.md](validation.md)에 남은 quickstart 0~5 수동 확인을 실제 화면에서 마친다 — 빈 목록·게시 취소 글 화면, 일반 계정의 관리 화면 차단, 관리 목록의 미게시 변경·갱신 필요 표시, 게시 취소 뒤 공개 목록·글·기록, 공개 화면의 브라우저 저장소 미사용, 실패 화면의 자동 재요청 없음, 대응표에서 사라진 예시의 대체 안내, 키보드 Tab 경로와 NVDA 또는 VoiceOver 읽기, 실제 003 도움말의 실패·재시도와 제목 변경 뒤 연결을 확인한다. 각 결과를 `validation.md`와 MR 본문 "테스트" 절에 성공·실패·미수행으로 구분해 기록하고 모두 확인된 뒤 T075와 이 태스크를 완료한다. SC-002 패턴 검사의 한계와 SC-005 사용성 확인 미수행 표시는 유지한다 per T075, FR-019, SC-008 (partial)
+
+---
+
+# 2판 (2026-10-05)
+
+> 이 절의 tasks 문서 작업은 branch `docs(fe)/spec-013-tasks`다. 2판 plan이 dev에 병합된 판(`09ef6d25`)을 기준으로 썼다. 2026-09-29부터 Jira 티켓을 쓰지 않으므로 구현 묶음의 브랜치는 `{type}({position})/{description}` 형식이며 이름은 [plan.md](plan.md) "작업 묶음"의 표를 따른다.
+> 1판 task(T001~T097)는 위에 그대로 둔다. 1판의 남은 수동 확인 T075·T097은 1판 묶음의 마무리이며 2판 묶음과 섞지 않는다(plan "묶음에 넣지 않은 것").
+
+**Input**: 2판 [plan.md](plan.md)·[research.md](research.md) R14~R40·[data-model.md](data-model.md)·[contracts/](contracts/README.md)·[quickstart.md](quickstart.md) §6~§13, spec 2026-10-05판(FR-001~FR-031, SC-001~SC-017, US1~US6)
+
+**Tests**: 포함한다. 1판과 같은 이유다(constitution "완료의 정의" 조건 2, plan "Testing"). 각 테스트 태스크는 [quickstart.md](quickstart.md)의 확인 항목 번호를 적는다.
+
+**Organization**: 1판과 같이 사용자 스토리별로 묶고 단계 안에서 파트별로 나눈다. 태스크 끝의 `‹B##›`는 그 태스크가 들어가는 작업 묶음(= 브랜치 하나 = MR 하나)이다. 스토리와 묶음은 서로 다른 축이다. 한 스토리의 태스크가 백엔드·프런트엔드 묶음에 나뉘어 들어간다.
+
+## 2판 Format: `[ID] [P?] [Story] (파트) Description ‹묶음›`
+
+- 파트 태그와 `[P]`의 뜻은 1판 Format 절과 같다. 스토리는 [US1]~[US6]이다(US6 '나의 학습'은 2판에서 생겼다).
+- `‹B07›`~`‹B16›`은 [plan.md](plan.md) "작업 묶음"의 묶음이다. 같은 묶음의 태스크만 한 브랜치·MR에 담는다.
+
+## 2판 착수 전에 알아둘 것
+
+013 혼자 닫을 수 없는 항목이다. 각 담당이 판단하고 별도 MR로 한다([plan](plan.md) "교차 의존").
+
+- ⑧ **017 용어 도우미가 013을 읽는다** — spec 017 tasks T030(미완)이 `PublishedTermRepository.findAllPublished()`와 `LearningQueryService.listPublishedTerms()`를 013 코드에 더할 예정이고, 017의 근거 원천 `EvidenceSourceType.ARTICLE`은 013 게시 글의 판 블록을 읽는다. 2판은 CURRENT 판의 블록을 글자 조각 모양으로 바꾸므로, B07이 공개 글 결과 블록에 평문을 내는 메서드를 둔다(T122). 017 T030이 먼저 병합되면 B07이 그 메서드에 `aliases`를 더할지 017 담당과 정하고, B07이 먼저면 017 T030이 2판 모양을 그대로 받는다. 어느 쪽이 먼저든 017 테스트가 깨지지 않는지 B07 MR 리뷰 포인트에 적는다. 017의 `readArticle` 도구는 게시 글 열거에 `LearningQueryService.listPublished()`를 쓰므로(017 plan '근거 팩과 도구') B16(T197)은 이 조회를 지우지 않는다
+- ⑨ **003 설정 항목 네 개** — 003 등록표 축의 `termId`를 예약 식별자(`lookback-period`·`skip-recent-period`·`selection-method`·`weight-cap`)로 바꾸는 일은 003의 별도 MR이다. 013은 B10에서 `TermHelp`의 `fallbackMeaning`·`articleLinkLabel`만 제공한다([term-help-ui](contracts/term-help-ui.md) §5). 등록표 `description` 한 필드에 섞인 뜻 문장과 나머지 안내(예: 모멘텀 `maxWeight`의 상한 처리 안내)를 나눠 `fallbackMeaning`과 `note`로 따로 넘기는 방법도 003이 같은 MR에서 정한다. 이름 차이('최근 구간 제외'와 '최근 구간 제외 기간', '비중 상한'과 '섹터당 최대 비중')는 [checklists/review.md](checklists/review.md) CHK017로 검토 중이다
+- ⑩ **014 갱신** — 배우기 로그인 복귀와 '내 기록과 배우기의 나의 학습' 공통 가정은 014·README의 별도 MR이다. 013은 014의 `useLoginReturn`·`normalizeReturnTarget`을 그대로 쓰므로 그 갱신을 기다리지 않는다(research R34)
+- ⑪ **constitution 초안** — 예시 선택(6.2.0)과 탭 단위 화면 상태(6.1.0)는 미승인 초안을 앞서 적용한다. 6.2.0이 반려되면 `exampleRequired: true`인 v3 규칙 파일을 더하는 태스크를 그때 추가한다(research R19)
+- ⑫ **요구사항 점검표** — [checklists/review.md](checklists/review.md)(38개)가 검토 중이다. 검토 결과 spec·plan이 바뀌면 이 태스크를 그 판에 맞춰 고친다. 지금 태스크는 spec 2026-10-05판과 2판 plan 그대로다
+- ⑬ **첫 단계 공개는 코드 태스크가 아니다** — B07~B14가 배포되고 plan "첫 단계 공개 조건"을 모두 확인한 뒤 운영자가 관리 화면에서 한다. 원고 27편은 단계별 원고 MR(`docs(fe)/learning-content-stage-{n}`)로 쓴다
+
+## 2판 Path Conventions
+
+- 백엔드 2판 도메인 타입: `backend/src/main/java/com/ssafy/thorp/learning/domain/model/`·`domain/vo/`([data-model](data-model.md) §14)
+- 2판 마이그레이션 셋: `backend/src/main/resources/db/migration/V{작성 시각}__learning_stages_and_v2_content.sql`(B07), `…__learning_stage_release.sql`(B08), `…__learning_records.sql`(B09). 버전은 작성 시각 타임스탬프이며, 브랜치가 오래 열려 있었으면 병합 직전에 `infra/scripts/check-migration-version.sh` 기준으로 다시 확인한다
+- 규칙 파일: `backend/src/main/resources/learning/publish-checks-v2.yml`(v1 파일은 그대로)
+- 계약 픽스처: `docs/specs/learning-api/examples/`에 2판 파일을 더하고, 대조 방식은 `docs/specs/learning-api/README.md` 표에 적는다
+- 프런트엔드 하위 폴더: `frontend/src/components/learning/article/`·`curriculum/`·`me/`·`admin/`(plan "Source Code")
+- 2판의 새 `.test.ts`는 T104가 더하는 `src/components/learning/**/*.test.ts` 한 줄로 수집된다. 그 밖의 위치에 `.test.ts`를 두면 `vite.config.ts`에 정확 경로를 더한다
+
+## Existing Seams
+
+2판이 대체·확장·제거해야 하는, 이미 저장소에 있는 코드다(2026-10-05 `09ef6d25` 기준 검색).
+
+| Seam (file:symbol) | Current state | What this feature does | Task |
+|---|---|---|---|
+| `frontend/src/components/learning/ReturnToDiagnosisLink.tsx:resolveLearningReturn` | 허용 경로 셋(`/diagnosis/sectors`·`/strategy`·`/results/`)과 정확 일치만 받는다. 007·009·010·011과 쿼리 문자열 경로를 거절한다 | `returnTargets.ts` 표와 `ReturnLink.tsx`로 대체한다 | T148 |
+| `frontend/src/pages/LearningListPage.test.tsx`·`LearningArticlePage.test.tsx`의 "진도 문구 없음"·"저장소에 쓰지 않음" 단언 | 1판 FR-012(기록 없음)를 단언한다. 2판 FR-020·FR-023과 맞지 않는다 | 비로그인 문구 없음·학습 기록 미저장·허용 키 둘(로그인 연결을 누르면 014 `thorp.auth.returnTarget` 하나 더)로 바꾼다 | T134, T141, T190 |
+| `frontend/CLAUDE.md`의 "일반 사용자 배우기 화면은 저장소에 쓰지 않는다" | 1판 규칙 | 2판 저장 키 둘과 '학습 기록은 쓰지 않는다'로 고친다 | T142 |
+| `frontend/vite.config.ts` `test.include` | `src/components/learning/**/*.test.ts`가 없다 | 한 줄 더한다 | T104 |
+| `frontend/src/api/learning.ts:fetchLearningArticles` → `GET /learning/articles` | 목록 화면의 유일한 소비자 | 화면을 커리큘럼 조회로 옮기고(T135·T140), 경로를 지운다(T197) | T140, T197 |
+| `frontend/src/test/learningFixtures.ts`의 `tideArticle`·`harborArticle`(`LearningArticle` 타입) | 1판 응답 모양이다. `tsconfig.app.json`이 `src` 전체를 검사하므로(`npm run build`의 `tsc -b`) 타입에 필수 필드가 생기면 이 파일에서 빌드가 실패한다. 이 파일을 쓰는 테스트는 아홉 개다 | 2판 필드를 채우고 예시 없는 `CURRENT` 글 픽스처를 더한다. `example`이 `null`일 수 있게 되어 깨지는 `ExampleEntry.test.tsx`를 맞춘다 | T128 |
+| `frontend/src/components/strategy/DetailSettingsPanel.tsx`의 `TermHelp`(`note`·`on="hover"`) | 003이 공용 도움말을 쓴다 | 새 선택 prop을 더해도 그대로 동작하게 회귀를 지킨다 | T149, T150 |
+| `frontend/src/pages/AccountProfilePage.tsx` | 닉네임 수정만 있다 | '학습 기록' 구역(학습 초기화)을 더한다 | T195 |
+| `frontend/src/App.tsx` 배우기 라우트 | `/learn`·`/learn/:articleId`만 있다 | `/learn/me`를 더한다 | T194 |
+| `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningMigrationTest.java` `hasSize(9)` | 1판 아홉 글을 단언한다. 거절 테스트 셋은 예외 종류만 보고, 그중 둘(`rejectsPublishedWithoutRevision`·`rejectsInvalidArticleKey`)은 `stage_id`·`stage_position` 없이 넣는다 | 단계·27편 배치·새 열과 나의 학습 네 테이블의 제약을 단언하도록 넓힌다. 거절 테스트는 INSERT에 단계 배치를 채우고 걸린 제약 이름으로 단언한다(B07 뒤 NOT NULL 위반으로 통과하지 않게) | T116, T121, T201 |
+| `LearningQueryServiceTest.java:revision`, `LearningRepositoryTest.java`의 판 저장·`revisionsAreAppendOnly` | `ArticleSnapshot`·`ArticleRevision`의 9월 판 생성자로 판을 만든다 | 2판 필드를 더한 생성자에 맞춰 V1 판으로 고친다 | T113 |
+| `backend/src/test/java/com/ssafy/thorp/learning/support/LearningSeeds.java:reset`·`publish` | 1판 테이블만 되돌리고 아홉 편 밖의 글을 지운다. 게시 도우미는 `published_revision_id`만 채운다 | 27편을 남기고 2판 열·테이블을 되돌리며 나의 학습 네 테이블을 비우고, 게시 도우미가 공개 배치를 함께 채우게 하고, 단계 공개·CURRENT 게시 도우미를 더한다 | T117, T121, T201 |
+| `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java:insertPublishedRevision` | 판을 SQL로 걸 때 `published_revision_id`만 채운다 | 공개 배치를 함께 채운다([data-model](data-model.md) §3-2 CHECK) | T117 |
+| `backend/src/main/java/com/ssafy/thorp/learning/presentation/support/UniqueConstraintViolations.java` | `uq_learning_term_key`를 409로 바꾼다 | 부분 유일 색인 두 이름으로 바꾼다 | T120 |
+| `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` 인증 경로 | `/learning/me/**`가 없다 | `authenticated()` 한 줄을 더한다 | T180 |
+| `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` spec 013 블록 | 1판 일곱 코드 | 2판 열세 코드를 묶음마다 더한다 | T101, T102, T103 |
+| `backend/src/main/resources/learning/publish-checks-v1.yml` 머리 주석 | `data-model §6`을 가리킨다(2판에서 §8-1) | 주석 참조만 고친다. 규칙은 바꾸지 않는다 | T152 |
+| `backend/src/main/resources/registry/parameter-registry.yml` 주석·축 `termId` | 주석이 `data-model.md §8`(2판 §13)을, '섹터당 최대 비중'이 `weight`를 가리킨다 | 주석 참조는 013이 고친다. 축의 `termId` 교체는 003의 별도 MR이다(⑨) | T198 |
+| `docs/specs/learning-api/README.md`와 `examples/` | 1판 픽스처 여덟 개 | 2판 픽스처와 대조 방식을 더하고, 1판 관리 픽스처 셋에 2판 키를 더하며, `article.json`은 9월 판 필드 대조의 기준으로 둔다. 지우는 경로의 픽스처를 뺀다 | T098, T099, T100, T197 |
+| `backend/src/test/java/com/ssafy/thorp/learning/LearningPublicApiIT.java:articleMatchesExample`, `LearningAdminApiIT.java`의 1판 경우 | `article.json`과 완전 동치, 관리 픽스처와 키 집합 정확 비교(`assertSameShape`), 목록 아홉 편·`readingOrder` 1..9, `readingOrder`만 싣는 만들기 요청, `stage_id` 없는 직접 `INSERT` | 9월 판 필드만 비교하고, 2판 키를 더한 픽스처·27편·`stageKey` 만들기로 고친다 | T124, T160 |
+| spec 017 T030 예정 `PublishedTermRepository.findAllPublished`·`LearningQueryService.listPublishedTerms`, 017 `EvidenceSourceType.ARTICLE` | 017이 013 게시 용어와 판 블록을 근거로 읽는다(미완) | CURRENT 판 블록의 평문 메서드를 제공하고 순서를 조율한다(⑧) | T122 |
+
+---
+
+## Phase 18: 2판 Setup
+
+**Purpose**: 2판 계약 픽스처, 오류 코드, 테스트 수집 설정
+
+- [X] T098 [P] (DOCS) B07 계약 픽스처 — `docs/specs/learning-api/examples/`에 `article-current.json`([learning-public-api](contracts/learning-public-api.md) §3-2), `article-previous.json`·`article-pre-release.json`(§3-1, `edition`만 다름), `admin-article-v2.json`([learning-admin-api](contracts/learning-admin-api.md) §4 V2), `admin-preview.json`(§8), `publish-check-failed-v2.json`(§6 422 `error` 전체)을 만들고, `docs/specs/learning-api/README.md` 표에 각 파일의 대조 방식(JSON 동치 또는 키 구성)을 더한다. 픽스처는 계약 예시와 같은 모양으로 쓰되 예시가 `...`로 줄인 값을 모두 채운 전체 응답으로 만든다(`admin-preview.json`은 계약에 예시가 없으므로 §8대로 §3 글 응답 모양에 `preview: true`를 더한다). `article-previous.json`·`article-pre-release.json`의 9월 판 필드는 `article.json`의 값을 그대로 쓰고 `readingMinutes`는 그 본문으로 계산한 값을 쓴다. `admin-article-v2.json`은 §4 V2 예시대로 용어의 `transferFrom` 키를 싣고 키 구성으로 대조한다(B07 응답은 이 키를 늘 `null`로 싣는다, T156). 기존 `article.json`(1판 V1 응답)은 값을 바꾸지 않고 9월 판 필드의 기준으로 둔다. README 머리 문단의 대조 방식 설명에 이 파일은 응답 가운데 이 파일에 있는 키만 JSON 동치로 비교한다고 적고(T124), 계약 예시가 줄여 보인 자리를 픽스처가 채운다는 문장을 더한다([contracts/README](contracts/README.md) 공통 규칙). 1판 관리 픽스처 `admin-articles-list.json`·`admin-article.json`·`publish-success.json`에는 [learning-admin-api](contracts/learning-admin-api.md) §2·§4(V1 초안)·§6 예시의 2판 키를 더하고 1판 키와 값은 그대로 둔다. `admin-articles-list.json`의 첫 글(`sectors-and-etf`, 초안)에 더하는 값은 [data-model](data-model.md) §13-3 배치를 따른다(T160) ‹B07›
+- [X] T099 [P] (DOCS) B08 계약 픽스처 — `curriculum.json`([learning-public-api](contracts/learning-public-api.md) §1 1·2단계 공개 예), `curriculum-pre-release.json`(§1 첫 단계 공개 전 예), `admin-stages.json`([learning-admin-api](contracts/learning-admin-api.md) §9), `stage-readiness.json`(§10), `stage-release.json`(§11 200), `stage-check-failed.json`(§11 422 `error` 전체)과 README 표. T098과 같이 계약 예시가 줄여 보인 자리(`stages`의 여섯 단계 전부와 공개된 단계의 글 전부, `"...": "..."` 키, `...` 값)를 모두 채운 전체 응답으로 만든다 ‹B08›
+- [ ] T100 [P] (DOCS) B09 계약 픽스처 — `me.json`([learning-me-api](contracts/learning-me-api.md) §1), `me-article.json`(§2), `me-completion.json`(§4), `me-answer.json`(§5), `me-retry.json`(§6)과 README 표. 시각이 들어가는 필드는 키 구성 대조로 적는다. T098과 같이 `me.json`은 계약 예시가 줄여 보인 배열(`stages` 여섯 단계, `badges` 31개, 공개된 글마다의 `articles`, `masteredTerms`)을 필드 표와 `counts`의 수에 맞게 채운 전체 응답으로 만든다 ‹B09›
+- [X] T101 (BE) `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` spec 013 블록에 `LEARNING_STAGE_NOT_FOUND`(404)·`LEARNING_STAGE_NOT_RELEASED`(409)·`LEARNING_FORMAT_OUTDATED`(409)를 더한다. 메시지는 [contracts/README](contracts/README.md) "오류 코드" 표의 뜻을 한 문장으로 쓴다 ‹B07›
+- [X] T102 (BE) `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`의 같은 블록에 `LEARNING_STAGE_ORDER`·`LEARNING_STAGE_ALREADY_RELEASED`·`LEARNING_STAGE_EMPTY`·`LEARNING_STAGE_CHANGED`(409), `LEARNING_STAGE_CHECK_FAILED`(422), `LEARNING_TERM_TRANSFER_INVALID`(409)를 더한다 ‹B08›
+- [ ] T103 (BE) `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`의 같은 블록에 `LEARNING_NOT_RECORDABLE`·`LEARNING_COMPLETION_REQUIRED`·`LEARNING_RETRY_NOT_AVAILABLE`(409), `LEARNING_QUESTION_NOT_FOUND`(404)를 더한다 ‹B09›
+- [X] T104 [P] (FE) `frontend/vite.config.ts`의 `test.include`에 `'src/components/learning/**/*.test.ts'`를 더하고, `src/diagnosis/testCollection.guard.test.tsx`가 이 경로의 파일을 수집 대상으로 보는지 확인한다. 2판 배우기 화면은 `useAuth`를 부르므로(비로그인 끝 T183, 목록의 비로그인 한 줄 T140, 로그인 끝 T189) 배우기 화면 테스트는 `AuthContext.Provider`로 감싸 그리고, 기본 값은 `frontend/src/test/authFixtures.ts`의 `anonymousAuthContext`로 둔다. 지금 `LearningListPage.test.tsx`·`LearningArticlePage.test.tsx`는 `AppHeader`만 대역으로 바꿔 제공자 없이 그리므로 화면이 `useAuth`를 부르는 순간 던진다 ‹B10›
+
+---
+
+## Phase 19: 2판 Foundational (Blocking Prerequisites)
+
+**Purpose**: 단계·글 형식·배치·확인 문제·용어 v2의 스키마와 도메인 모델(B07), 단계 공개 기록·넘겨받기의 스키마(B08). 스키마·매핑·검증은 각 묶음 안에서 닫는다(constitution "스키마 변경 규칙").
+
+**⚠️ CRITICAL**: B07 부분이 끝나기 전에는 어떤 2판 스토리도 시작할 수 없다. B08 부분은 커리큘럼(T125)·단계 공개(T162)·넘기기(T145)의 선행이다.
+
+### B07 — 스키마와 도메인
+
+- [X] T105 (INFRA) `backend/src/main/resources/db/migration/V{작성 시각}__learning_stages_and_v2_content.sql` — [data-model](data-model.md) §3-1 `learning_stage`와 여섯 행(§13-2, 모두 공개 전), §3-2 `learning_article`의 `format`(기본 `V1`)·`stage_id`·`stage_position`·`published_stage_id`·`published_stage_position`·`quiz`·`quiz_seq` 열과 CHECK, 기존 아홉 글의 단계·단계 안 순서(§13-3), `status='PUBLISHED'`인 글의 공개 배치 채우기, `stage_id` NOT NULL, 새 글 18편 자리(`format='V2'`, 빈 초안, `reading_order` = min(999, 단계 번호 × 100 + 순서)), §3-3 `learning_term`의 `aliases`·`meaning`·`reading`·`caveat`, §3-4 `learning_article_revision.edition`(기본 `LEGACY`), §3-6 `learning_published_term.aliases`. `first_released_at`·`transfer_from_article_id`·`learning_release_log`는 B08이다. 새 CHECK 제약에는 1판처럼 `ck_learning_…` 이름을 붙인다(T116이 이름으로 단언한다). 적용된 `V20260917101000__learning_content.sql`은 고치지 않는다 ‹B07›
+- [X] T106 [P] (BE) 값 타입 `backend/src/main/java/com/ssafy/thorp/learning/domain/vo/StageKey.java`(`ArticleId`와 같은 형식, 3~64자), `QuestionId.java`(`^q[1-9][0-9]{0,3}$`), `ChoiceId.java`(`^c[1-9][0-9]{0,3}$`) — 형식 검사는 생성자에서 한다([data-model](data-model.md) §2) ‹B07›
+- [X] T107 [P] (BE) `backend/src/main/java/com/ssafy/thorp/learning/domain/model/`에 `ArticleFormat.java`(`V1`·`V2`), `Edition.java`(`LEGACY`·`CURRENT`), `Placement.java`(단계 키와 단계 안 순서 1..99), `LearningStage.java`(고정 식별자·번호·이름·수준 표시·한 줄 설명·`releasedAt`·`releasedByUserId`, 두 공개 필드는 함께 있거나 함께 없음)를 만든다([data-model](data-model.md) §3-1·§14) ‹B07›
+- [X] T108 [P] (BE) `domain/model/RichText.java`와 `sealed interface Run`(`TextRun`·`TermMentionRun`·`SourceRun`) — [data-model](data-model.md) §5-2의 저장 시 검사(글자 1자 이상, 언급 `text` 1~50자, 출처 `url`은 `http`·`https`이고 2,000자 이하, 출처 조각은 첫 조각일 수 없음), 필드별 허용 조각 종류를 인자로 받는 검사, 글자 수 합 계산 ‹B07›
+- [X] T109 (BE) `domain/model/ArticleBlock.java`를 넓힌다 — `KeySummaryBlock`·`MisconceptionBlock`·`ListBlock`·`TableBlock`·`DiagramBlock`·`InstitutionNoteBlock`를 더하고, `ParagraphBlock`·`HypotheticalBlock`은 `RichText`를 담게 한다. V1은 글자 조각 하나로 읽고 쓴다. 형식별 허용 블록과 상한(V1 60개, V2 80개, 블록마다 §5-3 표의 길이·개수·`values` 길이 = `categories` 길이)을 생성 시 검사한다. 블록을 패턴 switch하거나 문단·가상의 계산 예의 글자를 읽는 기존 코드 가운데 맡은 task가 없는 곳은 같은 task에서 V1 결과가 바뀌지 않게 고친다. 대상은 `learning/domain/model/PublishCheck.java`(문단 없음 판정과 블록 switch, V2 블록은 [data-model](data-model.md) §8-1대로 예외), `learning/presentation/response/AdminArticleResponse.java`의 블록 변환, `learning/presentation/controller/LearningAdminController.java`의 `toBlock`, 블록을 만드는 기존 테스트(`LearningArticleTest`·`PublishCheckTest`·`LearningQueryServiceTest`·`LearningRepositoryTest`)다. `LearningContentJson`·`LearningQueryService`의 같은 자리는 T114·T122가, `AdminArticleResponse`·`LearningAdminController`의 V2 모양은 T156이 맡는다. T108 뒤 ‹B07›
+- [X] T110 [P] (BE) `domain/model/QuizQuestion.java`·`QuizChoice.java`·`QuizIdentity.java` — 저장 시 검사(문제 0~3개, 보기 0~5개, 문제 안 `choiceId` 중복 없음, 길이 §6-1), `quiz_seq`로 새 문제·보기 식별자 주기(문제와 보기가 같은 카운터, 지운 번호 재사용 없음), 지금 초안에 없는 식별자 거절, 가장 최근 판과의 같은 문제 판정(§6-3 세 경우)과 새 식별자 대응표 `renamed`를 돌려주는 순수 함수 ‹B07›
+- [X] T111 [P] (BE) `domain/model/ReadingEstimate.java` — 본문 글자 수(R20의 대상 블록, 공백 제외), 반올림한 분(최소 1), 최소 머문 시간 = max(최저 초, ceil(반올림 전 초 ÷ 나눗수))를 규칙 값(분당 글자 수·나눗수·최저 초)을 인자로 받아 계산한다 ‹B07›
+- [X] T112 (BE) `domain/model/LearningTerm.java`에 `aliases`(0~4개, 각 1~40자, 중복 없음)·`meaning`·`reading`·`caveat`(각 ≤200)을 더하고 V1(`sentence`)·V2 모양을 가른다. `domain/model/LearningArticle.java`에 `format`, 초안 배치, 공개 배치, `quiz`, `quizSeq`를 더하고 `saveDraft`가 형식별 모양 검사·식별자 주기(T110)를 하게 한다. V2→V1 전환은 인자로 받은 "LEGACY 판 있음"이 참일 때만 허용하고 아니면 `FormatOutdatedException`(409)을 던진다. `publish`는 공개 배치를 초안 배치로 바꾸고 `unpublish`는 비운다. 불변식 `(publishedPlacement == null) == (publishedRevisionId == null)`을 생성자에 둔다. `LearningTerm`·`LearningArticle`의 생성자와 용어 `sentence()`를 쓰는 기존 코드 가운데 맡은 task가 없는 곳은 같은 task에서 V1 결과가 바뀌지 않게 고친다. 대상은 `LearningAdminController.toCommand`의 `new LearningTerm`, `AdminArticleResponse`의 용어 변환, `PublishCheck`의 용어 문장 검사, 용어·글을 만드는 기존 테스트(`LearningArticleTest`·`PublishCheckTest`·`LearningQueryServiceTest`·`LearningRepositoryTest`)다. `LearningContentJson`·`LearningArticleMapper`·`LearningAdminService.create`·`LearningQueryService`·`PublishedTermRepositoryImpl`의 같은 자리는 T114·T115·T156·T122·T157이 맡는다. T107~T110 뒤 ‹B07›
+- [X] T113 (BE) `domain/model/ArticleSnapshot.java`·`ArticleRevision.java`에 `format`·`edition`·`quiz`·`reading`(V2)을 더한다. V1 판은 `format`이 없고 `quiz`·`reading`이 비어 있다([data-model](data-model.md) §4). 두 생성자를 쓰는 기존 코드 가운데 맡은 task가 없는 곳은 같은 task에서 V1 결과가 바뀌지 않게 고친다. 대상은 판을 만드는 기존 테스트 둘이다: `backend/src/test/java/com/ssafy/thorp/learning/application/service/LearningQueryServiceTest.java`의 `revision`, `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java`의 판 저장 경우와 `revisionsAreAppendOnly`. `LearningContentJson`·`ArticleRevisionMapper`·`LearningAdminService.publish`의 같은 자리는 T114·T115·T157이 맡고, 그 task가 V2 값을 채우기 전까지는 V1 값(`format` 없음·`LEGACY`·빈 확인 문제·`reading` 없음)으로 컴파일되게 둔다. T112 뒤 ‹B07›
+- [X] T114 (BE) `backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningContentJson.java` — V2 블록·글자 조각·확인 문제·용어(다른 이름·세 문장)·`reading`의 읽기와 쓰기. V1 판은 지금 모양 그대로 읽고 쓴다(`format` 키 없음 = V1). 알 수 없는 블록 `type`·조각 키는 지금처럼 `IllegalStateException`이다. 필수 키가 빠진 V2 판을 0이나 빈 값으로 채우지 않는다(T079와 같은 원칙). T109·T110·T113 뒤 ‹B07›
+- [X] T115 (BE) JPA 매핑 — `LearningStageJpaEntity`와 `LearningStageJpaRepository`·`learning/application/repository/LearningStageRepository.java`·`…/persistence/LearningStageRepositoryImpl.java`, `LearningArticleJpaEntity`·`LearningTermJpaEntity`·`LearningArticleRevisionJpaEntity`·`LearningPublishedTermJpaEntity`의 새 열, `LearningArticleMapper`·`ArticleRevisionMapper`. `RepositoryTestSupport`의 import 목록에 새 저장소 구현을 더한다. T105·T114 뒤 ‹B07›
+- [X] T116 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningMigrationTest.java`를 넓힌다 — 단계 여섯 행(번호·이름·수준·한 줄 설명, 모두 공개 전), 27편의 단계·단계 안 순서(§13-3), 기존 아홉 글의 제목·`format=V1` 유지, 새 18편 `format=V2`·빈 초안, 게시 중인 글의 공개 배치, 공개 배치 CHECK 위반 삽입 거절, 단계의 `released_at`·`released_by_user_id` 가운데 하나만 채우는 갱신 거절(§3-1 CHECK), `edition` 기본값 `LEGACY`(quickstart 1 "2판 마이그레이션"). **거절 테스트는 걸린 제약의 이름까지 단언한다.** 지금 단언은 예외 종류(`DataIntegrityViolationException`)뿐이라, 다른 제약이 먼저 걸려도 통과한다. 1판 거절 테스트 둘(`rejectsPublishedWithoutRevision`·`rejectsInvalidArticleKey`)은 `stage_id`·`stage_position` 없이 `learning_article`에 넣으므로, T105가 두 열에 NOT NULL을 건 뒤에는 검사하려던 CHECK(`ck_learning_article_published_revision`·`ck_learning_article_key_format`)가 아니라 NOT NULL 위반으로 통과한다. 두 INSERT에 단계와 단계 안 순서를 채워 대상 CHECK만 걸리게 하고, 예외의 가장 안쪽 원인 메시지에 그 제약 이름이 있는지 본다(`presentation/support/UniqueConstraintViolations`와 같은 판별). `rejectsDuplicateRevisionNo`(`uq_learning_article_revision_no`)와 이 task가 더하는 2판 거절 테스트도 같은 방식으로 단언하며, 2판 CHECK의 이름은 T105가 마이그레이션에서 붙인 이름이다 ‹B07›
+- [X] T117 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/support/LearningSeeds.java` — `reset()`이 마이그레이션이 만든 27편([data-model](data-model.md) §13-3)은 남기고 그 밖의 글만 지우며, 27편의 초안 열(제목·`reading_order` 포함)과 2판 열(배치·형식·확인 문제·`quiz_seq`), 용어 v2 열, 단계의 `released_at`·`released_by_user_id`를 마이그레이션 직후 값으로 되돌리게 한다. 게시를 비우는 갱신은 `published_revision_id`와 공개 배치(`published_stage_id`·`published_stage_position`)를 한 문장에서 함께 비운다. 기존 게시 도우미(`publishFromResponse`·`publishMinimal`이 거치는 `publish`)는 판을 걸 때 공개 배치를 그 글의 초안 배치로 함께 채운다([data-model](data-model.md) §3-2 CHECK). `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java`의 `insertPublishedRevision`도 같은 CHECK에 맞춰 공개 배치를 함께 채운다. 도우미 `markStageReleased(stageKey)`(테스트 전용 직접 갱신), `publishCurrent(articleId, …)`(V2 판을 공개 배치와 함께 심음)를 더한다. T115 뒤 ‹B07›
+- [X] T118 [P] (BE 테스트) 도메인 단위 테스트 `backend/src/test/java/com/ssafy/thorp/learning/domain/model/` — `RichTextTest`(조각 규칙), `ArticleBlockV2Test`(블록별 상한·형식별 허용), `QuizIdentityTest`(식별자 주기, 지어 낸 식별자 거절, 같은 문제 판정 세 경우, 지운 번호 재사용 없음), `ReadingEstimateTest`(1,749·1,750·3,749·3,750자의 분, 1,750자 70초·2,480자 100초·3,749자 150초의 최소 머문 시간(올림), 최소 머문 시간 최저 30초), `LearningArticleV2Test`(V2→V1 전환 규칙, 공개 배치 불변식) ‹B07›
+
+### B08 — 단계 공개 기록과 넘겨받기의 스키마
+
+- [X] T119 (INFRA) `backend/src/main/resources/db/migration/V{작성 시각}__learning_stage_release.sql` — [data-model](data-model.md) §3-7 `learning_release_log`(UNIQUE `entry_key`, `kind` CHECK, `ARTICLE_ADDED`일 때만 `article_id`), §3-2 `learning_article.first_released_at`, §3-3 `learning_term.transfer_from_article_id`와 `uq_learning_term_key` 삭제·부분 유일 색인 둘(`uq_learning_term_key_owned`·`uq_learning_term_key_incoming`). 이 마이그레이션은 데이터를 지우거나 기존 값을 바꾸지 않고, 새 색인은 기존 행이 어길 수 없다(`transfer_from_article_id`가 모두 NULL이고 `term_key`는 지금 유일 제약으로 이미 유일하다). 그래서 constitution "스키마 변경 규칙"의 되돌릴 수 없는 변경이 아니며(plan Constitution Check), 이 판정과 영향 범위(지우는 것은 제약 하나이고 409로 바꾸는 제약 이름이 바뀐다, T120)를 B08 MR 본문에 적는다 ‹B08›
+- [X] T120 (BE) `domain/model/ReleaseLogEntry.java`, `LearningArticle`의 `firstReleasedAt`(한 번 쓴 뒤 비우지 않음), `LearningTerm`의 `transferFrom`, JPA 매핑(`LearningReleaseLogJpaEntity`와 저장소, 새 열), `learning/application/repository/ReleaseLogRepository.java`(추가와 조회만), `learning/presentation/support/UniqueConstraintViolations.java`의 제약 이름을 두 부분 색인으로 바꾼다. T119 뒤 ‹B08›
+- [X] T121 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningMigrationTest.java`에 B08 열·테이블·부분 색인(같은 `term_key`를 소유 행 둘로 넣으면 거절, 소유 하나와 넘겨받기 하나는 허용, 넘겨받기 둘은 거절)을 더하고, `backend/src/test/java/com/ssafy/thorp/learning/support/LearningSeeds.java`의 `reset()`이 변경 기록·`first_released_at`·`transfer_from_article_id`를 되돌리게 한다. 단계 공개 상태와 27편 유지는 B07의 T117이 맡는다 ‹B08›
+
+**Checkpoint**: 빈 DB에 2판 스키마가 생기고 매핑이 `validate`를 통과하며, 도메인 모델이 V1·V2를 함께 다룬다
+
+---
+
+## Phase 20: User Story 1 — 단계별 커리큘럼에서 글을 골라 읽는다 (Priority: P1) 🎯 MVP
+
+**Goal**: 첫 단계 공개 전에는 1판 목록·글을 그대로 보이고, 공개 뒤에는 단계별 커리큘럼(여정 지도·목록 보기)과 새 기준 글(V2 요소·다른 이름·출처 표시·이전 판)을 보인다.
+
+**Independent Test**: 테스트로 1·2단계를 공개 상태로 심은 DB에서 `/learn`이 여정 지도·목록 보기·공개 경계·준비 중 단계·이전 판 카드·공개 안내를 보이고, CURRENT 글이 새 요소를 텍스트로 그리며, 단계를 하나도 공개하지 않은 DB에서는 1판과 같은 목록·글이 보이는지 확인한다(quickstart 6-1, 8-4, 9-1~9-3, 9-5, 11-1, 11-2).
+
+### Backend — 공개 글과 커리큘럼
+
+- [X] T122 [US1] (BE) `backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningQueryService.java`의 글 하나 조회를 2판으로 넓힌다 — `edition`(LEGACY 판은 공개된 단계가 하나도 없으면 `PRE_RELEASE`, 있으면 `PREVIOUS`), 공개 배치의 `stage`, `number`(공개된 글만), `readingMinutes`(V2는 판 값, LEGACY는 조회 때 계산), `minDwellSeconds`(LEGACY는 `null`), V2 블록과 언급 조각의 `owned`·`aliases`(소유 용어는 판에서, 다른 글의 용어는 게시 색인에서), 용어 블록의 세 문장과 다른 이름, `quiz`(정답·풀이 포함, R22), `next`, `stageArticleCount`, `hasUnreleasedStages`. CURRENT 판에 예시가 없으면 `judgeExample`이 예외를 던지지 않고 결과의 `example`을 `null`로 둔다(V2는 예시가 선택이다, [data-model](data-model.md) §9, [learning-public-api](contracts/learning-public-api.md) §3-2). 예시 없는 LEGACY 판은 v1 검사가 막는 상태라 지금처럼 실패시킨다. LEGACY 판의 블록은 1판 모양 그대로다. `LearningArticleResult.Block`에 글자 조각을 이어 붙인 평문을 내는 메서드를 두어 017처럼 글을 근거로 읽는 소비자가 조각 구조를 몰라도 되게 한다(⑧). 다른 글이 소유한 용어의 다른 이름은 `PublishedTermRepository`에 새로 두는 여러 용어 읽기 메서드(예: `findPublishedAliases(Collection<TermId>)`, 게시되지 않은 용어는 결과에 없음)로 한 번에 읽는다. 지금 이 저장소의 읽기는 용어 하나씩(`findPublished`·`findOwnerArticleKey`)이다. 미리 보기(T159)도 이 메서드를 쓴다. 생성자에 의존(단계 저장소·규칙 포트 등)이 늘면 `backend/src/test/java/com/ssafy/thorp/learning/application/service/LearningQueryServiceTest.java`의 세 인자 생성자 호출도 같은 task에서 고친다 ‹B07›
+- [X] T123 [US1] (BE) `learning/presentation/response/LearningArticleResponse.java`와 `LearningController`를 [learning-public-api](contracts/learning-public-api.md) §3에 맞춘다 — 필드 추가만 하고 1판 필드의 모양과 `NON_NULL` 규칙은 바꾸지 않는다(배포 순서 호환). `LearningArticleResponse.from`은 결과의 `example`이 `null`이면 그 필드를 읽지 않고 키를 남긴 `"example": null`로 싣는다(§3-2) ‹B07›
+- [X] T124 [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningPublicApiIT.java`에 2판 경우를 더한다 — `article-current.json`·`article-previous.json`·`article-pre-release.json`과 JSON 동치, 1판 `articles-list.json`·`term.json`은 여전히 JSON 동치, 1판 `article.json`은 응답 가운데 그 파일에 있는 키(9월 판 필드)만 골라 JSON 동치(배포 순서 호환. 지금 `articleMatchesExample`의 완전 동치 단언과 머리 주석의 대조 설명을 이렇게 바꾼다), 소유하지 않은 언급의 `aliases`가 게시 색인에서 오고 그 용어가 게시되지 않았으면 빈 배열(quickstart 6-1, 9-2 서버 부분) ‹B07›
+- [X] T125 [US1] (BE) `backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningQueryService.java`에 커리큘럼 조회를 더한다 — 여섯 단계와 `status`(`OPEN`·`PREPARING`·`REPREPARING`), `OPEN` 단계의 공개된 글(읽는 순서, 번호, 읽기 분, 공개 용어 수, `hasExample`), `PREPARING` 단계의 이전 판 글(첫 단계를 공개한 뒤에만 채우며, `releasedStageCount = 0`이면 모든 단계에서 빈 배열이다), `releasedStageCount = 0`일 때만 `preReleaseArticles`(1판 목록과 같은 글·순서), `changeLog`(최신 순서), `notices`(`occurredAt`이 지금부터 7일 안). 공개되지 않은 단계의 새 글 제목·편수·날짜는 어떤 필드로도 내보내지 않는다(SC-017). 생성자에 더한 의존(변경 기록 저장소·`Clock` 등)에 맞춰 `LearningQueryServiceTest.java`의 생성자 호출을 같은 task에서 고친다. T120 뒤 ‹B08›
+- [X] T126 [US1] (BE) `LearningController`에 `GET /learning/curriculum`과 `learning/presentation/response/CurriculumResponse.java`를 더한다([learning-public-api](contracts/learning-public-api.md) §1) ‹B08›
+- [X] T127 [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningCurriculumIT.java` — `curriculum.json`·`curriculum-pre-release.json`과 JSON 동치(시각 고정), 세 `status`, 이전 판 목록, 공개 안내 7일 경계(고정 시계로 7일 직전·직후), 공개 전 단계에 새 글 초안이 있어도 응답에 없음(quickstart 6-1, 8-4, 8-7, 11-2 서버 부분) ‹B08›
+
+### Frontend — 글 화면 2판 (B10)
+
+- [X] T128 [P] [US1] (FE) `frontend/src/types/learning.ts`에 2판 타입(`Edition`, `Run` 판별 합집합, V2 블록 합집합, `QuizQuestion`, `stage`·`number`·`next`·`readingMinutes`·`minDwellSeconds` 등)을 더하고, `LearningArticle`은 `edition`으로 가르는 판별 합집합으로 두고, `CURRENT` 글의 `example`만 `LearningExample | null`이다. 같은 `type` 이름의 블록이 판마다 필드가 다르므로(9월 판 `paragraph`·`hypothetical`의 `text`와 `term`의 `sentence`, V2 `paragraph`·`hypothetical`의 `content`와 `term`의 `aliases`·`meaning`·`reading`·`caveat`) `frontend/src/api/learning.ts`의 `readArticle`이 `edition`을 먼저 읽고, `CURRENT`면 [learning-public-api](contracts/learning-public-api.md) §3-2의 V2 블록과 조각으로, `PRE_RELEASE`·`PREVIOUS`면 §3-1의 9월 판 블록으로 `readBlock`을 가른다. `edition`이 없거나 이 세 값이 아니면 읽지 못한 응답으로 둔다. `CURRENT` 글의 `example: null`은 그대로 `null`로 받고 객체면 지금처럼 `readExample`로 검사한다. 9월 판 글의 `example`은 지금처럼 객체여야 한다. 알 수 없는 블록은 지금처럼 통과시켜 글 전체가 실패하지 않게 한다. 오류 코드 합집합은 `frontend/src/types/api.ts`와 맞춘다. 타입에 필수 필드가 생겨 `npm run build`가 깨지지 않게 같은 태스크에서 `frontend/src/test/learningFixtures.ts`의 `tideArticle`·`harborArticle`에 2판 필드를 채우고(9월 판 블록이므로 `edition: 'PRE_RELEASE'`), 예시 없는 `CURRENT` 글 픽스처 하나를 더한다. `example` 타입이 넓어져 `frontend/src/components/learning/ExampleEntry.test.tsx`가 깨지지 않게 픽스처 타입이나 그 사용을 맞춘다 ‹B10›
+- [X] T129 [US1] (FE) `frontend/src/components/learning/article/RichText.tsx`와 `firstOccurrences.ts` — 조각을 텍스트 노드로 그린다. 출처 표시는 바로 앞 글자 옆의 '(*출처)' 링크(새 탭, `rel="noopener noreferrer"`, 마우스·초점에 출처 이름, 스크린 리더는 출처 이름과 외부 링크임을 읽음), 용어 언급은 처음 나오는 자리에 `이름 (다른 이름…)`, 다른 글이 소유한 용어의 처음 자리에 `TermHelp`(용어 글자 자체는 누를 수 없음, `returnTo`는 받은 `learningReturn`). `firstOccurrences`는 문서 순서(블록 → 필드 → 조각)로 한 번만 정한다([data-model](data-model.md) §5-4, R18) ‹B10›
+- [X] T130 [P] [US1] (FE) `frontend/src/components/learning/article/`에 `KeySummary.tsx`, `Misconception.tsx`(틀린 생각 칸에 '오해' 표시, '가상의 예'), `ComparisonTable.tsx`(`th scope="col"`, '가상의 예'), `InstitutionNote.tsx`(기준 시점과 출처), `TermDefinition.tsx`('뜻'·'읽는 법' 이름표, 한계 앞 ⚠️를 `aria-label="주의"`로), `HypotheticalDiagram.tsx`(SVG와 `@visx/scale`, 그림은 `aria-hidden`, '가상의 예'와 설명 문장, 수치가 그릴 수 없는 모양이면 설명 문장만) — 빨강·파랑 토큰을 쓰지 않는다 ‹B10›
+- [X] T131 [US1] (FE) `frontend/src/components/learning/article/ArticleBody.tsx` — V1·V2 블록을 모두 그리며 1판 `ArticleBlocks.tsx`를 대신한다. `frontend/src/components/learning/`의 `ArticleBlocks.tsx`·`ArticleBlocks.module.css`·`ArticleBlocks.test.tsx`를 지우고, 1판 테스트의 단언(태그 문자열을 태그로 해석하지 않음, 모르는 블록 종류는 그리지 않고 나머지는 그림)은 T134의 `ArticleBody.test.tsx`가 이어받는다. 본문 마지막 블록 바로 뒤에 완료 판정용 표지 요소(`data-article-end`)를 둔다. T129·T130 뒤 ‹B10›
+- [X] T132 [P] [US1] (FE) `frontend/src/components/learning/article/EditionNotice.tsx` — `PREVIOUS` 글의 머리 '이전 판' 표시와 글 끝 한 줄('이 글은 새 기준으로 다시 쓰기 전의 판입니다. 그래서 읽은 기록과 확인 문제를 남기지 않습니다.')과 '배우기 목록으로'. `PRE_RELEASE`에는 아무것도 붙이지 않는다([design-notes](design-notes.md) §7) ‹B10›
+- [X] T133 [US1] (FE) `frontend/src/pages/LearningArticlePage.tsx`를 2판으로 다시 쓴다 — 단계·번호·예상 읽기 시간 머리, `ArticleBody`, 예시와 '이 예시로 전략 진단하기'(예시가 있는 글만, 표지 뒤. `example`이 `null`이면 섹터 목록·버튼·투자 권고가 아니라는 문장을 담은 예시 구역 전체를 그리지 않는다), 글 끝 자리(비로그인 끝은 T183, 로그인 끝은 T189가 채운다), `EditionNotice`, 다음 글 연결(`learningReturn`을 넘김), 1판의 불러오지 못함·볼 수 없는 글 처리는 그대로 ‹B10›
+- [X] T134 [US1] (FE 테스트) `frontend/src/components/learning/article/ArticleBody.test.tsx`(블록마다 표시와 이름표, `dangerouslySetInnerHTML` 없음), `firstOccurrences.test.ts`(다른 이름 한 번, 도움말 표시 한 번, 소유 용어에는 표시 없음), `HypotheticalDiagram.test.tsx`(설명 문장 대체), `RichText.test.tsx`(출처 링크 속성과 읽는 이름), `frontend/src/pages/LearningArticlePage.test.tsx` 갱신(1판 '진도 문구 없음' 단언을 '비로그인 화면에 학습 기록 문구 없음'으로 바꾸고, `PREVIOUS`·`PRE_RELEASE`·V2 글 화면을 더함), `frontend/src/api/learning.test.ts` 갱신(`CURRENT` 응답의 V2 블록과 `PRE_RELEASE`·`PREVIOUS` 응답의 9월 판 블록이 각각 `loaded`, `CURRENT` 응답에 `text`만 있는 `paragraph`가 오거나 9월 판 응답에 `content`만 있는 `paragraph`가 오면 `failed`, `example: null`인 `CURRENT` 글은 `loaded`이고 9월 판 글은 `failed`, `edition`이 없거나 모르는 값이면 `failed`, 모르는 블록 종류는 두 판 모두 계속 통과) (quickstart 9-1~9-3, 9-5) ‹B10›
+
+### Frontend — 커리큘럼과 목록 (B11)
+
+- [ ] T135 [P] [US1] (FE) `frontend/src/api/learning.ts`에 `fetchCurriculum()`(`loaded`·`failed`, 예외를 던지지 않음)과 `frontend/src/types/learning.ts`의 `Curriculum`·`StageView`·`ReleaseLogEntry` 타입 ‹B11›
+- [ ] T136 [P] [US1] (FE) `frontend/src/components/learning/curriculum/viewStorage.ts`(`thorp.learning.view`, `curriculum`·`list`)와 `noticeStorage.ts`(`thorp.learning.dismissedNotices`, `entryKey` 목록) — `sessionStorage`만 쓰고 모든 접근을 try/catch로 감싸며 내용 버전을 둔다(002 `selectionStorage.ts`와 같은 방식) ‹B11›
+- [ ] T137 [US1] (FE) `frontend/src/components/learning/curriculum/`에 `StageLandscape.tsx`(여섯 풍경 `symbol`, 2색 선화, `aria-hidden`), `ArticleNode.tsx`(노드는 `frontend/src/components/learning/me/ArticleStamp.tsx`로 그리고 노드와 카드가 한 링크, 상태는 prop으로 받고 없으면 중립 모양. `ArticleStamp`는 완료·읽는 중·안 읽음·준비 중·중립 다섯 모양이고 `aria-hidden`, `useId`로 그라디언트 식별자, 강제 색 모드에서 점선·실선 구분 유지), `StageBand.tsx`(`OPEN`·`PREPARING`·`REPREPARING`, 준비 중은 점선 테두리와 사유 문장), `JourneyMap.tsx`(노드 위치를 재서 그리는 SVG 길, `ResizeObserver`, 1280px 완만한 S자·720px 미만 곧은 세로 길, 길 그리기 700ms는 `prefers-reduced-motion: no-preference`에서만), `ReleaseBoundary.tsx`(공개 경계 한 줄), `PreviousEditionCards.tsx`(모서리 접힌 쪽지 카드, 번호·상태 없음) — 자물쇠·잠금·예고 어휘를 쓰지 않는다([design-notes](design-notes.md) §3.1·§4·§5) ‹B11›
+- [ ] T138 [US1] (FE) `frontend/src/components/learning/curriculum/ListView.tsx`(1280px 표: 단계마다 `<tbody>`와 `th scope="rowgroup"` 구분 줄, 맨 왼쪽 노선 열 / 720px 미만 `<ol>`, 가로 스크롤 없음)와 `ViewToggle.tsx`(`aria-pressed` 두 단추, 고른 보기를 `viewStorage`에 기억) ‹B11›
+- [ ] T139 [US1] (FE) `frontend/src/components/learning/curriculum/ReleaseNotice.tsx`(7일 안 줄을 한 줄로 합침, 로그인 사용자에게만 1단계가 아닌 단계 공개가 있을 때 '지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.' 덧붙임, '○단계 보기'·'변경 기록' 연결, [닫기]는 `noticeStorage`에 기록, 움직임 없음, 상태 알림으로 두지 않음)와 `ChangeLog.tsx`(`<details>`, 날짜·공개한 단계나 더한 글·편수, 기록 그대로 문장 없음) ‹B11›
+- [ ] T140 [US1] (FE) `frontend/src/pages/LearningListPage.tsx`를 커리큘럼 조회로 다시 쓴다 — `releasedStageCount = 0`이면 `preReleaseArticles`로 1판과 같은 목록만(보기 전환·공개 안내·나의 학습 요소 없음), 공개 뒤에는 보기 전환·공개 안내·여정 지도 또는 목록 보기·공개 경계·변경 기록, 비로그인 사용자에게 `frontend/src/components/learning/me/GuestSample.tsx`('로그인하면 학습 기록이 남습니다' 한 줄과 로그인 연결(`useLoginReturn`), 숫자·상태 모양·윤곽선·점선 없는 견본 그림(흐린 길과 도장·메달 실루엣, `aria-hidden`), [design-notes](design-notes.md) §3.5. 일곱 갈래 메달 실루엣 경로는 `me/medalShapes.ts`에 두어 T193·T194가 같은 모양을 쓴다), 불러오지 못함·빈 목록은 1판 처리 그대로. `fetchLearningArticles` 사용을 없애고 옛 목록 조회의 프런트엔드 코드도 지운다. 지울 것은 `frontend/src/api/learning.ts`의 `fetchLearningArticles`·`readList`와 쓰는 곳이 없어진 `LearningListResult`, `frontend/src/types/learning.ts`의 `LearningArticleList`, `frontend/src/api/learning.test.ts`의 '배우기 글 목록 조회' 경우들, `frontend/src/pages/LearningArticlePage.test.tsx`의 `fetchLearningArticles` 대역이다. `LearningArticleSummary`·`readSummary`는 글 하나 조회(`readArticle`)가 쓰므로 남기고(`preReleaseArticles` 항목도 같은 네 필드다), 그 타입 주석의 'GET /learning/articles 목록의 한 항목'을 글 하나 응답과 `preReleaseArticles` 항목의 공통 필드로 고친다. B11을 마칠 때 `frontend/src`에서 `fetchLearningArticles`·`LearningArticleList` 검색 결과가 0건이어야 한다(T197의 전제) ‹B11›
+- [ ] T141 [US1] (FE 테스트) `frontend/src/pages/LearningListPage.test.tsx` 갱신(1판 '저장소에 쓰지 않음' 단언을 "학습 기록을 쓰지 않고 `thorp.learning.view`·`thorp.learning.dismissedNotices`만 쓴다. 로그인 연결을 누른 경우에만 014 `thorp.auth.returnTarget`이 더해진다"로, 첫 단계 공개 전 화면이 1판과 같음)과 `frontend/src/components/learning/curriculum/*.test.tsx`(보기 기억과 새 탭 기본값, 안내 [닫기]의 탭 범위, 합친 안내 문구와 로그인 덧붙임 조건, `PREPARING` 단계에 제목·편수·날짜 없음, 금지 어휘 없음, 좁은 화면 목록) (quickstart 4-1, 6-1, 8-4, 11-1, 11-2) ‹B11›
+- [ ] T142 [US1] (DOCS) `frontend/CLAUDE.md`의 저장 키 목록에 `thorp.learning.view`·`thorp.learning.dismissedNotices`를 더하고 "일반 사용자 배우기 화면은 저장소에 쓰지 않는다"를 "학습 기록은 브라우저 저장소에 쓰지 않는다. 배우기 화면이 쓰는 키는 화면 상태 키 둘(탭 단위)이고, 로그인 연결을 누르면 014 `useLoginReturn`이 `thorp.auth.returnTarget`을 쓴다"로 고친다 ‹B11›
+
+**Checkpoint**: 비로그인으로 첫 단계 공개 전·뒤 목록과 글이 spec대로 보인다
+
+---
+
+## Phase 21: User Story 2 — 예시로 바로 진단을 시작한다 (Priority: P1)
+
+**Goal**: 예시는 글마다 고르며, 예시가 있는 글만 본문 바로 뒤에 '이 예시로 전략 진단하기'를 둔다. 002 계약은 바뀌지 않는다.
+
+**Independent Test**: 예시가 있는 V2 글과 없는 V2 글에서 버튼의 유무와 자리(본문 끝 표지 뒤, 글 끝 자리 앞)를 확인한다(quickstart 9-1, 4-3 회귀).
+
+- [X] T143 [US2] (FE 테스트) `frontend/src/pages/LearningArticlePage.test.tsx`에 예시 경우를 더한다 — `example: null`이면 버튼도 안내도 없음, 있으면 버튼이 `data-article-end` 표지 뒤·글 끝 자리 앞, 누르면 002 계약 §2 모양 그대로(1판 T032 단언 유지) (quickstart 9-1) ‹B10›
+- [X] T144 [US2] (BE 테스트) `LearningAdminApiIT`에 예시 경우를 더한다 — V2 글을 예시 없이 게시하면 예시 검사 항목이 없고 판의 `sector_map_version`이 `NOT_CHECKED`, 예시가 있으면 v2의 `EXAMPLE_SECTOR_*`·`EXAMPLE_WEIGHT_SUM`이 1판과 같이 걸림, 공개 응답의 `example`이 `null`([data-model](data-model.md) §3-4, §8-2 #7~#10) ‹B07›
+
+**Checkpoint**: 예시 선택이 서버 검사와 화면에서 같은 규칙으로 동작한다
+
+---
+
+## Phase 22: User Story 3 — 도움말이 같은 설명을 쓴다 (Priority: P2)
+
+**Goal**: CURRENT 판 용어의 도움말은 뜻 문장을 보이고, 용어는 단계 공개와 같은 트랜잭션에서 새 글로 넘어간다. 다른 화면에서 온 경우 그 화면 이름의 돌아가기 연결을 보인다. 설정 항목 네 개는 등록표 뜻 문장으로 대체할 수 있다.
+
+**Independent Test**: V2 판 용어의 도움말 문장이 그 글 본문의 뜻 문장과 같고, 넘기기 전후로 도움말 연결이 옛 글에서 새 글로 끊김 없이 바뀌며, 돌아가기 표의 각 경로가 맞는 문구로 보이는지 확인한다(quickstart 8-5, 9-6, 12-1, 12-2 컴포넌트 부분).
+
+- [X] T145 [US3] (BE) 넘겨받기 — `LearningAdminService`의 저장에서 V2 초안 용어의 `transferFrom`을 받아 지금 소유 글(초안 또는 게시 색인)과 같은지 확인하고(아니면 `LEARNING_TERM_TRANSFER_INVALID`), 같으면 `transfer_from_article_id`를 둔 행으로 저장한다. 게시(글마다 게시와 단계 공개 모두) 트랜잭션에서 같은 확인을 다시 하고(글마다 게시는 409 `LEARNING_TERM_TRANSFER_INVALID`, 단계 공개는 422의 `TERM_TRANSFER` 항목이며 어느 쪽이든 아무것도 쓰지 않는다), 통과하면 넘기기를 실행한다: 옛 글의 초안 용어 행과 게시 색인 행 삭제, 옛 글 `draft_version + 1`, 새 글 행의 `transfer_from_article_id` 비움, 새 판으로 색인 쓰기. 관리 목록의 `pendingTransfers`와 초안 응답 용어의 `transferFrom`(B07에서는 늘 `null`)을 채운다([data-model](data-model.md) §7-2, R24). 옛 글의 게시 색인 행 하나만 지우는 용어 단위 삭제 메서드(예: `PublishedTermRepository.deleteTerm(ArticleId, TermId)`)를 더한다. 지금 이 저장소의 쓰기는 글 단위(`replaceForArticle`·`deleteForArticle`)뿐이다. T120 뒤 ‹B08›
+- [X] T146 [US3] (BE 테스트) `LearningPublicApiIT`에 V2 용어 도움말을 더한다 — `GET /learning/terms/{termId}`의 `sentence`가 그 글 CURRENT 판 용어 블록의 `meaning`과 같고 응답 모양은 1판 `term.json`과 같음(SC-003) ‹B07›
+- [X] T147 [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningTermTransferIT.java` — 넘겨받기 저장의 소유 확인 409, 같은 용어를 두 글이 넘겨받으려 하면 409, 저장 뒤 소유가 달라진 넘겨받기(옛 소유 글이 그 용어를 초안에서 빼고 게시 취소함)의 글마다 게시가 409 `LEARNING_TERM_TRANSFER_INVALID`이고 판·색인·두 글의 초안이 바뀌지 않음, 같은 경우의 단계 공개가 422 `TERM_TRANSFER` 항목, 단계 공개 전 도움말은 옛 글·옛 문장, 공개 뒤 새 글·뜻 문장, 그 사이 `LEARNING_TERM_NOT_READY`가 없음, 옛 글 `draft_version`이 오르고 `hasUnpublishedChanges: true`, 옛 글의 다음 이전 판 고치기 게시가 `TERM_BLOCKS_MATCH`로 걸림(quickstart 8-5) ‹B08›
+- [X] T148 [US3] (FE) `frontend/src/components/learning/returnTargets.ts`(R35 표: pathname → 문구. `/results/`(뒤에 한 글자 이상)와 `/regime-link`(그 자체와 `/regime-link/` 아래)만 앞부분 일치이고 나머지 다섯 경로는 정확 일치, 쿼리 문자열 허용, `normalizeReturnTarget` 통과 필수, navigation state의 `label`은 요구하지도 쓰지도 않음)와 `ReturnLink.tsx`(보조 `a` 연결, `navigate(path)`)를 만들고 `frontend/src/components/learning/`의 `ReturnToDiagnosisLink.tsx`·`ReturnToDiagnosisLink.module.css`·`ReturnToDiagnosisLink.test.tsx`를 지운다(테스트를 남기면 지운 파일을 import해 `npm run build`가 실패한다). 허용 경로와 연결의 단언은 T150의 `returnTargets.test.ts`·`ReturnLink.test.tsx`가 이어받는다. `LearningArticlePage`와 다음 글·글 안 도움말·목록 연결이 받은 `learningReturn`을 그대로 넘기게 한다([term-help-ui](contracts/term-help-ui.md) §3) ‹B10›
+- [X] T149 [US3] (FE) `frontend/src/components/learning/TermHelp.tsx` — `returnTo`를 선택으로 바꾸고(없으면 글 연결에 state를 싣지 않음) `fallbackMeaning`(`notReady`일 때 '설명 준비 중' 대신 그 문장, 연결 없음. 받으면 뜻 자리·`note`·글 연결 순서로 둔다)과 `articleLinkLabel`(기본 `‘{articleTitle}’ 글 읽기`)을 더한다. `fallbackMeaning`이 없을 때의 `note` 표시(맨 앞, 모든 상태, `notReady`에서 '설명 준비 중'을 덧붙이지 않음)와 003 `DetailSettingsPanel`의 `on="hover"` 사용은 9월 판 그대로 동작해야 한다([term-help-ui](contracts/term-help-ui.md) §2·§5). 같은 묶음에서 `frontend/CLAUDE.md` 규칙 절의 `TermHelp.tsx`(`termId`·`label`·`returnTo`) 줄을 `termId`·`label`만 필수이고 나머지 prop은 선택이라는 뜻으로 고친다(term-help-ui §2 Props 표) ‹B10›
+- [X] T150 [US3] (FE 테스트) `frontend/src/components/learning/returnTargets.test.ts`(표의 다섯 경우, 쿼리 문자열, 외부 주소·`//`·`/login` 거절, 정확 일치 경로에 덧붙은 경로(`/strategy-x`·`/strategy/x`·`/param-search/x`) 거절, `/regime-link`·`/regime-link/start` 허용과 `/regime-linkx` 거절, 뒤가 빈 `/results/` 거절, state에 `label`이 없어도 경로가 맞으면 연결), `ReturnLink.test.tsx`, `TermHelp.test.tsx` 갱신(`fallbackMeaning`과 `note`를 함께 준 경우의 상태별 표시와 순서: `ready`는 013 뜻 문장·`note`·글 연결이고 `fallbackMeaning` 없음, `notReady`는 `fallbackMeaning`·`note`이고 '설명 준비 중'과 연결 없음, `failed`는 다시 시도와 `note`. `note`만 준 9월 판 경우는 그대로. `articleLinkLabel`, `returnTo` 없음), `frontend/src/components/strategy/DetailSettingsPanel.test.tsx` 회귀 통과 (quickstart 9-6, 12-2 컴포넌트 부분) ‹B10›
+
+**Checkpoint**: 도움말이 2판 용어와 넘기기, 다른 화면의 돌아가기를 지원한다
+
+---
+
+## Phase 23: User Story 4 — 학습 없이도 진단을 시작할 수 있다 (Priority: P3)
+
+**Goal**: 나의 학습·경험치·배지가 배우기 안에만 있고 진단의 조건이 되지 않는다는 것을 확인한다.
+
+**Independent Test**: 진단 화면(002·003·005)과 다른 메뉴에서 나의 학습 요청·알림·문구가 없는지 확인한다(quickstart 11-2 배우기 밖 알림, 11-6).
+
+- [ ] T151 [US4] (FE 테스트) `frontend/src/pages/LearningOutsideScreens.test.tsx` — 로그인 사용자로 `/diagnosis/sectors`·`/strategy`·`/results/:token`·`/market-flow`를 그렸을 때 `/learning/me` 요청이 없고, 경험치·배지·레벨·공개 안내·'로그인하면 학습 기록이 남습니다' 문구가 없으며, 진단 진입에 학습 완료 조건이 없음(US4 시나리오 1~3, FR-030, SC-010·SC-016) ‹B13›
+
+**Checkpoint**: 배우기 기록이 진단 흐름에 끼어들지 않는다
+
+---
+
+## Phase 24: User Story 5 — 운영자가 새 기준 글을 편집하고 단계를 공개한다 (Priority: P2)
+
+**Goal**: V1 이전 판 고치기와 V2 글의 저장·검사·미리 보기, 단계 미리 검사와 단계 공개(전부 아니면 무, 번호 순서, 되돌리지 않음), 원고 가져오기·내보내기를 갖춘 관리 화면.
+
+**Independent Test**: 허용 목록 계정으로 V2 원고를 가져와 저장·미리 보기를 하고, 검사에 걸린 단계의 공개가 아무것도 바꾸지 않으며, 고친 뒤 1단계 공개가 글·변경 기록·공개 상태를 함께 바꾸는지, 2단계를 먼저 공개하려 하면 거절되는지 확인한다(quickstart 6-2, 7-1~7-6, 8-1~8-7).
+
+### Backend — 검사와 게시 v2 (B07)
+
+- [X] T152 [US5] (INFRA) `backend/src/main/resources/learning/publish-checks-v2.yml`을 [data-model](data-model.md) §8-3대로 만든다(금지 표현·숫자 패턴·예외는 v1과 같고 `exampleMarker`·`exampleRequired: false`·`reading`·`quiz` 값을 더함). 같은 묶음에서 `publish-checks-v1.yml` 머리 주석의 참조를 `data-model §8-1`로 고친다(규칙 값은 바꾸지 않음) ‹B07›
+- [X] T153 [US5] (BE) `domain/model/PublishCheckRulesV2.java`와 `learning/infrastructure/rules/YamlPublishCheckRulesLoader.java`가 v1·v2 두 파일을 시작할 때 읽게 하고(하나라도 없거나 틀리면 기동 실패), `learning/application/port/PublishCheckRulesPort.java`가 둘을 각각 돌려주게 한다. 지금 포트에는 `current()` 하나뿐이므로 v1·v2를 가르는 두 메서드(예: `v1()`·`v2()`)로 바꾸고, 같은 task에서 호출처를 고친다. 대상은 `LearningAdminService`의 게시, `backend/src/test/java/com/ssafy/thorp/learning/domain/model/PublishCheckTest.java`의 규칙 읽기, `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/rules/YamlPublishCheckRulesLoaderTest.java`의 기본 생성자·패키지 생성자 `YamlPublishCheckRulesLoader(Resource)`·`RESOURCE_PATH` 사용이다. 이 테스트에 v2 실제 파일 읽기와, v2 파일이 없거나 틀리면 로더 생성이 실패하는 경우를 더한다 ‹B07›
+- [X] T154 [US5] (BE) `domain/model/PublishCheckV2.java` — [data-model](data-model.md) §8-2의 열일곱 검사를 모두 실행하고 순서대로 돌려주는 순수 함수. 입력은 초안, v2 규칙, 열린 대응표 섹터 집합(예시가 있을 때만 쓰임), 알려진 `termId` 집합(초안 용어 전체 ∪ 게시 색인), 검사 기준 날짜다. 기준 날짜는 `ELEMENT_FORMAT`이 제도 안내 `asOf`가 미래인지 가르는 오늘이며, 호출하는 T157·T162가 주입한 `Clock`(Asia/Seoul)의 날짜로 정한다. 금지 표현·숫자 검사 대상과 예외(오해 `wrong`, 틀린 보기, 출처 이름, 숫자 허용 요소, `(예:` 괄호), NFKC와 공백 줄이기, 위치(§8-4: `block`의 `field`, `quiz`의 `questionId`·`choiceId`), `READING_TIME` 메시지의 분과 글자 수를 정한다. 결과 모델도 같은 task에서 넓힌다. `PublishCheckFailure.Check`에 §8-2의 v2 이름(`KEY_SUMMARY`·`HEADING_COUNT`·`HYPOTHETICAL_PRESENT`·`MISCONCEPTION_PRESENT`·`READING_TIME`·`TERM_SENTENCES`·`TERM_MENTION_KNOWN`·`QUIZ`·`ELEMENT_FORMAT`)을 더하고 v1의 `TERM_SENTENCE`는 그대로 둔다. `CheckLocation`에 `Part.QUIZ`와 `field`(`block`·`term`)·`questionId`·`choiceId`(`quiz`)를 더하고, `index`를 `block`과 `quiz`(식별자 없는 새 문제)에 허용한다. `PublishCheckFailedException`의 `details` 변환은 값이 있는 새 키만 싣는다. 새 키가 없는 v1 항목의 응답은 지금 모양 그대로다(1판 `publish-check-failed.json` JSON 동치). T111·T153 뒤 ‹B07›
+- [X] T155 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/domain/model/PublishCheckV2Test.java` — 열일곱 검사가 각각 걸리는 초안과 모두 통과하는 초안, 여러 항목 동시 반환과 순서, 예외 자리(오해 `wrong`의 `확률`, 틀린 보기의 `추천합니다`, `(예: 왕복 약 0.19%)`, 표·확인 문제·제도 안내의 숫자), 같은 표현이 바로잡기 칸·정답 보기에 있으면 걸림, `(예:` 없는 괄호 안 숫자는 걸림, 전각 숫자, 제도 안내 `asOf`가 기준 날짜와 같으면 통과하고 다음 날이면 `ELEMENT_FORMAT`, 항목마다 채운 §8-4 위치(`field`·`questionId`·`choiceId`) (quickstart 7-2, 7-3) ‹B07›
+- [X] T156 [US5] (BE) 관리 저장·만들기·게시 취소·목록 2판 — `LearningAdminService`·`learning/presentation/request/SaveDraftRequest.java`(V2 블록·조각·확인 문제·용어 v2의 Jackson 다형 읽기, 알 수 없는 `type`·조각 키 400)·`CreateArticleRequest.java`(`stageKey`·`stagePosition` 필수, `readingOrder` 자동, 새 글 V2)·응답 DTO. 저장은 `format`·`stageKey`·`stagePosition`·`quiz`가 없으면 지금 값을 유지하고(1판 화면 호환), 형식별 모양 위반은 `details.fields`와 함께 400, V2→V1은 LEGACY 판이 있을 때만(아니면 409 `LEARNING_FORMAT_OUTDATED`), 없는 `stageKey`는 404. 게시 취소는 공개 배치를 비운다. 목록에 `format`·`stage`·`stagePosition`·`publishedEdition`·`needsReview`·`pendingTransfers`(B07에서는 0)를 더하고, 목록 순서를 초안 단계 번호 → `stagePosition` → `articleId`로 바꾼다(지금 `LearningArticleRepository.findAllOrdered`는 `reading_order`·`article_key` 순서다). 초안 응답의 V2 용어에는 `transferFrom`을 싣는다(B07에서는 늘 `null`, T145가 채운다). 응답 DTO 작업에는 `learning/presentation/response/AdminArticleResponse.java`의 V2 블록·글자 조각·용어 v2·확인 문제·배치 필드와 `AdminArticleListResponse.java`의 목록 필드가 들어간다. 요청을 도메인으로 바꾸는 `learning/presentation/controller/LearningAdminController.java`의 `toCommand`·`toBlock`에는 V2 블록·조각·용어·확인 문제·배치 변환이 들어간다([learning-admin-api](contracts/learning-admin-api.md) §2~§5·§7) ‹B07›
+- [X] T157 [US5] (BE) `domain/model/PublishMode.java`와 `LearningAdminService.publish` 2판 — [data-model](data-model.md) §10-1 게시 방식 표(V2·공개됨 → v2 검사와 `CURRENT` 판, V2·공개 전 → 409 `LEARNING_STAGE_NOT_RELEASED`, V1·공개 전 → v1 검사와 `LEGACY` 판, V1·공개됨 → 409 `LEARNING_FORMAT_OUTDATED`). V2 게시는 같은 문제 판정(T110)으로 새 식별자를 주고 초안의 문제 식별자도 같게 바꾸되 `draft_version`은 그대로 두며, 판에 `reading`을 넣고, 게시 색인에 `sentence`(뜻 문장)와 `aliases`를 쓰고, 예시가 없으면 `sector_map_version = NOT_CHECKED`다. 두 방식 모두 공개 배치를 초안 배치로 바꾼다. 응답에 `edition`·`renamedQuestions`·`transferredTerms`(B07에서는 빈 배열)를 싣는다 ‹B07›
+- [X] T158 [US5] (BE) '확인 필요' — `learning/infrastructure/config/LearningProperties.java`(`thorp.learning.institution-note-review-days`, 기본 180)를 `backend/src/main/resources/application.yml`에 두고, `learning/infrastructure/config/LearningConfig.java`(`@EnableConfigurationProperties(LearningProperties.class)`)로 등록한다. `ThorpApplication`에 `@ConfigurationPropertiesScan`이 없으므로 `myrecord/infrastructure/config/MyRecordConfig.java`와 같은 방식이다. application 계층은 infrastructure를 참조할 수 없으므로(`ArchitectureTest` 계층 규칙) `LearningConfig`가 기간을 담은 불변 값(`learning/application/port/` 아래, `MyRecordLimits`와 같은 자리)을 빈으로 만들어 `LearningAdminService`에 넘기고, 관리 목록의 `needsReview`를 공개 판의 제도 안내 `asOf`와 주입한 `Clock`으로 계산한다. 제도 안내가 없거나 게시되지 않았으면 `null`(R37) ‹B07›
+- [X] T159 [US5] (BE) 미리 보기 — `LearningAdminController`에 `GET /admin/learning/articles/{articleId}/preview`를 더하고, 초안으로 공개 글 응답 모양을 만든다(`edition`은 지금 게시하면 될 값, `preview: true`, `number`·`next`는 `null`, `reading`은 지금 v2 규칙, 언급 조각의 다른 이름은 초안 용어나 게시 색인, 예시 `available`은 지금 대응표). 검사하지 않고 아무것도 쓰지 않는다([learning-admin-api](contracts/learning-admin-api.md) §8) ‹B07›
+- [X] T160 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningAdminApiIT.java` 2판 — `admin-article-v2.json`·`admin-preview.json`·`publish-check-failed-v2.json` 대조, 형식별 저장 400, V2→V1 409, 게시 방식 네 경우, `renamedQuestions`와 게시 뒤 읽은 초안(새 식별자로 바뀌고 `draftVersion`은 그대로이며, 그 초안을 같은 `expectedDraftVersion`으로 저장하면 200, 게시 전 초안의 옛 식별자로 저장하면 400), `NOT_CHECKED`, `stageKey` 없는 만들기 400, `needsReview` 179·181일(고정 시계), 1판 관리 흐름 테스트는 2판 계약에 맞춰 고친 뒤 전부 통과(`listShowsNineDrafts`의 목록 아홉 편과 `readingOrder` 1..9 단언은 T105의 27편과 T156의 새 순서(초안 단계 번호 → `stagePosition` → `articleId`)로, `readingOrder`만 싣는 만들기 요청은 `stageKey`·`stagePosition`으로, 동시 만들기 경우의 직접 `INSERT`는 `stage_id`·`stage_position`을 넣고, 관리 픽스처 셋과의 키 구성 대조는 T098이 2판 키를 더한 파일로 한다) (quickstart 1 표, 6-2, 7-4~7-6) ‹B07›
+- [X] T161 [US5] (DOCS) B07 배포 전 확인 — 배포 직전 운영 DB의 `learning_article.article_key` 목록이 마이그레이션의 아홉 글과 같은지 확인한다. 10-02 덤프는 그 뒤에 관리 화면에서 만든 글을 담지 않으므로 대신 쓰지 않는다. 다른 글이 있으면 아직 적용되지 않은 T105 마이그레이션(`backend/src/main/resources/db/migration/V{작성 시각}__learning_stages_and_v2_content.sql`)에 그 글의 단계 배치를 정하는 대응을 더한다. 행을 지우거나 기존 값을 바꿔야만 풀리면 그 대응은 되돌릴 수 없는 변경이므로 배포 전에 운영 DB를 백업하고 팀 승인을 받는다. 확인 결과, 영향 범위(기존 행에 NOT NULL을 거는 `stage_id`, 제약 추가), plan Constitution Check의 판정(되돌릴 수 없는 변경이 아니고, 실패하면 마이그레이션 전체가 되돌아간다)을 B07 MR 본문에 적는다(R15, constitution "스키마 변경 규칙") ‹B07›
+
+### Backend — 단계 공개 (B08)
+
+- [X] T162 [US5] (BE) `learning/application/service/LearningStageAdminService.java`와 `domain/model/StageRelease.java` — 단계 목록(초안 단계 글, 공개 배치만 이 단계인 글, `releasable`), 미리 검사(쓰기 없음: `blockers` `ALREADY_RELEASED`·`ORDER`·`EMPTY`, 글마다 `FORMAT`·`PLACEMENT`·`TERM_TRANSFER`·`TERM_ID_TAKEN`·v2 검사), 단계 공개 트랜잭션([data-model](data-model.md) §10-3: 단계 행 잠금 → 순서·이미 공개·빈 단계 409 → 공개 집합 글 행을 `id` 순서로 잠금 → 목록·초안 번호 불일치 409 `LEARNING_STAGE_CHANGED` → 글마다 항목 하나라도 걸리면 422 `LEARNING_STAGE_CHECK_FAILED`로 아무것도 쓰지 않음 → 시각 하나로 글마다 게시(T157)·넘기기(T145)·비어 있는 `first_released_at`·`released_at`·`released_by_user_id`·`STAGE_RELEASED` 변경 기록). 편수는 `first_released_at`이 비어 있던 글만 세고 LEGACY 판이 있던 글이 다시 쓴 글이다(그때 제목 저장). T145·T157 뒤 ‹B08›
+- [X] T163 [US5] (BE) `backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningAdminService.java`의 글마다 게시가 공개된 단계에 처음 게시되는 글이면 `first_released_at`과 `ARTICLE_ADDED` 변경 기록(그때 제목)을 같은 트랜잭션에서 쓰게 한다. 다시 게시·게시 취소·공개된 단계 사이 이동은 기록하지 않는다. 넘기기 전 `transferFrom` 재확인(T145)에 걸리면 409 `LEARNING_TERM_TRANSFER_INVALID`이고 판·색인·초안·변경 기록을 쓰지 않는다. 응답의 `transferredTerms`를 단계 공개와 같은 `termId`·`fromArticleId`·`toArticleId` 모양으로 채운다 ‹B08›
+- [X] T164 [US5] (BE) `learning/presentation/controller/LearningStageAdminController.java` — `GET /admin/learning/stages`, `GET /admin/learning/stages/{stageKey}/readiness`, `POST /admin/learning/stages/{stageKey}/release`와 요청·응답 DTO. 경로가 `LearningAdminWebConfig` 가로채기와 `SecurityConfig`의 `/admin/learning/**`에 들어가는지 확인한다([learning-admin-api](contracts/learning-admin-api.md) §9~§11) ‹B08›
+- [X] T165 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningStageReleaseIT.java` — 픽스처 넷 대조, 2단계 먼저 409, 빈 단계 409, 목록·번호 불일치 409, 글 하나 실패 시 422와 아무 변화 없음(판·이벤트·색인·`released_at`·변경 기록), 미리 검사가 아무것도 쓰지 않음, 성공 시 모든 쓰기가 같은 시각, 다시 쓴 글 수와 제목, 공개된 단계에서 옮겨 온 글은 편수에 없음, `ARTICLE_ADDED` 한 번(다시 게시해도 늘지 않음), 모든 글 게시 취소 뒤 `REPREPARING`과 공개일 유지, 비로그인 401·권한 없음 404·CSRF 403(quickstart 8-1~8-4, 8-6, 8-7) ‹B08›
+- [X] T166 [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearningStageReleaseIT.java`에 동시성 경우를 더한다 — 같은 단계 공개 둘이 동시에 오면 하나만 성공하고 다른 하나는 `LEARNING_STAGE_ALREADY_RELEASED`, 단계 공개와 그 단계 글의 저장이 겹치면 저장이 먼저면 `LEARNING_STAGE_CHANGED`·공개가 먼저면 저장이 `LEARNING_DRAFT_CHANGED` 없이 정상 저장(공개 뒤 초안 저장. 공개가 그 글의 초안을 바꾸지 않은 경우다). 공개가 그 글의 `transferFrom`을 비웠으면 공개 전에 읽은 초안의 저장은 409 `LEARNING_TERM_TRANSFER_INVALID`이고 초안이 바뀌지 않으며, 공개 뒤 다시 읽은 초안의 저장은 정상 저장이다(문제 식별자가 바뀌는 경우는 T160) ‹B08›
+
+### Frontend — 관리 화면 2판 (B14)
+
+- [ ] T167 [P] [US5] (FE) `frontend/src/types/learningAdmin.ts`와 `frontend/src/api/learningAdmin.ts` 2판 — 초안 v2 필드, 미리 보기, 단계 목록·미리 검사·단계 공개(`runCsrfProtectedMutation`), 2판 오류 코드를 결과 합집합으로(예외를 던지지 않음), `frontend/src/types/api.ts` 합집합 갱신. 검사 위치도 2판으로 넓힌다. `PublishCheckLocation`의 `part`에 `quiz`를, 선택 필드로 `field`·`questionId`·`choiceId`를 더하고, `frontend/src/api/learningAdmin.ts`의 `CHECK_LOCATION_PARTS`와 `readLocation`이 이를 읽게 한다. `readFailures`는 모르는 `part`가 하나라도 있으면 목록 전체를 비우므로, 이 확장이 없으면 v2 게시 422의 항목이 하나도 보이지 않는다. 단계 미리 검사와 단계 공개 422의 글별 `failures`도 같은 `readFailures`로 읽는다. 공용 타입에 `quiz`를 더하면 `frontend/src/components/learning/admin/PublishCheckResultList.tsx`의 `describeLocation` switch가 깨지므로, 같은 task에서 `quiz` 위치(문제 식별자와 있으면 보기 식별자, 식별자 없는 새 문제는 순번, 둘 다 없으면 확인 문제 전체)와 `field`를 사람이 읽는 위치로 더한다. 단계 미리 검사에서 글마다 그려도 제목 `id`가 겹치지 않게 한다 ‹B14›
+- [ ] T168 [P] [US5] (FE) `frontend/src/components/learning/admin/richTextSyntax.ts`(`{{용어:termId|글자}}`·`{{출처:이름|https://…}}`·`\{{`를 조각 배열로, 조각 배열을 문법 문자열로. 틀린 문법은 줄·열 위치를 가진 오류)와 `RichTextField.tsx`(문법 문자열을 편집하고 저장 때 조각으로 바꿈, 오류 위치 표시) — 서버와 독자 화면은 이 문법을 모른다(R26) ‹B14›
+- [ ] T169 [US5] (FE) `frontend/src/components/learning/admin/BlockEditor.tsx` 2판(V2 블록 열 종류 추가·순서 바꾸기, 표·도식·제도 안내 전용 입력, V1 형식이면 1판 네 종류만)과 `PlacementEditor.tsx`(단계 선택·단계 안 순서·형식 표시, V2→V1 전환은 LEGACY 판이 있는 글에서만 보임). T168 뒤 ‹B14›
+- [ ] T170 [US5] (FE) `frontend/src/components/learning/admin/QuizEditor.tsx`(문제 2~3개, 보기 2~5개, 정답 하나를 고르는 라디오, 풀이, 받은 식별자 유지·새 항목은 `null`)와 `TermListEditor.tsx` 2판(다른 이름·뜻·읽는 법·한계, 저장 응답이 `LEARNING_TERM_ID_TAKEN`이면 `ownerArticleId`로 '이 글로 넘겨받기' 제안 → `transferFrom` 설정, 넘겨받는 중 표시) ‹B14›
+- [ ] T171 [US5] (FE) `frontend/src/components/learning/admin/ManuscriptTransfer.tsx`(원고 가져오기: `JSON.parse`와 편집 문법 해석, 지금 초안에 없는 `questionId`·`choiceId`는 `null`로 바꿈, 모양이 틀리면 위치와 함께 거절하고 편집 상태를 바꾸지 않음 / 원고 내보내기: 지금 편집 상태를 원고 JSON으로)와 `docs/learning-content/README.md`(원고 형식, 편집 문법, `current/`·`next/` 자리와 옮기는 때, 원고 MR 검토 항목: FR-006 이름, FR-027 동작 확인, SC-013 언급 표시, SC-014 출처, 보기 글자로 뜻 바꾸지 않기) ‹B14›
+- [ ] T172 [US5] (FE) `frontend/src/components/learning/admin/ArticlePreview.tsx`(미리 보기 응답을 B10의 `ArticleBody`와 비로그인 확인 문제로 그림)를 `frontend/src/pages/AdminLearningEditPage.tsx`에 붙이고, 게시 응답의 `renamedQuestions`('이미 답한 사용자에게도 새 문제로 보입니다')·`transferredTerms` 안내, `LEARNING_STAGE_NOT_RELEASED`·`LEARNING_FORMAT_OUTDATED` 안내를 더한다. 게시에 성공하면 초안(계약 §4)을 다시 읽어 화면 초안과 기준 번호를 바꾸고 게시 안내는 그대로 둔다(게시가 바꾼 문제 식별자와 비운 `transferFrom`을 받기 위해서다. 다시 읽지 못하면 '새로 불러오기'를 보인다). `adminDraftStorage.ts` 내용 버전을 2로 올리고 버전 1 보관본은 복원하지 않는다는 안내와 함께 버리며, 같은 파일에 보관본의 문제 식별자를 `renamedQuestions`대로 바꾸고 `transferredTerms` 가운데 `toArticleId`가 그 글인 용어의 `transferFrom`을 비우는 함수(초안 번호는 그대로)를 더해 게시 성공 뒤 이 글의 보관본에 적용한다 ‹B14›
+- [ ] T173 [US5] (FE) `frontend/src/components/learning/admin/StageReleasePanel.tsx`를 `frontend/src/pages/AdminLearningListPage.tsx`에 붙인다 — 단계 목록과 공개 상태, '미리 검사' 결과(막는 것과, 글마다 항목을 `PublishCheckResultList`로 그림, `message` 그대로), '단계 공개'는 되돌릴 수 없다는 확인 창(공개될 글 목록)에서 확인할 때만 요청, 409·422 처리, 공개에 성공하면 `published[].renamedQuestions`와 `transferredTerms`로 그 글들의 보관본을 T172의 함수로 고침. 관리 목록에 형식·단계·판·'확인 필요'·넘겨받는 중 열을 더한다 ‹B14›
+- [ ] T174 [US5] (FE 테스트) `frontend/src/components/learning/admin/richTextSyntax.test.ts`(왕복, 이스케이프, 오류 위치), `ManuscriptTransfer.test.tsx`(왕복 동일, 모르는 식별자 `null`, 틀린 원고 거절 시 편집 상태 그대로), `QuizEditor.test.tsx`, `StageReleasePanel.test.tsx`(확인 전 요청 없음, 취소 시 요청 없음, 실패 항목 그대로 표시, 공개 성공 뒤 그 글 보관본의 문제 식별자·`transferFrom`이 바뀌고 초안 번호는 그대로), `frontend/src/pages/AdminLearningEditPage.test.tsx` 2판(게시 직후 저장: 게시 성공 뒤 초안을 다시 읽고, 바로 한 저장 요청이 같은 `expectedDraftVersion`과 `renamedQuestions`의 새 식별자, 비운 `transferFrom`을 싣는다)·`frontend/src/api/learningAdmin.test.ts` 2판(단계 공개 요청의 `X-XSRF-TOKEN`, `quiz` 위치와 `field`가 있는 422 항목을 읽어 목록이 비지 않음), `frontend/src/components/learning/admin/PublishCheckResultList.test.tsx` 2판(`quiz` 위치와 `field` 표시, v2 검사 이름을 그대로 보임) (quickstart 7-1, 7-4, 7-5, 8-2) ‹B14›
+
+**Checkpoint**: 운영자가 원고를 넣고 검사하고 단계를 공개할 수 있다
+
+---
+
+## Phase 25: User Story 6 — 나의 학습으로 어디까지 읽었는지 보고 이어서 읽는다 (Priority: P2)
+
+**Goal**: 로그인 사용자의 완료·읽은 위치·첫 답·익힘·경험치·레벨·배지를 서버에 기록하고, 글 끝 완료 카드와 '나의 학습' 화면, 회원정보의 학습 초기화를 제공한다. 비로그인 사용자는 확인 문제를 풀 수 있지만 아무것도 남지 않는다.
+
+**Independent Test**: 로그인 계정으로 1단계를 모두 읽고 문제를 풀어 경험치·단계 완주·배지·레벨이 계산대로 생기고, 다른 기기에서 같은 기록이 보이며, 학습 초기화로 모두 사라지는지, 비로그인으로는 아무 기록도 생기지 않는지 확인한다(quickstart 9-4, 10-1~10-11, 11-3~11-6).
+
+### Backend — 나의 학습 기록 (B09)
+
+- [ ] T175 [US6] (INFRA) `backend/src/main/resources/db/migration/V{작성 시각}__learning_records.sql` — [data-model](data-model.md) §11의 `learning_progress`·`learning_answer`·`learning_exp_entry`·`learning_badge_award`(모든 `user_id`는 `users(id)` 외래키 `ON DELETE CASCADE`, CHECK, UNIQUE `(user_id, kind, ref_key)`, 색인 `(user_id, article_id)`). 네 테이블은 JPA 엔티티 없이 JdbcTemplate으로만 쓰므로(T178) Flyway를 끄고 `ddl-auto: update`로 도는 `local` 프로필(`backend/src/main/resources/application-local.yml`)에서는 생기지 않는다. B09 MR 본문의 테스트 절에 '나의 학습은 Flyway를 켠 로컬([quickstart](quickstart.md) §0 명령)에서만 동작한다'를 적는다 ‹B09›
+- [ ] T201 [US6] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningMigrationTest.java`에 B09 네 테이블을 더한다 — 네 테이블이 비어 있음, `learning_progress`의 `furthest_percent` 범위·`mastered_via` 값·`(mastered_at IS NULL) = (mastered_via IS NULL)`과 `learning_exp_entry`의 `kind`·`points` CHECK 위반 삽입 거절, 같은 `(user_id, kind, ref_key)` 장부 줄·같은 `(user_id, article_id, question_key)` 첫 답·같은 `(user_id, badge_key)` 배지의 두 번째 삽입 거절, 네 테이블 `user_id` 외래키의 삭제 규칙이 `CASCADE`(`RegimeLinkMigrationTest`의 `deleteRule`과 같은 information_schema 조회, FR-025). 네 테이블은 JPA 엔티티가 없어 `ddl-auto=validate`가 보지 않으므로 구조는 이 테스트가 지킨다. 사용자 행은 `TestUsers.ensure`로 준비한다. 또 `backend/src/test/java/com/ssafy/thorp/learning/support/LearningSeeds.java`의 `reset()`이 이 네 테이블을 맨 먼저 비우게 한다. 남은 기록은 다음 테스트의 경험치·배지 계산에 섞이고, `learning_article`을 가리키는 외래키 때문에 관리 API가 만든 글을 지우는 문장을 막는다(quickstart 1 "2판 마이그레이션"). T175 뒤 ‹B09›
+- [ ] T176 [US6] (BE) 도메인 `backend/src/main/java/com/ssafy/thorp/learning/domain/` — `vo/BadgeKey.java`(`ArticleId`와 같은 형식, 3~70자, [data-model](data-model.md) §2), `model/LearnerProgress.java`·`FirstAnswer.java`·`ExpEntry.java`·`ExpLedger.java`(정답 몫 상한, R29)·`Level.java`(문턱 표와 11 이상 900씩, 합계 ≥ 문턱, 보이는 가장 높은 레벨과 N·사유)·`BadgeCatalog.java`(31개: 키·갈래·이름·기준 문장, [data-model](data-model.md) §12-4)·`BadgeStatus.java`·`PreparingReason.java`·`ContentScope.java`(공개된 글·문제·용어·단계)·`LearnerFacts.java`·`Settlement.java`(단계 완주와 배지를 찾는 순수 함수, §12-5) ‹B09›
+- [ ] T177 [P] [US6] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/domain/model/` — `LevelTest`(합계 100 → 레벨 2, 1·2단계 8편 → 보이는 4·N 5·`MORE_STAGES`, 27편 여섯 단계 → 8·N 9·`MORE_ARTICLES`, 게시 취소로 현재 레벨이 더 높은 경우), `ExpLedgerTest`(quickstart 10-5 표의 네 경우), `BadgeCatalogTest`(31개 키, 이름에 '고수'·'전문가'·'상위'·'수익'·'순위' 없음), `SettlementTest`(운영자 게시 취소로 단계 완주 충족, `exploration`의 빈 조건, `terms-all`·`read-27`은 여섯 단계 공개 뒤, `PREPARING` 사유 다섯 가지와 묶음 기준) ‹B09›
+- [ ] T178 [US6] (BE) 저장 — `learning/application/repository/LearnerProgressRepository.java`·`LearnerAnswerRepository.java`·`ExpLedgerRepository.java`·`BadgeAwardRepository.java`와 `learning/infrastructure/persistence/`의 구현(JdbcTemplate): 위치 upsert(`GREATEST`, `last_opened_at` 갱신), 완료 upsert(`furthest_percent = 100`), 진행 행 `FOR UPDATE` 잠금, 첫 답·장부·배지의 `ON CONFLICT DO NOTHING` 뒤 읽기, `deleteAllForUser`(네 테이블 한 트랜잭션). 장부·답·배지에는 수정·개별 삭제 메서드를 두지 않는다 ‹B09›
+- [ ] T179 [US6] (BE) `learning/application/service/LearnerService.java` — [learning-me-api](contracts/learning-me-api.md) §1~§7: 전체(정산, 첫 단계 공개 전 409 `LEARNING_NOT_RECORDABLE`), 글 기록(+`continueReading`), 위치, 완료(+`ARTICLE_COMPLETED`·정산·`continueReading`), 첫 답(완료 필요, 공개 판 문제·보기 확인, 공개 판으로 판정, 저장 뒤 응답, 이미 답했으면 저장된 답, 정답 몫 상한, `all_answered_at`과 `ALL_CORRECT`, 첫 답 익힘(맞은 첫 답이 하나 생기면 모든 문제에 답하기 전이어도 `FIRST_ANSWER`, [data-model](data-model.md) §12-3), 정산), 다시 풀기(모든 문제에 답했고 첫 답 정답이 0개이며 익힘이 아닐 때만, 하나 맞히면 `RETRY` 익힘, 경험치 없음), 학습 초기화. 기록할 수 있는 글은 CURRENT 판이 게시 중인 글뿐이다. `gained`를 요청마다 만든다. T176·T178 뒤 ‹B09›
+- [ ] T180 [US6] (BE) `learning/presentation/controller/LearnerController.java`(`/learning/me` 일곱 엔드포인트)·`learning/presentation/support/LearnerAccess.java`(로그인 주체에서 사용자 ID, `backtest`를 참조하지 않음)·요청·응답 DTO, `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`에 `/learning/me/**` `authenticated()` 한 줄 ‹B09›
+- [ ] T181 [US6] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/learning/LearnerApiIT.java` — 픽스처 다섯 대조, 비로그인 401·CSRF 403, `PREVIOUS`·`PRE_RELEASE` 글 409, 첫 단계 공개 전 `GET /learning/me` 409, 읽은 위치 기록(더 작은 값을 보내도 기록된 비율이 줄지 않음, 다른 `READING` 글을 연 뒤 앞 글에 같은 값을 다시 보내면 `last_opened_at`이 바뀌어 앞 글이 `RESUME` 대상이 됨, 행이 없는 글에 0을 보내도 `READING`이고 `percent`는 1, [learning-me-api](contracts/learning-me-api.md) §3, quickstart 10-2 서버 부분), `continueReading` 세 경우(`last_opened_at`이 가장 늦은 `READING` 글의 `RESUME`, `READING` 글이 없으면 읽는 순서상 첫 `UNREAD` 글의 `START`와 `percent: null`, 공개된 글을 모두 완료하면 `ALL_DONE`이고 공개되지 않은 단계가 있으면 `moreStagesPreparing: true`·여섯 단계를 모두 공개했으면 `false`, [data-model](data-model.md) §12-2), 완료 멱등, 완료 전 답 409, 첫 답 저장 뒤 정답 공개와 다른 보기의 재요청에 저장된 답, 문제 바뀐 뒤 `LEARNING_QUESTION_NOT_FOUND`, 운영자가 문제를 바꾸거나 지워 게시한 뒤 `GET /learning/me/articles/{articleId}`의 `answers`에 공개 판에 남은 문제의 첫 답만 있고 경험치 합계가 줄지 않음([learning-me-api](contracts/learning-me-api.md) §2, quickstart 7-5 사용자 쪽), 다시 풀기 조건과 `persistence` 배지, quickstart 10-5 경험치 표, 운영자 게시 취소 뒤 `GET`에서 단계 완주·배지(10-7), 레벨 N(10-8), 학습 초기화가 그 사용자 행만 지움(10-9), 같은 문제 동시 두 요청에 행 하나(SC-009), `TestUsers.ensure`로 사용자 행 준비 ‹B09›
+- [ ] T182 [US6] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java`에 규칙 "`learning`은 `backtest`를 참조하지 않는다"를 더한다(R33, plan 게이트 재확인) ‹B09›
+
+### Frontend — 비로그인 확인 문제 (B10)
+
+- [X] T183 [US6] (FE) `frontend/src/components/learning/article/QuizPanel.tsx` 비로그인 모드와 글 끝 자리 — 답하면 바로 맞음·틀림과 정답·풀이, 틀린 보기에 '틀린 보기' 표시, 다음 문제로, 모두 답하면 'n문제 중 m개', 어떤 요청·저장도 하지 않고 글을 다시 열면 처음 상태. 글 끝은 확인 문제, 다음 글(없으면 '배우기 목록으로'와 공개되지 않은 단계가 있으면 '다음 단계는 준비 중입니다'), '로그인하면 학습 기록이 남습니다'와 로그인 연결(`useLoginReturn`). 첫 단계 공개 전 글(`PRE_RELEASE`)과 이전 판에는 확인 문제가 없다 ‹B10›
+- [X] T184 [US6] (FE 테스트) `frontend/src/components/learning/article/QuizPanel.test.tsx` 비로그인 경우 — `/learning/me` 요청 없음(`apiClient`와 전역 `fetch` 감시), 답하고 다음 문제로 넘기는 동안 `Storage.prototype.setItem` 호출 없음(로그인 연결을 누르면 014 `useLoginReturn`이 `thorp.auth.returnTarget`만 쓴다), 다시 그리면 답하지 않은 상태, 오답 표시에 빨강 토큰 없음(quickstart 9-4, 10-11 화면 부분) ‹B10›
+
+### Frontend — 글 끝 기록 (B12)
+
+- [ ] T185 [P] [US6] (FE) `frontend/src/types/learningMe.ts`와 `frontend/src/api/learningMe.ts` — 글 기록·위치·완료·첫 답·다시 풀기·초기화·전체 조회를 결과 합집합으로(401은 `unauthenticated`, `LEARNING_NOT_RECORDABLE`·`LEARNING_QUESTION_NOT_FOUND`는 따로). 나의 학습 오류 코드(`LEARNING_NOT_RECORDABLE`·`LEARNING_COMPLETION_REQUIRED`·`LEARNING_RETRY_NOT_AVAILABLE`·`LEARNING_QUESTION_NOT_FOUND`)를 합집합 `LearningMeApiErrorCode`로 `frontend/src/types/learningMe.ts`에 두고 `frontend/src/types/api.ts`의 `ServiceApiErrorCode`에 잇는다(`ApiClientError.is`가 이 닫힌 합집합만 받는다). 화면 안에서 보내는 상태 변경 요청(완료·첫 답·다시 풀기·초기화, 화면 이동 때의 위치)은 `frontend/src/api/client.ts`의 `runCsrfProtectedMutation`으로 감싼다. 위치의 탭 숨김·닫기 경로는 `apiClient`와 같은 기준 주소(`import.meta.env.VITE_API_BASE_URL ?? '/api'`, `frontend/src/api/progressStream.ts`와 같은 식)를 앞에 붙인 `/learning/me/articles/{articleId}/position`으로 `fetch(…, { method: 'PUT', keepalive: true, credentials: 'include' })`를 보내고, `Content-Type: application/json`과 쿠키 `XSRF-TOKEN`에서 읽은 `X-XSRF-TOKEN` 헤더를 싣는다(R32) ‹B12›
+- [ ] T186 [US6] (FE) `frontend/src/components/learning/article/useArticleCompletion.ts`(`data-article-end` 표지의 `IntersectionObserver`와 탭이 보이는 동안만 세는 시간, `minDwellSeconds`, 두 조건이 함께 참인 첫 순간에 한 번)와 `useReadingPosition.ts`(가장 큰 비율, 떠날 때마다 한 번: 화면 이동은 `apiClient`, `pagehide`·`visibilitychange` hidden은 keepalive, 한 번 떠날 때 겹치면 한 번만). 로그인 상태나 `userId`가 바뀌면 둘 다 처음부터 한다. 재확인(`checking`)과 `error`는 바뀐 것으로 보지 않으므로 그 앞뒤가 같은 상태·같은 `userId`면 센 시간과 가장 큰 비율을 이어 가고, 그동안 두 조건이 참이 되면 완료 요청은 확인이 끝나 바뀌지 않은 것을 안 뒤에 보낸다(R33) ‹B12›
+- [ ] T187 [US6] (FE) `frontend/src/components/learning/article/CompletionCard.tsx` — 완료 날짜, 익힐 용어(용어가 있는 글만), 확인 문제, 이번에 받은 경험치 목록과 새 배지·레벨의 조용한 알림(미리 있는 `role="status"` 영역에 넣음, 초점을 옮기지 않음), 다음 글 카드 또는 `continueReading`에 따른 문구('이어서 읽기' / '지금 공개된 글을 모두 읽었습니다'와 '다음 단계는 준비 중입니다'), `continueReading.kind`가 `RESUME`일 때 '이어서 읽기'가 싣는 navigation state `learningResume`(T189가 받는다), 단계 진행('n편 중 m편 읽음', 다 읽었으면 '완주 · n편'). 그림 장면(단계 도장 줄과 단계 완주 메달, 레벨 표장과 레벨 길, 다음 배지 메달)과 그 움직임은 T193(B13)이 더한다. 이 묶음의 카드는 글자와 조용한 알림만으로 완결하고 빈 그림 자리를 두지 않는다. 폭죽·소리 없음([design-notes](design-notes.md) §3.4) ‹B12›
+- [ ] T188 [US6] (FE) `QuizPanel.tsx` 로그인 모드 — 고른 보기를 잠그고 저장 응답 뒤에만 정답·풀이, 실패면 '기록되지 않았습니다'와 같은 보기를 다시 보내는 '다시 시도', `alreadyAnswered`면 저장된 답으로 표시, `LEARNING_QUESTION_NOT_FOUND`면 글을 다시 불러오라는 한 줄과 '다시 불러오기', 다시 들어오면 첫 답 결과와 풀이, 첫 답에서 하나도 못 맞히면 '다시 풀기'(한 문제씩, 경험치 없음, `persistence` 알림) ‹B12›
+- [ ] T189 [US6] (FE) `frontend/src/pages/LearningArticlePage.tsx` 로그인 연결 — `useAuth().status`별 표시(R33 표: 확인 중(`checking`)과 `error` 동안에는 자리를 둔 채 보이지 않게만 하고 고른 보기·잠근 답·받은 글 기록과 완료 응답을 버리지 않으며 앞뒤가 같은 상태·같은 `userId`면 그대로 다시 보임, 만료는 '기록되지 않았습니다'·'다시 시도'와 014 재로그인 안내, 로그아웃 시작 즉시 숨김), 글 기록 조회와 실패 줄, 완료 실패 시 완료 카드·확인 문제 대신 '기록되지 않았습니다'와 '다시 시도', `ResumeLine.tsx`('62%까지 읽었습니다 · 이어서 읽기' 한 줄, 완료한 글에는 없음), navigation state `learningResume`이면 기록된 위치로 스크롤, CURRENT 글에서만 기록 ‹B12›
+- [ ] T190 [US6] (FE 테스트) `useArticleCompletion.test.ts`(가짜 시계·`IntersectionObserver` 대역, 숨긴 시간 제외, 두 조건 순서 무관, 한 번만, `checking`이나 `error`를 거쳐 같은 `userId`로 돌아오면 센 시간을 이어 가고 다른 `userId`나 `anonymous`면 처음부터), `useReadingPosition.test.ts`(비율이 그대로여도 전송, keepalive 요청의 `X-XSRF-TOKEN`, `checking`이나 `error`를 거쳐 같은 `userId`면 가장 큰 비율을 이어 감), `CompletionCard.test.tsx`(문구 분기, 상태 알림이 초점을 옮기지 않음), `QuizPanel.test.tsx` 로그인 경우(저장 전 정답 없음, 실패 시 같은 보기 재전송), `frontend/src/api/learningMe.test.ts`(keepalive 위치 기록의 실제 주소가 `apiClient.defaults.baseURL`(테스트 기본값 `/api`)을 앞에 붙인 `/learning/me/articles/{articleId}/position`이고 `Content-Type: application/json`과 `X-XSRF-TOKEN`이 실림), `LearningArticlePage.test.tsx`의 로그인 상태별 경우(완료 훅이 `IntersectionObserver`를 쓰므로 이 파일에도 대역을 파일 안에서 둔다. `src/test/setup.ts`에 전역으로 두면 `src/hooks/useNearViewport.test.tsx`의 '없는 환경' 경우가 깨진다. 재확인 동안 완료 카드·확인 문제를 숨겼다가 같은 `userId`면 글 기록을 다시 요청하지 않고 잠근 답과 완료 카드를 그대로 보임, 비로그인에서는 떠날 때 `fetch`도 `apiClient`도 부르지 않음)와 1판 '저장소에 쓰지 않음' 단언 갱신 (quickstart 10-1~10-4, 10-10) ‹B12›
+
+### Frontend — 나의 학습 화면 (B13)
+
+- [ ] T191 [US6] (FE) `frontend/src/components/learning/me/useLearnerOverview.ts` — 로그인 상태이고 커리큘럼 `releasedStageCount > 0`일 때만 `GET /learning/me`, 사용자가 바뀌거나 로그아웃하면 버림. 재확인(`checking`)·`error` 동안에는 `user`가 `null`이어도 사용자가 바뀐 것으로 보지 않아 받아 둔 응답을 그대로 두고, 같은 `userId`로 확인되면 다시 요청하지 않음(R33), 실패 상태와 사용자가 누르는 다시 시도(조용한 재시도 없음), 브라우저 저장소에 쓰지 않음 ‹B13›
+- [ ] T192 [US6] (FE) `frontend/src/components/learning/me/SummaryPanel.tsx`(레벨 표장·레벨에 닿은 지 7일 안이면 레벨 옆 '새' 알약(`level.isNew`)·다음 레벨까지 남은 경험치·읽은 글·익힌 용어(분모 없음)·받은 지 7일 안의 배지가 있을 때만 '새 배지: 1단계 완주'와 '새' 알약 한 줄(`badges[].isNew`, 레벨 갈래 배지는 레벨 옆 '새'와 겹치므로 빼고 여럿이면 가장 최근 배지 이름에 '외 n개')·'이어서 읽기'·'모두 보기', 실패면 '학습 기록을 불러오지 못했습니다'와 '다시 시도' 한 번)와 `FloatingContinue.tsx`(커리큘럼 보기에서만, 패널의 '이어서 읽기'가 화면 밖이면 오른쪽 아래, 실패·모두 읽음이면 없음, 깜빡이거나 맥동하는 움직임 없음)를 `LearningListPage`에 붙이고, 패널과 떠 있는 단추의 '이어서 읽기'는 `continueReading.kind`가 `RESUME`이면 navigation state `learningResume`을 실어 열고, 글별 상태(`ArticleNode`에 넘기는 상태와 `ListView` 줄: '완료'·'62% 읽는 중'·'안 읽음', 용어 n/m)와 단계별 완료 수(커리큘럼 보기의 띠에는 글 도장 줄과 `StageMedal`을 함께 둔다, [design-notes](design-notes.md) §3.1)를 채운다. 실패면 그 자리들을 비우고 '안 읽음'·0편으로 채우지 않는다. 재확인(`checking`)과 `error` 동안에는 이 자리들을 접지 않고 숨겼다가 같은 `userId`로 확인되면 다시 요청하지 않고 그대로 보인다(R33). T193 뒤 ‹B13›
+- [ ] T193 [P] [US6] (FE) `frontend/src/components/learning/me/`에 `LevelEmblem.tsx`(둥근 팔각 초록 금속, 레벨에 따라 고리·눈금만 늚), `LevelPath.tsx`(이정표, 보이는 가장 높은 레벨 뒤 점선과 사유별 문장, '도착' 없음), `StageMedal.tsx`(단계 색 스테인드글라스), `BadgeMedal.tsx`(일곱 실루엣 × 받음·아직·준비 중, 진행 호) — 모두 `aria-hidden`, `useId`로 그라디언트 식별자, 강제 색 모드에서 점선·실선 구분 유지, 메달 실루엣 경로는 T140의 `me/medalShapes.ts`를 쓴다([design-notes](design-notes.md) §3.3·§4). 이 부품과 `ArticleStamp`(T137)로 `frontend/src/components/learning/article/CompletionCard.tsx`(T187)에 단계 도장 줄과 단계 완주 메달, 레벨 표장과 레벨 길, 다음 배지 메달을 더한다. 마지막 도장·색유리·레벨 숫자·레벨 길 점의 움직임은 `no-preference`에서만 950ms 안에 끝나고 폭죽·소리는 없으며, 그림은 `aria-hidden`이고 글자 정보는 T187 그대로다([design-notes](design-notes.md) §3.4·§5) ‹B13›
+- [ ] T194 [US6] (FE) `frontend/src/pages/LearningMePage.tsx`와 `frontend/src/components/learning/me/BadgeFamilies.tsx`, `frontend/src/App.tsx`의 `/learn/me` 라우트(`/learn/:articleId`보다 먼저) — FR-020 순서(레벨 카드, 숫자 줄과 '지금 공개된 글은 n편입니다', 단계별 진행, 이어서 읽기(`continueReading.kind`가 `RESUME`이면 navigation state `learningResume`을 싣는다), 익힌 용어(누르면 그 글), 배지, 변경 기록), 배지 상태 글자와 `preparingReason` → [design-notes](design-notes.md) §7 문구, 같은 문구의 준비 중 기준만 한 줄로 묶고 단계 완주는 낱장, 7일 안에 닿은 레벨과 받은 배지의 '새' 알약(`level.isNew`·`badges[].isNew`), 경험치 내역 없음. 비로그인은 `GuestSample`(T140)의 한 줄·로그인 연결·견본 그림과 그 아래 '나의 학습에 쌓이는 것' 세 칸(숫자·상태 없음), 첫 단계 공개 전에는 `/learn`으로 보냄 ‹B13›
+- [ ] T195 [US6] (FE) `frontend/src/components/learning/me/LearningResetSection.tsx`를 `frontend/src/pages/AccountProfilePage.tsx` 아래 '학습 기록' 구역으로 붙인다 — '학습 초기화'는 지워지는 것(완료·읽은 위치·첫 답·익힘·경험치·배지)과 되살릴 수 없다는 안내의 확인 창에서 확인할 때만 `DELETE /learning/me`, 성공·실패 문장. '나의 학습' 화면에는 두지 않는다(FR-025, R36). 개발 전용 `preview` 모드(`/dev/account-profile`)에서는 닉네임 저장의 미리보기 처리와 같이 확인해도 `DELETE /learning/me`를 부르지 않고 지우지 않았다는 안내만 보인다 ‹B13›
+- [ ] T196 [US6] (FE 테스트) `SummaryPanel.test.tsx`·`FloatingContinue.test.tsx`(실패 시 빈 자리, 모두 읽음이면 단추 없음, 재확인 동안 숨겼다가 같은 `userId`면 `GET /learning/me`를 다시 부르지 않고 그대로 보이며 다른 `userId`면 버리고 다시 부름), `frontend/src/pages/LearningMePage.test.tsx`(순서, 배지 세 상태의 글자, 준비 중 묶음과 단계 완주 낱장, '새', 비로그인 견본, 공개 전 이동), `LearningResetSection.test.tsx`(확인 전 요청 없음, 취소 시 요청 없음, CSRF 헤더), `frontend/src/components/learning/learningCopy.test.ts`(배우기 화면 문구·`aria-label`에 '잠김'·'해금'·'열립니다'·'공개 예정'·'Coming soon'·'NEW' 없음, 배우기 상태 표시에 `--thorp-up`·`--thorp-down` 없음, SC-017) (quickstart 10-6~10-9, 11-3~11-7) ‹B13›
+
+**Checkpoint**: 로그인 사용자의 나의 학습이 글 끝·목록·'나의 학습' 화면·회원정보에서 spec대로 동작하고, 비로그인은 아무것도 남지 않는다
+
+---
+
+## Phase 26: 2판 Polish & Cross-Cutting Concerns
+
+**Purpose**: 화면이 옮겨 간 경로 정리, 문서 동기화, 전체 검증
+
+- [ ] T197 (BE) `GET /learning/articles`를 지운다 — `LearningController`의 메서드와 응답 DTO, `LearningPublicApiIT`의 해당 경우, `docs/specs/learning-api/examples/articles-list.json`과 README 표의 줄. `LearningQueryService.listPublished()`와 저장소 조회 `findPublishedOrdered()`는 커리큘럼의 `preReleaseArticles`나 017 `readArticle` 도구(게시 글 열거, 017 plan '근거 팩과 도구')가 쓰면 남긴다. 017 코드가 아직 병합되지 않았어도 017 plan이 이 조회를 가리키면 지우지 않는다([plan](plan.md) "교차 의존"). 프런트엔드에 `fetchLearningArticles`·`LearningArticleList` 참조가 0건인지 먼저 확인한다(T140이 지운다). B11이 운영에 배포된 뒤에만 병합한다 ‹B16›
+- [ ] T198 (DOCS) 2판 문서 동기화 — `backend/src/main/resources/registry/parameter-registry.yml`의 주석 참조(`data-model.md §8` → `§13`), `docs/specs/learning-api/README.md` 최종 표, spec·plan·contracts와 구현의 차이 반영, [specs/README.md](../README.md) 색인 확인, 1판 `tasks.md` 머리의 Jira 문장은 기록으로 두고 고치지 않음 ‹B15›
+- [ ] T199 (DOCS) [quickstart.md](quickstart.md) §6~§13을 실제 화면과 HTTP로 돌려 [validation.md](validation.md)에 '2판' 절로 기록한다 — 성공·실패·미수행을 구분하고, HTTP나 자동 확인만 있는 항목을 화면 확인으로 세지 않으며, 375px 확인은 iframe 하네스로 잰다. SC-002는 패턴 검사 통과로 증명되지 않는다는 문장과 SC-005 '사용성 확인: 미수행'(또는 결과)을 따로 적는다 ‹B15›
+- [ ] T200 (DOCS) [plan.md](plan.md) "첫 단계 공개 조건" 여섯 항목의 확인 상태(누가, 언제, 결과)를 `validation.md` 2판 절에 표로 둔다. 코드 묶음의 완료와 첫 단계 공개를 섞어 보고하지 않는다 ‹B15›
+
+---
+
+## 2판 Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Phase 18 Setup**: 선행 없음. 픽스처(T098~T100)는 해당 묶음의 서버·화면 작업보다 먼저 커밋한다
+- **Phase 19 Foundational**: B07 부분(T105~T118)이 모든 2판 스토리를 막는다. B08 부분(T119~T121)은 커리큘럼·넘기기·단계 공개를 막는다
+- **Phase 20~25 스토리**: Foundational 뒤. 백엔드 묶음은 B07 → B08 → B09 순서, 프런트엔드 묶음은 계약 픽스처만으로 시작할 수 있다
+- **Phase 26 Polish**: T197은 B11 배포 뒤, T198~T200은 B07~B14·B16 뒤
+
+### User Story Dependencies
+
+- **US1**: 서버 글 응답(B07) → 화면 글(B10), 서버 커리큘럼(B08) → 화면 목록(B11). 첫 단계 공개 전 모습은 B07만으로 지켜진다
+- **US2**: US1의 글 화면(T133) 위에 얹는다
+- **US3**: 넘기기(T145)는 B08 스키마와 게시 2판(T157)이 선행. 화면(T148~T150)은 B07 계약만 있으면 된다
+- **US4**: US6 화면(B13)과 같은 묶음에서 확인한다
+- **US5**: 검사·게시 2판(B07)이 단계 공개(B08)의 선행. 관리 화면(B14)은 B07·B08 계약과 B10의 `ArticleBody`가 선행
+- **US6**: 서버(B09)는 B08의 공개 상태를 읽는다. 비로그인 확인 문제(T183)는 B10, 글 끝 기록(B12)은 B09 계약과 B10, '나의 학습' 화면(B13)은 B09 계약·B11·B12가 선행
+
+### Within Each Story
+
+- 테스트를 먼저 쓰고 실패를 확인한 뒤 구현한다. "T### 뒤"는 대상 타입·경로·계약이 정해져 있어야 한다는 뜻이다
+- BE: 값 타입·모델 → 저장소 → 서비스 → 컨트롤러 → 계약 테스트
+- FE: 타입·픽스처 → API 함수(결과 합집합) → 부품 → 페이지 조립 → 라우트 → 페이지 테스트
+
+### 작업 묶음 = 브랜치·MR 단위 (B07~B16)
+
+| 묶음 | 브랜치 | 태스크 | 수 |
+|---|---|---|---|
+| B07 | `feat(be)/learning-v2-content` | T098, T101, T105~T118, T122~T124, T144, T146, T152~T161 | 31 |
+| B08 | `feat(be)/learning-stage-release` | T099, T102, T119~T121, T125~T127, T145, T147, T162~T166 | 15 |
+| B09 | `feat(be)/learning-records` | T100, T103, T175~T182, T201 | 11 |
+| B10 | `feat(fe)/learning-article-v2` | T104, T128~T134, T143, T148~T150, T183, T184 | 14 |
+| B11 | `feat(fe)/learning-curriculum` | T135~T142 | 8 |
+| B12 | `feat(fe)/learning-article-records` | T185~T190 | 6 |
+| B13 | `feat(fe)/learning-journal` | T151, T191~T196 | 7 |
+| B14 | `feat(fe)/learning-admin-v2` | T167~T174 | 8 |
+| B16 | `refactor(be)/learning-articles-endpoint` | T197 | 1 |
+| B15 | `docs(fe)/spec-013-v2-wrapup` | T198~T200 | 3 |
+
+**합계 104개(T098~T201)**. 묶음 안의 태스크 번호는 MR 본문 "주요 변경 사항"에 적어 추적한다(constitution "작업 묶음").
+
+**각 묶음이 끝나면 무엇이 달라지나**
+- B07: V2 원고를 저장·검사·미리 보기 할 수 있고, 기존 글은 이전 판 고치기로만 게시된다. 첫 단계 공개 전 화면은 그대로다
+- B08: 운영자가 단계를 차례로 공개하고, 커리큘럼 조회가 공개 상태·이전 판·공개 안내·변경 기록을 준다. 용어가 단계 공개와 함께 새 글로 넘어간다
+- B09: 로그인 사용자의 기록·경험치·배지·레벨을 서버가 계산하고 학습 초기화로 지울 수 있다
+- B10: 글 화면이 새 요소·다른 이름·출처·이전 판·비로그인 확인 문제를 보이고, 다른 화면에서 온 돌아가기를 받는다
+- B11: 목록이 첫 단계 공개 전 1판 모습과 공개 뒤 여정 지도·목록 보기를 가른다
+- B12: 글 끝에서 완료·읽은 위치·확인 문제가 기록되고 완료 카드가 보인다
+- B13: 요약 패널·떠 있는 '이어서 읽기'·'나의 학습' 화면·학습 초기화가 생기고, 완료 카드에 그림 장면이 더해진다
+- B14: 관리 화면에서 원고를 가져와 편집·미리 보기·단계 공개를 한다
+- B16: 화면이 쓰지 않는 옛 목록 경로가 사라진다
+- B15: 문서와 구현이 같고 2판 검증 기록이 남는다
+
+### Parallel Opportunities
+
+- Phase 18: T098~T100, T104 병렬. T101~T103은 같은 파일이라 묶음 순서대로
+- Phase 19 B07: T106·T107·T108·T110·T111 병렬 → T109 → T112 → T113 → T114 → T115 → T116·T117·T118 병렬
+- US1: 서버(T122~T127)와 화면(T128~T142)은 다른 담당이 동시에. B10 안에서 T128·T130·T132 병렬, B11 안에서 T135·T136 병렬
+- US5: T152~T155(검사)와 T156·T158(저장·확인 필요) 병렬 → T157 → T159 → T160. B14 안에서 T167·T168 병렬
+- US6: T176·T178 병렬(서로 다른 계층) → T179 → T180 → T181·T182 병렬. T201은 T175 뒤 T176·T178과 병렬. B13 안에서 T193은 다른 부품과 병렬
+- **BE와 FE는 스토리 안에서 병렬** — 계약과 픽스처가 고정되어 있다
+
+---
+
+## 2판 Parallel Example: User Story 6
+
+```bash
+# 백엔드 — 도메인과 저장을 따로, 그 뒤 서비스·컨트롤러·테스트
+Task: "T176 도메인 Level·ExpLedger·BadgeCatalog·Settlement"
+Task: "T178 LearnerProgress·Answer·ExpLedger·BadgeAward 저장소(JdbcTemplate)"   # T176과 병렬
+Task: "T201 LearningMigrationTest 나의 학습 네 테이블·LearningSeeds 정리"   # T175 뒤, T176과 병렬
+Task: "T177 LevelTest·ExpLedgerTest·BadgeCatalogTest·SettlementTest"           # T176 뒤
+Task: "T179 LearnerService" → "T180 LearnerController·LearnerAccess·SecurityConfig"
+Task: "T181 LearnerApiIT" / "T182 ArchitectureTest 규칙"                         # 병렬
+
+# 프런트엔드 — 계약 픽스처(T100) 기준으로 백엔드와 동시에
+Task: "T185 learningMe 타입·API" → "T186 완료·위치 훅" / "T187 CompletionCard"   # T186·T187 병렬
+Task: "T188 QuizPanel 로그인 모드" → "T189 글 화면 연결" → "T190 테스트"
+```
+
+---
+
+## 2판 Implementation Strategy
+
+### MVP First (US1 + US5의 서버 B07)
+
+1. **B07** — 여기가 2판 스키마의 시작이다. T105 마이그레이션, T116 마이그레이션 검증, T161 배포 전 확인을 건너뛰지 않는다. T098 픽스처를 먼저 커밋해 B10이 출발할 수 있게 한다
+2. **B10** — 글 화면이 V1·V2를 모두 그린다
+3. **멈추고 검증**: 단계를 공개하지 않은 DB에서 1판 목록·글이 그대로인지(quickstart 6-1, 2~5 회귀), 테스트로 심은 CURRENT 판이 새 요소로 보이는지(9-1~9-3)
+4. 이 시점에서 운영자는 V2 원고를 넣고 미리 볼 수 있지만(B07 API) 공개는 아직 할 수 없다. 원고 MR 작업이 이때부터 시작된다
+
+### Incremental Delivery
+
+1. B07 + B10 → 원고 작업 시작, 운영 화면은 그대로
+2. B08 + B11 → 단계 공개와 커리큘럼(관리 화면 없이 API로 시험 DB에서 확인)
+3. B14 → 운영자가 관리 화면으로 원고를 넣고 단계를 공개할 수 있다
+4. B09 + B12 + B13 → 나의 학습. **첫 단계 공개는 여기까지 배포된 뒤**(plan "첫 단계 공개 조건")
+5. B16 → 옛 목록 경로 정리(B11 배포 뒤)
+6. B15 → 문서와 2판 검증 기록
+
+### Parallel Team Strategy
+
+백엔드 한 사람, 프런트엔드 한 사람이면:
+
+1. 백엔드 B07 동안 프런트엔드는 T098 픽스처로 B10
+2. 백엔드 B08 동안 프런트엔드는 B10 마무리 → B11(T099 픽스처)
+3. 백엔드 B09 동안 프런트엔드는 B14(B07·B08 계약)
+4. B09 병합 뒤 프런트엔드 B12 → B13, 백엔드는 B16·원고 검토 지원
+5. B15는 둘이 함께
+
+---
+
+## 2판 Notes
+
+- `[P]` = 다른 파일, 선행 없음. `‹B##›` = 브랜치·MR 단위. `[US#]` = 추적용 스토리
+- 테스트가 먼저 실패하는 것을 확인한 뒤 구현한다. 태스크 하나 또는 논리적 묶음마다 커밋한다
+- 피할 것: 판·이벤트·변경 기록·장부·답·배지를 고치는 저장소 메서드, 초안을 읽어 공개 응답을 만드는 경로(미리 보기 T159 제외), 학습 기록을 브라우저 저장소에 쓰는 코드, 배우기 밖 화면의 경험치·배지 알림, 조용한 재시도
+- 1판 Notes의 규칙(모호한 태스크, 같은 파일 충돌, 스토리 독립성을 깨는 교차 의존 피하기)도 그대로 따른다
+
+---
+
+## Phase 27: Convergence
+
+**Purpose**: B10 converge(2026-10-06)에서 찾은 빈자리 가운데 다른 묶음에 속하는 것. B10 MR에 있어야 했던 빈자리는 B10 브랜치(`feat(fe)/learning-article-v2`)에서 바로 채웠다. 아래 두 태스크는 B11 묶음(`feat(fe)/learning-curriculum`)에 담는다.
+
+- [ ] T202 [US6] (FE) `frontend/src/components/learning/article/ArticleEnd.tsx`의 비로그인 글 끝에 있는 '로그인하면 학습 기록이 남습니다.' 한 줄과 로그인 연결을 T140이 만드는 `frontend/src/components/learning/me/GuestSample.tsx`(견본 그림·한 줄·로그인 연결)로 바꾼다. 확인 문제 → 다음 글 → 견본 순서와, 로그인 상태를 다시 확인하는 동안 부품을 내리지 않고 숨기기만 하는 처리(`concealed`, research R33)를 그대로 둔다. `frontend/src/pages/LearningArticlePage.test.tsx`에 비로그인 글 끝의 견본(그림은 `aria-hidden`, 숫자·상태 모양 없음)을 더한다 per design-notes §3.5, 목업 '글 끝'의 `guestSample('end')`, FR-031 (missing) ‹B11›
+- [ ] T203 [US1] (FE) `frontend/src/pages/LearningArticlePage.tsx` 글 머리 경로의 단계 연결('n단계 · 이름', B10에서는 `/learn`으로 간다)을 커리큘럼 보기의 그 단계 자리로 잇고, 받은 `learningReturn`을 그대로 싣는다. 단계 자리를 가리키는 방식은 T139의 '○단계 보기' 연결과 같게 한다 per 목업 '글 끝'의 경로(`data-to="stage-n"`), FR-031 (partial) ‹B11›

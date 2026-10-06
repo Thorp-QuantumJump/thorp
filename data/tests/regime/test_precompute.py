@@ -35,6 +35,7 @@ from data_pipeline.regime.macro.types import (
     Publication,
     format_month,
 )
+from data_pipeline.regime.phase import load_config as load_phase_config
 from data_pipeline.regime.snapshot import (
     COMPOSITE_SCOPE,
     MODEL_VERSION,
@@ -465,9 +466,28 @@ class TestEraPositionReuse:
 
 
 class TestCompositePropagation:
-    """T078 — 계산 불가가 분야 → 종합으로 전파되고, 반대 방향도 있다 (spec FR-039)."""
+    """T078 — 계산 불가가 분야 → 종합으로 전파되고, 반대 방향도 있다 (spec FR-039).
 
-    def test_한_분야가_계산_불가면_종합도_계산_불가다(self) -> None:
+    배치처럼 v3 설정을 넣어 빌더를 만든다. 운영 배치는 늘 설정을 넘기므로(`_precompute`) 종합은
+    v3 국면 모델로 간다 — 설정 없이 만들면 운영이 타지 않는 v1 종합 경로만 보게 된다.
+    """
+
+    @staticmethod
+    def _builder(
+        registry: IndicatorRegistry, source: StubMacroSource, tmp_path: Path
+    ) -> SnapshotBuilder:
+        return SnapshotBuilder(
+            registry,
+            {entry.id: source.monthly_series(entry.id) for entry in registry.indicators},
+            source.publication,
+            Versions(data=source.data_version(), registry=registry.version),
+            phase_config=load_phase_config(
+                write_phase_config(tmp_path, registry),
+                indicator_ids=[entry.id for entry in registry.indicators],
+            ),
+        )
+
+    def test_한_분야가_계산_불가면_종합도_계산_불가다(self, tmp_path: Path) -> None:
         """한 분야의 지표가 그 달에 비면 그 분야도, 종합도 계산할 수 없다.
 
         모양을 여기서 만든다. 예전에는 임시 대역의 실제 자료에서 그런 달을 골라 썼는데,
@@ -486,21 +506,17 @@ class TestCompositePropagation:
         )
         # A 는 끝까지 차 있고 B 는 마지막 달이 비었다. 그 마지막 달이 시험할 기준월이다.
         baseline_month = max(source.monthly_series("A1"))
-        builder = SnapshotBuilder(
-            registry,
-            {entry.id: source.monthly_series(entry.id) for entry in registry.indicators},
-            source.publication,
-            Versions(data=source.data_version(), registry=registry.version),
-        )
+        builder = self._builder(registry, source, tmp_path)
         broken = builder.build(SearchScope.field("B"), baseline_month)
         composite = builder.build(SearchScope.composite(), baseline_month)
+        assert composite.versions.model == "REGIME-V3-TEST", "종합이 v3 경로를 타지 않았다"
         assert broken.status.status == STATUS_NOT_COMPUTABLE
         assert composite.status.status == STATUS_NOT_COMPUTABLE
         # 사유는 분야가 낸 것을 그대로 쓴다 — 새 어휘를 만들지 않는다.
         assert composite.status.reason == broken.status.reason
         assert composite.cases == ()
 
-    def test_모든_분야가_정상인데_종합만_계산_불가일_수_있다(self) -> None:
+    def test_모든_분야가_정상인데_종합만_계산_불가일_수_있다(self, tmp_path: Path) -> None:
         """반대 방향 — T_all 자체가 없는 경우다 (FR-039 ②).
 
         지표 교체로 두 계열이 겹치는 달이 하나도 없으면 종합 기준월이 서지 않는다. 그때 분야
@@ -515,12 +531,7 @@ class TestCompositePropagation:
         source = StubMacroSource(registry, series)
         assert source.baseline_months().composite is None
 
-        builder = SnapshotBuilder(
-            registry,
-            {key: source.monthly_series(key) for key in series},
-            source.publication,
-            Versions(data=source.data_version(), registry=registry.version),
-        )
+        builder = self._builder(registry, source, tmp_path)
         for field_id, latest in source.baseline_months().by_field.items():
             snapshot = builder.build(SearchScope.field(field_id), latest)
             assert snapshot.status.status != STATUS_NOT_COMPUTABLE, field_id
@@ -528,6 +539,7 @@ class TestCompositePropagation:
         composite_scope = SearchScope.composite()
         horizon = builder.observable_months(composite_scope)[-1]
         composite = builder.build(composite_scope, horizon)
+        assert composite.versions.model == "REGIME-V3-TEST", "종합이 v3 경로를 타지 않았다"
         assert composite.status.status == STATUS_NOT_COMPUTABLE
         assert composite.cases == ()
 

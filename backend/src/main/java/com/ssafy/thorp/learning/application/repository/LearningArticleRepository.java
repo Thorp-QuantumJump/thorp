@@ -1,10 +1,13 @@
 package com.ssafy.thorp.learning.application.repository;
 
+import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
+import com.ssafy.thorp.learning.application.result.PublishedArticleView;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -24,7 +27,7 @@ public interface LearningArticleRepository {
      */
     Optional<LearningArticle> findByArticleKeyForUpdate(ArticleId articleId);
 
-    /** 모든 글. {@code reading_order}, {@code article_key} 오름차순. */
+    /** 모든 글. 초안 단계 번호, 단계 안 순서, {@code article_key} 순서다(learning-admin-api §2). */
     List<LearningArticle> findAllOrdered();
 
     /**
@@ -39,7 +42,27 @@ public interface LearningArticleRepository {
     /** 이 글의 공개 중인 판. 초안이거나 없는 글이면 비어 있다. */
     Optional<ArticleRevision> findPublishedRevision(ArticleId articleId);
 
-    /** 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다. */
+    /** 공개 중인 판 전부(글 → 판). 초안인 글은 결과에 없다. */
+    Map<ArticleId, ArticleRevision> findPublishedRevisions();
+
+    /** 이 글의 공개 중인 판과 공개 배치. 초안이거나 없는 글이면 비어 있다. */
+    Optional<PublishedArticleView> findPublished(ArticleId articleId);
+
+    /** 공개 중인 글 전부의 판과 공개 배치. 한 문장으로 읽는다. 순서는 정하지 않는다. 커리큘럼이 쓴다. */
+    List<PublishedArticleView> findAllPublished();
+
+    /**
+     * 새 기준 판({@code CURRENT})이 게시 중인 글. 읽는 순서(공개 배치 단계 번호, 단계 안 순서, {@code articleId})다(data-model
+     * §12-2). 본문을 읽지 않는다.
+     */
+    List<CurrentArticleEntry> findCurrentInReadingOrder();
+
+    /**
+     * 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다.
+     *
+     * @return 넘겨받은 글에 대리키를 채운 것. 저장된 용어 행으로 다시 만들지 않으므로 용어 교체({@code LearningTermRepository})와 부르는
+     *     순서에 기대지 않는다
+     */
     LearningArticle save(LearningArticle article);
 
     boolean existsByArticleKey(ArticleId articleId);

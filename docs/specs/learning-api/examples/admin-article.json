@@ -20,7 +20,12 @@
     "sources": [],
     "terms": [
       { "termId": "max-drawdown", "label": "가장 크게 줄었던 폭", "sentence": "계약 형식을 보이는 합성 용어 문장이다." }
-    ]
+    ],
+    "format": "V1",
+    "stageKey": "returns-and-risk",
+    "stagePosition": 1,
+    "quiz": []
   },
-  "publishedRevisionNo": 3
+  "publishedRevisionNo": 3,
+  "publishedEdition": "LEGACY"
 }

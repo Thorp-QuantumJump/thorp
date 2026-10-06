@@ -106,10 +106,6 @@ class BacktestResultProjectionTest extends RepositoryTestSupport {
         // record equals는 BigDecimal의 scale까지 본다
         assertThat(summary.performance()).isEqualTo(event.payload().engineOutput().performance());
         assertThat(summary.execution()).isEqualTo(event.payload().engineOutput().execution());
-        // v2 FINISHED에는 벤치마크가 없다. 저장 컬럼은 남아 있고 null이다
-        assertThat(summary.benchmarkInstrumentId()).isNull();
-        assertThat(summary.benchmarkTotalReturn()).isNull();
-        assertThat(summary.hasBenchmark()).isFalse();
         // v2 요약 항목(T009): 비용·청산·분석 블록과 예외 건수. 예외 본문은 읽지 않는다
         EngineOutput output = event.payload().engineOutput();
         assertThat(summary.costs()).isEqualTo(output.costs());

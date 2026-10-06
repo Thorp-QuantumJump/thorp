@@ -1,25 +1,73 @@
-/* '지금 국내 시장' 지수 카드. 카드는 가로로 나란히 서고, 카드 안은 이름(왼쪽)·값과 변화(오른쪽), 출처는 아래 오른쪽이다. */
-.market {
+/*
+  '지금 국내 시장' 띠. 왼쪽 칸은 제목과 그 아래 출처·기준일, 오른쪽 칸은 카드가 왼쪽으로 끝없이 흐르는 창이다.
+  카드 안은 이름(왼쪽)·값과 변화(오른쪽)다. 출처를 제목 아래에 두어 띠가 카드 한 줄 높이를 넘지 않게 한다.
+*/
+/* 제목 칸이 카드보다 높아지면 띠 전체가 커진다. 기준일·출처 두 줄은 줄 간격을 좁혀 카드 높이 안에 둔다. */
+.head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
+  min-width: 0;
 }
 
+.head .source {
+  line-height: 1.35;
+}
+
+/* 양 끝을 배경으로 흐리게 녹여, 카드가 창 밖에서 들어오고 나가는 모양으로 보이게 한다. */
+.viewport {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--thorp-radius-inset, 8px);
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+}
+
+.viewport:focus-visible {
+  outline: 2px solid var(--thorp-accent-soft);
+  outline-offset: 2px;
+}
+
+/*
+  창을 채울 만큼 반복한 묶음 두 벌을 잇고 한 묶음의 폭(전체의 절반)만큼 옮긴다. 다 옮기면 처음과 같은 모양이라
+  끊김이 보이지 않는다.
+*/
+.track {
+  display: flex;
+  width: max-content;
+  animation: market-ticker var(--ticker-duration, 40s) linear infinite;
+}
+
+.viewport:hover .track,
+.viewport:focus-within .track {
+  animation-play-state: paused;
+}
+
+@keyframes market-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* 줄 끝의 오른쪽 여백이 카드 사이 간격과 같아야 두 벌이 이어지는 자리가 티 나지 않는다. */
 .cards {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin: 0;
-  padding: 0;
+  padding: 0 8px 0 0;
   list-style: none;
 }
 
 .card {
-  flex: 1 1 200px;
+  flex: 0 0 auto;
+  min-width: 200px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   padding: var(--thorp-pad-inset, 12px 14px);
   border: 1px solid var(--thorp-line);
   border-radius: var(--thorp-radius-inset, 8px);
@@ -54,6 +102,11 @@
   font-weight: 600;
 }
 
+/* 거래정지·직전 값 표시는 오르내림이 아니므로 흐린 글자로 둔다. */
+.reading em[data-flag] {
+  color: var(--thorp-muted);
+}
+
 /* 오르내림 색: 값과 변화 모두 상승 빨강·하락 파랑. */
 .reading[data-direction='up'] {
   color: var(--thorp-up);
@@ -68,8 +121,21 @@
   margin: 0;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-caption, 0.72rem);
+  white-space: nowrap;
 }
 
-.source {
-  text-align: right;
+/* 움직임을 줄이도록 설정했으면 흐르지 않고 손으로 넘기는 띠가 된다. 반복한 줄은 모두 감춘다. */
+@media (prefers-reduced-motion: reduce) {
+  .viewport {
+    overflow-x: auto;
+    mask-image: none;
+  }
+
+  .track {
+    animation: none;
+  }
+
+  .cards[data-copy='repeat'] {
+    display: none;
+  }
 }

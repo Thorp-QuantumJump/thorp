@@ -1,6 +1,7 @@
 package com.ssafy.thorp.backtest.infrastructure.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.ssafy.thorp.backtest.application.port.BacktestProgressStream;
 import com.ssafy.thorp.backtest.application.port.message.ProcessingStage;
@@ -36,11 +37,18 @@ class InMemoryBacktestProgressStreamTest {
     }
 
     @Test
-    @DisplayName("구독자가 없는 실행의 발행은 조용히 버려진다")
+    @DisplayName("구독자가 없는 실행의 발행은 조용히 버려진다 — 나중에 붙은 구독자에게 다시 보내지 않는다")
     void publishingWithoutSubscribersIsDropped() {
-        stream.publish(RUN_ID, payload(LocalDate.of(2025, 3, 3)));
+        ProgressPayload dropped = payload(LocalDate.of(2025, 3, 3));
+        // 발행하는 쪽은 브로커 리스너 스레드다. 여기서 예외가 나면 아무도 보지 않는 화면 때문에 이벤트가 재전달된다.
+        assertThatCode(() -> stream.publish(RUN_ID, dropped)).doesNotThrowAnyException();
 
-        assertThat(stream.subscriberCount(RUN_ID)).isZero();
+        RecordingListener late = new RecordingListener();
+        stream.subscribe(RUN_ID, late);
+        ProgressPayload next = payload(LocalDate.of(2025, 3, 4));
+        stream.publish(RUN_ID, next);
+
+        assertThat(late.received).as("구독 전 발행을 쌓아 두지 않는다").containsExactly(next);
     }
 
     @Test

@@ -40,12 +40,13 @@ public class NewsHttpSecurityPolicy {
     /** 응답 본문이 한도를 넘었다. */
     public static final String RESPONSE_TOO_LARGE = "RESPONSE_TOO_LARGE";
 
-    /** 배포 파일은 구분자 텍스트로 온다. DOC API의 JSON 한도와 섞지 않으려고 따로 둔다. */
     /**
      * GDELT 배포 파일의 content-type.
      *
      * <p>GDELT 2.0은 배포 파일을 zip으로만 내려 준다. 서버마다 zip을 가리키는 이름이 갈려 세 가지를 모두 받는다. 압축을 풀어 얻는 것은 탭으로 나뉜
      * 표라, 압축 없이 그대로 주는 경우까지 열어 둔다.
+     *
+     * <p>DOC API의 JSON content-type 목록(설정값 {@code allowedJsonContentTypes})과 섞지 않으려고 따로 둔다.
      */
     private static final Set<String> EXPORT_FILE_CONTENT_TYPES =
             Set.of(

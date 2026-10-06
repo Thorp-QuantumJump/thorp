@@ -160,11 +160,6 @@ public class BacktestRequest {
         return cancelledAt != null;
     }
 
-    /** 로그인하지 않고 낸 요청인가. */
-    public boolean isAnonymous() {
-        return requesterId == null;
-    }
-
     /**
      * 이 사람이 낸 요청인가. 비로그인 요청은 누구의 것도 아니다 — 소유자 경로({@code /backtests/**})로는 열리지 않고 공개 토큰으로만 본다.
      *

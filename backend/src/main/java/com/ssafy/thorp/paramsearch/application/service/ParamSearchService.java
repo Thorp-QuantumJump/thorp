@@ -59,7 +59,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><b>전략에 대한 판단이 하나도 없다.</b> 대상 전략은 {@link SearchTargetResolver}가, 조합은 {@link GridExpander}가,
  * 유효성은 등록표가 정한다. 이 클래스에는 전략 ID가 나타나지 않는다(FR-025).
  *
- * <p>기능 플래그가 켜졌을 때만 빈이 된다 — {@link ParamSearchProperties}의 네 한도가 {@code @NotNull}이라 조건 없이 두면 값을 채우지
+ * <p>기능 플래그가 켜졌을 때만 빈이 된다 — {@code ParamSearchProperties}의 네 한도가 {@code @NotNull}이라 조건 없이 두면 값을 채우지
  * 않은 환경에서 애플리케이션 전체가 기동에 실패한다({@code ParamSearchConfig} 주석).
  */
 @Service

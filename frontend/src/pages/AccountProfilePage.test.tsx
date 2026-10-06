@@ -64,7 +64,6 @@ describe('AccountProfilePage', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: '회원정보 수정' })).toBeTruthy()
     expect(screen.getByText('회원 정보를 확인하고 수정할 내용을 입력할 수 있습니다.')).toBeTruthy()
-    expect(screen.queryByText(/계정에 표시되는 정보/)).toBeNull()
     expect((screen.getByLabelText('이메일') as HTMLInputElement).value).toBe('user@example.com')
     expect((screen.getByLabelText('이메일') as HTMLInputElement).readOnly).toBe(true)
     expect((screen.getByLabelText('닉네임') as HTMLInputElement).value).toBe('쏘프사용자')

@@ -274,6 +274,4 @@ class ParamSearchRetryTest extends LauncherMockedIntegrationTestSupport {
                 {"netTotalReturn": "0.1000", "maxDrawdown": "-0.1000", "totalTradingCost": "0.0100"}
                 """);
     }
-
-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */
 }

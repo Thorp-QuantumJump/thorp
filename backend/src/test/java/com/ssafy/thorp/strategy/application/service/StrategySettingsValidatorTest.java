@@ -1,6 +1,7 @@
 package com.ssafy.thorp.strategy.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.common.exception.BusinessException;
@@ -96,8 +97,8 @@ class StrategySettingsValidatorTest {
         assertThat(
                         validator.verifySaved(
                                 STRATEGY, settings("lookbackDays", 63), VERSION, 3, VALID_AMOUNT))
-                .hasValueSatisfying(
-                        verified -> assertThat(verified.registryVersion()).isEqualTo(VERSION));
+                .as("버전이 같으면 판정을 건너뛰지 않는다")
+                .isPresent();
         assertThatThrownBy(
                         () ->
                                 validator.verifySaved(
@@ -255,7 +256,6 @@ class StrategySettingsValidatorTest {
                 validatorOf(maxWeightRegistry())
                         .verify(STRATEGY, settings("maxWeight", 34), VERSION, 3, VALID_AMOUNT);
 
-        assertThat(verified.registryVersion()).isEqualTo(VERSION);
         // 워밍업 규칙이 없는 전략은 0이다.
         assertThat(verified.warmupTradingDays()).isZero();
     }
@@ -306,11 +306,16 @@ class StrategySettingsValidatorTest {
     @Test
     @DisplayName("조건 밖 축은 빠져 있어도 받는다 — 등록표가 이 설정에서 쓰지 않는다고 정한 축이다")
     void 조건_밖_축은_빠져도_통과() {
-        StrategySettingsValidator.Verified verified =
-                validatorOf(conditionalRegistry())
-                        .verify(STRATEGY, settings("mode", "B"), VERSION, 3, VALID_AMOUNT);
-
-        assertThat(verified.registryVersion()).isEqualTo(VERSION);
+        assertThatCode(
+                        () ->
+                                validatorOf(conditionalRegistry())
+                                        .verify(
+                                                STRATEGY,
+                                                settings("mode", "B"),
+                                                VERSION,
+                                                3,
+                                                VALID_AMOUNT))
+                .doesNotThrowAnyException();
     }
 
     @Test

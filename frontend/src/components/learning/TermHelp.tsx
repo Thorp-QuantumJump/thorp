@@ -9,12 +9,16 @@ import type { LearningReturnState } from "@/types/learning";
 import styles from "./TermHelp.module.css";
 
 interface TermHelpProps {
-  /** 가리킬 용어의 고정 식별자(013 data-model §8) */
+  /** 가리킬 용어의 고정 식별자(013 data-model §13) */
   termId: string;
   /** 트리거 버튼에 보일 이름. 설명을 불러오기 전에도 버튼이 이름을 가져야 한다 */
   label: string;
-  /** 글로 이동했다가 돌아올 자리. 보통 지금 화면의 경로와 이름이다 */
-  returnTo: LearningReturnState;
+  /**
+   * 글로 이동했다가 돌아올 자리. 보통 지금 화면의 경로와 이름이다. 배우기 글 안에서는 그 글이 받은
+   * `learningReturn`을 그대로 넘기고, 없으면 넘기지 않는다 — 그때 글 연결은 state를 싣지 않는다
+   * (013 term-help-ui §2·§7).
+   */
+  returnTo?: LearningReturnState;
   /**
    * 013 설명 앞에 함께 보일, <b>화면이 가진</b> 한 문장. 없으면 그리지 않는다.
    *
@@ -31,14 +35,24 @@ interface TermHelpProps {
    * 초점을 받으면 열리고, 그래서 키보드와 터치에서도 닿는다.
    */
   on?: "click" | "hover";
+  /**
+   * 013 용어가 아직 게시되지 않았을 때(`notReady`) '설명 준비 중' 대신 보일 뜻 문장(013 term-help-ui §5).
+   *
+   * 이 값을 받으면 창 안을 뜻 자리 → `note` → 글 연결 순서로 둔다. 뜻 자리는 `ready`면 013 용어 이름과
+   * 뜻 문장, `notReady`면 이 문장, `failed`면 불러오지 못했다는 문장과 다시 시도다. 그래서 `note`에는 뜻
+   * 문장을 뺀 나머지 안내만 담아야 한다 — 같은 문장을 둘 다 넘기면 뜻 문장이 두 번 보인다.
+   */
+  fallbackMeaning?: string;
+  /** 글 연결 문구. 기본은 `‘{articleTitle}’ 글 읽기`다(013 term-help-ui §2) */
+  articleLinkLabel?: string;
 }
 
 type HelpState = { status: "loading" } | GlossaryLookup;
 
 /**
- * 진단 화면의 용어 도움말(013 term-help-ui §2, 003 FR-016).
+ * 진단 화면과 배우기 글 안의 용어 도움말(013 term-help-ui §2·§7, 003 FR-016).
  *
- * <p><b>002·003·005가 함께 쓴다.</b> 화면마다 따로 만들면 세 상태와 접근성 규칙이 갈라진다.
+ * <p><b>002·003·005와 배우기 글 본문이 함께 쓴다.</b> 화면마다 따로 만들면 세 상태와 접근성 규칙이 갈라진다.
  *
  * <p><b>설명 문장을 짓지 않는다.</b> 받은 문장을 그대로 보이고, 설명이 없으면 '설명 준비 중'만 보인다
  * (013 FR-010). 불러오지 못한 것은 설명이 없는 것과 다른 사실이라 다른 문장과 다시 시도를 준다.
@@ -57,6 +71,8 @@ export function TermHelp({
   returnTo,
   note,
   on = "click",
+  fallbackMeaning,
+  articleLinkLabel,
 }: TermHelpProps) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<HelpState>({ status: "loading" });
@@ -78,48 +94,76 @@ export function TermHelp({
 
   const retry = useCallback(() => setAttempt((count) => count + 1), []);
 
+  const loading =
+    state.status === "loading" ? (
+      <p className={styles.muted}>설명을 불러오는 중입니다.</p>
+    ) : null;
+
+  const entry =
+    state.status === "ready" ? (
+      <>
+        <p className={styles.term}>{state.entry.label}</p>
+        <p className={styles.sentence}>{state.entry.sentence}</p>
+      </>
+    ) : null;
+
+  // 돌아올 자리가 없으면 state를 싣지 않는다. 빈 learningReturn을 실으면 받는 쪽이 모양을 다시 판정해야 한다.
+  const articleLink =
+    state.status === "ready" ? (
+      <Link
+        className={styles.link}
+        to={`/learn/${encodeURIComponent(state.entry.articleId)}`}
+        state={returnTo ? { learningReturn: returnTo } : undefined}
+      >
+        {articleLinkLabel ?? `‘${state.entry.articleTitle}’ 글 읽기`}
+      </Link>
+    ) : null;
+
+  const failed =
+    state.status === "failed" ? (
+      <div className={styles.failed}>
+        <p role="alert">설명을 불러오지 못했습니다.</p>
+        <button type="button" className={styles.retry} onClick={retry}>
+          다시 시도
+        </button>
+      </div>
+    ) : null;
+
+  const noteLine = note ? <p className={styles.sentence}>{note}</p> : null;
+
   /** 여는 방법이 달라도 보이는 것은 같다. 두 벌로 적으면 한쪽만 고쳐진다. */
-  const body = (
-    <>
-      {note ? <p className={styles.sentence}>{note}</p> : null}
+  const body =
+    fallbackMeaning !== undefined ? (
+      // 뜻 자리 → note → 글 연결(term-help-ui §5). 등록표의 뜻 문장은 013 문장이 없을 때만 보인다.
+      <>
+        {loading}
+        {entry}
+        {state.status === "notReady" ? (
+          <p className={styles.sentence}>{fallbackMeaning}</p>
+        ) : null}
+        {failed}
+        {noteLine}
+        {articleLink}
+      </>
+    ) : (
+      <>
+        {noteLine}
+        {loading}
+        {entry}
+        {articleLink}
 
-      {state.status === "loading" ? (
-        <p className={styles.muted}>설명을 불러오는 중입니다.</p>
-      ) : null}
+        {/*
+          013 이 아직 그 용어를 싣지 않았다는 사실이다(013 FR-010). 화면이 이미 한 문장을 실었으면
+          덧붙이지 않는다 — 읽을 것이 있는데 "준비 중"이 함께 뜨면 방금 읽은 문장이 임시처럼 보인다.
+          note 가 없는 곳(002·005)에서는 그대로 보인다. 도움말이 비어 있는 것과 다른 사실이다.
+        */}
+        {state.status === "notReady" && !note ? (
+          <p className={styles.muted}>설명 준비 중</p>
+        ) : null}
 
-      {state.status === "ready" ? (
-        <>
-          <p className={styles.term}>{state.entry.label}</p>
-          <p className={styles.sentence}>{state.entry.sentence}</p>
-          <Link
-            className={styles.link}
-            to={`/learn/${encodeURIComponent(state.entry.articleId)}`}
-            state={{ learningReturn: returnTo }}
-          >
-            ‘{state.entry.articleTitle}’ 글 읽기
-          </Link>
-        </>
-      ) : null}
-
-      {/*
-        013 이 아직 그 용어를 싣지 않았다는 사실이다(013 FR-010). 화면이 이미 한 문장을 실었으면
-        덧붙이지 않는다 — 읽을 것이 있는데 "준비 중"이 함께 뜨면 방금 읽은 문장이 임시처럼 보인다.
-        note 가 없는 곳(002·005)에서는 그대로 보인다. 도움말이 비어 있는 것과 다른 사실이다.
-      */}
-      {state.status === "notReady" && !note ? (
-        <p className={styles.muted}>설명 준비 중</p>
-      ) : null}
-
-      {state.status === "failed" ? (
-        <div className={styles.failed}>
-          <p role="alert">설명을 불러오지 못했습니다.</p>
-          <button type="button" className={styles.retry} onClick={retry}>
-            다시 시도
-          </button>
-        </div>
-      ) : null}
-    </>
-  );
+        {failed}
+      </>
+    );
 
   if (on === "hover") {
     return (

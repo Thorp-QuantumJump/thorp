@@ -1,5 +1,7 @@
 package com.ssafy.thorp.learning.infrastructure.persistence;
 
+import com.ssafy.thorp.learning.domain.model.Edition;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +20,24 @@ public interface LearningArticleRevisionJpaRepository
     Optional<LearningArticleRevisionJpaEntity> findById(Long id);
 
     List<LearningArticleRevisionJpaEntity> findByArticleIdOrderByRevisionNoAsc(Long articleId);
+
+    /** 이 글의 가장 최근 판. 게시가 다음 판 번호와 같은 문제 판정의 기준을 함께 얻는다. */
+    Optional<LearningArticleRevisionJpaEntity> findFirstByArticleIdOrderByRevisionNoDesc(
+            Long articleId);
+
+    boolean existsByArticleIdAndEdition(Long articleId, Edition edition);
+
+    /** 판 번호만. 본문 JSON을 읽지 않는다. */
+    interface RevisionNoRow {
+        Long getId();
+
+        Integer getRevisionNo();
+    }
+
+    @Query(
+            "select r.id as id, r.revisionNo as revisionNo"
+                    + " from LearningArticleRevisionJpaEntity r where r.id in :ids")
+    List<RevisionNoRow> findRevisionNos(@Param("ids") Collection<Long> ids);
 
     /** 공개 목록 한 줄. native alias는 PostgreSQL이 소문자로 접으므로 따옴표로 감싼다. */
     interface PublishedSummaryRow {
@@ -47,6 +67,40 @@ public interface LearningArticleRevisionJpaRepository
             nativeQuery = true)
     List<PublishedSummaryRow> findPublishedSummaries();
 
+    /** 새 기준 판이 게시 중인 글 한 줄. native alias는 따옴표로 감싼다. */
+    interface CurrentArticleRow {
+        String getArticleId();
+
+        String getTitle();
+
+        String getStageKey();
+
+        Integer getStageNumber();
+
+        Integer getPosition();
+    }
+
+    /**
+     * {@code CURRENT} 판이 게시 중인 글. 공개 배치의 단계 번호, 단계 안 순서, {@code article_key} 순서다(data-model §12-2).
+     * 제목만 판 JSON에서 꺼내고 본문은 읽지 않는다.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT a.article_key AS "articleId",
+                           r.snapshot ->> 'title' AS "title",
+                           s.stage_key AS "stageKey",
+                           CAST(s.number AS INTEGER) AS "stageNumber",
+                           CAST(a.published_stage_position AS INTEGER) AS "position"
+                    FROM learning_article a
+                    JOIN learning_article_revision r ON r.id = a.published_revision_id
+                    JOIN learning_stage s ON s.id = a.published_stage_id
+                    WHERE a.status = 'PUBLISHED' AND r.edition = 'CURRENT'
+                    ORDER BY s.number, a.published_stage_position, a.article_key
+                    """,
+            nativeQuery = true)
+    List<CurrentArticleRow> findCurrentInReadingOrder();
+
     /** 이 글의 공개 중인 판. */
     @Query(
             "select r from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"
@@ -55,4 +109,24 @@ public interface LearningArticleRevisionJpaRepository
                     + " and a.articleKey = :articleKey")
     Optional<LearningArticleRevisionJpaEntity> findCurrentlyPublished(
             @Param("articleKey") String articleKey);
+
+    /** 이 글의 공개 중인 판과 공개 배치. 한 문장으로 읽는다. */
+    @Query(
+            "select new com.ssafy.thorp.learning.infrastructure.persistence.PublishedRevisionRow("
+                    + "a.articleKey, r, a.publishedStageId, a.publishedStagePosition)"
+                    + " from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"
+                    + " where a.publishedRevisionId = r.id"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED"
+                    + " and a.articleKey = :articleKey")
+    Optional<PublishedRevisionRow> findCurrentlyPublishedWithPlacement(
+            @Param("articleKey") String articleKey);
+
+    /** 공개 중인 판 전부. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */
+    @Query(
+            "select new com.ssafy.thorp.learning.infrastructure.persistence.PublishedRevisionRow("
+                    + "a.articleKey, r, a.publishedStageId, a.publishedStagePosition)"
+                    + " from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"
+                    + " where a.publishedRevisionId = r.id"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED")
+    List<PublishedRevisionRow> findAllCurrentlyPublished();
 }

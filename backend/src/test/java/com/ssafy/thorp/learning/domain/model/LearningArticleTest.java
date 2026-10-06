@@ -7,9 +7,11 @@ import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.learning.domain.exception.DraftChangedException;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.TermBlock;
+import com.ssafy.thorp.learning.domain.model.LearningArticle.DraftContent;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation.SectorWeight;
+import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +22,7 @@ class LearningArticleTest {
 
     private static final ArticleId ARTICLE = new ArticleId("returns-and-losses");
     private static final TermId MAX_DRAWDOWN = new TermId("max-drawdown");
+    private static final Placement PLACEMENT = new Placement(new StageKey("returns-and-risk"), 1);
 
     private static LearningArticle draft(int draftVersion) {
         return new LearningArticle(
@@ -28,28 +31,47 @@ class LearningArticleTest {
                 "수익과 손실",
                 "",
                 8,
+                ArticleFormat.V1,
+                PLACEMENT,
+                null,
                 List.of(),
                 null,
                 List.of(),
                 ArticleStatus.DRAFT,
                 null,
                 draftVersion,
-                List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "")));
+                List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "")),
+                List.of(),
+                0,
+                null);
+    }
+
+    private static DraftContent v1Content(
+            List<ArticleBlock> blocks, ExampleAllocation example, List<LearningTerm> terms) {
+        return new DraftContent(
+                "수익과 손실",
+                "질문",
+                8,
+                ArticleFormat.V1,
+                PLACEMENT,
+                blocks,
+                example,
+                List.of(new ArticleSource("출처", null)),
+                terms,
+                List.of());
     }
 
     private static LearningArticle saveSample(LearningArticle article, int expectedVersion) {
         return article.saveDraft(
                 expectedVersion,
-                "수익과 손실",
-                "질문",
-                8,
-                List.of(new ParagraphBlock("문단"), new TermBlock(MAX_DRAWDOWN)),
-                new ExampleAllocation(
-                        List.of(
-                                new SectorWeight("SEMICONDUCTOR", 500),
-                                new SectorWeight("BATTERY", 500))),
-                List.of(new ArticleSource("출처", null)),
-                List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "문장")));
+                v1Content(
+                        List.of(new ParagraphBlock("문단"), new TermBlock(MAX_DRAWDOWN)),
+                        new ExampleAllocation(
+                                List.of(
+                                        new SectorWeight("SEMICONDUCTOR", 500),
+                                        new SectorWeight("BATTERY", 500))),
+                        List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "문장"))),
+                false);
     }
 
     @Test
@@ -80,24 +102,26 @@ class LearningArticleTest {
     }
 
     @Test
-    @DisplayName("publish는 PUBLISHED와 공개 판 대리키를 남기고, 옛 판 번호면 거절한다")
+    @DisplayName("publish는 PUBLISHED와 공개 판 대리키와 공개 배치를 남기고, 옛 판 번호면 거절한다")
     void publishSetsRevision() {
         LearningArticle published = draft(3).publish(3, 42L);
 
         assertThat(published.status()).isEqualTo(ArticleStatus.PUBLISHED);
         assertThat(published.publishedRevisionId()).isEqualTo(42L);
+        assertThat(published.publishedPlacement()).isEqualTo(PLACEMENT);
         assertThat(published.draftVersion()).isEqualTo(3);
         assertThatThrownBy(() -> draft(3).publish(2, 42L))
                 .isInstanceOf(DraftChangedException.class);
     }
 
     @Test
-    @DisplayName("unpublish는 DRAFT와 null로 되돌린다")
+    @DisplayName("unpublish는 DRAFT와 null로 되돌리고 공개 배치를 비운다")
     void unpublishClearsRevision() {
         LearningArticle unpublished = draft(3).publish(3, 42L).unpublish();
 
         assertThat(unpublished.status()).isEqualTo(ArticleStatus.DRAFT);
         assertThat(unpublished.publishedRevisionId()).isNull();
+        assertThat(unpublished.publishedPlacement()).isNull();
     }
 
     @Test
@@ -111,42 +135,25 @@ class LearningArticleTest {
     @Test
     @DisplayName("PUBLISHED인데 공개 판이 없거나, DRAFT인데 공개 판이 있으면 만들 수 없다")
     void rejectsStatusRevisionMismatch() {
-        assertThatThrownBy(
-                        () ->
-                                new LearningArticle(
-                                        1L,
-                                        ARTICLE,
-                                        "t",
-                                        "",
-                                        1,
-                                        List.of(),
-                                        null,
-                                        List.of(),
-                                        ArticleStatus.PUBLISHED,
-                                        null,
-                                        0,
-                                        List.of()))
+        assertThatThrownBy(() -> withPublication(ArticleStatus.PUBLISHED, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(
-                        () ->
-                                new LearningArticle(
-                                        1L,
-                                        ARTICLE,
-                                        "t",
-                                        "",
-                                        1,
-                                        List.of(),
-                                        null,
-                                        List.of(),
-                                        ArticleStatus.DRAFT,
-                                        7L,
-                                        0,
-                                        List.of()))
+        assertThatThrownBy(() -> withPublication(ArticleStatus.DRAFT, 7L, PLACEMENT))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("블록 61개는 거절하고 60개는 받는다")
+    @DisplayName("공개 배치는 공개 중인 판과 함께 있거나 함께 없다")
+    void rejectsPublishedPlacementMismatch() {
+        assertThatThrownBy(() -> withPublication(ArticleStatus.PUBLISHED, 7L, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> withPublication(ArticleStatus.DRAFT, null, PLACEMENT))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(withPublication(ArticleStatus.PUBLISHED, 7L, PLACEMENT).publishedPlacement())
+                .isEqualTo(PLACEMENT);
+    }
+
+    @Test
+    @DisplayName("V1 글은 블록 61개를 거절하고 60개는 받는다")
     void rejectsMoreThanSixtyBlocks() {
         List<ArticleBlock> sixty = Collections.nCopies(60, new ParagraphBlock("문단"));
         List<ArticleBlock> sixtyOne = Collections.nCopies(61, new ParagraphBlock("문단"));
@@ -163,31 +170,31 @@ class LearningArticleTest {
                         () ->
                                 draft(0).saveDraft(
                                                 0,
-                                                "t",
-                                                "",
-                                                1,
-                                                List.of(),
-                                                null,
-                                                List.of(),
-                                                List.of(
-                                                        new LearningTerm(MAX_DRAWDOWN, "a", ""),
-                                                        new LearningTerm(MAX_DRAWDOWN, "b", ""))))
+                                                v1Content(
+                                                        List.of(),
+                                                        null,
+                                                        List.of(
+                                                                new LearningTerm(
+                                                                        MAX_DRAWDOWN, "a", ""),
+                                                                new LearningTerm(
+                                                                        MAX_DRAWDOWN, "b", ""))),
+                                                false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("블록 종류는 sealed라 네 가지뿐이다")
+    @DisplayName("블록 종류는 sealed라 열 가지뿐이다")
     void blockKindsAreSealed() {
         assertThat(ArticleBlock.class.isSealed()).isTrue();
-        assertThat(ArticleBlock.class.getPermittedSubclasses()).hasSize(4);
+        assertThat(ArticleBlock.class.getPermittedSubclasses()).hasSize(10);
     }
 
     @Test
-    @DisplayName("블록 text의 길이 경계를 지킨다")
+    @DisplayName("블록 글자의 길이 경계를 지킨다")
     void blockTextLengthBoundaries() {
         assertThatThrownBy(() -> new ParagraphBlock(""))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(new ParagraphBlock("가".repeat(2000)).text()).hasSize(2000);
+        assertThat(new ParagraphBlock("가".repeat(2000)).content().length()).isEqualTo(2000);
         assertThatThrownBy(() -> new ParagraphBlock("가".repeat(2001)))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ArticleBlock.HeadingBlock("가".repeat(101)))
@@ -196,7 +203,30 @@ class LearningArticleTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    private static LearningArticle withPublication(
+            ArticleStatus status, Long revisionId, Placement publishedPlacement) {
+        return new LearningArticle(
+                1L,
+                ARTICLE,
+                "t",
+                "",
+                1,
+                ArticleFormat.V1,
+                PLACEMENT,
+                publishedPlacement,
+                List.of(),
+                null,
+                List.of(),
+                status,
+                revisionId,
+                0,
+                List.of(),
+                List.of(),
+                0,
+                null);
+    }
+
     private static LearningArticle saveWithBlocks(List<ArticleBlock> blocks) {
-        return draft(0).saveDraft(0, "t", "", 1, blocks, null, List.of(), List.of());
+        return draft(0).saveDraft(0, v1Content(blocks, null, List.of()), false);
     }
 }

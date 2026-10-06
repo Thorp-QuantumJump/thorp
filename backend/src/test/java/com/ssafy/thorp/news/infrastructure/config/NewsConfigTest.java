@@ -6,39 +6,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.core.io.ClassPathResource;
 
 /** 뉴스 설정과 버전 관리되는 등록표의 검증 규칙. 근거: specs/012-market-news-digest/spec.md, plan.md. */
 class NewsConfigTest {
 
-    private static NewsProperties.Http defaultHttp() {
-        return new NewsProperties.Http(
-                3,
-                Duration.ofSeconds(5),
-                Duration.ofSeconds(20),
-                10_485_760L,
-                Set.of("application/xml"),
-                Set.of("application/json"),
-                List.of("api.gdeltproject.org"));
-    }
-
-    private static NewsProperties properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode mode) {
-        return new NewsProperties(
-                mode,
-                Duration.ofMinutes(30),
-                Duration.ofMinutes(15),
-                Duration.ofMinutes(15),
-                LocalDate.of(2026, 11, 7),
-                "Asia/Seoul",
-                93,
-                20,
-                3,
-                Duration.ofHours(48),
-                defaultHttp());
+    /**
+     * 설정 없이 바인딩한 뉴스 설정. 운영 설정 파일에 {@code thorp.news}의 노출·보관·HTTP 키가 없으므로 이 값이 곧 운영값이다.
+     *
+     * <p>record를 직접 만들어 같은 값을 되읽으면 {@code @DefaultValue}가 바뀌어도 시험이 통과한다. 그래서 실제 바인더를 지난다.
+     */
+    private static NewsProperties defaults() {
+        return new Binder(new MapConfigurationPropertySource(Map.of()))
+                .bindOrCreate("thorp.news", NewsProperties.class);
     }
 
     @Nested
@@ -48,7 +35,7 @@ class NewsConfigTest {
         @Test
         @DisplayName("기본 한도는 plan이 고정한 값이다")
         void 기본_한도() {
-            NewsProperties.Http http = defaultHttp();
+            NewsProperties.Http http = defaults().http();
 
             assertThat(http.maxRedirects()).isEqualTo(3);
             assertThat(http.connectTimeout()).isEqualTo(Duration.ofSeconds(5));
@@ -113,23 +100,9 @@ class NewsConfigTest {
     class Exposure {
 
         @Test
-        @DisplayName("노출 모드는 서버 설정이 정한다 (spec FR-016)")
-        void 노출_모드() {
-            assertThat(
-                            properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL)
-                                    .isPublic())
-                    .isFalse();
-            assertThat(
-                            properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.PUBLIC)
-                                    .isPublic())
-                    .isTrue();
-        }
-
-        @Test
         @DisplayName("삭제 기준일은 시간대와 함께 해석한다 (spec FR-019)")
         void 삭제_기준일() {
-            NewsProperties properties =
-                    properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL);
+            NewsProperties properties = defaults();
 
             assertThat(properties.retentionDate()).isEqualTo(LocalDate.of(2026, 11, 7));
             assertThat(properties.retentionZone()).isEqualTo("Asia/Seoul");
@@ -138,11 +111,22 @@ class NewsConfigTest {
         @Test
         @DisplayName("과거 조회 상한과 묶음 수 상한은 서로 다른 경계다")
         void 상한_분리() {
-            NewsProperties properties =
-                    properties(com.ssafy.thorp.news.domain.vo.NewsExposureMode.INTERNAL);
+            NewsProperties properties = defaults();
 
             assertThat(properties.maxHistoricalRangeDays()).isEqualTo(93);
-            assertThat(properties.maxDigests()).isEqualTo(3);
+            assertThat(properties.maxDigests()).isEqualTo(20);
+        }
+
+        @Test
+        @DisplayName("묶음 수 상한은 설정이 없으면 20이다 (2026-10-02)")
+        void 묶음_수_상한_기본값() {
+            NewsProperties defaults =
+                    new Binder(new MapConfigurationPropertySource(Map.of()))
+                            .bindOrCreate("thorp.news", NewsProperties.class);
+
+            assertThat(defaults.maxDigests())
+                    .as("뉴스 구역의 분류 칸이 주요 뉴스 다섯과 고른 섹터 몫을 건너뛰고도 셋을 채울 만큼이다")
+                    .isEqualTo(20);
         }
     }
 

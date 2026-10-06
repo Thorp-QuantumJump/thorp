@@ -29,6 +29,16 @@ vi.mock('@/api/sectors', async () => {
   return { ...actual, ...apiMocks }
 })
 
+// 뉴스 구역이 목록 아래에 서지만 이 검사가 보는 것이 아니다. 실제 요청을 내지 않게 빈 응답으로 막는다.
+// vi.fn이 아니라 그냥 함수라 각 검사의 mock 초기화에 지워지지 않는다.
+vi.mock('@/api/marketNews', () => ({
+  fetchNewsSectors: async () => [],
+  fetchMarketNewsDigests: async () => ({
+    context: 'CURRENT', state: 'EMPTY', sectorId: null, from: null, to: null,
+    lastUpdatedAt: null, stale: false, statusMessage: null, digests: [],
+  }),
+}))
+
 function sector(
   code: string,
   name: string,
@@ -64,10 +74,13 @@ const catalog: SectorCatalog = {
 
 const loaded: SectorCatalogResult = { status: 'loaded', catalog }
 
-/** 지금 경로를 화면에 드러내 다음 단계로 실제로 이동했는지 값으로 확인한다. */
+/**
+ * 지금 주소를 화면에 드러내 다음 단계로 실제로 이동했는지 값으로 확인한다. 질의 문자열까지 싣는다 — 값이
+ * 주소에 실리는 회귀는 경로가 아니라 질의 문자열에서 일어난다.
+ */
 function PathProbe() {
   const location = useLocation()
-  return <output data-testid="path">{location.pathname}</output>
+  return <output data-testid="path">{location.pathname + location.search}</output>
 }
 
 async function openPage() {
@@ -261,10 +274,9 @@ describe('다음 단계 버튼과 003 인계', () => {
 
     await user.click(proceedButton())
 
-    // 경로에 섹터 코드나 비중이 섞이면 공유된 링크가 '추천 비중'처럼 읽힌다(원칙 III).
+    // 주소에 섹터 코드나 비중이 섞이면 공유된 링크가 '추천 비중'처럼 읽힌다(원칙 III). 질의 문자열까지
+    // 비어 있어야 한다.
     expect(currentPath()).toBe('/strategy')
-    expect(currentPath()).not.toContain('SEMICONDUCTOR')
-    expect(currentPath()).not.toContain('500')
   })
 
   it('보관이 막혀 넘길 수 없으면 다음 화면으로 보내지 않고 그 사실을 알린다 (원칙 VI)', async () => {

@@ -3,7 +3,7 @@ import { Popover } from 'radix-ui'
 import { useId } from 'react'
 import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from '@/components/common/useHoverOpen'
 import type { FieldSummary } from '@/types/marketFlow'
-import { DataStateLine } from './DataStateNotice'
+import { DataStateLine } from './DataState'
 import { formatNarrative, stateLineLabels } from './marketFlowFormat'
 import styles from './MarketFlow.module.css'
 
@@ -104,6 +104,37 @@ export function FieldSummaryCard({ field, selected = false, onOpen, listUpdatedA
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
+    </motion.article>
+  )
+}
+
+/**
+ * 분야 메뉴 끝의 'Thorp 종합 비교'(009 FR-019). 일곱 분야를 함께 견주므로 분야 버튼과 같은 줄에 서되 노랑으로 가른다.
+ * 분야 버튼과 같은 상세 영역을 열고(aria-controls), 같은 화살표 이동 묶음에 든다. 누를 때만 조회한다(010 US3).
+ */
+export function CompositeSummaryCard({ selected = false, onOpen }: { selected?: boolean; onOpen: () => void }) {
+  const reducedMotion = useReducedMotion()
+  return (
+    <motion.article
+      className={`${styles.summaryCard} ${styles.compositeCard}`}
+      data-selected={selected}
+      initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reducedMotion ? 0 : 0.22, delay: reducedMotion ? 0 : 0.18 }}
+    >
+      {selected ? (
+        <motion.span
+          className={styles.selectionLine}
+          layoutId={reducedMotion ? undefined : 'market-flow-selection'}
+          transition={{ duration: 0.2 }}
+          aria-hidden="true"
+        />
+      ) : null}
+      <h3 className={styles.summaryHeading}>
+        <button type="button" className={styles.openButton} aria-pressed={selected} aria-controls="market-flow-detail" onClick={onOpen}>
+          Thorp 종합 비교
+        </button>
+      </h3>
     </motion.article>
   )
 }

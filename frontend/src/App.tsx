@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { AssistantProvider, AssistantWidget } from '@/components/assistant/AssistantWidget'
 import { LandingPage } from '@/pages/LandingPage'
 
-// 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.
+// 첫 화면 밖의 화면은 각 경로에 접근할 때 불러온다.
 // 설정 조합 자동 비교(spec 007)도 전략 화면에서 넘어올 때 불러온다.
 const ParamSearchPage = lazy(() =>
   import('@/pages/ParamSearchPage').then((module) => ({

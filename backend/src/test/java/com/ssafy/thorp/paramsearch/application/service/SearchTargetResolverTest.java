@@ -76,9 +76,8 @@ class SearchTargetResolverTest {
         assertThat(targets.notExecutable())
                 .as("004는 이 전략을 실행할 수 있다 — 두 사유를 뭉치면 사용자가 '기다리면 되는 일'로 읽는다")
                 .isEmpty();
+        // 사용자에게 나가는 422 코드는 접수 경로가 정한다. ParamSearchRejectionIT가 그 경로로 본다.
         assertThat(targets.stopReason()).isEqualTo(StopReason.STRATEGY_NOT_SEARCHABLE);
-        assertThat(targets.toException().getErrorCode())
-                .isEqualTo(ErrorCode.STRATEGY_NOT_SEARCHABLE);
     }
 
     @Test

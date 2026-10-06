@@ -13,8 +13,8 @@ import com.ssafy.thorp.news.application.result.NewsArticleExportResult;
 import com.ssafy.thorp.news.application.service.NewsArticleExportService;
 import com.ssafy.thorp.news.application.service.NewsDigestQueryService;
 import com.ssafy.thorp.news.domain.vo.PublicationTimeStatus;
-import com.ssafy.thorp.news.presentation.controller.NewsArticleExportExceptionHandler;
 import com.ssafy.thorp.news.presentation.controller.NewsDigestController;
+import com.ssafy.thorp.news.presentation.controller.NewsDigestExceptionHandler;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -33,10 +33,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
  */
 class NewsArticleExportContractTest {
 
+    /** 운영에 등록되는 처리기를 그대로 끼운다. 내보내기도 같은 컨트롤러에 있어 {@link NewsDigestExceptionHandler}가 오류를 옮긴다. */
     private static MockMvc mockMvc(Function<NewsArticleExportQuery, NewsArticleExportResult> stub) {
         return MockMvcBuilders.standaloneSetup(
                         new NewsDigestController(null, new StubExportService(stub), null))
-                .setControllerAdvice(new NewsArticleExportExceptionHandler())
+                .setControllerAdvice(new NewsDigestExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(MAPPER))
                 .build();
     }

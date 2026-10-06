@@ -1,5 +1,6 @@
 package com.ssafy.thorp.learning.application.result;
 
+import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import java.util.Objects;
 
@@ -8,10 +9,16 @@ import java.util.Objects;
  *
  * @param article 초안 작업본과 그 글의 초안 용어
  * @param publishedRevisionNo 공개 중인 판 번호. 초안이면 null이다
+ * @param publishedEdition 공개 중인 판의 종류. 초안이면 null이다
  */
-public record AdminArticleResult(LearningArticle article, Integer publishedRevisionNo) {
+public record AdminArticleResult(
+        LearningArticle article, Integer publishedRevisionNo, Edition publishedEdition) {
 
     public AdminArticleResult {
         Objects.requireNonNull(article, "article must not be null");
+        if ((publishedRevisionNo == null) != (publishedEdition == null)) {
+            throw new IllegalArgumentException(
+                    "publishedRevisionNo and publishedEdition must be present together");
+        }
     }
 }

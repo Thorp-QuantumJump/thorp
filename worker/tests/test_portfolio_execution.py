@@ -330,6 +330,26 @@ def test_distribution_is_paid_once_on_the_pay_date_for_ex_date_holdings() -> Non
     assert with_flows[0].cash == before.cash + flow.amount, "지급일에 현금이 정확히 그만큼 는다"
 
 
+def test_distribution_paid_after_the_run_ends_is_not_counted_as_cash() -> None:
+    """지급일이 실행 종료일 뒤면 끝내 받지 못한다. 받은 것으로 치지 않는다.
+
+    권리락일(4/29)에 들고 있어 자격은 생기지만 지급일(5/2) 전에 실행이 끝난다. 분배금을 뺀
+    자료로 돌린 결과와 날마다 현금·자산이 같아야 한다 — 종료일에 남은 자격을 현금이나 자산에
+    얹으면 여기서 갈린다.
+    """
+    window = three_etf("2024-04-01", "2024-04-30")
+    output = completed(**window)
+    assert holding(output, BATTERY_EX_DATE - timedelta(days=1), BATTERY) > 0
+    assert output.portfolio_series[-1].date < BATTERY_PAY_DATE
+    assert not any(s.cash_flows for s in output.portfolio_series)
+
+    baseline = run_patched(lambda market: replace(market, distributions=()), **window)
+    assert baseline.run.status is RunStatus.COMPLETED, baseline.run.error
+    assert [(s.date, s.cash, s.equity) for s in output.portfolio_series] == [
+        (s.date, s.cash, s.equity) for s in baseline.portfolio_series
+    ]
+
+
 def test_split_doubles_quantity_without_a_trade() -> None:
     output = completed(**three_etf("2024-02-01", "2024-03-29"))
     after = next(s for s in output.portfolio_series if s.date == SPLIT_DAY)

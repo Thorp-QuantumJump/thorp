@@ -90,11 +90,6 @@ class DistributionLedger:
             for item in due
         ]
 
-    @property
-    def unpaid(self) -> list[Entitlement]:
-        """아직 지급일이 오지 않은 자격. 실행이 끝나면 그대로 버려진다."""
-        return list(self._pending)
-
 
 @dataclass(frozen=True)
 class SplitOutcome:

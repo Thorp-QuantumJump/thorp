@@ -19,8 +19,6 @@ const apiMocks = vi.hoisted(() => ({
   fetchResultWeights: vi.fn(),
   fetchResultExceptions: vi.fn(),
   fetchResultTrades: vi.fn(),
-  fetchResultPositions: vi.fn(),
-  fetchResultIndexComparison: vi.fn(),
 }))
 const sectorMocks = vi.hoisted(() => ({
   fetchSectorCatalog: vi.fn(),
@@ -99,7 +97,6 @@ describe('DetailPanel(결과 분석·설정·근거 탭)', () => {
     expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()
     expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()
     expect(sectorMocks.fetchInstrumentProfile).not.toHaveBeenCalled()
-    expect(apiMocks.fetchResultIndexComparison).not.toHaveBeenCalled()
 
     await openSettings()
     await screen.findByText('44.73%')

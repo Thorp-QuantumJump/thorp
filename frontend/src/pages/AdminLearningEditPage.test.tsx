@@ -264,13 +264,21 @@ describe('AdminLearningEditPage', () => {
       status: 'unpublished',
       result: { articleId: 'tide-reading', status: 'DRAFT', unpublishedRevisionNo: 3 },
     })
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // 처음 물음은 거절하고, 다시 눌렀을 때는 수락한다.
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValue(true)
     const user = userEvent.setup()
     renderEdit()
 
     await user.click(await screen.findByRole('button', { name: '게시 취소' }))
+    // 거절하면 요청을 보내지 않고 버튼도 그대로 둔다.
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(apiMocks.unpublishArticle).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '게시 취소' }))
 
     expect(await screen.findByText('3판의 게시를 취소했습니다.')).not.toBeNull()
+    expect(confirm).toHaveBeenCalledTimes(2)
+    expect(apiMocks.unpublishArticle).toHaveBeenCalledTimes(1)
     // 취소한 뒤에는 그 버튼이 사라진다. 상태가 DRAFT로 바뀌었다.
     expect(screen.queryByRole('button', { name: '게시 취소' })).toBeNull()
   })

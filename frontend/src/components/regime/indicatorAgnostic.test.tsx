@@ -12,29 +12,47 @@ function walk(directory: string): string[] {
 /** 010 운영 파일을 손 목록 없이 모은다. */
 const sources = walk('src').filter((path) =>
   !/\.test\.tsx?$|^src\/test\//.test(path) &&
-  (/^src\/components\/regime\//.test(path) || /^(src\/(api|types)\/regime\.ts|src\/hooks\/useRegimeSearch\.ts|src\/pages\/RegimeSearchPage\.tsx)$/.test(path)),
+  (/^src\/components\/regime\//.test(path) || /^(src\/(api|types)\/regime\.ts|src\/hooks\/useRegimeSearch\.ts|src\/pages\/RegimeSearchPage\.tsx)$/.test(path) ||
+    // 시장 흐름 분야 상세 안에서 010 결과를 보이는 자리(009 FR-019)도 같은 경계를 따른다.
+    /^(src\/components\/marketflow\/(FieldPastCompare|CompositePast)\.tsx|src\/hooks\/usePastCases\.ts)$/.test(path)),
 )
 
-// 임시 등록표의 이름·ID. 검사는 화면의 도메인 상수 유입을 막는다.
+// 008 등록표의 분야·지표 ID와 이름(data/src/data_pipeline/macro/registry.py·display.py)과 종합 비교 묶음 이름
+// (data/config/regime-phase-v3.json). 검사는 화면의 도메인 상수 유입을 막는다. ID는 대소문자를 가리지 않고 찾아
+// 백엔드 enum 이름(PRODUCTION 등)도 함께 막되, 식별자 경계에서만 찾아 collaborate 같은 낱말 속 labor에는 걸리지 않는다.
+// '생산'·'노동'·'수출'·'수입'·'물가'처럼 흔한 낱말과 exports·imports는 뺐다.
 const registryWords = [
-  'PRODUCTION', 'CONSUMPTION_INVESTMENT', 'EXTERNAL_TRADE', 'LABOR',
-  'PRICES_COMMODITIES', 'FINANCE_HOUSING', 'GLOBAL_ECONOMY',
-  'UNEMPLOYMENT_RATE', 'CONSUMER_PRICES', 'USD_KRW',
-  '소비·투자', '대외 거래', '물가·원자재', '금융·주택', '세계 경제',
-  '실업률', '소비자물가 상승률', '원/달러 환율',
+  'production', 'consumption_investment', 'external_trade', 'labor',
+  'prices_commodities', 'finance_housing', 'overseas',
+  'all_industry_production', 'mining_manufacturing_production', 'service_production',
+  'retail_sales_index', 'facility_investment_index', 'construction_completed_constant',
+  'trade_balance', 'employed_persons', 'unemployment_rate', 'consumer_price_index',
+  'dubai_crude', 'treasury_bond_3y', 'usd_krw_rate', 'housing_sale_price', 'g20_cli',
+  '소비·투자', '대외거래', '물가·원자재', '금융·주택', '해외 경기',
+  '전산업생산', '광공업생산', '서비스업생산', '소매판매액지수', '설비투자지수', '건설기성액',
+  '무역수지', '취업자 수', '실업률', '소비자물가', '두바이유', '국고채 3년', '원/달러 환율',
+  '주택 매매가격', 'G20 경기선행지수',
+  '실물 경기', '대외 거래', '금융 여건',
 ]
+
+function containsRegistryWord(source: string, word: string): boolean {
+  if (!/^[\w ]+$/.test(word)) return source.includes(word)
+  return new RegExp(`(?<![A-Za-z0-9_])${word}(?![A-Za-z0-9_])`, 'i').test(source)
+}
 
 describe('010 화면의 등록표 경계', () => {
   it('src를 훑어 API·타입·훅·화면·컴포넌트를 빠짐없이 검사한다', () => {
     expect(sources).toContain('src/pages/RegimeSearchPage.tsx')
     expect(sources).toContain('src/components/regime/CaseDetail.tsx')
     expect(sources).toContain('src/api/regime.ts')
+    expect(sources).toContain('src/components/marketflow/FieldPastCompare.tsx')
+    expect(sources).toContain('src/components/marketflow/CompositePast.tsx')
     expect(sources.length).toBeGreaterThan(10)
   })
 
   it('지표와 분야의 등록표 ID·이름을 코드에 박지 않는다', () => {
     const found = sources.flatMap((path) => registryWords
-      .filter((word) => readFileSync(path, 'utf8').includes(word))
+      .filter((word) => containsRegistryWord(readFileSync(path, 'utf8'), word))
       .map((word) => `${path}: ${word}`))
     expect(found).toEqual([])
   })

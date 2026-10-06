@@ -1,13 +1,21 @@
 import { ApiClientError, apiClient, normalizeApiError } from './client'
 import type { ApiEnvelope, ApiErrorCode } from '@/types/api'
 import type {
-  ArticleBlock,
+  ArticleNext,
+  ArticleStage,
+  CurrentArticleBlock,
+  DiagramSeries,
   LearningArticle,
   LearningArticleList,
   LearningArticleSummary,
   LearningExample,
   LearningExampleSector,
   LearningSource,
+  LegacyArticleBlock,
+  NoteSource,
+  QuizChoice,
+  QuizQuestion,
+  Run,
 } from '@/types/learning'
 
 /**
@@ -80,14 +88,34 @@ function readList(value: unknown): LearningArticleList | null {
   return { articles }
 }
 
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number'
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString)
+}
+
+/** 배열의 항목을 모두 읽는다. 하나라도 읽지 못하면 배열 전체를 읽지 못한 것으로 둔다. */
+function readAll<T>(value: unknown, read: (item: unknown) => T | null): T[] | null {
+  if (!Array.isArray(value)) return null
+  const items: T[] = []
+  for (const item of value) {
+    const parsed = read(item)
+    if (parsed === null) return null
+    items.push(parsed)
+  }
+  return items
+}
+
 /**
- * 블록 하나를 읽는다.
+ * 9월 판 블록 하나를 읽는다(`PRE_RELEASE`·`PREVIOUS`, 계약 §3-1).
  *
  * <b>모르는 `type`은 읽지 못한 응답으로 다루지 않는다.</b> 서버가 새 블록 종류를 더해도 글 전체가
- * 실패로 바뀌지 않게 그대로 넘기고, 그리지 않는 판단은 `ArticleBlocks`가 한다. 아는 종류인데 필드가
+ * 실패로 바뀌지 않게 그대로 넘기고, 그리지 않는 판단은 `ArticleBody`가 한다. 아는 종류인데 필드가
  * 빠졌으면 계약 위반이므로 빈 글로 채우지 않고 응답 전체를 읽지 못한 것으로 둔다.
  */
-function readBlock(value: unknown): ArticleBlock | null {
+function readLegacyBlock(value: unknown): LegacyArticleBlock | null {
   if (!isRecord(value) || !isString(value.type)) return null
   switch (value.type) {
     case 'heading':
@@ -99,8 +127,186 @@ function readBlock(value: unknown): ArticleBlock | null {
         ? { type: 'term', termId: value.termId, label: value.label, sentence: value.sentence }
         : null
     default:
-      return value as unknown as ArticleBlock
+      return value as unknown as LegacyArticleBlock
   }
+}
+
+function readNoteSource(value: unknown): NoteSource | null {
+  if (!isRecord(value) || !isString(value.label) || !isString(value.url)) return null
+  return { label: value.label, url: value.url }
+}
+
+/**
+ * 글자 조각 하나를 읽는다(data-model §5-2). 조각은 글자·용어 언급·출처 표시 가운데 하나다.
+ *
+ * 블록과 달리 모르는 조각은 통과시키지 않는다. 서버가 저장할 때 모르는 키를 거절하므로(§5-2) 여기서
+ * 모르는 모양을 만나면 계약 위반이고, 문장 한가운데가 빈 채로 그려지면 뜻이 바뀐다.
+ */
+function readRun(value: unknown): Run | null {
+  if (!isRecord(value)) return null
+  if ('source' in value) {
+    const source = readNoteSource(value.source)
+    return source ? { source } : null
+  }
+  if ('term' in value) {
+    return isString(value.term) &&
+      isString(value.text) &&
+      typeof value.owned === 'boolean' &&
+      isStringArray(value.aliases)
+      ? { term: value.term, text: value.text, owned: value.owned, aliases: value.aliases }
+      : null
+  }
+  return isString(value.text) ? { text: value.text } : null
+}
+
+function readRuns(value: unknown): Run[] | null {
+  return readAll(value, readRun)
+}
+
+function readRunLines(value: unknown): Run[][] | null {
+  return readAll(value, readRuns)
+}
+
+function readDiagramSeries(value: unknown): DiagramSeries | null {
+  if (!isRecord(value) || !isString(value.name)) return null
+  if (!Array.isArray(value.values) || !value.values.every(isNumber)) return null
+  return { name: value.name, values: value.values }
+}
+
+/**
+ * 새 기준 블록 하나를 읽는다(`CURRENT`, 계약 §3-2, data-model §5-3).
+ *
+ * 9월 판과 같은 원칙이다. 모르는 `type`은 그대로 넘기고, 아는 종류의 필드가 틀리면 응답 전체를 읽지
+ * 못한 것으로 둔다. 같은 `type` 이름이라도 9월 판 필드(`paragraph`의 `text` 등)만 있으면 틀린 것이다.
+ */
+function readCurrentBlock(value: unknown): CurrentArticleBlock | null {
+  if (!isRecord(value) || !isString(value.type)) return null
+  switch (value.type) {
+    case 'keySummary': {
+      const lines = readRunLines(value.lines)
+      return lines ? { type: 'keySummary', lines } : null
+    }
+    case 'heading':
+      return isString(value.text) ? { type: 'heading', text: value.text } : null
+    case 'paragraph':
+    case 'hypothetical': {
+      const content = readRuns(value.content)
+      return content ? { type: value.type, content } : null
+    }
+    case 'term':
+      return isString(value.termId) &&
+        isString(value.label) &&
+        isStringArray(value.aliases) &&
+        isString(value.meaning) &&
+        isString(value.reading) &&
+        isString(value.caveat)
+        ? {
+            type: 'term',
+            termId: value.termId,
+            label: value.label,
+            aliases: value.aliases,
+            meaning: value.meaning,
+            reading: value.reading,
+            caveat: value.caveat,
+          }
+        : null
+    case 'misconception': {
+      const wrong = readRuns(value.wrong)
+      const correction = readRuns(value.correction)
+      return wrong && correction ? { type: 'misconception', wrong, correction } : null
+    }
+    case 'list': {
+      const items = readRunLines(value.items)
+      return items && typeof value.ordered === 'boolean'
+        ? { type: 'list', ordered: value.ordered, items }
+        : null
+    }
+    case 'table': {
+      const rows = readAll(value.rows, readRunLines)
+      return rows && isString(value.caption) && isStringArray(value.columns)
+        ? { type: 'table', caption: value.caption, columns: value.columns, rows }
+        : null
+    }
+    case 'diagram': {
+      const series = readAll(value.series, readDiagramSeries)
+      return series &&
+        (value.kind === 'bar' || value.kind === 'line') &&
+        isString(value.title) &&
+        isString(value.unit) &&
+        isStringArray(value.categories) &&
+        isString(value.description)
+        ? {
+            type: 'diagram',
+            kind: value.kind,
+            title: value.title,
+            unit: value.unit,
+            categories: value.categories,
+            series,
+            description: value.description,
+          }
+        : null
+    }
+    case 'institutionNote': {
+      const content = readRuns(value.content)
+      if (!content) return null
+      if (value.asOf !== null && !isString(value.asOf)) return null
+      const source = value.source === null ? null : readNoteSource(value.source)
+      if (value.source !== null && !source) return null
+      return { type: 'institutionNote', content, asOf: value.asOf, source }
+    }
+    default:
+      return value as unknown as CurrentArticleBlock
+  }
+}
+
+function readQuizChoice(value: unknown): QuizChoice | null {
+  if (!isRecord(value) || !isString(value.choiceId) || !isString(value.text)) return null
+  return { choiceId: value.choiceId, text: value.text }
+}
+
+function readQuizQuestion(value: unknown): QuizQuestion | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.questionId) ||
+    !isString(value.prompt) ||
+    !isString(value.correctChoiceId) ||
+    !isString(value.explanation)
+  ) {
+    return null
+  }
+  const choices = readAll(value.choices, readQuizChoice)
+  if (!choices) return null
+  return {
+    questionId: value.questionId,
+    prompt: value.prompt,
+    choices,
+    correctChoiceId: value.correctChoiceId,
+    explanation: value.explanation,
+  }
+}
+
+function readStage(value: unknown): ArticleStage | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.stageKey) ||
+    !isNumber(value.number) ||
+    !isString(value.name)
+  ) {
+    return null
+  }
+  return { stageKey: value.stageKey, number: value.number, name: value.name }
+}
+
+function readNext(value: unknown): ArticleNext | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.articleId) ||
+    !(value.number === null || isString(value.number)) ||
+    !isString(value.title)
+  ) {
+    return null
+  }
+  return { articleId: value.articleId, number: value.number, title: value.title }
 }
 
 function readExampleSector(value: unknown): LearningExampleSector | null {
@@ -150,28 +356,61 @@ function readSource(value: unknown): LearningSource | null {
   return { label: value.label, url: value.url ?? null }
 }
 
+/**
+ * 글 하나를 읽는다(계약 §3).
+ *
+ * <p><b>`edition`을 먼저 읽는다.</b> 같은 `type` 이름의 블록이 판마다 필드가 달라서(9월 판 `paragraph`의
+ * `text`, 새 기준 `paragraph`의 `content`) 판을 모르고는 블록을 읽을 수 없다. `edition`이 없거나 세 값이
+ * 아니면 읽지 못한 응답이다.
+ *
+ * <p><b>예시는 판마다 다르다.</b> 새 기준 글은 예시가 선택이라 `null`을 그대로 받고, 9월 판 글은 지금처럼
+ * 객체여야 한다(data-model §9).
+ */
 function readArticle(value: unknown): LearningArticle | null {
   const summary = readSummary(value)
   if (!summary || !isRecord(value)) return null
-  if (!Array.isArray(value.blocks) || !Array.isArray(value.sources)) return null
-  if (!isString(value.publishedAt)) return null
+  const edition = value.edition
+  if (edition !== 'CURRENT' && edition !== 'PRE_RELEASE' && edition !== 'PREVIOUS') return null
 
-  const blocks: ArticleBlock[] = []
-  for (const item of value.blocks) {
-    const block = readBlock(item)
-    if (!block) return null
-    blocks.push(block)
+  const stage = readStage(value.stage)
+  const sources = readAll(value.sources, readSource)
+  const quiz = readAll(value.quiz, readQuizQuestion)
+  const next = value.next === null ? null : readNext(value.next)
+  if (!stage || !sources || !quiz || (value.next !== null && !next)) return null
+  if (
+    !(value.number === null || isString(value.number)) ||
+    !isNumber(value.readingMinutes) ||
+    !(value.stageArticleCount === null || isNumber(value.stageArticleCount)) ||
+    typeof value.hasUnreleasedStages !== 'boolean' ||
+    !isString(value.publishedAt)
+  ) {
+    return null
   }
-  const sources: LearningSource[] = []
-  for (const item of value.sources) {
-    const source = readSource(item)
-    if (!source) return null
-    sources.push(source)
+  const common = {
+    ...summary,
+    stage,
+    number: value.number,
+    readingMinutes: value.readingMinutes,
+    sources,
+    next,
+    stageArticleCount: value.stageArticleCount,
+    hasUnreleasedStages: value.hasUnreleasedStages,
+    publishedAt: value.publishedAt,
+    quiz,
   }
+
+  if (edition === 'CURRENT') {
+    const blocks = readAll(value.blocks, readCurrentBlock)
+    const example = value.example === null ? null : readExample(value.example)
+    if (!blocks || (value.example !== null && !example)) return null
+    if (!isNumber(value.minDwellSeconds)) return null
+    return { ...common, edition, blocks, example, minDwellSeconds: value.minDwellSeconds }
+  }
+
+  const blocks = readAll(value.blocks, readLegacyBlock)
   const example = readExample(value.example)
-  if (!example) return null
-
-  return { ...summary, blocks, example, sources, publishedAt: value.publishedAt }
+  if (!blocks || !example || value.minDwellSeconds !== null) return null
+  return { ...common, edition, blocks, example, minDwellSeconds: null }
 }
 
 function unreadable(): LoadFailure {

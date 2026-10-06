@@ -7,6 +7,7 @@ import { StepOrbButton, type StepOrbStage } from '@/components/common/StepOrbBut
 import { AvailabilityTimeline } from '@/components/diagnosis/AvailabilityTimeline'
 import { InstrumentBrowser } from '@/components/diagnosis/InstrumentBrowser'
 import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'
+import { NewsSection } from '@/components/diagnosis/NewsSection'
 import { OverwriteConfirmDialog } from '@/components/diagnosis/OverwriteConfirmDialog'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { KRX_SOURCE_ATTRIBUTION } from '@/diagnosis/attribution'
@@ -261,15 +262,19 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {
           */}
           <div className={styles.cardRow}>
             {/*
-              지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
-              비교 가능 기간 바로 위에 같은 폭으로 지수를 가로로 펼친다.
+              지금 국내 시장(대표 지수와 섹터 대표 ETF, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.
+              비교 가능 기간 바로 위에 같은 폭으로 두고, 카드는 띠 안에서 가로로 흐른다.
             */}
             <section className={styles.marketStrip} aria-labelledby="market-now-title">
-              <h2 id="market-now-title">
-                <ChartNoAxesCombined size={14} aria-hidden="true" />
-                지금 국내 시장
-              </h2>
-              <MarketNow />
+              <MarketNow
+                sectors={sectors}
+                title={
+                  <h2 id="market-now-title">
+                    <ChartNoAxesCombined size={14} aria-hidden="true" />
+                    지금 국내 시장
+                  </h2>
+                }
+              />
             </section>
             <AvailabilityTimeline
               className={`${styles.timeline} ${styles.rowTimeline}`}
@@ -444,13 +449,20 @@ export function SectorSelectionPage() {
           선택 상태는 목록이 실제로 있을 때만 존재한다. 목록을 받지 못한 상태에서 고를 수 있는
           대상이 없으므로 그 경우에는 상태 자체를 만들지 않는다.
         */}
+        {/*
+          뉴스 구역은 투자 대상 탐색·선택 영역 다음에 전체 폭으로 선다(012 FR-001, 002 FR-019). 고른 섹터의 뉴스를 보이려면
+          선택 상태 안에 있어야 한다. 목록을 받지 못했어도 뉴스는 보이므로, 그때는 선택 없이 따로 세운다.
+        */}
         {result?.status === 'loaded' ? (
           <SectorSelectionProvider
             sectors={result.catalog.sectors}
             mapVersion={result.catalog.mapVersion}
           >
             <InstrumentBoard sectors={orderedSectors} isSample={result.catalog.isSample} />
+            <NewsSection />
           </SectorSelectionProvider>
+        ) : result !== null ? (
+          <NewsSection />
         ) : null}
       </main>
     </div>

@@ -1,8 +1,10 @@
 package com.ssafy.thorp.news.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.news.application.command.NewsDigestQuery;
+import com.ssafy.thorp.news.application.exception.NewsQueryException;
 import com.ssafy.thorp.news.application.repository.NewsArticleLinkRepository;
 import com.ssafy.thorp.news.application.repository.NewsCollectionStateRepository;
 import com.ssafy.thorp.news.application.repository.NewsDigestRepository;
@@ -133,7 +135,8 @@ class NewsDigestQueryServiceTest {
     @DisplayName("공개 모드는 회신하지 않은 매체를 거른다")
     void 공개_모드는_미허가를_거른다() {
         NewsDigestListResult result =
-                service(NewsExposureMode.PUBLIC, PENDING_PUBLISHER).query(null, null, null);
+                service(NewsExposureMode.PUBLIC, PENDING_PUBLISHER)
+                        .query(List.of(), null, null, null);
 
         assertThat(result.digests()).as("회신이 없는 매체의 항목은 공개 환경에 표시하지 않는다(spec FR-016)").isEmpty();
         assertThat(result.state())
@@ -148,7 +151,8 @@ class NewsDigestQueryServiceTest {
     @DisplayName("내부 모드는 회신 전 매체도 보여 준다")
     void 내부_모드는_회신_전도_본다() {
         NewsDigestListResult result =
-                service(NewsExposureMode.INTERNAL, PENDING_PUBLISHER).query(null, null, null);
+                service(NewsExposureMode.INTERNAL, PENDING_PUBLISHER)
+                        .query(List.of(), null, null, null);
 
         assertThat(result.digests())
                 .as("회신을 기다리는 동안 수집이 제대로 도는지 내부에서 확인할 길이 있어야 한다(spec FR-016)")
@@ -159,7 +163,7 @@ class NewsDigestQueryServiceTest {
     @DisplayName("공개 모드는 허가된 매체라도 요약 근거가 없으면 뺀다")
     void 공개_모드는_요약을_재계산한다() {
         NewsDigestListResult result =
-                service(NewsExposureMode.PUBLIC, PUBLISHER).query(null, null, null);
+                service(NewsExposureMode.PUBLIC, PUBLISHER).query(List.of(), null, null, null);
 
         assertThat(result.digests())
                 .as("주제 근거가 없으면 요약을 만들 수 없어 그 묶음은 표시하지 않는다(spec FR-003)")
@@ -206,6 +210,156 @@ class NewsDigestQueryServiceTest {
         assertThat(result.digests())
                 .as("저장된 요약에는 미허가 매체의 제목·매체명이 남아 있을 수 있다(spec FR-016)")
                 .isEmpty();
+    }
+
+    /** 그 시각에 발행된 기사 하나로 만든 묶음. 매체가 하나라 주요도는 발행 시각 순서가 된다. */
+    private static NewsDigest digestAt(long id, String path, Duration ago) {
+        CanonicalNewsUrl canonical = CanonicalNewsUrl.normalize("https://example.co.kr/" + path);
+        NewsArticle article =
+                NewsArticle.restore(
+                        id,
+                        com.ssafy.thorp.news.domain.vo.NewsArticleId.of(canonical),
+                        NewsSourceType.RSS,
+                        PUBLISHER.getId(),
+                        null,
+                        canonical.value(),
+                        canonical,
+                        "기사 " + path,
+                        "ko",
+                        NOW.minus(ago),
+                        PublicationTimeStatus.VERIFIED,
+                        NOW.minus(ago),
+                        null,
+                        canonical.value(),
+                        "hash-" + path,
+                        "run-1",
+                        true);
+        return NewsDigest.restore(
+                id * 10,
+                NewsDigestId.of(article.getArticleId(), NewsGroupingPolicy.RULE_VERSION),
+                List.of(article),
+                article,
+                article.getTitle(),
+                STORED_SUMMARY,
+                NewsGroupingPolicy.RULE_VERSION,
+                NewsImportancePolicy.RULE_VERSION);
+    }
+
+    private static final NewsDigest NEWEST = digestAt(11L, "newest", Duration.ofHours(1));
+    private static final NewsDigest MIDDLE = digestAt(12L, "middle", Duration.ofHours(2));
+    private static final NewsDigest OLDEST = digestAt(13L, "oldest", Duration.ofHours(3));
+    private static final NewsDigest EARLIEST = digestAt(14L, "earliest", Duration.ofHours(4));
+
+    /** 섹터 A에는 NEWEST·OLDEST, 섹터 B에는 OLDEST·MIDDLE·EARLIEST가 연결된 저장소. OLDEST는 두 섹터에 걸친다. */
+    private static NewsDigestQueryService sectorService(int maxDigests) {
+        RegistryNewsTopicCatalog topics =
+                new RegistryNewsTopicCatalog(
+                        new NewsLinkRegistry("news-link-v1", List.of(), List.of()));
+        return new NewsDigestQueryService(
+                new SectorDigestStore(
+                        Map.of(
+                                "A", List.of(NEWEST, OLDEST),
+                                "B", List.of(OLDEST, MIDDLE, EARLIEST))),
+                new SinglePublisherStore(PUBLISHER),
+                new EmptyStateStore(),
+                new EmptyLinkStore(),
+                new NewsSummaryPolicy(topics),
+                new NewsImportancePolicy(),
+                new NewsFreshnessPolicy(),
+                new NewsSectorQueryPolicy(new StubSectorCatalog(Set.of("A", "B"))),
+                new NewsDigestQueryService.NewsQuerySettings(
+                        NewsExposureMode.INTERNAL,
+                        Duration.ofMinutes(30),
+                        maxDigests,
+                        Duration.ofHours(48),
+                        93),
+                new RecordingNewsMetrics(),
+                Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    private static List<String> titlesOf(NewsDigestListResult result) {
+        return result.digests().stream()
+                .map(NewsDigestListResult.Digest::representativeTitle)
+                .toList();
+    }
+
+    @Test
+    @DisplayName("섹터 여럿이면 그중 하나 이상에 걸린 묶음을 한 번씩만 주요도 순으로 준다 (spec FR-001 ③)")
+    void 섹터_여럿을_합친다() {
+        NewsDigestListResult result = sectorService(10).query(List.of("A", "B"), null, null, 4);
+
+        assertThat(titlesOf(result))
+                .as("두 섹터에 걸친 묶음도 한 번만 나오고, 순서는 화면이 아니라 주요도 규칙이 정한다(spec FR-004)")
+                .containsExactly("기사 newest", "기사 middle", "기사 oldest", "기사 earliest");
+        assertThat(result.sectorId()).as("섹터가 여럿이면 응답의 sectorId는 비운다").isNull();
+    }
+
+    @Test
+    @DisplayName("limit만큼만 주고, 서버 상한보다 크면 상한까지만 준다. 주지 않으면 예전처럼 셋이다")
+    void limit과_상한() {
+        assertThat(titlesOf(sectorService(10).query(List.of("A", "B"), null, null, 1)))
+                .containsExactly("기사 newest");
+        assertThat(titlesOf(sectorService(10).query(List.of("A", "B"), null, null, null)))
+                .as("limit 없이 부르는 사례 화면은 받은 묶음을 모두 그린다. 상한을 올려도 그 화면은 셋이어야 한다")
+                .containsExactly("기사 newest", "기사 middle", "기사 oldest");
+        assertThat(titlesOf(sectorService(2).query(List.of("A", "B"), null, null, 10)))
+                .as("상한을 넘는 요청은 상한까지만이다. 모자라면 채우지 않는 것과 같은 규칙이다(spec FR-001)")
+                .containsExactly("기사 newest", "기사 middle");
+    }
+
+    @Test
+    @DisplayName("묶음이 셋이 안 되면 있는 만큼만 주고 다른 섹터 묶음으로 채우지 않는다 (spec FR-001)")
+    void 부족하면_채우지_않는다() {
+        assertThat(titlesOf(sectorService(10).query(List.of("A"), null, null, null)))
+                .as("개수를 맞추려고 관련 없는 기사를 끌어오면 화면은 그것을 '주요 뉴스'로 읽는다(원칙 VI)")
+                .containsExactly("기사 newest", "기사 oldest");
+    }
+
+    @Test
+    @DisplayName("섹터 가운데 하나라도 등록되지 않은 값이면 요청을 거절한다")
+    void 모르는_섹터가_섞이면_거절() {
+        assertThatThrownBy(() -> sectorService(5).query(List.of("A", "UNKNOWN"), null, null, null))
+                .isInstanceOf(NewsQueryException.class);
+    }
+
+    /** 섹터마다 정해 둔 묶음을 돌려주는 저장소 대역. 여러 섹터 조회는 저장소 기본 구현이 합친다. */
+    private record SectorDigestStore(Map<String, List<NewsDigest>> bySector)
+            implements NewsDigestRepository {
+
+        @Override
+        public NewsDigest save(NewsDigest digest) {
+            return digest;
+        }
+
+        @Override
+        public Optional<NewsDigest> findByDigestId(NewsDigestId digestId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<NewsDigest> findRecent(Instant since) {
+            return bySector.values().stream().flatMap(List::stream).distinct().toList();
+        }
+
+        @Override
+        public List<NewsDigest> findRecentBySector(Instant since, String sectorId) {
+            return bySector.getOrDefault(sectorId, List.of());
+        }
+
+        @Override
+        public List<NewsDigest> findVerifiedBetween(Instant from, Instant to, String sectorId) {
+            return List.of();
+        }
+
+        @Override
+        public List<NewsDigest> findByArticleIds(List<Long> articleIds) {
+            return List.of();
+        }
+
+        @Override
+        public void deleteByArticleIds(List<Long> articleIds) {
+            // 조회 시험이라 쓰지 않는다.
+        }
     }
 
     /** 묶음 하나만 돌려주는 저장소 대역. */
