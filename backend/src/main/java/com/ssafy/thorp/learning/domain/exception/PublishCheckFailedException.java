@@ -29,7 +29,8 @@ public class PublishCheckFailedException extends BusinessException {
                         failures.stream().map(PublishCheckFailedException::toDetail).toList()));
     }
 
-    private static Map<String, Object> toDetail(PublishCheckFailure failure) {
+    /** 걸린 항목 하나의 응답 모양. 단계 공개의 글별 항목과 단계 미리 검사의 응답도 같은 모양이다. */
+    public static Map<String, Object> toDetail(PublishCheckFailure failure) {
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("check", failure.check().name());
         detail.put("location", toDetail(failure.location()));

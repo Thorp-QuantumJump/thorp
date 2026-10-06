@@ -141,7 +141,7 @@ public record AdminArticleResponse(
                         term.meaning(),
                         term.reading(),
                         term.caveat(),
-                        null);
+                        term.transferFrom() == null ? null : term.transferFrom().value());
     }
 
     private static Question question(QuizQuestion question) {
@@ -299,7 +299,7 @@ public record AdminArticleResponse(
     public record V1Term(String termId, String label, String sentence) implements DraftTerm {}
 
     /**
-     * @param transferFrom 넘겨받는 중이면 지금 소유 글(R24). 넘겨받기는 단계 공개 묶음이 채우고 지금은 늘 null이다
+     * @param transferFrom 넘겨받는 중이면 지금 소유 글(R24). 아니면 명시적 null이다
      */
     public record V2Term(
             String termId,

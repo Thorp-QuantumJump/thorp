@@ -14,7 +14,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 배우기 통합 테스트용 시드. 판·게시 용어 색인·글 상태·단계 공개 상태와 001 대응표를 JDBC로 직접 심는다.
  *
  * <p>공개 조회 테스트는 게시 유스케이스를 거치지 않고 판을 SQL로 심는다. 조회가 "판 → 응답" 변환만 확인하게 하려는 것이다. 대응표도 백엔드에 쓰기 경로가
- * 없으므로({@code SectorApiIT}와 같은 사정) SQL로 넣는다. 단계 공개도 아직 쓰기 경로가 없어(B08) SQL로 표시한다.
+ * 없으므로({@code SectorApiIT}와 같은 사정) SQL로 넣는다. 조회만 보는 테스트는 단계 공개와 변경 기록도 SQL로 심는다. 단계 공개 유스케이스는
+ * {@code LearningStageReleaseIT}가 본다.
  *
  * <p><b>컨텍스트와 DB 컨테이너를 다른 테스트와 공유한다.</b> 이 클래스가 심은 것과 관리 API가 바꾼 초안은 {@link #reset()}이 마이그레이션 직후
  * 상태로 되돌린다. {@code LearningMigrationTest}는 27편이 모두 빈 초안이고 용어 문장이 비어 있으며 단계가 모두 공개 전이기를 기대한다.
@@ -198,16 +199,20 @@ public final class LearningSeeds {
     }
 
     /**
-     * 마이그레이션 직후 상태로 되돌린다. 공개 판·기록·색인과 공개 배치를 지우고, 관리 API가 만든 글을 지우고, 27편의 초안 컬럼(제목·읽는 순서·형식·배치·확인
-     * 문제 포함)과 열네 용어를 초기 자리로 되돌리고, 단계를 모두 공개 전으로 되돌린다. 이 클래스가 넣은 대응표를 지우고 남은 열린 대응표도 닫는다.
+     * 마이그레이션 직후 상태로 되돌린다. 공개 판·기록·색인·변경 기록과 공개 배치·첫 공개 시각을 지우고, 관리 API가 만든 글을 지우고, 27편의 초안 컬럼(제목·읽는
+     * 순서·형식·배치·확인 문제 포함)과 열네 용어(넘겨받기 없음)를 초기 자리로 되돌리고, 단계를 모두 공개 전으로 되돌린다. 이 클래스가 넣은 대응표를 지우고 남은 열린
+     * 대응표도 닫는다.
      */
     public void reset() {
+        // 변경 기록은 단계·글을 가리키므로 글을 지우기 전에 비운다.
+        jdbc.update("DELETE FROM learning_release_log");
         jdbc.update("DELETE FROM learning_published_term");
         jdbc.update("DELETE FROM learning_publication_event");
         // 공개 판 포인터와 공개 배치는 함께 있거나 함께 없다(테이블 CHECK). 한 문장에서 함께 비운다.
         jdbc.update(
                 "UPDATE learning_article SET status = 'DRAFT', published_revision_id = NULL,"
-                        + " published_stage_id = NULL, published_stage_position = NULL");
+                        + " published_stage_id = NULL, published_stage_position = NULL,"
+                        + " first_released_at = NULL");
         jdbc.update("DELETE FROM learning_article_revision");
         jdbc.update("DELETE FROM learning_term");
         String[] initialKeys = new String[INITIAL_ARTICLES.size()];
@@ -251,15 +256,67 @@ public final class LearningSeeds {
                         + " WHERE effective_to IS NULL");
     }
 
-    /** 단계를 공개된 것으로 표시한다. 단계 공개 유스케이스(B08) 전까지 테스트가 공개된 단계를 만드는 유일한 길이다. 공개한 계정은 관리 계정 7이다. */
+    /** 단계를 공개된 것으로 표시한다. 단계 공개 유스케이스를 거치지 않으므로 판·변경 기록은 생기지 않는다. 공개한 계정은 관리 계정 7이다. */
     public void markStageReleased(String stageKey) {
+        markStageReleased(stageKey, Instant.parse("2026-11-12T01:00:00Z"));
+    }
+
+    /** 단계를 그 시각에 공개된 것으로 표시한다. */
+    public void markStageReleased(String stageKey, Instant releasedAt) {
         int updated =
                 jdbc.update(
-                        "UPDATE learning_stage SET released_at = TIMESTAMPTZ '2026-11-12 10:00:00+09',"
+                        "UPDATE learning_stage SET released_at = CAST(? AS TIMESTAMPTZ),"
                                 + " released_by_user_id = 7 WHERE stage_key = ?",
+                        releasedAt.toString(),
                         stageKey);
         if (updated != 1) {
             throw new IllegalArgumentException("no learning stage: " + stageKey);
+        }
+    }
+
+    /** 단계 공개 변경 기록 한 줄을 심는다. 다시 쓴 글 수는 제목 수다. */
+    public void logStageReleased(
+            String stageKey, int newCount, List<String> rewrittenTitles, Instant occurredAt) {
+        jdbc.update(
+                """
+                INSERT INTO learning_release_log
+                    (entry_key, kind, stage_id, new_count, rewritten_count, rewritten_titles,
+                     actor_user_id, occurred_at)
+                SELECT ?, 'STAGE_RELEASED', id, ?, ?, CAST(? AS JSONB), 7, CAST(? AS TIMESTAMPTZ)
+                FROM learning_stage WHERE stage_key = ?
+                """,
+                "stage:" + stageKey,
+                newCount,
+                rewrittenTitles.size(),
+                toJson(rewrittenTitles),
+                occurredAt.toString(),
+                stageKey);
+    }
+
+    /** 공개된 단계에 더한 글의 변경 기록 한 줄을 심는다. */
+    public void logArticleAdded(
+            String stageKey, String articleId, String title, Instant occurredAt) {
+        jdbc.update(
+                """
+                INSERT INTO learning_release_log
+                    (entry_key, kind, stage_id, article_id, new_count, rewritten_count,
+                     article_title, actor_user_id, occurred_at)
+                SELECT ?, 'ARTICLE_ADDED', s.id, a.id, 1, 0, ?, 7, CAST(? AS TIMESTAMPTZ)
+                FROM learning_stage s, learning_article a
+                WHERE s.stage_key = ? AND a.article_key = ?
+                """,
+                "article:" + articleId,
+                title,
+                occurredAt.toString(),
+                stageKey,
+                articleId);
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException impossible) {
+            throw new IllegalStateException(impossible);
         }
     }
 
@@ -319,12 +376,60 @@ public final class LearningSeeds {
      * @return 심은 판의 대리키
      */
     public long publishMinimal(String articleId, String title, String question, int readingOrder) {
+        return publishLegacy(articleId, title, question, readingOrder, "합성 문단");
+    }
+
+    /**
+     * 본문이 {@code bodyChars}자(공백 없음) 문단 하나인 LEGACY 판을 심는다. 읽기 분은 조회 때 이 글자 수로 계산된다(500자에 1분, 반올림).
+     *
+     * @return 심은 판의 대리키
+     */
+    public long publishLegacyWithBody(
+            String articleId, String title, String question, int readingOrder, int bodyChars) {
+        return publishLegacy(articleId, title, question, readingOrder, "가".repeat(bodyChars));
+    }
+
+    /**
+     * 용어 하나를 소유한 최소 LEGACY 판을 심는다. 본문은 문단과 그 용어 블록이고 게시 용어 색인에 그 용어의 설명 문장이 오른다.
+     *
+     * @return 심은 판의 대리키
+     */
+    public long publishLegacyWithTerm(
+            String articleId, String title, String termId, String label, String sentence) {
+        ObjectNode snapshot = objectMapper.createObjectNode();
+        snapshot.put("articleId", articleId);
+        snapshot.put("title", title);
+        snapshot.put("question", "합성 질문");
+        snapshot.put("readingOrder", 3);
+        ArrayNode blocks = snapshot.putArray("bodyBlocks");
+        blocks.addObject().put("type", "paragraph").put("text", "합성 문단");
+        blocks.addObject().put("type", "term").put("termId", termId);
+        ArrayNode sectors = snapshot.putObject("example").putArray("sectors");
+        sectors.addObject().put("code", "SEMICONDUCTOR").put("weightTenths", 500);
+        sectors.addObject().put("code", "BATTERY").put("weightTenths", 500);
+        snapshot.putArray("sources");
+        snapshot.putArray("terms")
+                .addObject()
+                .put("termId", termId)
+                .put("label", label)
+                .put("sentence", sentence);
+        snapshot.put("draftVersion", 0);
+        return publish(
+                snapshot,
+                Instant.parse("2026-09-20T01:00:00Z"),
+                "LEGACY",
+                CHECK_VERSION,
+                MAP_VERSION);
+    }
+
+    private long publishLegacy(
+            String articleId, String title, String question, int readingOrder, String body) {
         ObjectNode snapshot = objectMapper.createObjectNode();
         snapshot.put("articleId", articleId);
         snapshot.put("title", title);
         snapshot.put("question", question);
         snapshot.put("readingOrder", readingOrder);
-        snapshot.putArray("bodyBlocks").addObject().put("type", "paragraph").put("text", "합성 문단");
+        snapshot.putArray("bodyBlocks").addObject().put("type", "paragraph").put("text", body);
         ArrayNode sectors = snapshot.putObject("example").putArray("sectors");
         sectors.addObject().put("code", "SEMICONDUCTOR").put("weightTenths", 500);
         sectors.addObject().put("code", "BATTERY").put("weightTenths", 500);
@@ -402,11 +507,28 @@ public final class LearningSeeds {
      */
     public long publishCurrentMinimal(
             String articleId, String title, Map<String, List<String>> terms) {
+        return publishCurrent(articleId, title, "합성 질문", 4, terms, false);
+    }
+
+    /**
+     * 본문이 문단 하나인 CURRENT 판을 심는다. 판의 읽기 값은 주어진 분이다(조회는 판 값을 그대로 쓴다). 커리큘럼처럼 판 값을 목록으로 보이는 조회에 쓴다.
+     *
+     * @param terms 이 판이 소유하는 용어. termId → 다른 이름
+     * @param withExample 두 섹터 예시를 넣는다
+     * @return 심은 판의 대리키
+     */
+    public long publishCurrent(
+            String articleId,
+            String title,
+            String question,
+            int readingMinutes,
+            Map<String, List<String>> terms,
+            boolean withExample) {
         ObjectNode snapshot = objectMapper.createObjectNode();
         snapshot.put("format", "V2");
         snapshot.put("articleId", articleId);
         snapshot.put("title", title);
-        snapshot.put("question", "합성 질문");
+        snapshot.put("question", question);
         snapshot.put("readingOrder", 100);
         ArrayNode blocks = snapshot.putArray("bodyBlocks");
         blocks.addObject()
@@ -429,14 +551,20 @@ public final class LearningSeeds {
                             .put("reading", "합성 읽는 법")
                             .put("caveat", "합성 한계");
                 });
-        snapshot.putNull("example");
+        if (withExample) {
+            ArrayNode sectors = snapshot.putObject("example").putArray("sectors");
+            sectors.addObject().put("code", "SEMICONDUCTOR").put("weightTenths", 500);
+            sectors.addObject().put("code", "BATTERY").put("weightTenths", 500);
+        } else {
+            snapshot.putNull("example");
+        }
         snapshot.putArray("sources");
         snapshot.put("draftVersion", 0);
         snapshot.putArray("quiz");
         snapshot.putObject("reading")
-                .put("bodyChars", 2000)
-                .put("readingMinutes", 4)
-                .put("minDwellSeconds", 80);
+                .put("bodyChars", readingMinutes * 500)
+                .put("readingMinutes", readingMinutes)
+                .put("minDwellSeconds", readingMinutes * 20);
         return publish(
                 snapshot,
                 Instant.parse("2026-11-12T01:00:00Z"),

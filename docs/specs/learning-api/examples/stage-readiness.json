@@ -1,0 +1,34 @@
+{
+  "stageKey": "returns-and-risk",
+  "ready": false,
+  "blockers": [],
+  "articles": [
+    {
+      "articleId": "returns-and-losses",
+      "draftVersion": 9,
+      "failures": []
+    },
+    {
+      "articleId": "same-return-different-feel",
+      "draftVersion": 5,
+      "failures": []
+    },
+    {
+      "articleId": "recovery-period",
+      "draftVersion": 4,
+      "failures": [
+        {
+          "check": "KEY_SUMMARY",
+          "location": { "part": "block", "index": 0 },
+          "message": "핵심 요약은 세 줄이어야 합니다. 지금 2줄입니다."
+        }
+      ]
+    },
+    {
+      "articleId": "volatility-is-not-loss",
+      "draftVersion": 7,
+      "failures": []
+    }
+  ],
+  "checkVersion": "learning-publish-checks-v2"
+}

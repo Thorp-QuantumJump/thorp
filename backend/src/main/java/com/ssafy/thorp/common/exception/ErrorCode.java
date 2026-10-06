@@ -81,6 +81,13 @@ public enum ErrorCode {
     LEARNING_FORMAT_OUTDATED(
             HttpStatus.CONFLICT,
             "이전 형식(V1) 초안은 공개 전 단계에서 이전 판 고치기로만 게시하고, 이전 판이 없는 글은 V1로 되돌릴 수 없습니다."),
+    // 2판(B08): 단계 공개와 용어 넘겨받기(research R23·R24). 단계 공개는 되돌리지 않는다(FR-031).
+    LEARNING_STAGE_ORDER(HttpStatus.CONFLICT, "앞 단계가 아직 공개되지 않았습니다."),
+    LEARNING_STAGE_ALREADY_RELEASED(HttpStatus.CONFLICT, "이미 공개한 단계입니다."),
+    LEARNING_STAGE_EMPTY(HttpStatus.CONFLICT, "단계에 글이 없습니다."),
+    LEARNING_STAGE_CHANGED(HttpStatus.CONFLICT, "단계의 글 목록이나 초안이 바뀌었습니다. 새로 불러온 뒤 다시 확인해 주세요."),
+    LEARNING_STAGE_CHECK_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "검사에 걸린 글이 있어 단계를 공개하지 않았습니다."),
+    LEARNING_TERM_TRANSFER_INVALID(HttpStatus.CONFLICT, "넘겨받으려는 용어의 지금 소유 글이 아닙니다."),
 
     // spec 006 내 기록. 계약은 specs/006-my-records/contracts/my-records-api.md "오류".
     // 저장 자리 한도(409)와 실행 자원 한도(EXECUTION_LIMIT, 429)를 다른 코드로 나눈다 — 사용자가

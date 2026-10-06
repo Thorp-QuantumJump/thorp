@@ -1,0 +1,19 @@
+{
+  "stageKey": "returns-and-risk",
+  "releasedAt": "2026-11-19T01:00:00Z",
+  "published": [
+    { "articleId": "returns-and-losses", "revisionNo": 4, "renamedQuestions": [] },
+    { "articleId": "same-return-different-feel", "revisionNo": 1, "renamedQuestions": [] },
+    { "articleId": "recovery-period", "revisionNo": 1, "renamedQuestions": [] },
+    { "articleId": "volatility-is-not-loss", "revisionNo": 1, "renamedQuestions": [] }
+  ],
+  "transferredTerms": [
+    {
+      "termId": "volatility",
+      "fromArticleId": "inverse-volatility",
+      "toArticleId": "volatility-is-not-loss"
+    }
+  ],
+  "logEntryKey": "stage:returns-and-risk",
+  "checkVersion": "learning-publish-checks-v2"
+}

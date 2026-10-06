@@ -29,6 +29,8 @@ public record CheckLocation(
 
     /** 위치의 종류. 응답에는 소문자 이름으로 나간다. */
     public enum Part {
+        /** 글 전체(형식·배치). 단계 공개의 글별 항목만 쓴다. */
+        ARTICLE,
         TITLE,
         QUESTION,
         EXAMPLE,
@@ -54,6 +56,11 @@ public record CheckLocation(
             throw new IllegalArgumentException(
                     "question and choice ids are only for quiz locations");
         }
+    }
+
+    /** 글 전체. 단계 공개에서 초안 형식({@code FORMAT})과 초안 배치({@code PLACEMENT})를 가리킨다. */
+    public static CheckLocation article() {
+        return new CheckLocation(Part.ARTICLE, null, null, null, null, null);
     }
 
     public static CheckLocation title() {
