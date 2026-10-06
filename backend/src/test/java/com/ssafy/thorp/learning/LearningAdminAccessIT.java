@@ -96,11 +96,21 @@ class LearningAdminAccessIT extends IntegrationTestSupport {
                 List.of(
                         "/admin/learning/access",
                         "/admin/learning/articles",
-                        "/admin/learning/stages")) {
+                        "/admin/learning/stages",
+                        "/admin/learning/stages/etf-market-basics/readiness")) {
             JsonNode body = call(get(url), 401);
 
             assertThat(body.at("/error/code").asText()).isEqualTo("AUTHENTICATION_REQUIRED");
         }
+        // 상태를 바꾸는 단계 공개도 CSRF 토큰을 실은 비로그인 요청이면 401이다.
+        JsonNode release =
+                call(
+                        post("/admin/learning/stages/etf-market-basics/release")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"articles\":[]}")
+                                .with(csrf()),
+                        401);
+        assertThat(release.at("/error/code").asText()).isEqualTo("AUTHENTICATION_REQUIRED");
     }
 
     @Test

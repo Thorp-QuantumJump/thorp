@@ -4,7 +4,7 @@ import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.learning.application.command.ReleaseStageCommand;
 import com.ssafy.thorp.learning.application.command.ReleaseStageCommand.ExpectedArticle;
 import com.ssafy.thorp.learning.application.service.LearningStageAdminService;
-import com.ssafy.thorp.learning.presentation.request.ReleaseStageRequest;
+import com.ssafy.thorp.learning.presentation.request.StageReleaseRequest;
 import com.ssafy.thorp.learning.presentation.response.AdminStagesResponse;
 import com.ssafy.thorp.learning.presentation.response.StageReadinessResponse;
 import com.ssafy.thorp.learning.presentation.response.StageReleaseResponse;
@@ -60,7 +60,7 @@ public class LearningStageAdminController {
     /** 단계 공개. 글 하나라도 걸리면 422이고 아무것도 바뀌지 않는다. 되돌릴 수 없다. */
     @PostMapping("/{stageKey}/release")
     public ResponseEntity<ApiResponse<StageReleaseResponse>> release(
-            @PathVariable String stageKey, @Valid @RequestBody ReleaseStageRequest request) {
+            @PathVariable String stageKey, @Valid @RequestBody StageReleaseRequest request) {
         long actorUserId = adminAccess.requireAdminUserId();
         ReleaseStageCommand command =
                 new ReleaseStageCommand(

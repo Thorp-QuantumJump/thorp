@@ -200,6 +200,17 @@
       "rewrittenCount": 1,
       "rewrittenTitles": ["수익과 손실"],
       "articleTitle": null
+    },
+    {
+      "entryKey": "article:etf-fees",
+      "kind": "ARTICLE_ADDED",
+      "stageNumber": 1,
+      "stageName": "ETF와 국내 시장 기초",
+      "occurredAt": "2026-11-15T01:00:00Z",
+      "newCount": 1,
+      "rewrittenCount": 0,
+      "rewrittenTitles": [],
+      "articleTitle": "ETF 보수는 어디로 빠져나갈까?"
     }
   ],
   "changeLog": [
@@ -215,12 +226,23 @@
       "articleTitle": null
     },
     {
+      "entryKey": "article:etf-fees",
+      "kind": "ARTICLE_ADDED",
+      "stageNumber": 1,
+      "stageName": "ETF와 국내 시장 기초",
+      "occurredAt": "2026-11-15T01:00:00Z",
+      "newCount": 1,
+      "rewrittenCount": 0,
+      "rewrittenTitles": [],
+      "articleTitle": "ETF 보수는 어디로 빠져나갈까?"
+    },
+    {
       "entryKey": "stage:etf-market-basics",
       "kind": "STAGE_RELEASED",
       "stageNumber": 1,
       "stageName": "ETF와 국내 시장 기초",
       "occurredAt": "2026-11-12T01:00:00Z",
-      "newCount": 3,
+      "newCount": 2,
       "rewrittenCount": 1,
       "rewrittenTitles": ["섹터와 ETF"],
       "articleTitle": null

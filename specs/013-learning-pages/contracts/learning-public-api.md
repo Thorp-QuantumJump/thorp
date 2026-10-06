@@ -68,17 +68,31 @@ GET /learning/curriculum
       "rewrittenCount": 1,
       "rewrittenTitles": ["수익과 손실"],
       "articleTitle": null
+    },
+    {
+      "entryKey": "article:etf-fees",
+      "kind": "ARTICLE_ADDED",
+      "stageNumber": 1,
+      "stageName": "ETF와 국내 시장 기초",
+      "occurredAt": "2026-11-15T01:00:00Z",
+      "newCount": 1,
+      "rewrittenCount": 0,
+      "rewrittenTitles": [],
+      "articleTitle": "ETF 보수는 어디로 빠져나갈까?"
     }
   ],
   "changeLog": [
     { "entryKey": "stage:returns-and-risk", "kind": "STAGE_RELEASED", "stageNumber": 2, "stageName": "수익과 위험 읽기", "occurredAt": "2026-11-19T01:00:00Z", "newCount": 3, "rewrittenCount": 1, "rewrittenTitles": ["수익과 손실"], "articleTitle": null },
-    { "entryKey": "stage:etf-market-basics", "kind": "STAGE_RELEASED", "stageNumber": 1, "stageName": "ETF와 국내 시장 기초", "occurredAt": "2026-11-12T01:00:00Z", "newCount": 3, "rewrittenCount": 1, "rewrittenTitles": ["섹터와 ETF"], "articleTitle": null }
+    { "entryKey": "article:etf-fees", "kind": "ARTICLE_ADDED", "stageNumber": 1, "stageName": "ETF와 국내 시장 기초", "occurredAt": "2026-11-15T01:00:00Z", "newCount": 1, "rewrittenCount": 0, "rewrittenTitles": [], "articleTitle": "ETF 보수는 어디로 빠져나갈까?" },
+    { "entryKey": "stage:etf-market-basics", "kind": "STAGE_RELEASED", "stageNumber": 1, "stageName": "ETF와 국내 시장 기초", "occurredAt": "2026-11-12T01:00:00Z", "newCount": 2, "rewrittenCount": 1, "rewrittenTitles": ["섹터와 ETF"], "articleTitle": null }
   ]
 }
 ```
 
 | 필드 | 뜻 | 근거 |
 |---|---|---|
+| `releasedStageCount` | 공개된 단계 수. 공개됐지만 공개된 글이 0편인 단계(`REPREPARING`)도 센다 | FR-031 |
+| `allStagesReleased` | 여섯 단계를 모두 공개했다(`REPREPARING` 단계 포함). 화면은 이 값으로 '준비 중' 문구를 고른다 | FR-031 |
 | `stages` | 여섯 단계 전부, 번호 순서. 공개되지 않은 단계도 들어 있다 | FR-031 |
 | `stages[].status` | `OPEN`(공개됨, 공개된 글 한 편 이상) · `PREPARING`(공개 전) · `REPREPARING`(공개됐지만 공개된 글 0편) | FR-031 |
 | `stages[].articles` | `OPEN` 단계의 공개된 글, 읽는 순서. 그 밖의 상태는 빈 배열이다. 새 글 제목·편수를 미리 보이지 않는다 | FR-023, FR-031, SC-017 |
@@ -86,8 +100,14 @@ GET /learning/curriculum
 | `stages[].articles[].termCount` | 그 글의 공개 용어 수. 0이면 화면이 용어 수를 보이지 않는다 | FR-023 |
 | `stages[].previousEditionArticles` | `PREPARING` 단계에 남은 LEGACY 판 글(이전 판). 번호·상태가 없다 | FR-031 |
 | `preReleaseArticles` | 첫 단계를 공개하기 전에만 배열이다(아래). 공개한 뒤에는 `null` | FR-031 |
-| `notices` | `changeLog` 가운데 `occurredAt`이 지금부터 7일 안인 줄, 최신 순서 | FR-031, R27 |
-| `changeLog` | 모든 변경 기록, 최신 순서 | FR-031 |
+| `notices` | `changeLog` 가운데 `occurredAt`이 지금부터 7일 안인 줄(정확히 7일 전 같은 시각까지 든다), 최신 순서 | FR-031, R27 |
+| `changeLog` | 모든 변경 기록, 최신 순서(같은 시각이면 나중에 쓴 줄이 먼저) | FR-031 |
+| `notices[]`·`changeLog[]`의 `kind` | `STAGE_RELEASED`(단계 공개 한 줄) 또는 `ARTICLE_ADDED`(공개된 단계에 처음 게시된 글 한 줄). 다시 게시·게시 취소·공개된 단계 사이 이동은 줄을 만들지 않는다 | FR-031, R27 |
+| `entryKey` | `stage:{stageKey}` 또는 `article:{articleId}`. 공개 안내를 닫은 상태(`thorp.learning.dismissedNotices`)가 이 값을 기억한다 | R27 |
+| `stageNumber`·`stageName` | 공개한 단계 또는 글을 더한 단계. 지금 단계 정의의 값이다 | FR-031 |
+| `occurredAt` | 단계 공개일 또는 글의 첫 게시 시각 | FR-031 |
+| `newCount`·`rewrittenCount`·`rewrittenTitles` | 그 공개로 처음 공개된 글 가운데 새 글 편수, 다시 쓴 글 편수와 그때 제목. `ARTICLE_ADDED`는 `1`·`0`·`[]`이다. 공개된 단계에서 옮겨 온 글은 세지 않는다 | FR-031, R27 |
+| `articleTitle` | `ARTICLE_ADDED`의 그때 제목. `STAGE_RELEASED`는 `null`이다 | FR-031 |
 
 - 화면은 `notices`를 한 줄로 합쳐 보인다. 로그인 사용자에게는 합친 줄에 `stageNumber`가 1이 아닌 `STAGE_RELEASED`가 있을 때만 '지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.'를 덧붙인다. 변경 기록 항목에는 이 문장을 붙이지 않는다([design-notes](../design-notes.md) §7).
 - 공개 경계 한 줄('지금 공개된 단계는 1·2단계입니다. 3~6단계는 준비 중입니다.')은 `status`로 화면이 만든다. `REPREPARING`도 공개된 단계로 센다.

@@ -320,20 +320,24 @@ class LearningTermTransferIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("저장 뒤 옛 소유 글이 그 용어를 빼고 게시하지 않았으면 글마다 게시는 409이고 판·색인·두 글의 초안이 그대로다")
+    @DisplayName(
+            "저장 뒤 옛 소유 글이 그 용어를 초안에서 빼고 게시 취소했으면 글마다 게시는 409이고 판·색인·변경 기록·두 글의 초안이 그대로다 (T147)")
     void ownerVanishedBeforePublishIsInvalid() throws Exception {
         seeds.markStageReleased(STAGE_2);
+        seeds.publishLegacyWithTerm(OLD_OWNER, "변동성에 따라 나누기", "volatility", "변동성", "옛 문장");
         adminData(save(NEW_OWNER, newOwnerDraft(OLD_OWNER).build(0)), 200);
         adminData(save(OLD_OWNER, oldOwnerV1Draft(0, false)), 200);
+        adminData(post("/admin/learning/articles/" + OLD_OWNER + "/unpublish"), 200);
         JsonNode newOwnerBefore = draftOf(NEW_OWNER);
         JsonNode oldOwnerBefore = draftOf(OLD_OWNER);
+        int revisionsBefore = count("learning_article_revision");
 
         JsonNode error = adminError(publish(NEW_OWNER, 1), 409);
 
         assertThat(error.get("code").asText()).isEqualTo("LEARNING_TERM_TRANSFER_INVALID");
         assertThat(error.at("/details/termId").asText()).isEqualTo("volatility");
         assertThat(error.at("/details/ownerArticleId").isMissingNode()).as("넘겨줄 소유 글이 없다").isTrue();
-        assertThat(count("learning_article_revision")).isZero();
+        assertThat(count("learning_article_revision")).isEqualTo(revisionsBefore);
         assertThat(count("learning_published_term")).isZero();
         assertThat(count("learning_release_log")).isZero();
         assertThat(draftOf(NEW_OWNER)).isEqualTo(newOwnerBefore);
@@ -341,10 +345,38 @@ class LearningTermTransferIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("옛 소유 글이 그 용어를 초안에서 뺐어도 게시 중이면 그 글에서 넘겨받는다 — 색인 행을 지우고 초안 번호를 올리며 공개 판은 그대로다")
+    void transferFromArticleThatOnlyPublishesTheTerm() throws Exception {
+        seeds.markStageReleased(STAGE_2);
+        long oldRevision =
+                seeds.publishLegacyWithTerm(OLD_OWNER, "변동성에 따라 나누기", "volatility", "변동성", "옛 문장");
+        adminData(save(OLD_OWNER, oldOwnerV1Draft(0, false)), 200);
+        adminData(save(NEW_OWNER, newOwnerDraft(OLD_OWNER).build(0)), 200);
+
+        JsonNode published = adminData(publish(NEW_OWNER, 1), 200);
+
+        assertThat(published.at("/transferredTerms/0/fromArticleId").asText()).isEqualTo(OLD_OWNER);
+        JsonNode help = call(get("/learning/terms/volatility"), 200).get("data");
+        assertThat(help.get("articleId").asText()).isEqualTo(NEW_OWNER);
+        JsonNode oldOwner = draftOf(OLD_OWNER);
+        assertThat(oldOwner.get("draftVersion").asInt()).isEqualTo(2);
+        assertThat(oldOwner.get("status").asText()).isEqualTo("PUBLISHED");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT published_revision_id FROM learning_article WHERE article_key = ?",
+                                Long.class,
+                                OLD_OWNER))
+                .as("옛 글의 공개 판은 바꾸지 않는다")
+                .isEqualTo(oldRevision);
+    }
+
+    @Test
     @DisplayName("같은 경우의 단계 공개는 422의 TERM_TRANSFER 항목이고 아무것도 쓰지 않는다")
     void ownerVanishedBeforeStageReleaseIsCheckFailure() throws Exception {
+        seeds.publishLegacyWithTerm(OLD_OWNER, "변동성에 따라 나누기", "volatility", "변동성", "옛 문장");
         prepareStageTwo();
         adminData(save(OLD_OWNER, oldOwnerV1Draft(0, false)), 200);
+        adminData(post("/admin/learning/articles/" + OLD_OWNER + "/unpublish"), 200);
 
         JsonNode error = adminError(release(STAGE_2, readinessVersions(STAGE_2)), 422);
 
@@ -359,7 +391,11 @@ class LearningTermTransferIT extends IntegrationTestSupport {
                                         + " "
                                         + failure.get("location").toString())
                 .containsExactly("TERM_TRANSFER {\"part\":\"term\",\"termId\":\"volatility\"}");
-        assertThat(count("learning_article_revision")).isZero();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM learning_article_revision WHERE edition = 'CURRENT'",
+                                Integer.class))
+                .isZero();
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "SELECT released_at FROM learning_stage WHERE stage_key = ?",
@@ -407,6 +443,166 @@ class LearningTermTransferIT extends IntegrationTestSupport {
                                 .get("draftVersion")
                                 .asInt())
                 .isEqualTo(2);
+    }
+
+    // --- 같은 단계 안의 넘기기 (data-model §10-3 ④) ---
+
+    private V2Draft stageTwoDraft(String title, int position) {
+        return V2Draft.of(objectMapper, title, STAGE_2, position);
+    }
+
+    private JsonNode readinessFailures(String articleId) throws Exception {
+        for (JsonNode article :
+                adminData(get("/admin/learning/stages/" + STAGE_2 + "/readiness"), 200)
+                        .get("articles")) {
+            if (article.get("articleId").asText().equals(articleId)) {
+                return article.get("failures");
+            }
+        }
+        throw new AssertionError("not in the release set: " + articleId);
+    }
+
+    @Test
+    @DisplayName(
+            "같은 단계의 옛 소유 글이 넘겨줄 용어를 초안에 남기면 그 글에 TERM_TRANSFER 항목이 걸리고, 빼면 공개되며 옛 글의 새 판은 그 용어를 갖지 않는다")
+    void giverInSameStageMustDropTheTerm() throws Exception {
+        seeds.markStageReleased("etf-market-basics");
+        // 운영의 기존 아홉 글처럼 옛 소유 글은 LEGACY 판이 게시 중이다. 초안에서 용어를 빼도 게시 색인으로 그 용어를 소유한다.
+        seeds.publishLegacyWithTerm(
+                "returns-and-losses", "수익과 손실", "max-drawdown", "가장 크게 줄었던 폭", "옛 문장");
+        adminData(
+                save(
+                        "returns-and-losses",
+                        stageTwoDraft("수익과 손실", 1)
+                                .term("net-total-return", "비용 차감 후 전체 수익률")
+                                .term("max-drawdown", "가장 크게 줄었던 폭")
+                                .build(0)),
+                200);
+        adminData(
+                save(
+                        "same-return-different-feel",
+                        stageTwoDraft("같은 수익률인데 왜 느낌이 다를까?", 2)
+                                .term("path-dependence", "지나온 길")
+                                .build(0)),
+                200);
+        adminData(
+                save(
+                        "recovery-period",
+                        stageTwoDraft("떨어진 뒤 얼마나 걸려 돌아왔을까?", 3)
+                                .term("recovery-period", "회복 기간")
+                                .transferredTerm(
+                                        "max-drawdown", "가장 크게 줄었던 폭", "returns-and-losses")
+                                .build(0)),
+                200);
+        adminData(save(NEW_OWNER, newOwnerDraft(OLD_OWNER).build(0)), 200);
+
+        JsonNode kept = readinessFailures("returns-and-losses");
+        assertThat(kept)
+                .extracting(
+                        failure ->
+                                failure.get("check").asText()
+                                        + " "
+                                        + failure.get("location").toString())
+                .containsExactly("TERM_TRANSFER {\"part\":\"term\",\"termId\":\"max-drawdown\"}");
+        assertThat(kept.get(0).get("message").asText()).contains("recovery-period");
+        assertThat(readinessFailures("recovery-period")).isEmpty();
+        JsonNode refused = adminError(release(STAGE_2, readinessVersions(STAGE_2)), 422);
+        assertThat(refused.at("/details/articles"))
+                .extracting(article -> article.get("articleId").asText())
+                .containsExactly("returns-and-losses");
+
+        // 옛 소유 글의 초안에서 그 용어를 빼면 공개된다.
+        adminData(
+                save(
+                        "returns-and-losses",
+                        stageTwoDraft("수익과 손실", 1)
+                                .term("net-total-return", "비용 차감 후 전체 수익률")
+                                .build(1)),
+                200);
+        JsonNode released = adminData(release(STAGE_2, readinessVersions(STAGE_2)), 200);
+
+        assertThat(released.get("transferredTerms"))
+                .extracting(
+                        term ->
+                                term.get("termId").asText()
+                                        + ":"
+                                        + term.get("fromArticleId").asText()
+                                        + ">"
+                                        + term.get("toArticleId").asText())
+                .containsExactlyInAnyOrder(
+                        "max-drawdown:returns-and-losses>recovery-period",
+                        "volatility:inverse-volatility>volatility-is-not-loss");
+        assertThat(call(get("/learning/terms/max-drawdown"), 200).at("/data/articleId").asText())
+                .isEqualTo("recovery-period");
+        String oldOwnerPage =
+                call(get("/learning/articles/returns-and-losses"), 200).get("data").toString();
+        assertThat(oldOwnerPage)
+                .as("옛 글의 새 판에는 넘겨준 용어의 용어 블록이 없다")
+                .doesNotContain("\"termId\":\"max-drawdown\"");
+    }
+
+    @Test
+    @DisplayName(
+            "같은 단계의 두 글이 서로의 용어를 넘겨받으면 미리 검사가 두 글 모두 TERM_TRANSFER로 걸고, 단계 공개는 500이 아니라 422로 아무것도 쓰지 않는다")
+    void crossingTransfersInOneStageAreCheckFailures() throws Exception {
+        seeds.markStageReleased("etf-market-basics");
+        adminData(
+                save(
+                        "same-return-different-feel",
+                        stageTwoDraft("같은 수익률인데 왜 느낌이 다를까?", 2)
+                                .term("path-dependence", "지나온 길")
+                                .transferredTerm(
+                                        "max-drawdown", "가장 크게 줄었던 폭", "returns-and-losses")
+                                .build(0)),
+                200);
+        adminData(
+                save(
+                        "returns-and-losses",
+                        stageTwoDraft("수익과 손실", 1)
+                                .term("net-total-return", "비용 차감 후 전체 수익률")
+                                .term("max-drawdown", "가장 크게 줄었던 폭")
+                                .transferredTerm(
+                                        "path-dependence", "지나온 길", "same-return-different-feel")
+                                .build(0)),
+                200);
+        adminData(
+                save(
+                        "recovery-period",
+                        stageTwoDraft("떨어진 뒤 얼마나 걸려 돌아왔을까?", 3)
+                                .term("recovery-period", "회복 기간")
+                                .build(0)),
+                200);
+        adminData(save(NEW_OWNER, newOwnerDraft(OLD_OWNER).build(0)), 200);
+
+        assertThat(readinessFailures("returns-and-losses"))
+                .extracting(
+                        failure ->
+                                failure.get("check").asText()
+                                        + " "
+                                        + failure.at("/location/termId").asText())
+                .containsExactly("TERM_TRANSFER max-drawdown");
+        assertThat(readinessFailures("same-return-different-feel"))
+                .extracting(
+                        failure ->
+                                failure.get("check").asText()
+                                        + " "
+                                        + failure.at("/location/termId").asText())
+                .containsExactly("TERM_TRANSFER path-dependence");
+
+        JsonNode error = adminError(release(STAGE_2, readinessVersions(STAGE_2)), 422);
+
+        assertThat(error.get("code").asText()).isEqualTo("LEARNING_STAGE_CHECK_FAILED");
+        assertThat(error.at("/details/articles"))
+                .extracting(article -> article.get("articleId").asText())
+                .containsExactly("returns-and-losses", "same-return-different-feel");
+        assertThat(count("learning_article_revision")).isZero();
+        assertThat(count("learning_release_log")).isZero();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT released_at FROM learning_stage WHERE stage_key = ?",
+                                Object.class,
+                                STAGE_2))
+                .isNull();
     }
 
     // --- 동시 저장 ---

@@ -74,8 +74,8 @@ common: 모든 계층에서 참조 가능
 ## 규칙
 
 - `result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 9). 비로그인 요청은 `requester_id`가 NULL이고 `public_token_expires_at`이 필수다.
-- 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다.
-- 배우기 게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지운다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003).
+- 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)·변경 기록(`learning_release_log`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다. 단계 공개일(`learning_stage.released_at`)과 글의 첫 공개 시각(`learning_article.first_released_at`)은 한 번 쓰고 비우지 않는다(단계 공개는 되돌리지 않는다).
+- 배우기 게시·게시 취소·용어 넘기기·단계 공개는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지우며, 넘기기는 옛 소유 글의 그 용어 행을 지운 뒤 새 글의 행을 쓴다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003).
 - 배우기 관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고, 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다.
 - DTO는 record 우선, 요청 DTO에 `@Valid` 검증 필수
 - 포맷은 Spotless(google-java-format AOSP)가 강제 — CI에서 spotlessCheck 실패 시 빌드 실패

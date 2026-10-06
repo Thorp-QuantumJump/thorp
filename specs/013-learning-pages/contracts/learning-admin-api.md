@@ -230,12 +230,12 @@ PUT /admin/learning/articles/{articleId}
 
 | 응답 | 조건 |
 |---|---|
-| `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`·조각 키, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `url`이 `http`·`https`가 아님, **(2판)** 형식 모양 위반, 지어 낸 문제·보기 식별자, 식별자를 모두 쓴 글의 새 문제·보기([data-model](../data-model.md) §6-2). `error.details.fields`에 위반 위치를 싣는다 |
+| `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`·조각 키, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `url`이 `http`·`https`가 아님, **(2판)** 형식 모양 위반(V1 용어의 `transferFrom` 포함), `articleId` 형식이 아닌 `transferFrom`, 지어 낸 문제·보기 식별자, 식별자를 모두 쓴 글의 새 문제·보기([data-model](../data-model.md) §6-2). `error.details.fields`에 위반 위치를 싣는다 |
 | `404 LEARNING_ARTICLE_NOT_FOUND` | 없는 글 |
 | `404 LEARNING_STAGE_NOT_FOUND` **(2판)** | 없는 `stageKey` |
 | `409 LEARNING_DRAFT_CHANGED` | `expectedDraftVersion`이 서버 값과 다르다(R12). `error.details.currentDraftVersion`을 싣는다 |
 | `409 LEARNING_TERM_ID_TAKEN` | `terms[].termId`를 다른 글이 초안에 두었거나 **게시 중이고**, 그 용어에 `transferFrom`이 없다([data-model](../data-model.md) §2). `error.details.termId`·`ownerArticleId`를 싣는다. 화면은 이 값으로 '이 글로 넘겨받기'를 제안할 수 있다 |
-| `409 LEARNING_TERM_TRANSFER_INVALID` **(2판)** | `transferFrom`이 그 용어의 지금 소유 글이 아니거나, 다른 글이 이미 그 용어를 넘겨받는 중이다. `error.details.termId`·`ownerArticleId`를 싣는다 |
+| `409 LEARNING_TERM_TRANSFER_INVALID` **(2판)** | `transferFrom`이 그 용어의 지금 소유 글이 아니거나(자기 글 포함), 다른 글이 이미 그 용어를 넘겨받는 중이다. `error.details.termId`·`ownerArticleId`를 싣는다. 지금 소유 글이 없으면(옛 소유 글이 그 용어를 초안에서 빼고 게시 취소함) `ownerArticleId` 키가 없다. 화면은 이때 `transferFrom`을 비우라고 안내할 수 있다 |
 | `409 LEARNING_FORMAT_OUTDATED` **(2판)** | LEGACY 판이 없는 글을 V1로 되돌리려 했다 |
 
 ## 6. 글마다 게시
@@ -286,6 +286,8 @@ POST /admin/learning/articles/{articleId}/publish
 
 **(2판) 게시는 초안도 바꾼다.** `renamedQuestions`의 문제는 초안에서도 새 식별자가 되고, `transferredTerms`의 용어는 이 글 초안의 `transferFrom`이 비워진다. `draftVersion`은 그대로다([data-model](../data-model.md) §6-3·§7-2). 그래서 게시 전에 읽은 초안을 그대로 저장하면 옛 식별자는 400 `INVALID_INPUT`, 옛 `transferFrom`은 409 `LEARNING_TERM_TRANSFER_INVALID`다. 관리 화면은 게시에 성공하면 초안(§4)을 다시 읽고, 이 탭에 보관한 이 글의 편집 내용은 두 필드대로 고친다.
 
+넘겨준 글(`transferredTerms[].fromArticleId`)의 초안도 바뀐다. 그 용어가 초안에서 빠지고 초안 번호가 1 오른다(용어를 여럿 넘겨도 한 번). 판과 초안의 다른 부분은 그대로다([data-model](../data-model.md) §7-2). 그 글을 열어 둔 편집 화면은 다음 저장에서 409 `LEARNING_DRAFT_CHANGED`를 받고 초안을 다시 읽는다.
+
 ### 응답 422 `LEARNING_PUBLISH_CHECK_FAILED`
 
 **걸린 검사를 모두 싣는다.** 첫 항목에서 멈추지 않는다([research](../research.md) R7·R19). 아무것도 바뀌지 않는다.
@@ -329,7 +331,7 @@ POST /admin/learning/articles/{articleId}/publish
 | `404 LEARNING_ARTICLE_NOT_FOUND` | 없는 글 |
 | `409 LEARNING_DRAFT_CHANGED` | `expectedDraftVersion` 불일치. 운영자가 보지 않은 초안을 게시하지 않는다 |
 | `409 LEARNING_TERM_ID_TAKEN` | 이 글의 `termId`를 다른 글이 게시 중이고 `transferFrom`이 없다 |
-| `409 LEARNING_TERM_TRANSFER_INVALID` **(2판)** | `transferFrom`이 지금 소유 글과 다르다(그사이 소유가 바뀌었다) |
+| `409 LEARNING_TERM_TRANSFER_INVALID` **(2판)** | `transferFrom`이 지금 소유 글과 다르다(그사이 소유가 바뀌었다). `error.details`는 §5와 같다. 아무것도 바꾸지 않는다 |
 | `409 LEARNING_STAGE_NOT_RELEASED` · `409 LEARNING_FORMAT_OUTDATED` **(2판)** | 위 게시 방식 표 |
 | `400 INVALID_INPUT` **(2판)** | 정답이 바뀐 문제에 줄 새 식별자가 남지 않았다([data-model](../data-model.md) §6-2). `error.details.fields`에 `quiz`를 싣고 아무것도 바꾸지 않는다 |
 
@@ -411,6 +413,7 @@ GET /admin/learning/stages
 | `releasable` | 공개 전이고 앞 단계가 공개되었다(1단계는 앞 단계 조건 없음). 검사 통과 여부는 §10 |
 | `articles` | 초안 단계가 이 단계인 글. 단계 공개에서 게시할 글이다 |
 | `placementOnlyArticles` | 공개 배치만 이 단계인 글(초안을 다른 단계로 옮겼지만 아직 다시 게시하지 않음). 공개 집합에 들어가며, 단계 공개에서 `PLACEMENT` 항목으로 걸린다([data-model](../data-model.md) §10-3) |
+| `articles[].stagePosition` · `placementOnlyArticles[].stagePosition` | 이 단계 안 순서다. `articles`는 초안 배치의 값, `placementOnlyArticles`는 공개 배치의 값이다. 두 목록 모두 이 값, `articleId` 순서다 |
 
 ## 10. 단계 미리 검사 **(2판)**
 
@@ -445,7 +448,7 @@ GET /admin/learning/stages/{stageKey}/readiness
 |---|---|
 | `blockers` | 글 검사와 별개로 공개를 막는 것: `ALREADY_RELEASED`, `ORDER`(앞 단계 공개 전), `EMPTY`(글 없음) |
 | `articles` | 공개 집합의 글 전부(§9의 `articles`와 `placementOnlyArticles`) |
-| `articles[].failures` | v2 검사([data-model](../data-model.md) §8-2)에 더해 `FORMAT`(V1 초안), `PLACEMENT`(초안을 다른 단계로 옮긴 글. 옮긴 단계로 다시 게시하거나 게시 취소한 뒤 공개한다), `TERM_TRANSFER`(넘겨받기 소유 불일치), `TERM_ID_TAKEN`(다른 글이 게시 중인 용어를 넘겨받기 없이 씀) 항목이 올 수 있다. 순서는 이 넷, 그다음 v2 검사다. `FORMAT`·`PLACEMENT`의 위치는 `{ "part": "article" }`, 용어 소유 항목의 위치는 `{ "part": "term", "termId": … }`다([data-model](../data-model.md) §8-4). V1 초안은 v2 검사를 받을 수 없어 `FORMAT`과 용어 소유 항목만 싣는다 |
+| `articles[].failures` | v2 검사([data-model](../data-model.md) §8-2)에 더해 `FORMAT`(V1 초안), `PLACEMENT`(초안을 다른 단계로 옮긴 글. 옮긴 단계로 다시 게시하거나 게시 취소한 뒤 공개한다), `TERM_TRANSFER`(넘겨받기 소유 불일치, 또는 같은 공개의 다른 글이 넘겨받을 용어를 이 글이 아직 초안에 둠. 이 글의 초안에서 그 용어와 용어 블록을 빼야 한다), `TERM_ID_TAKEN`(다른 글이 게시 중인 용어를 넘겨받기 없이 씀) 항목이 올 수 있다. 순서는 `FORMAT`·`PLACEMENT`, 용어 소유 항목(초안 용어 순서), 그다음 v2 검사다. `FORMAT`·`PLACEMENT`의 위치는 `{ "part": "article" }`, 용어 소유 항목의 위치는 `{ "part": "term", "termId": … }`다([data-model](../data-model.md) §8-4). V1 초안은 v2 검사를 받지 않으므로 앞의 두 갈래(`FORMAT`과 해당하면 `PLACEMENT`, 용어 소유 항목)만 싣는다 |
 | `articles[].draftVersion` | 화면이 §11 요청에 그대로 싣는다 |
 | `ready` | `blockers`와 모든 `failures`가 비었다 |
 
@@ -492,7 +495,7 @@ POST /admin/learning/stages/{stageKey}/release
 
 한 트랜잭션에서 모든 글을 게시하고 단계 공개일·변경 기록을 쓴다([data-model](../data-model.md) §10-3). 공개일은 이 요청의 시각 하나다.
 
-글마다 §6처럼 초안의 문제 식별자와 `transferFrom`이 바뀔 수 있고 초안 번호는 그대로다. 관리 화면은 `published[].renamedQuestions`와 `transferredTerms`(`toArticleId`로 글을 가른다)로 이 탭에 보관한 그 글들의 편집 내용을 고친다.
+글마다 §6처럼 초안의 문제 식별자와 `transferFrom`이 바뀔 수 있고 초안 번호는 그대로다. 관리 화면은 `published[].renamedQuestions`와 `transferredTerms`(`toArticleId`로 글을 가른다)로 이 탭에 보관한 그 글들의 편집 내용을 고친다. 넘겨준 글(`fromArticleId`)은 §6처럼 그 용어가 초안에서 빠지고 초안 번호가 1 오른다. 넘겨준 글이 같은 단계에서 함께 게시되면 넘겨받는 글보다 먼저 게시되고, 그 글의 초안 번호도 이 공개 안에서 오른다.
 
 ### 응답 422 `LEARNING_STAGE_CHECK_FAILED`
 
@@ -515,11 +518,12 @@ POST /admin/learning/stages/{stageKey}/release
 
 | 응답 | 조건 |
 |---|---|
+| `400 INVALID_INPUT` | `articles`가 없거나, 항목의 `articleId`가 비었거나 `expectedDraftVersion`이 없다 |
 | `404 LEARNING_STAGE_NOT_FOUND` | 없는 단계 |
 | `409 LEARNING_STAGE_ALREADY_RELEASED` | 이미 공개했다 |
 | `409 LEARNING_STAGE_ORDER` | 앞 번호 단계가 공개되지 않았다(US5 시나리오 7) |
 | `409 LEARNING_STAGE_EMPTY` | 단계에 글이 없다 |
-| `409 LEARNING_STAGE_CHANGED` | 요청의 글 목록이 공개 집합과 다르거나 초안 번호가 다르다. `error.details`에 서버의 글 목록과 초안 번호를 싣는다 |
+| `409 LEARNING_STAGE_CHANGED` | 요청의 글 목록이 공개 집합과 다르거나 초안 번호가 다르다(같은 글을 두 번 실어도 다르다). `error.details.articles`에 잠근 뒤 다시 읽은 공개 집합을 §10의 `articles` 순서로 `{ "articleId", "draftVersion" }` 목록으로 싣는다 |
 
 단계 공개에서는 용어 소유 문제(넘겨받기 소유 불일치, 넘겨받기 없이 쓴 다른 글의 게시 용어)를 409로 따로 돌려주지 않고 422의 글별 항목(`TERM_TRANSFER`·`TERM_ID_TAKEN`)으로 함께 싣는다. 운영자가 한 번에 모든 문제를 보게 하려는 것이다.
 
