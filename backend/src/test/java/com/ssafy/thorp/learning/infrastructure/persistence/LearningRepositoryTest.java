@@ -250,6 +250,26 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                             assertThat(event.revisionId()).isEqualTo(saved.id());
                             assertThat(event.actorUserId()).isEqualTo(7L);
                         });
+        // 관리 목록과 게시가 쓰는 묶음·단건 조회도 같은 값을 돌려준다.
+        assertThat(articleRepository.findPublishedRevisions())
+                .containsExactly(Map.entry(ARTICLE, saved));
+        assertThat(eventRepository.findLastForEachArticle())
+                .containsOnlyKeys(ARTICLE)
+                .extractingByKey(ARTICLE)
+                .extracting(PublicationEvent::revisionId)
+                .isEqualTo(saved.id());
+        assertThat(revisionRepository.findLatestByArticleId(ARTICLE)).contains(saved);
+        assertThat(revisionRepository.existsByArticleIdAndEdition(ARTICLE, Edition.LEGACY))
+                .isTrue();
+        assertThat(revisionRepository.existsByArticleIdAndEdition(ARTICLE, Edition.CURRENT))
+                .isFalse();
+        assertThat(revisionRepository.findRevisionNos(List.of(saved.id(), -1L)))
+                .containsExactly(Map.entry(saved.id(), 1));
+        assertThat(articleRepository.findAllOrdered())
+                .hasSize(27)
+                .filteredOn(article -> article.articleId().equals(ARTICLE))
+                .singleElement()
+                .satisfies(article -> assertThat(article.terms()).isEqualTo(load().terms()));
 
         // 같은 판으로 색인을 다시 써도 같은 term_key가 UNIQUE에 걸리지 않고, 지우면 공개에서 빠진다.
         publishedTermRepository.replaceForArticle(ARTICLE, saved.id(), terms, ArticleFormat.V1);
@@ -681,6 +701,33 @@ class LearningRepositoryTest extends RepositoryTestSupport {
         assertThatThrownBy(() -> revisionRepository.findById(id))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("content");
+    }
+
+    @Test
+    @DisplayName("저장된 글자 조각에 모르는 키가 있으면 버리지 않고 실패한다 (원칙 VI)")
+    void storedRunWithUnknownKeyFails() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_V2_SNAPSHOT.replace(
+                                "{\"text\":\"문단\"}", "{\"text\":\"문단\",\"emphasis\":true}"));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("unknown keys")
+                .hasMessageContaining("emphasis");
+    }
+
+    @Test
+    @DisplayName("저장된 글이 도메인 규칙을 어기면 요청 오류(400)가 아니라 저장 데이터 오류로 실패한다")
+    void storedArticleViolationIsStateError() {
+        flushAndClear();
+        jdbcTemplate.update(
+                "UPDATE learning_term SET meaning = '뜻' WHERE term_key = 'max-drawdown'");
+
+        assertThatThrownBy(this::load)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("learning_article(returns-and-losses)")
+                .hasRootCauseInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

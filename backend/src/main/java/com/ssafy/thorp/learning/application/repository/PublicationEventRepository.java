@@ -2,6 +2,7 @@ package com.ssafy.thorp.learning.application.repository;
 
 import com.ssafy.thorp.learning.domain.model.PublicationEvent;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -15,4 +16,7 @@ public interface PublicationEventRepository {
 
     /** 이 글의 마지막 기록. 기록이 없으면 비어 있다. */
     Optional<PublicationEvent> findLastByArticleId(ArticleId articleId);
+
+    /** 글마다 마지막 기록. 기록이 없는 글은 결과에 없다. */
+    Map<ArticleId, PublicationEvent> findLastForEachArticle();
 }

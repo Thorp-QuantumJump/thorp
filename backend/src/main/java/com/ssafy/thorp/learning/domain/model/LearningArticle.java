@@ -162,6 +162,28 @@ public record LearningArticle(
                 0);
     }
 
+    /** 저장소가 새 행에 준 대리키를 채운다. 그 밖의 값은 그대로다. */
+    public LearningArticle withId(long newId) {
+        return new LearningArticle(
+                newId,
+                articleId,
+                title,
+                question,
+                readingOrder,
+                format,
+                placement,
+                publishedPlacement,
+                blocks,
+                example,
+                sources,
+                status,
+                publishedRevisionId,
+                draftVersion,
+                terms,
+                quiz,
+                quizSeq);
+    }
+
     /**
      * 저장 요청이 담는 초안 내용. 생략된 필드는 호출자가 지금 초안의 값으로 채워 넘긴다.
      *
