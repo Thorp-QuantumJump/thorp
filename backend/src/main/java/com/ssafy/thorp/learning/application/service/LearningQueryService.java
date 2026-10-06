@@ -21,6 +21,7 @@ import com.ssafy.thorp.learning.application.result.LearningArticleResult.Source;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.StageRef;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
+import com.ssafy.thorp.learning.application.result.PublishedArticleEntry;
 import com.ssafy.thorp.learning.application.result.PublishedArticleView;
 import com.ssafy.thorp.learning.application.service.ArticleViewAssembler.Mode;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
@@ -36,7 +37,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,23 +106,40 @@ public class LearningQueryService {
      * <p>단계·판·공개 배치·색인·변경 기록을 여러 문장으로 읽으므로 한 스냅숏({@code REPEATABLE_READ})에서 읽는다. 그사이 단계 공개가 커밋되면
      * 단계는 공개됐는데 글이 없는 응답이 된다.
      *
+     * <p>판 본문을 읽지 않는다({@link PublishedArticleEntry}). 본문이 필요한 것은 공개 전 단계에 남은 이전 판 글의 읽기 분뿐이라 그 글만
+     * 따로 읽는다. 글 번호는 글 화면({@link #getPublished})과 같은 저장소 순서로 매긴다.
+     *
      * @return 게시된 글이 없어도 정상 응답이다(spec Edge Cases)
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public CurriculumResult curriculum() {
         List<LearningStage> stages = stageRepository.findAllOrdered();
         int releasedStageCount = (int) stages.stream().filter(LearningStage::released).count();
-        Map<String, List<PublishedArticleView>> currentByStage = new HashMap<>();
-        Map<String, List<PublishedArticleView>> legacyByStage = new HashMap<>();
-        for (PublishedArticleView view : articleRepository.findAllPublished()) {
-            (view.revision().edition() == Edition.CURRENT ? currentByStage : legacyByStage)
-                    .computeIfAbsent(view.placement().stageKey().value(), key -> new ArrayList<>())
-                    .add(view);
+        // 첫 단계를 공개하기 전에는 모든 글이 preReleaseArticles에 있다. 단계마다 나눌 글을 읽지 않는다.
+        List<PublishedArticleEntry> entries =
+                releasedStageCount == 0 ? List.of() : articleRepository.findPublishedEntries();
+        Map<StageKey, List<PublishedArticleEntry>> currentByStage = new HashMap<>();
+        Map<StageKey, List<PublishedArticleEntry>> legacyByStage = new HashMap<>();
+        for (PublishedArticleEntry entry : entries) {
+            (entry.edition() == Edition.CURRENT ? currentByStage : legacyByStage)
+                    .computeIfAbsent(entry.stageKey(), key -> new ArrayList<>())
+                    .add(entry);
         }
         Map<ArticleId, Integer> termCounts =
                 currentByStage.isEmpty()
                         ? Map.of()
                         : publishedTermRepository.countPublishedByArticle();
+        Map<ArticleId, ArticleRevision> previousRevisions =
+                articleRepository.findPublishedRevisions(
+                        stages.stream()
+                                .filter(stage -> !stage.released())
+                                .flatMap(
+                                        stage ->
+                                                legacyByStage
+                                                        .getOrDefault(stage.stageKey(), List.of())
+                                                        .stream())
+                                .map(PublishedArticleEntry::articleId)
+                                .toList());
         int charsPerMinute = rulesPort.v2().reading().charsPerMinute();
 
         List<StageView> views = new ArrayList<>();
@@ -132,31 +149,35 @@ public class LearningQueryService {
             List<PreviousArticle> previous = List.of();
             StageStatus status;
             if (stage.released()) {
-                List<PublishedArticleView> current = inReadingOrder(currentByStage.get(key));
+                // 저장소가 읽는 순서(단계 안 순서, articleId)로 준다. 그 순번이 글 번호다.
+                List<PublishedArticleEntry> current =
+                        currentByStage.getOrDefault(stage.stageKey(), List.of());
                 List<OpenArticle> numbered = new ArrayList<>();
                 for (int index = 0; index < current.size(); index++) {
-                    ArticleSnapshot snapshot = current.get(index).revision().snapshot();
+                    PublishedArticleEntry entry = current.get(index);
                     numbered.add(
                             new OpenArticle(
-                                    snapshot.articleId().value(),
+                                    entry.articleId().value(),
                                     stage.number() + "-" + (index + 1),
-                                    snapshot.title(),
-                                    snapshot.question(),
-                                    snapshot.reading().readingMinutes(),
-                                    termCounts.getOrDefault(snapshot.articleId(), 0),
-                                    snapshot.example() != null));
+                                    entry.title(),
+                                    entry.question(),
+                                    entry.readingMinutes(),
+                                    termCounts.getOrDefault(entry.articleId(), 0),
+                                    entry.hasExample()));
                 }
                 open = numbered;
                 status = open.isEmpty() ? StageStatus.REPREPARING : StageStatus.OPEN;
             } else {
                 status = StageStatus.PREPARING;
-                // 첫 단계를 공개하기 전에는 모든 글이 preReleaseArticles에 있다. 단계에 다시 싣지 않는다.
-                if (releasedStageCount > 0) {
-                    previous =
-                            inReadingOrder(legacyByStage.get(key)).stream()
-                                    .map(view -> previousArticle(view, charsPerMinute))
-                                    .toList();
-                }
+                previous =
+                        legacyByStage.getOrDefault(stage.stageKey(), List.of()).stream()
+                                .map(
+                                        entry ->
+                                                previousArticle(
+                                                        entry,
+                                                        previousRevisions.get(entry.articleId()),
+                                                        charsPerMinute))
+                                .toList();
             }
             views.add(
                     new StageView(
@@ -303,27 +324,22 @@ public class LearningQueryService {
                 .orElseThrow(TermNotReadyException::new);
     }
 
-    /** 단계 안 읽는 순서: 공개 배치의 단계 안 순서, {@code articleId}(data-model §12-2). */
-    private static List<PublishedArticleView> inReadingOrder(List<PublishedArticleView> views) {
-        if (views == null) {
-            return List.of();
+    /**
+     * 이전 판 글의 읽기 분은 판에 없으므로 조회 때 계산한다. 글 하나 조회와 같은 식이다.
+     *
+     * @param revision 같은 스냅숏에서 읽은 그 글의 공개 중인 판
+     */
+    private static PreviousArticle previousArticle(
+            PublishedArticleEntry entry, ArticleRevision revision, int charsPerMinute) {
+        if (revision == null) {
+            throw new IllegalStateException(
+                    "published revision vanished in one snapshot: " + entry.articleId());
         }
-        return views.stream()
-                .sorted(
-                        Comparator.comparingInt(
-                                        (PublishedArticleView view) -> view.placement().position())
-                                .thenComparing(
-                                        view -> view.revision().snapshot().articleId().value()))
-                .toList();
-    }
-
-    /** 이전 판 글의 읽기 분은 판에 없으므로 조회 때 계산한다. 글 하나 조회와 같은 식이다. */
-    private static PreviousArticle previousArticle(PublishedArticleView view, int charsPerMinute) {
-        ArticleSnapshot snapshot = view.revision().snapshot();
+        ArticleSnapshot snapshot = revision.snapshot();
         return new PreviousArticle(
-                snapshot.articleId().value(),
-                snapshot.title(),
-                snapshot.question(),
+                entry.articleId().value(),
+                entry.title(),
+                entry.question(),
                 ReadingEstimate.minutes(
                         ReadingEstimate.bodyChars(snapshot.bodyBlocks(), snapshot.terms()),
                         charsPerMinute));

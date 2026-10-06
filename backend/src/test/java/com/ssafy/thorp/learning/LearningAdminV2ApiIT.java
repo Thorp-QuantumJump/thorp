@@ -1,20 +1,18 @@
 package com.ssafy.thorp.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ssafy.thorp.learning.support.AdminCalls;
 import com.ssafy.thorp.learning.support.LearningSeeds;
+import com.ssafy.thorp.learning.support.V2Draft;
 import com.ssafy.thorp.support.IntegrationTestSupport;
-import com.ssafy.thorp.support.Requesters;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -63,10 +61,12 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     private LearningSeeds seeds;
+    private AdminCalls calls;
 
     @BeforeEach
     void setUp() {
         seeds = new LearningSeeds(jdbcTemplate, objectMapper);
+        calls = new AdminCalls(mockMvc, objectMapper, ADMIN);
         seeds.reset();
     }
 
@@ -76,36 +76,6 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     }
 
     // --- 호출 도우미 ---
-
-    private JsonNode call(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        String body =
-                mockMvc.perform(request)
-                        .andExpect(status().is(expectedStatus))
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-        return objectMapper.readTree(body);
-    }
-
-    private JsonNode admin(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        return call(request.with(Requesters.as(ADMIN)).with(csrf()), expectedStatus);
-    }
-
-    private JsonNode adminData(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        JsonNode body = admin(request, expectedStatus);
-        assertThat(body.get("success").asBoolean()).isTrue();
-        return body.get("data");
-    }
-
-    private JsonNode adminError(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        JsonNode body = admin(request, expectedStatus);
-        assertThat(body.get("success").asBoolean()).isFalse();
-        return body.get("error");
-    }
 
     private JsonNode example(String file) throws Exception {
         return objectMapper.readTree(Files.readString(EXAMPLES.resolve(file)));
@@ -125,7 +95,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     }
 
     private JsonNode publicData(String url) throws Exception {
-        return call(get(url), 200).get("data");
+        return calls.call(get(url), 200).get("data");
     }
 
     private int count(String table) {
@@ -230,9 +200,11 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     }
 
     /**
-     * v2 검사 열일곱 가지를 모두 통과하는 초안. 본문은 약 2,100자(4분)이고 숫자는 가상의 계산 예에만 있다. 언급 조각의 {@code max-drawdown}은
-     * {@code returns-and-losses}의 초안 용어라 알려진 용어다.
+     * v2 검사 열일곱 가지를 모두 통과하는 {@code volatility-is-not-loss} 초안({@link V2Draft}). {@code volatility}를
+     * 소유한다.
      *
+     * @param questionIds 두 문제의 식별자. null이면 서버가 준다
+     * @param choiceIds 네 보기의 식별자. null이면 서버가 준다
      * @param secondCorrect 둘째 문제의 정답 보기(0 또는 1). 같은 문제 판정을 바꿀 때 쓴다
      */
     private ObjectNode passingDraft(
@@ -240,50 +212,16 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
             List<String> questionIds,
             List<String> choiceIds,
             int secondCorrect) {
-        ObjectNode body = v2Base(expectedDraftVersion);
-        ArrayNode blocks = body.putArray("blocks");
-        keySummary(blocks, "오르내림은 폭을 잰다.", "끝 값이 같을 수 있다.", "손실은 시작과 끝으로 본다.");
-        heading(blocks, "오르내림은 무엇을 재나");
-        ArrayNode mention = paragraph(blocks);
-        text(mention, "오르내린 폭은 ");
-        mention.addObject().put("term", "max-drawdown").put("text", "가장 크게 줄었던 폭");
-        text(mention, "과 따로 본다.");
-        blocks.addObject().put("type", "term").put("termId", "volatility");
-        heading(blocks, "오르내림과 손실");
-        hypothetical(blocks, "100만 원이 80만 원이 되었다가 100만 원으로 돌아오면 손실은 0%다.");
-        misconception(blocks, "크게 오르내렸으니 그만큼 잃었다.", "오르내린 폭과 손익은 따로 본다.");
-        heading(blocks, "읽을 때 볼 것");
-        text(paragraph(blocks), "가".repeat(2000));
-        body.putArray("terms")
-                .addObject()
-                .put("termId", "volatility")
-                .put("label", "변동성")
-                .put("meaning", "값이 오르내리는 정도다.")
-                .put("reading", "클수록 값이 크게 흔들렸다는 뜻이다.")
-                .put("caveat", "손실의 크기를 직접 말하지 않는다.")
-                .putArray("aliases")
-                .add("volatility");
-        ArrayNode quiz = body.putArray("quiz");
-        ObjectNode first = question(quiz, "변동성이 크면 반드시 잃었을까?", "끝 값을 함께 봐야 한다.");
-        setId(first, questionIds, 0);
-        choice(first, id(choiceIds, 0), "그렇다", false);
-        choice(first, id(choiceIds, 1), "아니다", true);
-        ObjectNode second = question(quiz, "손실은 무엇으로 보나?", "시작과 끝을 비교한다.");
-        setId(second, questionIds, 1);
-        choice(second, id(choiceIds, 2), "시작과 끝", secondCorrect == 0);
-        choice(second, id(choiceIds, 3), "오르내린 폭", secondCorrect == 1);
-        return body;
-    }
-
-    private static void setId(ObjectNode question, List<String> ids, int index) {
-        String id = id(ids, index);
-        if (id != null) {
-            question.put("questionId", id);
+        V2Draft draft =
+                V2Draft.of(objectMapper, "변동성은 손실일까?", "returns-and-risk", 4)
+                        .question("값이 크게 오르내렸다는 것은 돈을 잃었다는 뜻일까?")
+                        .readingOrder(204)
+                        .term("volatility", "변동성", "값이 오르내리는 정도다.", "volatility")
+                        .secondQuestionCorrectChoice(secondCorrect);
+        if (questionIds != null) {
+            draft.quizIds(questionIds, choiceIds);
         }
-    }
-
-    private static String id(List<String> ids, int index) {
-        return ids == null ? null : ids.get(index);
+        return draft.build(expectedDraftVersion);
     }
 
     /**
@@ -348,7 +286,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
             "stageKey 없는 9월 판 만들기 요청은 400, 없는 단계는 404 LEARNING_STAGE_NOT_FOUND다 (quickstart 6-2)")
     void createNeedsExistingStage() throws Exception {
         JsonNode legacyRequest =
-                adminError(
+                calls.adminError(
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
@@ -357,7 +295,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         assertThat(fieldsOf(legacyRequest)).contains("stageKey", "stagePosition");
 
         JsonNode unknownStage =
-                adminError(
+                calls.adminError(
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
@@ -379,7 +317,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     void saveV2DraftAssignsQuizIds() throws Exception {
         freeVolatilityTerm();
 
-        JsonNode saved = adminData(save(V2_ARTICLE, fixtureDraft(0)), 200);
+        JsonNode saved = calls.adminData(save(V2_ARTICLE, fixtureDraft(0)), 200);
 
         assertSameShape(saved, example("admin-article-v2.json"), "$");
         assertThat(saved.get("draftVersion").asInt()).isEqualTo(1);
@@ -396,7 +334,8 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                         objectMapper.readTree(
                                 "{\"term\":\"max-drawdown\",\"text\":\"가장 크게 줄었던 폭\"}"));
         assertThat(saved.at("/draft/blocks/9/asOf").isNull()).isTrue();
-        assertThat(adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200)).isEqualTo(saved);
+        assertThat(calls.adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200))
+                .isEqualTo(saved);
         // 키 구성 대조는 배열의 첫 원소만 본다. 블록 열 종류 전부의 초안 모양은 저장한 요청과 값으로 맞춘다.
         ObjectNode echoed = (ObjectNode) saved.get("draft").deepCopy();
         echoed.get("terms").forEach(term -> ((ObjectNode) term).remove("transferFrom"));
@@ -413,15 +352,18 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     @DisplayName("미리 보기는 admin-preview.json과 같고 아무것도 쓰지 않는다 (quickstart 7-4)")
     void previewMatchesExample() throws Exception {
         freeVolatilityTerm();
-        adminData(save(V2_ARTICLE, fixtureDraft(0)), 200);
+        calls.adminData(save(V2_ARTICLE, fixtureDraft(0)), 200);
 
         JsonNode preview =
-                adminData(get("/admin/learning/articles/" + V2_ARTICLE + "/preview"), 200);
+                calls.adminData(get("/admin/learning/articles/" + V2_ARTICLE + "/preview"), 200);
 
         assertThat(preview).isEqualTo(example("admin-preview.json"));
         assertThat(count("learning_article_revision")).isZero();
         assertThat(count("learning_published_term")).isZero();
-        assertThat(call(get("/learning/articles/" + V2_ARTICLE), 404).at("/error/code").asText())
+        assertThat(
+                        calls.call(get("/learning/articles/" + V2_ARTICLE), 404)
+                                .at("/error/code")
+                                .asText())
                 .isEqualTo("LEARNING_ARTICLE_UNAVAILABLE");
     }
 
@@ -436,7 +378,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         keySummary(v1WithV2Block.putArray("blocks"), "한 줄");
         v1WithV2Block.putArray("sources");
         v1WithV2Block.putArray("terms");
-        JsonNode v1Error = adminError(save(V1_ARTICLE, v1WithV2Block), 400);
+        JsonNode v1Error = calls.adminError(save(V1_ARTICLE, v1WithV2Block), 400);
         assertThat(v1Error.get("code").asText()).isEqualTo("INVALID_INPUT");
         assertThat(fieldsOf(v1Error)).containsExactly("blocks[0]");
 
@@ -444,15 +386,15 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         ObjectNode v2WithV1Parts = fixtureDraft(0);
         ((ObjectNode) v2WithV1Parts.get("terms").get(0)).put("sentence", "V1 설명 문장");
         ((ArrayNode) v2WithV1Parts.get("sources")).addObject().put("label", "출처");
-        JsonNode v2Error = adminError(save(V2_ARTICLE, v2WithV1Parts), 400);
+        JsonNode v2Error = calls.adminError(save(V2_ARTICLE, v2WithV1Parts), 400);
         assertThat(fieldsOf(v2Error)).containsExactlyInAnyOrder("sources", "terms[0].sentence");
 
         ObjectNode bothShapes = fixtureDraft(0);
         ((ObjectNode) bothShapes.get("blocks").get(2)).put("text", "문단 글자");
-        JsonNode bothError = adminError(save(V2_ARTICLE, bothShapes), 400);
+        JsonNode bothError = calls.adminError(save(V2_ARTICLE, bothShapes), 400);
         assertThat(fieldsOf(bothError)).containsExactly("blocks[2]");
         assertThat(
-                        adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200)
+                        calls.adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200)
                                 .get("draftVersion")
                                 .asInt())
                 .isZero();
@@ -476,7 +418,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .put("label", "출처")
                 .put("url", "https://example.com");
 
-        JsonNode error = adminError(save(V2_ARTICLE, body), 400);
+        JsonNode error = calls.adminError(save(V2_ARTICLE, body), 400);
 
         assertThat(fieldsOf(error))
                 .containsExactlyInAnyOrder(
@@ -489,7 +431,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         freeVolatilityTerm();
         ObjectNode unknownKey = fixtureDraft(0);
         ((ObjectNode) unknownKey.at("/blocks/2/content/0")).put("bold", true);
-        assertThat(fieldsOf(adminError(save(V2_ARTICLE, unknownKey), 400)))
+        assertThat(fieldsOf(calls.adminError(save(V2_ARTICLE, unknownKey), 400)))
                 .containsExactly("blocks[2].content[0]");
 
         ObjectNode twoKinds = fixtureDraft(0);
@@ -497,7 +439,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .putObject("source")
                 .put("label", "출처")
                 .put("url", "https://example.com");
-        assertThat(fieldsOf(adminError(save(V2_ARTICLE, twoKinds), 400)))
+        assertThat(fieldsOf(calls.adminError(save(V2_ARTICLE, twoKinds), 400)))
                 .containsExactly("blocks[2].content[0]");
     }
 
@@ -514,7 +456,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         v1Body.putArray("sources");
         v1Body.putArray("terms");
 
-        JsonNode error = adminError(save(V2_ARTICLE, v1Body), 409);
+        JsonNode error = calls.adminError(save(V2_ARTICLE, v1Body), 409);
 
         assertThat(error.get("code").asText()).isEqualTo("LEARNING_FORMAT_OUTDATED");
     }
@@ -546,7 +488,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .putArray("aliases");
         v2Body.putArray("quiz");
 
-        JsonNode rewritten = adminData(save("returns-and-losses", v2Body), 200);
+        JsonNode rewritten = calls.adminData(save("returns-and-losses", v2Body), 200);
 
         assertThat(rewritten.at("/draft/format").asText()).isEqualTo("V2");
         assertThat(
@@ -570,7 +512,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .put("label", "가장 크게 줄었던 폭")
                 .put("sentence", "고점에서 가장 크게 줄었던 폭이다.");
 
-        JsonNode reverted = adminData(save("returns-and-losses", v1Body), 200);
+        JsonNode reverted = calls.adminData(save("returns-and-losses", v1Body), 200);
 
         assertThat(reverted.at("/draft/format").asText()).isEqualTo("V1");
         assertThat(
@@ -588,12 +530,12 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         ObjectNode fabricated = fixtureDraft(0);
         ((ObjectNode) fabricated.at("/quiz/0")).put("questionId", "q9");
         ((ObjectNode) fabricated.at("/quiz/0/choices/0")).put("choiceId", "c9");
-        assertThat(fieldsOf(adminError(save(V2_ARTICLE, fabricated), 400)))
+        assertThat(fieldsOf(calls.adminError(save(V2_ARTICLE, fabricated), 400)))
                 .containsExactly("quiz[0].questionId", "quiz[0].choices[0].choiceId");
 
         ObjectNode unknownStage = fixtureDraft(0);
         unknownStage.put("stageKey", "no-such-stage");
-        assertThat(adminError(save(V2_ARTICLE, unknownStage), 404).get("code").asText())
+        assertThat(calls.adminError(save(V2_ARTICLE, unknownStage), 404).get("code").asText())
                 .isEqualTo("LEARNING_STAGE_NOT_FOUND");
     }
 
@@ -603,12 +545,12 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     @DisplayName("V2 글은 초안 단계가 공개 전이면 409, V1 글은 초안 단계가 공개됐으면 409다 (data-model §10-1)")
     void publishModeConflicts() throws Exception {
         freeVolatilityTerm();
-        adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
-        assertThat(adminError(publish(V2_ARTICLE, 1), 409).get("code").asText())
+        calls.adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
+        assertThat(calls.adminError(publish(V2_ARTICLE, 1), 409).get("code").asText())
                 .isEqualTo("LEARNING_STAGE_NOT_RELEASED");
 
         seeds.markStageReleased("returns-and-risk");
-        assertThat(adminError(publish(V1_ARTICLE, 0), 409).get("code").asText())
+        assertThat(calls.adminError(publish(V1_ARTICLE, 0), 409).get("code").asText())
                 .isEqualTo("LEARNING_FORMAT_OUTDATED");
         assertThat(count("learning_article_revision")).isZero();
     }
@@ -618,9 +560,9 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     void publishCurrentWithoutExample() throws Exception {
         freeVolatilityTerm();
         seeds.markStageReleased("returns-and-risk");
-        adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
+        calls.adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
 
-        JsonNode published = adminData(publish(V2_ARTICLE, 1), 200);
+        JsonNode published = calls.adminData(publish(V2_ARTICLE, 1), 200);
 
         assertThat(published.get("edition").asText()).isEqualTo("CURRENT");
         assertThat(published.get("checkVersion").asText()).isEqualTo("learning-publish-checks-v2");
@@ -661,9 +603,9 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .addObject()
                 .put("code", "ENERGY")
                 .put("weightTenths", 450);
-        adminData(save(V2_ARTICLE, lone), 200);
+        calls.adminData(save(V2_ARTICLE, lone), 200);
 
-        assertThat(adminError(publish(V2_ARTICLE, 1), 422).at("/details/failures"))
+        assertThat(calls.adminError(publish(V2_ARTICLE, 1), 422).at("/details/failures"))
                 .extracting(failure -> failure.get("check").asText())
                 .containsExactly(
                         "EXAMPLE_SECTOR_COUNT", "EXAMPLE_SECTOR_IN_MAP", "EXAMPLE_WEIGHT_SUM");
@@ -672,17 +614,17 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         ArrayNode sectors = draft.putObject("example").putArray("sectors");
         sectors.addObject().put("code", "SEMICONDUCTOR").put("weightTenths", 500);
         sectors.addObject().put("code", "BATTERY").put("weightTenths", 450);
-        adminData(save(V2_ARTICLE, draft), 200);
+        calls.adminData(save(V2_ARTICLE, draft), 200);
 
-        JsonNode failed = adminError(publish(V2_ARTICLE, 2), 422);
+        JsonNode failed = calls.adminError(publish(V2_ARTICLE, 2), 422);
         assertThat(failed.at("/details/failures"))
                 .extracting(failure -> failure.get("check").asText())
                 .containsExactly("EXAMPLE_WEIGHT_SUM");
 
         ((ObjectNode) sectors.get(1)).put("weightTenths", 500);
         draft.put("expectedDraftVersion", 2);
-        adminData(save(V2_ARTICLE, draft), 200);
-        JsonNode published = adminData(publish(V2_ARTICLE, 3), 200);
+        calls.adminData(save(V2_ARTICLE, draft), 200);
+        JsonNode published = calls.adminData(publish(V2_ARTICLE, 3), 200);
 
         assertThat(published.get("sectorMapVersion").asText()).isEqualTo(LearningSeeds.MAP_VERSION);
         assertThat(
@@ -696,9 +638,9 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     @DisplayName("v2 검사에 걸리면 publish-check-failed-v2.json과 같은 422이고 아무것도 바뀌지 않는다 (quickstart 7-2)")
     void failingV2PublishMatchesExample() throws Exception {
         seeds.markStageReleased("returns-and-risk");
-        adminData(save(V2_ARTICLE, failingDraft(0)), 200);
+        calls.adminData(save(V2_ARTICLE, failingDraft(0)), 200);
 
-        JsonNode error = adminError(publish(V2_ARTICLE, 1), 422);
+        JsonNode error = calls.adminError(publish(V2_ARTICLE, 1), 422);
 
         assertThat(error).isEqualTo(example("publish-check-failed-v2.json"));
         assertThat(count("learning_article_revision")).isZero();
@@ -711,22 +653,22 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     void renamedQuestionsOnRepublish() throws Exception {
         freeVolatilityTerm();
         seeds.markStageReleased("returns-and-risk");
-        JsonNode first = adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
+        JsonNode first = calls.adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
         assertThat(first.at("/draft/quiz"))
                 .extracting(question -> question.get("questionId").asText())
                 .containsExactly("q1", "q4");
-        adminData(publish(V2_ARTICLE, 1), 200);
+        calls.adminData(publish(V2_ARTICLE, 1), 200);
 
         // q1은 글자만, q4는 정답 보기를 바꾼다.
         ObjectNode changed =
                 passingDraft(1, List.of("q1", "q4"), List.of("c2", "c3", "c5", "c6"), 1);
         ((ObjectNode) changed.at("/quiz/0")).put("prompt", "글자만 고친 질문");
-        adminData(save(V2_ARTICLE, changed), 200);
-        JsonNode republished = adminData(publish(V2_ARTICLE, 2), 200);
+        calls.adminData(save(V2_ARTICLE, changed), 200);
+        JsonNode republished = calls.adminData(publish(V2_ARTICLE, 2), 200);
 
         assertThat(republished.get("renamedQuestions"))
                 .isEqualTo(objectMapper.readTree("[{\"from\":\"q4\",\"to\":\"q7\"}]"));
-        JsonNode reread = adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200);
+        JsonNode reread = calls.adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200);
         assertThat(reread.get("draftVersion").asInt()).isEqualTo(2);
         assertThat(reread.at("/draft/quiz"))
                 .extracting(question -> question.get("questionId").asText())
@@ -736,10 +678,10 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .containsExactly("q1", "q7");
 
         ObjectNode stale = passingDraft(2, List.of("q1", "q4"), List.of("c2", "c3", "c5", "c6"), 1);
-        assertThat(fieldsOf(adminError(save(V2_ARTICLE, stale), 400)))
+        assertThat(fieldsOf(calls.adminError(save(V2_ARTICLE, stale), 400)))
                 .containsExactly("quiz[1].questionId");
         ObjectNode fresh = passingDraft(2, List.of("q1", "q7"), List.of("c2", "c3", "c5", "c6"), 1);
-        assertThat(adminData(save(V2_ARTICLE, fresh), 200).get("draftVersion").asInt())
+        assertThat(calls.adminData(save(V2_ARTICLE, fresh), 200).get("draftVersion").asInt())
                 .isEqualTo(3);
     }
 
@@ -748,10 +690,10 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     void unpublishClearsPublishedPlacement() throws Exception {
         freeVolatilityTerm();
         seeds.markStageReleased("returns-and-risk");
-        adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
-        adminData(publish(V2_ARTICLE, 1), 200);
+        calls.adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
+        calls.adminData(publish(V2_ARTICLE, 1), 200);
 
-        adminData(post("/admin/learning/articles/" + V2_ARTICLE + "/unpublish"), 200);
+        calls.adminData(post("/admin/learning/articles/" + V2_ARTICLE + "/unpublish"), 200);
 
         Map<String, Object> row =
                 jdbcTemplate.queryForMap(
@@ -771,19 +713,19 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         freeVolatilityTerm();
         seeds.markStageReleased("etf-market-basics");
         seeds.markStageReleased("returns-and-risk");
-        adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
-        adminData(publish(V2_ARTICLE, 1), 200);
+        calls.adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
+        calls.adminData(publish(V2_ARTICLE, 1), 200);
         ObjectNode moved = passingDraft(1, List.of("q1", "q4"), List.of("c2", "c3", "c5", "c6"), 0);
         moved.put("stageKey", "etf-market-basics");
         moved.put("stagePosition", 7);
 
-        adminData(save(V2_ARTICLE, moved), 200);
+        calls.adminData(save(V2_ARTICLE, moved), 200);
 
         JsonNode beforeRepublish = publicData("/learning/articles/" + V2_ARTICLE);
         assertThat(beforeRepublish.at("/stage/stageKey").asText()).isEqualTo("returns-and-risk");
         assertThat(beforeRepublish.get("number").asText()).isEqualTo("2-1");
 
-        adminData(publish(V2_ARTICLE, 2), 200);
+        calls.adminData(publish(V2_ARTICLE, 2), 200);
 
         JsonNode afterRepublish = publicData("/learning/articles/" + V2_ARTICLE);
         assertThat(afterRepublish.at("/stage/stageKey").asText()).isEqualTo("etf-market-basics");
@@ -809,10 +751,10 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         ObjectNode question = question(body.putArray("quiz"), "정답이 없는 문제", "풀이");
         choice(question, null, "가", false);
         choice(question, null, "나", false);
-        adminData(save(V2_ARTICLE, body), 200);
+        calls.adminData(save(V2_ARTICLE, body), 200);
 
         JsonNode preview =
-                adminData(get("/admin/learning/articles/" + V2_ARTICLE + "/preview"), 200);
+                calls.adminData(get("/admin/learning/articles/" + V2_ARTICLE + "/preview"), 200);
 
         assertThat(preview.get("edition").asText()).isEqualTo("CURRENT");
         assertThat(preview.get("preview").asBoolean()).isTrue();
@@ -842,10 +784,10 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .put("termId", "max-drawdown")
                 .put("label", "가장 크게 줄었던 폭")
                 .put("sentence", "고점에서 가장 크게 줄었던 폭이다.");
-        adminData(save(V1_ARTICLE, body), 200);
+        calls.adminData(save(V1_ARTICLE, body), 200);
         String url = "/admin/learning/articles/" + V1_ARTICLE + "/preview";
 
-        JsonNode beforeRelease = adminData(get(url), 200);
+        JsonNode beforeRelease = calls.adminData(get(url), 200);
 
         assertThat(beforeRelease.get("edition").asText()).isEqualTo("PRE_RELEASE");
         assertThat(beforeRelease.get("minDwellSeconds").isNull()).isTrue();
@@ -857,13 +799,14 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
 
         seeds.markStageReleased("etf-market-basics");
 
-        assertThat(adminData(get(url), 200).get("edition").asText()).isEqualTo("PREVIOUS");
+        assertThat(calls.adminData(get(url), 200).get("edition").asText()).isEqualTo("PREVIOUS");
     }
 
     @Test
     @DisplayName("없는 글의 미리 보기는 404 LEARNING_ARTICLE_NOT_FOUND다")
     void previewOfMissingArticle() throws Exception {
-        JsonNode error = adminError(get("/admin/learning/articles/no-such-article/preview"), 404);
+        JsonNode error =
+                calls.adminError(get("/admin/learning/articles/no-such-article/preview"), 404);
 
         assertThat(error.get("code").asText()).isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
     }
@@ -907,7 +850,8 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     }
 
     private JsonNode adminListItem(String articleId) throws Exception {
-        for (JsonNode item : adminData(get("/admin/learning/articles"), 200).get("articles")) {
+        for (JsonNode item :
+                calls.adminData(get("/admin/learning/articles"), 200).get("articles")) {
             if (articleId.equals(item.get("articleId").asText())) {
                 return item;
             }

@@ -1,27 +1,22 @@
 package com.ssafy.thorp.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ssafy.thorp.learning.support.AdminCalls;
 import com.ssafy.thorp.learning.support.LearningSeeds;
+import com.ssafy.thorp.learning.support.LockWaits;
 import com.ssafy.thorp.support.IntegrationTestSupport;
-import com.ssafy.thorp.support.Requesters;
-import com.zaxxer.hikari.HikariDataSource;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -75,10 +70,12 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @Autowired private DataSource dataSource;
 
     private LearningSeeds seeds;
+    private AdminCalls calls;
 
     @BeforeEach
     void setUp() {
         seeds = new LearningSeeds(jdbcTemplate, objectMapper);
+        calls = new AdminCalls(mockMvc, objectMapper, ADMIN);
         seeds.reset();
     }
 
@@ -89,38 +86,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
 
     // --- 호출 도우미 ---
 
-    private JsonNode call(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        String body =
-                mockMvc.perform(request)
-                        .andExpect(status().is(expectedStatus))
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-        return objectMapper.readTree(body);
-    }
-
-    private JsonNode admin(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        return call(request.with(Requesters.as(ADMIN)).with(csrf()), expectedStatus);
-    }
-
-    private JsonNode adminData(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        JsonNode body = admin(request, expectedStatus);
-        assertThat(body.get("success").asBoolean()).isTrue();
-        return body.get("data");
-    }
-
-    private JsonNode adminError(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        JsonNode body = admin(request, expectedStatus);
-        assertThat(body.get("success").asBoolean()).isFalse();
-        return body.get("error");
-    }
-
     private JsonNode publicCall(String url, int expectedStatus) throws Exception {
-        return call(get(url), expectedStatus);
+        return calls.call(get(url), expectedStatus);
     }
 
     private JsonNode example(String file) throws Exception {
@@ -142,7 +109,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     }
 
     private JsonNode adminListItem(String articleId) throws Exception {
-        for (JsonNode item : adminData(get("/admin/learning/articles"), 200).get("articles")) {
+        for (JsonNode item :
+                calls.adminData(get("/admin/learning/articles"), 200).get("articles")) {
             if (articleId.equals(item.get("articleId").asText())) {
                 return item;
             }
@@ -249,7 +217,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("목록은 초기 자리 27편이고 모두 DRAFT, 기록 없음이며 예시 파일과 키 구성이 같다")
     void listShowsTwentySevenDrafts() throws Exception {
-        JsonNode data = adminData(get("/admin/learning/articles"), 200);
+        JsonNode data = calls.adminData(get("/admin/learning/articles"), 200);
 
         assertThat(data.get("articles")).hasSize(27);
         assertThat(data.get("articles"))
@@ -297,7 +265,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                         + "\"stageKey\":\"etf-market-basics\",\"stagePosition\":5}";
 
         JsonNode created =
-                adminData(
+                calls.adminData(
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body),
@@ -317,7 +285,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertSameShape(created, example("admin-article-v2.json"), "$");
 
         JsonNode taken =
-                adminError(
+                calls.adminError(
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body),
@@ -325,7 +293,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertThat(taken.get("code").asText()).isEqualTo("LEARNING_ARTICLE_ID_TAKEN");
 
         JsonNode invalid =
-                adminError(
+                calls.adminError(
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
@@ -345,10 +313,10 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     void missingArticleIsNotFound() throws Exception {
         String missing = "/admin/learning/articles/no-such-article";
 
-        assertThat(adminError(get(missing), 404).get("code").asText())
+        assertThat(calls.adminError(get(missing), 404).get("code").asText())
                 .isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
         assertThat(
-                        adminError(
+                        calls.adminError(
                                         put(missing)
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .content(goodDraft(0).toString()),
@@ -357,7 +325,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                                 .asText())
                 .isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
         assertThat(
-                        adminError(
+                        calls.adminError(
                                         post(missing + "/publish")
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .content("{\"expectedDraftVersion\":0}"),
@@ -365,9 +333,12 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                                 .get("code")
                                 .asText())
                 .isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
-        assertThat(adminError(post(missing + "/unpublish"), 404).get("code").asText())
+        assertThat(calls.adminError(post(missing + "/unpublish"), 404).get("code").asText())
                 .isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
-        assertThat(adminError(get("/admin/learning/articles/Bad_Key"), 404).get("code").asText())
+        assertThat(
+                        calls.adminError(get("/admin/learning/articles/Bad_Key"), 404)
+                                .get("code")
+                                .asText())
                 .isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
     }
 
@@ -377,7 +348,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @DisplayName(
             "저장은 draftVersion을 1 올리고, 옛 버전은 409 LEARNING_DRAFT_CHANGED와 currentDraftVersion이다 (quickstart 1)")
     void saveDraftBumpsVersionAndRejectsStaleVersion() throws Exception {
-        JsonNode saved = adminData(saveDraft(goodDraft(0)), 200);
+        JsonNode saved = calls.adminData(saveDraft(goodDraft(0)), 200);
 
         assertThat(saved.get("draftVersion").asInt()).isEqualTo(1);
         assertThat(saved.at("/draft/blocks/2/text").asText()).isEqualTo(GOOD_PARAGRAPH);
@@ -387,13 +358,14 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertThat(saved.at("/draft/sources/0/url").asText())
                 .isEqualTo("https://example.com/source");
         assertSameShape(saved, example("admin-article.json"), "$");
-        assertThat(adminData(get(ADMIN_ARTICLE), 200)).isEqualTo(saved);
+        assertThat(calls.adminData(get(ADMIN_ARTICLE), 200)).isEqualTo(saved);
 
-        JsonNode stale = adminError(saveDraft(goodDraft(0)), 409);
+        JsonNode stale = calls.adminError(saveDraft(goodDraft(0)), 409);
 
         assertThat(stale.get("code").asText()).isEqualTo("LEARNING_DRAFT_CHANGED");
         assertThat(stale.at("/details/currentDraftVersion").asInt()).isEqualTo(1);
-        assertThat(adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isEqualTo(1);
+        assertThat(calls.adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt())
+                .isEqualTo(1);
     }
 
     @Test
@@ -406,7 +378,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                 .put("label", "리밸런싱")
                 .put("sentence", "비중을 되돌리는 일이다.");
 
-        JsonNode error = adminError(saveDraft(body), 409);
+        JsonNode error = calls.adminError(saveDraft(body), 409);
 
         assertThat(error.get("code").asText()).isEqualTo("LEARNING_TERM_ID_TAKEN");
         assertThat(error.at("/details/termId").asText()).isEqualTo("rebalancing");
@@ -420,13 +392,13 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         ObjectNode body = goodDraft(0);
         ((ArrayNode) body.get("blocks")).addObject().put("type", "video").put("text", "x");
 
-        JsonNode error = adminError(saveDraft(body), 400);
+        JsonNode error = calls.adminError(saveDraft(body), 400);
 
         assertThat(error.get("code").asText()).isEqualTo("INVALID_INPUT");
         assertThat(error.at("/details/fields"))
                 .extracting(field -> field.get("field").asText())
                 .containsExactly("blocks[5]");
-        assertThat(adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isZero();
+        assertThat(calls.adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isZero();
     }
 
     @Test
@@ -439,7 +411,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                 .put("label", "또 하나")
                 .put("sentence", "겹친 용어다.");
 
-        JsonNode error = adminError(saveDraft(body), 400);
+        JsonNode error = calls.adminError(saveDraft(body), 400);
 
         assertThat(error.at("/details/fields"))
                 .extracting(field -> field.get("field").asText())
@@ -449,7 +421,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("옛 버전에 다른 글의 termId까지 실으면 LEARNING_DRAFT_CHANGED가 먼저다")
     void staleVersionIsReportedBeforeTakenTermId() throws Exception {
-        adminData(saveDraft(goodDraft(0)), 200);
+        calls.adminData(saveDraft(goodDraft(0)), 200);
         ObjectNode body = goodDraft(0);
         ((ArrayNode) body.get("terms"))
                 .addObject()
@@ -457,7 +429,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                 .put("label", "리밸런싱")
                 .put("sentence", "비중을 되돌리는 일이다.");
 
-        assertThat(adminError(saveDraft(body), 409).get("code").asText())
+        assertThat(calls.adminError(saveDraft(body), 409).get("code").asText())
                 .isEqualTo("LEARNING_DRAFT_CHANGED");
     }
 
@@ -469,16 +441,16 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @DisplayName("다른 글이 게시 중인 termId는 초안에서 빠졌어도 409 LEARNING_TERM_ID_TAKEN이다")
     void publishedTermIdCannotBeTakenByAnotherArticle() throws Exception {
         seedFullSectorMap();
-        adminData(saveDraft(goodDraft(0)), 200);
-        adminData(publish(1), 200);
+        calls.adminData(saveDraft(goodDraft(0)), 200);
+        calls.adminData(publish(1), 200);
         ObjectNode withoutMaxDrawdown = goodDraft(1);
         ((ArrayNode) withoutMaxDrawdown.get("terms")).remove(0);
-        adminData(saveDraft(withoutMaxDrawdown), 200);
+        calls.adminData(saveDraft(withoutMaxDrawdown), 200);
 
         ObjectNode other = goodDraft(0);
         ((ArrayNode) other.get("terms")).remove(1);
         JsonNode error =
-                adminError(
+                calls.adminError(
                         put("/admin/learning/articles/backtest")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(other.toString()),
@@ -499,7 +471,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         ((ObjectNode) body.at("/example/sectors/1")).put("weightTenths", 1001);
         ((ObjectNode) body.at("/sources/0")).put("url", "ftp://example.com");
 
-        JsonNode error = adminError(saveDraft(body), 400);
+        JsonNode error = calls.adminError(saveDraft(body), 400);
 
         assertThat(error.at("/details/fields"))
                 .extracting(field -> field.get("field").asText())
@@ -512,7 +484,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         ObjectNode body = goodDraft(0);
         ((ArrayNode) body.get("terms")).remove(1);
 
-        JsonNode saved = adminData(saveDraft(body), 200);
+        JsonNode saved = calls.adminData(saveDraft(body), 200);
 
         assertThat(saved.at("/draft/terms"))
                 .extracting(term -> term.get("termId").asText())
@@ -531,9 +503,9 @@ class LearningAdminApiIT extends IntegrationTestSupport {
             "검사에 걸린 게시는 422이고 error가 publish-check-failed.json과 같으며 아무것도 바뀌지 않는다 (quickstart 3-2)")
     void failingPublishChangesNothing() throws Exception {
         seedFullSectorMap();
-        adminData(saveDraft(quickstartBadDraft(0)), 200);
+        calls.adminData(saveDraft(quickstartBadDraft(0)), 200);
 
-        JsonNode error = adminError(publish(1), 422);
+        JsonNode error = calls.adminError(publish(1), 422);
 
         assertThat(error).isEqualTo(example("publish-check-failed.json"));
         assertThat(count("learning_article_revision")).isZero();
@@ -547,9 +519,9 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("대응표가 없으면 게시는 EXAMPLE_SECTOR_IN_MAP으로 거절된다 (quickstart 3-4)")
     void publishWithoutSectorMapIsRejected() throws Exception {
-        adminData(saveDraft(goodDraft(0)), 200);
+        calls.adminData(saveDraft(goodDraft(0)), 200);
 
-        JsonNode error = adminError(publish(1), 422);
+        JsonNode error = calls.adminError(publish(1), 422);
 
         assertThat(error.at("/details/failures"))
                 .extracting(failure -> failure.get("check").asText())
@@ -561,9 +533,9 @@ class LearningAdminApiIT extends IntegrationTestSupport {
     @DisplayName("옛 expectedDraftVersion으로는 게시하지 않는다")
     void publishWithStaleVersionIsRejected() throws Exception {
         seedFullSectorMap();
-        adminData(saveDraft(goodDraft(0)), 200);
+        calls.adminData(saveDraft(goodDraft(0)), 200);
 
-        JsonNode error = adminError(publish(0), 409);
+        JsonNode error = calls.adminError(publish(0), 409);
 
         assertThat(error.get("code").asText()).isEqualTo("LEARNING_DRAFT_CHANGED");
         assertThat(error.at("/details/currentDraftVersion").asInt()).isEqualTo(1);
@@ -580,8 +552,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         seedFullSectorMap();
 
         // 3-3 통과하는 게시
-        adminData(saveDraft(goodDraft(0)), 200);
-        JsonNode published = adminData(publish(1), 200);
+        calls.adminData(saveDraft(goodDraft(0)), 200);
+        JsonNode published = calls.adminData(publish(1), 200);
 
         assertSameShape(published, example("publish-success.json"), "$");
         // V1 초안·공개 전 단계 → 이전 판 고치기(LEGACY), v1 검사(research R16).
@@ -616,11 +588,11 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertThat(listed.at("/lastPublication/revisionNo").asInt()).isEqualTo(1);
         assertThat(listed.at("/lastPublication/actorUserId").asLong()).isEqualTo(ADMIN);
         assertSameShape(listed, example("admin-articles-list.json").at("/articles/1"), "$");
-        assertThat(adminData(get(ADMIN_ARTICLE), 200).get("publishedRevisionNo").asInt())
+        assertThat(calls.adminData(get(ADMIN_ARTICLE), 200).get("publishedRevisionNo").asInt())
                 .isEqualTo(1);
 
         // 3-5 게시된 글을 저장만 한다
-        adminData(
+        calls.adminData(
                 saveDraft(draft(1, "수익과 손실", "저장만 한 문단이다.", 500, "가장 크게 줄었던 폭", "저장만 한 문장이다.")),
                 200);
 
@@ -637,11 +609,11 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         seedFullSectorMap();
 
         // 제목·용어 이름·문장을 바꿔 다시 게시한다(US3 시나리오 7, quickstart 5-3의 서버 쪽)
-        adminData(
+        calls.adminData(
                 saveDraft(
                         draft(2, "수익과 손실 다시 보기", GOOD_PARAGRAPH, 500, "고점 대비 하락 폭", "바꾼 용어 문장이다.")),
                 200);
-        assertThat(adminData(publish(3), 200).get("revisionNo").asInt()).isEqualTo(2);
+        assertThat(calls.adminData(publish(3), 200).get("revisionNo").asInt()).isEqualTo(2);
 
         JsonNode republished = publicCall("/learning/articles/" + ARTICLE, 200).get("data");
         JsonNode retermed = publicCall("/learning/terms/max-drawdown", 200).get("data");
@@ -654,7 +626,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
 
         // 3-8 게시 취소
         int eventsBeforeUnpublish = count("learning_publication_event");
-        JsonNode unpublished = adminData(unpublish(), 200);
+        JsonNode unpublished = calls.adminData(unpublish(), 200);
 
         assertThat(unpublished)
                 .isEqualTo(
@@ -672,67 +644,63 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertThat(afterUnpublish.at("/lastPublication/action").asText()).isEqualTo("UNPUBLISH");
         assertThat(afterUnpublish.at("/lastPublication/revisionNo").asInt()).isEqualTo(2);
         assertThat(afterUnpublish.get("hasUnpublishedChanges").asBoolean()).isFalse();
-        assertThat(adminData(get(ADMIN_ARTICLE), 200).get("publishedRevisionNo").isNull()).isTrue();
+        assertThat(calls.adminData(get(ADMIN_ARTICLE), 200).get("publishedRevisionNo").isNull())
+                .isTrue();
 
         // 한 번 더 취소하면 200 null이고 기록이 늘지 않는다
-        JsonNode again = adminData(unpublish(), 200);
+        JsonNode again = calls.adminData(unpublish(), 200);
         assertThat(again.get("unpublishedRevisionNo").isNull()).isTrue();
         assertThat(count("learning_publication_event")).isEqualTo(eventsBeforeUnpublish + 1);
 
         // 다시 게시하면 판 번호가 이어서 오른다
-        assertThat(adminData(publish(3), 200).get("revisionNo").asInt()).isEqualTo(3);
+        assertThat(calls.adminData(publish(3), 200).get("revisionNo").asInt()).isEqualTo(3);
         assertThat(publicCall("/learning/terms/max-drawdown", 200).at("/data/sentence").asText())
                 .isEqualTo("바꾼 용어 문장이다.");
     }
 
     // --- 동시 요청이 UNIQUE 제약에 부딪힐 때 (T082) ---
 
-    /** 테스트 연결 풀(2개)과 별개인 연결. 커밋하지 않은 행으로 요청을 제약 앞에 세워 두는 데 쓴다. */
-    private Connection rawConnection() throws Exception {
-        HikariDataSource hikari = dataSource.unwrap(HikariDataSource.class);
-        return DriverManager.getConnection(
-                hikari.getJdbcUrl(), hikari.getUsername(), hikari.getPassword());
-    }
+    @Test
+    @DisplayName(
+            "글마다 게시는 초안 단계 행을 먼저 잠근다 — 그 단계의 공개가 도는 동안 기다렸다가 공개된 단계를 보고 V1 글을 409 LEARNING_FORMAT_OUTDATED로 거절한다")
+    void publishWaitsForStageReleaseInProgress() throws Exception {
+        seedFullSectorMap();
+        calls.adminData(saveDraft(goodDraft(0)), 200);
 
-    /**
-     * 요청이 {@code holder}의 커밋하지 않은 행에 막혀 기다릴 때까지 기다린다. 그 뒤에 커밋해야 요청이 존재 검사를 이미 통과한 채 UNIQUE 제약에 걸려,
-     * 컨트롤러의 "제약 위반 → 409" 변환 경로를 실제로 탄다.
-     *
-     * <p>DB 전체의 잠금 대기를 세면 안 된다. 같은 컨테이너를 쓰는 다른 세션(스케줄러의 advisory lock 등)이 기다리는 순간 곧바로 넘어가, 요청이 제약
-     * 앞에 서기 전에 커밋하게 된다. 그러면 요청은 일반 존재 검사에서 409를 받아 테스트는 통과하지만 변환 경로는 한 번도 돌지 않는다. 그래서 {@code
-     * holder}에게 막힌 세션만 센다({@code pg_blocking_pids}).
-     */
-    private static void awaitBlockedBy(Connection holder, Connection watcher) throws Exception {
-        int holderPid;
-        try (ResultSet pid = holder.createStatement().executeQuery("SELECT pg_backend_pid()")) {
-            pid.next();
-            holderPid = pid.getInt(1);
-        }
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
-        while (System.nanoTime() < deadline) {
-            try (PreparedStatement blocked =
-                    watcher.prepareStatement(
-                            "SELECT count(*) FROM pg_stat_activity"
-                                    + " WHERE ? = ANY (pg_blocking_pids(pid))")) {
-                blocked.setInt(1, holderPid);
-                try (ResultSet rows = blocked.executeQuery()) {
-                    rows.next();
-                    if (rows.getInt(1) > 0) {
-                        return;
-                    }
-                }
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        JsonNode error;
+        try (Connection holder = LockWaits.rawConnection(dataSource);
+                Connection watcher = LockWaits.rawConnection(dataSource)) {
+            holder.setAutoCommit(false);
+            // 단계 공개가 단계 행을 잠그고 공개일을 쓴 채 아직 커밋하지 않은 상태를 흉내 낸다.
+            try (PreparedStatement release =
+                    holder.prepareStatement(
+                            "UPDATE learning_stage SET released_at = now(), released_by_user_id = 7"
+                                    + " WHERE stage_key = 'returns-and-risk'")) {
+                release.executeUpdate();
             }
-            Thread.sleep(50);
+            Future<JsonNode> publishing = executor.submit(() -> calls.adminError(publish(1), 409));
+            LockWaits.awaitBlockedBy(holder, watcher);
+            holder.commit();
+            error = publishing.get(20, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
         }
-        throw new AssertionError("request never waited on the row held by pid " + holderPid);
+
+        assertThat(error.get("code").asText()).isEqualTo("LEARNING_FORMAT_OUTDATED");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM learning_article_revision", Integer.class))
+                .as("공개된 단계에 LEGACY 판을 남기지 않는다")
+                .isZero();
     }
 
     @Test
     @DisplayName("같은 articleId를 동시에 만들면 늦은 쪽은 500이 아니라 409 LEARNING_ARTICLE_ID_TAKEN이다")
     void concurrentCreateWithSameArticleIdIsConflict() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        try (Connection holder = rawConnection();
-                Connection watcher = rawConnection()) {
+        try (Connection holder = LockWaits.rawConnection(dataSource);
+                Connection watcher = LockWaits.rawConnection(dataSource)) {
             holder.setAutoCommit(false);
             holder.createStatement()
                     .executeUpdate(
@@ -743,7 +711,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
             Future<JsonNode> late =
                     executor.submit(
                             () ->
-                                    admin(
+                                    calls.admin(
                                             post("/admin/learning/articles")
                                                     .contentType(MediaType.APPLICATION_JSON)
                                                     .content(
@@ -751,7 +719,7 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                                                                     + "\"stageKey\":\"etf-market-basics\",\"stagePosition\":5}"),
                                             409));
 
-            awaitBlockedBy(holder, watcher);
+            LockWaits.awaitBlockedBy(holder, watcher);
             holder.commit();
 
             assertThat(late.get(20, TimeUnit.SECONDS).at("/error/code").asText())
@@ -771,8 +739,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                 .put("label", "경쟁 용어")
                 .put("sentence", "동시에 넣은 용어다.");
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        try (Connection holder = rawConnection();
-                Connection watcher = rawConnection()) {
+        try (Connection holder = LockWaits.rawConnection(dataSource);
+                Connection watcher = LockWaits.rawConnection(dataSource)) {
             holder.setAutoCommit(false);
             holder.createStatement()
                     .executeUpdate(
@@ -780,9 +748,9 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                                     + " created_at, updated_at)"
                                     + " SELECT 'race-term', id, '먼저 넣은 용어', '', now(), now()"
                                     + " FROM learning_article WHERE article_key = 'backtest'");
-            Future<JsonNode> late = executor.submit(() -> admin(saveDraft(body), 409));
+            Future<JsonNode> late = executor.submit(() -> calls.admin(saveDraft(body), 409));
 
-            awaitBlockedBy(holder, watcher);
+            LockWaits.awaitBlockedBy(holder, watcher);
             holder.commit();
 
             JsonNode error = late.get(20, TimeUnit.SECONDS).get("error");
@@ -792,6 +760,6 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         } finally {
             executor.shutdownNow();
         }
-        assertThat(adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isZero();
+        assertThat(calls.adminData(get(ADMIN_ARTICLE), 200).get("draftVersion").asInt()).isZero();
     }
 }

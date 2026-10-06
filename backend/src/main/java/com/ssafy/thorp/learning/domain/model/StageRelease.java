@@ -6,9 +6,13 @@ import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * 단계 공개의 전제 판정(data-model §10-2·§10-3, research R23). 저장소를 읽지 않는 순수 함수다. 단계 공개와 그 미리 검사가 같은 판정을 쓴다.
@@ -58,9 +62,18 @@ public final class StageRelease {
 
     /** 공개 집합에 드는 글인가. 초안 배치가 이 단계인 글과 공개 배치가 이 단계인 글이다. 공개 배치만 이 단계인 글은 {@code PLACEMENT}로 걸린다. */
     public static boolean inReleaseSet(LearningArticle article, StageKey stageKey) {
-        return article.placement().stageKey().equals(stageKey)
-                || (article.publishedPlacement() != null
-                        && article.publishedPlacement().stageKey().equals(stageKey));
+        return inReleaseSet(article.placement(), article.publishedPlacement(), stageKey);
+    }
+
+    /**
+     * {@link #inReleaseSet(LearningArticle, StageKey)}를 배치만으로 판정한다. 글 전체를 읽지 않고 공개 집합을 정할 때 쓴다.
+     *
+     * @param publishedPlacement 게시되지 않았으면 null
+     */
+    public static boolean inReleaseSet(
+            Placement placement, Placement publishedPlacement, StageKey stageKey) {
+        return placement.stageKey().equals(stageKey)
+                || (publishedPlacement != null && publishedPlacement.stageKey().equals(stageKey));
     }
 
     /**
@@ -118,6 +131,66 @@ public final class StageRelease {
             }
         }
         return kept;
+    }
+
+    /**
+     * 게시 순서(data-model §10-3 ⑤). 같은 공개 안에서 다른 글이 용어를 넘겨받는 옛 소유 글은 넘겨받는 글보다 먼저 게시한다. 그래야 옛 글의 판에
+     * 운영자가 미리 검사에서 확인한 초안 번호가 남는다. 넘기기가 옛 글의 초안 번호를 먼저 올리면 판에는 운영자가 보지 않은 번호가 남는다. 그 밖의 순서는 공개 집합의
+     * 순서다.
+     *
+     * <p>넘겨받기가 고리를 이루면(서로의 용어를 넘겨받음) 고리 안에서는 지킬 순서가 없다. 옛 소유 글이 넘겨줄 용어를 초안에 남긴 고리는 판정이 먼저
+     * 막지만({@link #termsKeptByGivers}), 서로 넘겨줄 용어를 이미 초안에서 뺀 고리는 판정을 통과한다. 그때는 고리 안의 글 하나만 먼저 게시해
+     * 고리를 끊고 나머지는 다시 순서를 따진다. 고리 밖에서 그 고리의 글에게서 넘겨받는 글은 계속 옛 소유 글 다음에 게시된다.
+     *
+     * @param releaseSet 공개 집합, 단계 안 순서
+     */
+    public static List<LearningArticle> publishOrder(List<LearningArticle> releaseSet) {
+        List<LearningArticle> pending = new ArrayList<>(releaseSet);
+        List<LearningArticle> ordered = new ArrayList<>();
+        while (!pending.isEmpty()) {
+            Map<ArticleId, LearningArticle> waiting = new HashMap<>();
+            pending.forEach(article -> waiting.put(article.articleId(), article));
+            // 넘겨줄 옛 글이 아직 게시를 기다리는 글은 다음 차례로 미룬다.
+            List<LearningArticle> ready =
+                    pending.stream()
+                            .filter(article -> pendingGivers(article, waiting).findAny().isEmpty())
+                            .toList();
+            if (ready.isEmpty()) {
+                ready = List.of(onCycle(pending.getFirst(), waiting));
+            }
+            ordered.addAll(ready);
+            pending.removeAll(ready);
+        }
+        return ordered;
+    }
+
+    /** 아직 게시를 기다리는 옛 소유 글. */
+    private static Stream<LearningArticle> pendingGivers(
+            LearningArticle article, Map<ArticleId, LearningArticle> waiting) {
+        return article.terms().stream()
+                .filter(LearningTerm::transferring)
+                .map(term -> waiting.get(term.transferFrom()))
+                .filter(Objects::nonNull);
+    }
+
+    /**
+     * 게시할 수 있는 글이 없을 때 고리 위의 글 하나. 기다리는 글은 모두 기다리는 옛 글이 있으므로 옛 글을 따라가면 이미 지난 글로 돌아오고, 그 글이 고리 위에
+     * 있다. 고리 밖에서 고리를 기다리는 글을 고르면 그 글이 고리의 옛 글보다 먼저 게시된다.
+     */
+    private static LearningArticle onCycle(
+            LearningArticle start, Map<ArticleId, LearningArticle> waiting) {
+        Set<ArticleId> visited = new HashSet<>();
+        LearningArticle current = start;
+        while (visited.add(current.articleId())) {
+            current =
+                    pendingGivers(current, waiting)
+                            .findFirst()
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalStateException(
+                                                    "a waiting article has no waiting giver"));
+        }
+        return current;
     }
 
     /** {@link #termsKeptByGivers}가 찾은 용어 하나의 항목. 옛 소유 글에 붙고 위치는 그 용어다. */

@@ -243,6 +243,19 @@ class LearningCurriculumIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("커리큘럼은 판 본문을 읽지 않는다 — 공개된 단계의 글 본문이 깨져 있어도 응답은 그대로다")
+    void brokenBodyDoesNotBreakCurriculum() throws Exception {
+        seedTwoStagesReleased();
+        jdbcTemplate.update(
+                "UPDATE learning_article_revision"
+                        + " SET snapshot = jsonb_set(snapshot, '{bodyBlocks}', '[{\"type\":\"broken\"}]')"
+                        + " WHERE id = (SELECT published_revision_id FROM learning_article"
+                        + " WHERE article_key = 'returns-and-losses')");
+
+        assertThat(curriculumAt(NOW)).isEqualTo(example("curriculum.json"));
+    }
+
+    @Test
     @DisplayName("공개 안내는 지금부터 7일 안의 줄이다 — 7일 직전은 싣고 7일 직후는 싣지 않으며, 변경 기록에는 늘 있다 (quickstart 11-2)")
     void noticesCoverSevenDays() {
         seedTwoStagesReleased();

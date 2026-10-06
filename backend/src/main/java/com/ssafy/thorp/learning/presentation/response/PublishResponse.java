@@ -25,21 +25,23 @@ public record PublishResponse(
                 result.sectorMapVersion(),
                 result.publishedAt(),
                 result.edition().name(),
-                result.renamedQuestions().stream()
-                        .map(renamed -> new RenamedQuestion(renamed.from(), renamed.to()))
-                        .toList(),
-                result.transferredTerms().stream()
-                        .map(
-                                term ->
-                                        new TransferredTerm(
-                                                term.termId(),
-                                                term.fromArticleId(),
-                                                term.toArticleId()))
-                        .toList());
+                result.renamedQuestions().stream().map(RenamedQuestion::from).toList(),
+                result.transferredTerms().stream().map(TransferredTerm::from).toList());
     }
 
-    /** 같은 문제 판정으로 새 식별자를 받은 문제. 이미 답한 사용자에게도 새 문제로 보인다. */
-    public record RenamedQuestion(String from, String to) {}
+    /** 같은 문제 판정으로 새 식별자를 받은 문제. 이미 답한 사용자에게도 새 문제로 보인다. 단계 공개 응답도 이 모양이다. */
+    public record RenamedQuestion(String from, String to) {
 
-    public record TransferredTerm(String termId, String fromArticleId, String toArticleId) {}
+        public static RenamedQuestion from(PublishResult.RenamedQuestion renamed) {
+            return new RenamedQuestion(renamed.from(), renamed.to());
+        }
+    }
+
+    /** 넘긴 용어. 단계 공개 응답도 이 모양이다. */
+    public record TransferredTerm(String termId, String fromArticleId, String toArticleId) {
+
+        public static TransferredTerm from(PublishResult.TransferredTerm term) {
+            return new TransferredTerm(term.termId(), term.fromArticleId(), term.toArticleId());
+        }
+    }
 }

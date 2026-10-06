@@ -16,7 +16,7 @@ import java.util.Map;
 public class StageChangedException extends BusinessException {
 
     /**
-     * @param releaseSet 잠근 뒤 다시 읽은 공개 집합, 단계 안 순서
+     * @param releaseSet 서버가 읽은 공개 집합(잠그기 전에 이미 다르면 그때 읽은 값, 아니면 잠근 뒤 다시 읽은 값), 단계 안 순서
      */
     public StageChangedException(List<LearningArticle> releaseSet) {
         super(

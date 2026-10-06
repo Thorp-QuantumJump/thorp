@@ -60,17 +60,19 @@ public interface LearningPublishedTermJpaRepository
     @Query("select t.termKey from LearningPublishedTermJpaEntity t")
     List<String> findAllTermKeys();
 
-    /** 이 용어의 색인 행이 속한 글. */
+    /** 용어와 그 색인 행이 속한 글의 키. */
+    interface TermOwnerRow {
+        String getTermKey();
+
+        String getArticleKey();
+    }
+
+    /** 이 용어들의 색인 행이 속한 글. */
     @Query(
-            value =
-                    """
-                    SELECT a.article_key
-                    FROM learning_published_term pt
-                    JOIN learning_article a ON a.id = pt.article_id
-                    WHERE pt.term_key = :termKey
-                    """,
-            nativeQuery = true)
-    Optional<String> findOwnerArticleKey(@Param("termKey") String termKey);
+            "select t.termKey as termKey, a.articleKey as articleKey"
+                    + " from LearningPublishedTermJpaEntity t, LearningArticleJpaEntity a"
+                    + " where a.id = t.articleId and t.termKey in :termKeys")
+    List<TermOwnerRow> findOwners(@Param("termKeys") Collection<String> termKeys);
 
     /** 글마다 공개 용어 수. {@link #findPublishedIn}과 같은 규칙으로 센다. */
     interface TermCountRow {

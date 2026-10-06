@@ -9,7 +9,9 @@ import com.ssafy.thorp.learning.presentation.response.AdminStagesResponse;
 import com.ssafy.thorp.learning.presentation.response.StageReadinessResponse;
 import com.ssafy.thorp.learning.presentation.response.StageReleaseResponse;
 import com.ssafy.thorp.learning.presentation.support.LearningAdminAccess;
+import com.ssafy.thorp.learning.presentation.support.UniqueConstraintViolations;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,7 +59,12 @@ public class LearningStageAdminController {
                 ApiResponse.ok(StageReadinessResponse.from(stageService.readiness(stageKey))));
     }
 
-    /** 단계 공개. 글 하나라도 걸리면 422이고 아무것도 바뀌지 않는다. 되돌릴 수 없다. */
+    /**
+     * 단계 공개. 글 하나라도 걸리면 422이고 아무것도 바뀌지 않는다. 되돌릴 수 없다.
+     *
+     * <p>판정 뒤 먼저 커밋한 다른 저장·게시가 같은 용어를 가져가 용어 UNIQUE 제약에 걸리면, 트랜잭션이 끝난 뒤 지금 상태로 다시 판정해 422로 바꾼다. 다시
+     * 판정해도 걸린 글이 없으면 판정할 수 없는 충돌이라 원래 예외를 그대로 둔다(글마다 게시와 같다).
+     */
     @PostMapping("/{stageKey}/release")
     public ResponseEntity<ApiResponse<StageReleaseResponse>> release(
             @PathVariable String stageKey, @Valid @RequestBody StageReleaseRequest request) {
@@ -72,7 +79,15 @@ public class LearningStageAdminController {
                                                         article.expectedDraftVersion()))
                                 .toList(),
                         actorUserId);
-        return ResponseEntity.ok(
-                ApiResponse.ok(StageReleaseResponse.from(stageService.release(stageKey, command))));
+        try {
+            return ResponseEntity.ok(
+                    ApiResponse.ok(
+                            StageReleaseResponse.from(stageService.release(stageKey, command))));
+        } catch (DataIntegrityViolationException violation) {
+            if (UniqueConstraintViolations.violatesTermKey(violation)) {
+                stageService.requireChecksPass(stageKey);
+            }
+            throw violation;
+        }
     }
 }
