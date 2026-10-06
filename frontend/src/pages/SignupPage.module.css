@@ -25,6 +25,10 @@
   z-index: 1;
   width: min(100% - 40px, 1320px);
   margin: 0 auto;
+  /* 한글은 어절 단위로만 줄을 바꾼다("계정이 있|어요" 방지). 이메일·주소처럼 띄어쓰기 없는 긴 값은 그래도 넘치지 않게 끊는다.
+     상속되는 속성이라 제목·설명·패널 문단·버튼까지 인증 화면 전부에 한 번에 적용된다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .header {

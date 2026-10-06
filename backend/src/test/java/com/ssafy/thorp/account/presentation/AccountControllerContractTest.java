@@ -86,6 +86,26 @@ class AccountControllerContractTest {
     }
 
     @Test
+    void signupWithoutPhoneNumberIsAccepted() throws Exception {
+        when(signupService.signup(any()))
+                .thenReturn(new SignupResult(1L, "member@example.com", "회원", "ACTIVE"));
+
+        mockMvc.perform(
+                        post("/accounts")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"email":"member@example.com","password":"password123","nickname":"회원"}
+                                        """))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<SignupCommand> command = ArgumentCaptor.forClass(SignupCommand.class);
+        verify(signupService).signup(command.capture());
+        org.assertj.core.api.Assertions.assertThat(command.getValue().phoneNumber()).isNull();
+    }
+
+    @Test
     void legacyDoubleApiPathIsNotExposed() throws Exception {
         mockMvc.perform(
                         post("/api/accounts")

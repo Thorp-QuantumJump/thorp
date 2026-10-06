@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -23,6 +24,7 @@ import com.ssafy.thorp.common.exception.ErrorCode;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -89,6 +91,22 @@ class SignupAndEmailVerificationServiceTest {
         verify(verificationRepository).deleteByEmail(CANONICAL_EMAIL);
         assertThat(saved.getValue().getEmail()).isEqualTo(CANONICAL_EMAIL);
         assertThat(result.email()).isEqualTo(CANONICAL_EMAIL);
+    }
+
+    @Test
+    void signupWithoutPhoneSkipsPhoneChecksAndStoresNoNumber() {
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(Optional.of(verified(CANONICAL_EMAIL)));
+        when(passwordEncoder.encode("password123")).thenReturn("password-hash");
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> savedUser(invocation.getArgument(0)));
+
+        signup(CANONICAL_EMAIL, null);
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().getPhoneNumber()).isNull();
+        verify(userRepository, never()).existsByPhoneNumber(any());
     }
 
     @Test
@@ -181,9 +199,11 @@ class SignupAndEmailVerificationServiceTest {
 
         verificationService.verifyCode(" MEMBER@example.com ", "123456");
 
+        // 대조 전에 시도 수를 한 번 저장하고, 맞으면 인증 완료를 저장한다.
         ArgumentCaptor<EmailVerification> saved = ArgumentCaptor.forClass(EmailVerification.class);
-        verify(verificationRepository).save(saved.capture());
+        verify(verificationRepository, org.mockito.Mockito.times(2)).save(saved.capture());
         assertThat(saved.getValue().isVerified()).isTrue();
+        assertThat(saved.getValue().getAttempts()).isEqualTo(1);
     }
 
     @Test
@@ -198,13 +218,139 @@ class SignupAndEmailVerificationServiceTest {
         verify(verificationRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("인증번호는 5번까지만 대조하고, 그 뒤엔 맞는 번호도 다시 받으라고 거절한다")
+    void verificationAttemptsAreCapped() {
+        EmailVerification verification = issued(CANONICAL_EMAIL, Instant.now().plusSeconds(60));
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(Optional.of(verification));
+        when(passwordEncoder.matches("000000", "code-hash")).thenReturn(false);
+        when(passwordEncoder.matches("123456", "code-hash")).thenReturn(true);
+
+        for (int i = 0; i < EmailVerification.MAX_ATTEMPTS; i++) {
+            assertBusinessCode(
+                    () -> verificationService.verifyCode(CANONICAL_EMAIL, "000000"),
+                    ErrorCode.EMAIL_VERIFICATION_INVALID);
+        }
+
+        assertBusinessCode(
+                () -> verificationService.verifyCode(CANONICAL_EMAIL, "123456"),
+                ErrorCode.EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED);
+        assertThat(verification.isVerified()).isFalse();
+    }
+
+    @Test
+    @DisplayName("다시 받기 간격 안에 또 요청하면 메일을 보내지 않는다")
+    void resendWithinIntervalIsRejected() {
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new EmailVerification(
+                                        1L,
+                                        CANONICAL_EMAIL,
+                                        "code-hash",
+                                        Instant.now().plusSeconds(170),
+                                        null,
+                                        Instant.now().minusSeconds(5),
+                                        0,
+                                        1,
+                                        Instant.now().minusSeconds(5))));
+
+        assertBusinessCode(
+                () -> verificationService.createVerificationCode(CANONICAL_EMAIL),
+                ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON);
+        verify(mailSender, never()).sendVerificationCode(any(), any());
+    }
+
+    @Test
+    @DisplayName("재발송 간격은 같은 창에서 받을 때마다 두 배로 늘어난다")
+    void resendGapDoublesWithinWindow() {
+        // 이 창에서 두 통째를 40초 전에 받았다. 다음 간격은 60초라 아직 이르다.
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(Optional.of(previousSent(40, 2)));
+
+        assertBusinessCode(
+                () -> verificationService.createVerificationCode(CANONICAL_EMAIL),
+                ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON);
+        verify(mailSender, never()).sendVerificationCode(any(), any());
+    }
+
+    @Test
+    @DisplayName("간격만 지나면 보낸다 — 고정 상한이 없어 남이 요청해 주인의 가입을 막을 수 없다")
+    void resendAfterGapIsAllowedEvenAfterManySends() {
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(Optional.of(previousSent(11 * 60, 9)));
+        when(passwordEncoder.encode(any())).thenReturn("new-hash");
+
+        verificationService.createVerificationCode(CANONICAL_EMAIL);
+
+        verify(mailSender).sendVerificationCode(eq(CANONICAL_EMAIL), anyString());
+    }
+
+    @Test
+    @DisplayName("늘어나는 간격은 10분에서 멈춘다")
+    void resendGapIsCapped() {
+        assertThat(EmailVerification.resendGap(1)).isEqualTo(java.time.Duration.ofSeconds(30));
+        assertThat(EmailVerification.resendGap(2)).isEqualTo(java.time.Duration.ofSeconds(60));
+        assertThat(EmailVerification.resendGap(30))
+                .isEqualTo(EmailVerification.MAX_RESEND_INTERVAL);
+    }
+
+    private static EmailVerification previousSent(long secondsAgo, int sendsInWindow) {
+        return new EmailVerification(
+                1L,
+                CANONICAL_EMAIL,
+                "code-hash",
+                Instant.now().plusSeconds(60),
+                null,
+                Instant.now().minusSeconds(secondsAgo),
+                0,
+                sendsInWindow,
+                Instant.now().minusSeconds(secondsAgo + 60));
+    }
+
+    @Test
+    @DisplayName("재발송한 번호는 직전 발송 수를 이어서 센다")
+    void resendCarriesSendCount() {
+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new EmailVerification(
+                                        1L,
+                                        CANONICAL_EMAIL,
+                                        "code-hash",
+                                        Instant.now().plusSeconds(60),
+                                        null,
+                                        Instant.now().minusSeconds(120),
+                                        3,
+                                        2,
+                                        Instant.now().minusSeconds(600))));
+        when(passwordEncoder.encode(any())).thenReturn("new-hash");
+
+        verificationService.createVerificationCode(CANONICAL_EMAIL);
+
+        org.mockito.ArgumentCaptor<EmailVerification> saved =
+                org.mockito.ArgumentCaptor.forClass(EmailVerification.class);
+        verify(verificationRepository).save(saved.capture());
+        assertThat(saved.getValue().getSendsInWindow()).isEqualTo(3);
+        assertThat(saved.getValue().getAttempts()).isZero();
+    }
+
     private void signup(String email, String phoneNumber) {
         signupService.signup(new SignupCommand(email, "password123", "회원", phoneNumber));
     }
 
     private static EmailVerification issued(String email, Instant expiresAt) {
         return new EmailVerification(
-                1L, email, "code-hash", expiresAt, null, Instant.now().minusSeconds(10));
+                1L,
+                email,
+                "code-hash",
+                expiresAt,
+                null,
+                Instant.now().minusSeconds(10),
+                0,
+                1,
+                Instant.now().minusSeconds(10));
     }
 
     private static EmailVerification verified(String email) {
@@ -214,6 +360,9 @@ class SignupAndEmailVerificationServiceTest {
                 "code-hash",
                 Instant.now().plusSeconds(60),
                 Instant.now(),
+                Instant.now().minusSeconds(10),
+                0,
+                1,
                 Instant.now().minusSeconds(10));
     }
 

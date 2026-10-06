@@ -16,9 +16,21 @@ export const authApiErrorCodes = [
   'EMAIL_VERIFICATION_NOT_FOUND',
   'EMAIL_VERIFICATION_INVALID',
   'EMAIL_VERIFICATION_EXPIRED',
+  'EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED',
   'INVALID_CREDENTIALS',
   'AUTHENTICATION_REQUIRED',
   'CSRF_TOKEN_INVALID',
+  // 소셜 로그인(spec 014, 2026-10-01). 비밀번호·인증번호 오류는 위 이름을 그대로 쓴다.
+  'SOCIAL_PENDING_NOT_FOUND',
+  'SOCIAL_PENDING_STAGE_MISMATCH',
+  'SOCIAL_SIGNUP_REJECTED',
+  'SOCIAL_LINK_REQUIRED',
+  'SOCIAL_PROVIDER_ALREADY_LINKED',
+  'SOCIAL_ACCOUNT_ALREADY_LINKED',
+  'SOCIAL_PROVIDER_NOT_ENABLED',
+  'SOCIAL_VERIFICATION_LIMIT',
+  'SOCIAL_LINK_TEMPORARILY_LOCKED',
+  'EMAIL_VERIFICATION_RESEND_TOO_SOON',
   'INTERNAL_ERROR',
 ] as const
 
@@ -29,7 +41,6 @@ export type AuthFieldName =
   | 'verificationCode'
   | 'password'
   | 'nickname'
-  | 'phoneNumber'
 
 export type AuthFieldError = {
   field: AuthFieldName
@@ -50,7 +61,6 @@ export type SignupRequest = {
   email: string
   password: string
   nickname: string
-  phoneNumber: string
 }
 
 export type LoginRequest = {
@@ -83,3 +93,44 @@ export type AuthStateStatus =
 export type RequestStatus = 'idle' | 'pending' | 'success' | 'error'
 
 export type VerificationState = 'idle' | 'sent' | 'verified' | 'error' | 'expired'
+
+/** 소셜 제공자. 외부 경로와 계약(`SocialProviderId`)의 표기다. */
+export const socialProviderIds = ['kakao', 'naver', 'google'] as const
+
+export type SocialProviderId = (typeof socialProviderIds)[number]
+
+export type SocialPendingStage = 'EMAIL_VERIFICATION' | 'SIGNUP' | 'LINK'
+
+/** 기존 계정 소유 확인 방법. `SOCIAL_*`은 그 제공자로 한 번 더 로그인하는 방법이다. */
+export type SocialLinkMethod =
+  | 'PASSWORD'
+  | 'EMAIL_CODE'
+  | 'VERIFIED_EMAIL'
+  | 'SOCIAL_KAKAO'
+  | 'SOCIAL_GOOGLE'
+  | 'SOCIAL_NAVER'
+
+/**
+ * 소셜 가입·연결 대기 상태 중 화면에 보여도 되는 값(contracts `PendingSocialView`).
+ *
+ * 서버 세션에만 있는 값을 읽어 온 것이다. 화면은 이것을 메모리에만 들고 저장소에 쓰지 않는다.
+ */
+export type PendingSocialView = {
+  provider: SocialProviderId
+  stage: SocialPendingStage
+  email: string
+  suggestedNickname: string | null
+  linkReason: 'EMAIL' | 'PHONE' | null
+  linkTargetMaskedEmail: string | null
+  linkMethods: SocialLinkMethod[]
+  expiresAt: string
+}
+
+export type SocialSignupRequest = {
+  nickname: string
+}
+
+export type SocialLinkRequest =
+  | { method: 'PASSWORD'; password: string }
+  | { method: 'EMAIL_CODE'; verificationCode: string }
+  | { method: 'VERIFIED_EMAIL' }

@@ -22,7 +22,7 @@ const baseline = {
 function renderPage(options: { entries?: string[]; user?: AuthContextValue['user'] } = {}) {
   const auth: AuthContextValue = {
     status: options.user ? 'authenticated' : 'anonymous', user: options.user ?? null,
-    login: vi.fn(), logout: vi.fn(), recheck: vi.fn(), updateNickname: vi.fn(),
+    login: vi.fn(), logout: vi.fn(), recheck: vi.fn(), updateNickname: vi.fn(), completeSignIn: vi.fn(),
   }
   return render(
     <MemoryRouter initialEntries={options.entries ?? ['/regime-search']}>
@@ -337,7 +337,7 @@ describe('경제환경 검색 화면', () => {
     vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)
     const { unmount } = render(
       <MemoryRouter initialEntries={[{ pathname: '/regime-search', state: { entryPath: 'STRATEGY_RESULT' } }]}>
-        <AuthContext.Provider value={{ status: 'authenticated', user: authenticatedUser, login: vi.fn(), logout: vi.fn(), recheck: vi.fn(), updateNickname: vi.fn() }}>
+        <AuthContext.Provider value={{ status: 'authenticated', user: authenticatedUser, login: vi.fn(), logout: vi.fn(), recheck: vi.fn(), updateNickname: vi.fn(), completeSignIn: vi.fn() }}>
           <RegimeSearchPage />
         </AuthContext.Provider>
       </MemoryRouter>,

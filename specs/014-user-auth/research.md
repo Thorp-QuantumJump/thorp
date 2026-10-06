@@ -160,6 +160,84 @@
 - 현재의 원문 비교 유지: 같은 사용자가 대소문자만 다른 계정을 만들거나 인증 기록을 찾지 못할 수 있어 제외했다.
 - FE에서만 정규화: 서버 고유성 조건을 보장하지 못해 제외했다.
 
+## Decision 10: 소셜 로그인은 Spring Security OAuth2 Client로 서버 세션에 붙인다 (2026-10-01)
+
+**Decision**: `spring-boot-starter-oauth2-client`의 `oauth2Login()`으로 카카오·구글·네이버의 authorization code
+흐름을 처리한다. 콜백 성공 뒤에는 이메일 로그인과 같은 `AuthenticatedPrincipal`을 기존 서버 세션에 저장한다. 제공자
+access token은 저장하지 않는다.
+
+**Rationale**:
+
+- Decision 1의 서버 세션·`HttpOnly` 쿠키·CSRF 구조를 바꾸지 않고 로그인 수단만 늘린다. `oauth2Login()`은 기본으로
+  세션에 인증을 저장하므로 구조가 맞는다.
+- `state` 생성·검증, authorization request 보관, code 교환을 프레임워크가 맡아 FR-026의 위조·재사용 차단을 직접
+  구현하지 않는다.
+- Thorp는 제공자 API를 계속 호출하지 않는다. 사용자 정보 한 번 조회 뒤 token이 필요 없으므로 저장하지 않아야 노출 면이
+  줄어든다(FR-025).
+
+**Alternatives considered**:
+
+- FE가 제공자 SDK로 token을 받아 Backend에 넘기는 방식: token이 브라우저 JavaScript를 거치고 제공자마다 검증 코드가
+  따로 필요해 제외했다.
+- 제공자 access token으로 JWT를 발급: Decision 1에서 제외한 JWT를 다시 들이게 된다.
+- 직접 OAuth 클라이언트 구현: `state`·PKCE·오류 처리를 다시 만들 이유가 없다.
+
+**Sources**:
+
+- [Spring Security — OAuth 2.0 Login](https://docs.spring.io/spring-security/reference/servlet/oauth2/login/index.html)
+- [Kakao Login REST API](https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api)
+- [Naver Login API](https://developers.naver.com/docs/login/api/api.md)
+- [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)
+
+## Decision 11: 소셜 계정은 별도 연결 테이블로 두고, 비밀번호만 nullable로 바꾼다 (2026-10-01)
+
+**Decision**: `social_accounts(user_id, provider, provider_user_id, linked_at)`를 새로 만들고
+`(provider, provider_user_id)`와 `(user_id, provider)`를 각각 고유로 둔다. `users.password_hash`만 nullable로 바꾸고
+`email`·`phone_number`의 NOT NULL·UNIQUE는 유지한다.
+
+**Rationale**:
+
+- 한 계정에 제공자 셋까지 연결해야 해서 `users`에 제공자 열을 두면 열이 늘고 고유 제약을 걸기 어렵다.
+- 제공자 사용자 식별자로 구분해야 제공자 쪽 이메일 변경과 무관하게 연결이 유지된다(spec Edge Cases).
+- 소셜 가입도 확인된 이메일과 휴대폰 번호를 받으므로 두 열은 계속 필수다. 비밀번호만 없을 수 있다.
+- 기존 행은 모두 비밀번호가 있으므로 nullable 전환은 기존 데이터와 이전 버전 코드에 영향이 없다.
+
+**Alternatives considered**:
+
+- `users`에 `kakao_id`·`google_id`·`naver_id` 열 추가: 제공자가 늘 때마다 스키마가 바뀌어 제외했다.
+- 소셜 전용 계정에 임의 비밀번호 hash 저장: 실제로 쓸 수 없는 자격 증명을 만들고 "비밀번호 없음"을 구분할 수 없어
+  제외했다.
+
+## Decision 12: 가입·연결 대기 상태와 소셜 인증번호는 세션 속성에 둔다 (2026-10-01)
+
+**Decision**: 제공자 로그인 뒤 추가 정보·이메일 확인·연결 확인을 기다리는 상태를 Spring Session 세션 속성
+`PendingSocialLogin`으로 10분 동안 보관한다. 소셜 경로의 6자리 인증번호 hash와 만료 시각도 이 안에 둔다.
+
+**Rationale**:
+
+- 대기 상태는 브라우저 한 탭의 짧은 흐름이고 서버 재시작에도 Decision 1의 JDBC 세션으로 유지된다. 별도 테이블과
+  정리 작업이 필요 없다.
+- 기존 `email_verifications`는 "가입되지 않은 이메일" 전용 규칙(이미 가입된 이메일 거절)을 가진다. 연결 확인은 이미
+  가입된 이메일로 보내야 하므로 그 테이블을 재사용하면 기존 가입 규칙을 깨게 된다.
+- 대기 상태 식별자를 URL로 넘기지 않아도 되므로 FR-025를 만족한다.
+
+**Alternatives considered**:
+
+- `pending_social_logins` 테이블: 만료 정리 작업과 식별자 전달이 추가되어 제외했다.
+- 대기 상태를 서명된 쿠키에 저장: 크기와 폐기(한 번만 사용) 보장이 어려워 제외했다.
+- `email_verifications`에 `purpose` 열 추가: 완료된 가입 흐름의 조회·삭제 규칙을 함께 바꿔야 해 제외했다.
+
+## 소셜 로그인 확장에 필요한 기능 (2026-10-01)
+
+| 구분 | 상태 | 후속 조치 |
+|---|---|---|
+| OAuth2 client 의존성·설정 | 없음 | `spring-boot-starter-oauth2-client`, 제공자 3곳 등록, 환경 변수 자격 증명 |
+| 소셜 계정 연결 저장 | 없음 | `social_accounts` 테이블, `password_hash` nullable 마이그레이션 |
+| 비밀번호 없는 계정 로그인 거절 | 없음 | `AuthenticationService`에서 `NULL` hash를 `INVALID_CREDENTIALS`로 처리 |
+| 가입·연결 대기 상태 | 없음 | 세션 속성, 10분 만료, 일회용 |
+| 소셜 경로 인증번호 | 일부 재사용 | 메일 발송기·6자리·3분 규칙은 재사용, 저장 위치는 대기 상태 |
+| 제공자 개발자 앱 | 없음 | 카카오·구글·네이버 앱 등록, 개발·운영 redirect URI, 카카오 비즈 앱 전환 여부 확인 |
+| proxy 뒤 redirect URI | 확인 필요 | `forward-headers-strategy`와 nginx `X-Forwarded-*` 확인 |
 ## 확인된 기존 기능과 부족한 기능
 
 | 구분 | 상태 | 근거/후속 조치 |

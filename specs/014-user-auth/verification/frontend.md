@@ -32,3 +32,21 @@ ESLint 경고 19건은 기존 차트 공통 코드의 Fast Refresh export 경고
 - 상태 알림·키보드 초점: `AuthAccessibility.test.tsx`
 
 T056의 lint, 단위/컴포넌트 테스트, production build 검증은 통과했다.
+
+## 2026-10-01 소셜 로그인 확장
+
+**실행일**: 2026-10-01  
+**환경**: Node.js `v24.18.0`
+
+| 명령 | 결과 | 세부 |
+|---|---|---|
+| `npm run lint` | PASS | 오류 0건, 경고 26건. 모두 기존 파일의 Fast Refresh export·Hook dependency 경고이며 소셜 파일에서 나온 경고는 없다 |
+| `npm run build` | PASS | TypeScript 검사와 Vite production build 완료 |
+| `npm test` | PASS | Vitest 160 files / 1,522 tests, Node test skip 0 |
+
+소셜 범위 증거는 `SocialSignupPage.test.tsx`(9), `SocialLinkPage.test.tsx`(9), `SocialNoticePages.test.tsx`(9),
+`socialAuth.test.ts`, `returnTarget.test.ts`(소셜 화면 복귀 위치 제외)다. 항목별 대조는
+[social.md](social.md)에 있다.
+
+`AuthContextValue`에 `completeSignIn`이 더해져 인증 문맥을 직접 만드는 기존 테스트 목 13곳과
+`AccountProfilePreviewPage`에 그 필드를 채웠다. 동작은 바뀌지 않는다.

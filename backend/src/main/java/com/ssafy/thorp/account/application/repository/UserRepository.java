@@ -22,6 +22,9 @@ public interface UserRepository {
 
     boolean existsByPhoneNumber(String phoneNumber);
 
+    /** 휴대폰 번호의 주인을 찾는다. 소셜 가입에서 번호가 겹치면 그 계정에 연결을 권한다(spec 014 FR-023). */
+    Optional<User> findByPhoneNumber(String phoneNumber);
+
     /**
      * 마지막 로그인 시각만 갱신한다.
      *

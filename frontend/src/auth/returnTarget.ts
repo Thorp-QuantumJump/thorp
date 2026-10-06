@@ -10,7 +10,8 @@
 export const DEFAULT_RETURN_TARGET = '/diagnosis/sectors'
 
 const RETURN_TARGET_KEY = 'thorp.auth.returnTarget'
-const AUTH_PATHS = ['/login', '/signup']
+// `/auth/social`은 소셜 로그인 뒤 화면들이다(spec 014). 대기 상태에 묶인 화면이라 로그인 뒤 돌아갈 자리가 아니다.
+const AUTH_PATHS = ['/login', '/signup', '/auth/social']
 
 function isAuthPath(pathname: string): boolean {
   return AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
@@ -50,6 +51,21 @@ export function saveReturnTarget(target: unknown): void {
     window.sessionStorage.setItem(RETURN_TARGET_KEY, normalized)
   } catch {
     // 저장소가 차단된 환경에서는 안전한 기본 화면 복귀로 자연스럽게 대체한다.
+  }
+}
+
+/**
+ * 저장된 위치를 지우지 않고 읽는다. 없으면 null.
+ *
+ * <p>소셜 로그인 시작 주소에 실어 보낼 때 쓴다(FR-011). 서버가 콜백 뒤 바로 그 자리로 보내므로 경유 화면이 필요 없다.
+ * 지우지 않는 이유는 가입이 필요한 경우 가입 뒤 복귀가 아직 이 값을 쓰기 때문이다.
+ */
+export function peekReturnTarget(): string | null {
+  try {
+    const target = window.sessionStorage.getItem(RETURN_TARGET_KEY)
+    return target === null ? null : normalizeReturnTarget(target)
+  } catch {
+    return null
   }
 }
 

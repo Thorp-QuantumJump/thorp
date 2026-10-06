@@ -22,9 +22,31 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "인증 요청을 찾을 수 없습니다. 인증번호를 다시 요청해 주세요."),
     EMAIL_VERIFICATION_INVALID(HttpStatus.BAD_REQUEST, "인증번호를 다시 확인해 주세요."),
     EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다. 인증번호를 다시 요청해 주세요."),
+    // 2026-10-01 남은 위험 보완: 번호 하나를 대조할 수 있는 횟수에 상한을 둔다. 재발송은 늘어나는 간격(RESEND_TOO_SOON)으로 늦춘다.
+    EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED(
+            HttpStatus.BAD_REQUEST, "인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."),
     CSRF_TOKEN_INVALID(HttpStatus.FORBIDDEN, "요청 확인 정보가 만료되었습니다. 다시 시도해 주세요."),
+
+    // spec 014 소셜 로그인(2026-10-01). 비밀번호·인증번호 오류는 위 코드를 그대로 쓴다 — 화면이 같은 안내로 분기한다.
+    SOCIAL_PENDING_NOT_FOUND(HttpStatus.NOT_FOUND, "소셜 로그인 시간이 지났습니다. 처음부터 다시 시도해 주세요."),
+    SOCIAL_PENDING_STAGE_MISMATCH(HttpStatus.CONFLICT, "지금 단계에서는 할 수 없는 요청입니다. 화면을 새로고침해 주세요."),
+    // 겹친 계정이 정지·탈퇴 상태여도 그 사실을 드러내지 않는 일반 거절이다(spec Edge Cases).
+    SOCIAL_SIGNUP_REJECTED(HttpStatus.BAD_REQUEST, "지금은 이 정보로 가입할 수 없습니다. 다른 방법으로 로그인해 주세요."),
+    SOCIAL_LINK_REQUIRED(HttpStatus.CONFLICT, "이 번호로 가입된 계정이 있습니다. 계정 연결을 확인해 주세요."),
+    SOCIAL_PROVIDER_ALREADY_LINKED(HttpStatus.CONFLICT, "이 계정은 이미 같은 제공자의 다른 계정과 연결되어 있습니다."),
+    SOCIAL_ACCOUNT_ALREADY_LINKED(HttpStatus.CONFLICT, "이 소셜 계정은 다른 Thorp 계정에 연결되어 있습니다."),
+    SOCIAL_PROVIDER_NOT_ENABLED(HttpStatus.NOT_FOUND, "지금은 이 방법으로 로그인할 수 없습니다."),
+    // 소셜 경로의 확인 시도·발송 상한(2026-10-01 code review). 대기 상태를 버렸으므로 처음부터 다시 해야 한다.
+    SOCIAL_VERIFICATION_LIMIT(
+            HttpStatus.TOO_MANY_REQUESTS, "확인 시도 횟수를 넘었습니다. 소셜 로그인을 처음부터 다시 시도해 주세요."),
+    // 같은 기존 계정을 향한 연결 확인이 한 시간 창의 상한을 넘었다. 그 계정의 로그인은 막지 않는다.
+    SOCIAL_LINK_TEMPORARILY_LOCKED(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "이 계정에 대한 확인 시도가 많아 잠시 막았습니다. 1시간 뒤 다시 시도하거나 다른 방법으로 로그인해 주세요."),
+    EMAIL_VERIFICATION_RESEND_TOO_SOON(
+            HttpStatus.TOO_MANY_REQUESTS, "인증번호를 방금 보냈습니다. 잠시 후 다시 받아 주세요."),
 
     // spec 004 백테스트 실행. 계약은 specs/004-backtest-execution/contracts/rest-api.md "오류 코드 추가분".
     RULES_NOT_REGISTERED(

@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SignupService {
 
-    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("^01[016789]\\d{7,8}$");
+    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile(User.PHONE_NUMBER_REGEX);
 
     private final UserRepository userRepository;
     private final EmailVerificationRepository emailVerificationRepository;
@@ -37,8 +37,9 @@ public class SignupService {
     public SignupResult signup(SignupCommand command) {
         String email = EmailNormalizer.normalize(command.email());
 
-        if (command.phoneNumber() == null
-                || !PHONE_NUMBER_PATTERN.matcher(command.phoneNumber()).matches()) {
+        // 번호는 선택이다(spec 014 2026-10-02). 실려 왔을 때만 형식·중복을 본다 — 문자 인증 도입에 대비해 검사는 남긴다.
+        boolean hasPhone = command.phoneNumber() != null;
+        if (hasPhone && !PHONE_NUMBER_PATTERN.matcher(command.phoneNumber()).matches()) {
             throw new BusinessException(
                     ErrorCode.INVALID_INPUT, "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678");
         }
@@ -47,7 +48,7 @@ public class SignupService {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
-        if (userRepository.existsByPhoneNumber(command.phoneNumber())) {
+        if (hasPhone && userRepository.existsByPhoneNumber(command.phoneNumber())) {
             throw new BusinessException(ErrorCode.DUPLICATE_PHONE);
         }
 

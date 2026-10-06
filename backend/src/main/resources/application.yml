@@ -89,6 +89,22 @@ app:
 # 값이 없으면 기동이 실패한다 — 코드가 미확정 수치를 임의로 정하지 않기 때문이다.
 
 thorp:
+  # spec 014 소셜 로그인. client id와 secret이 둘 다 있는 제공자만 켜진다 — 없으면 버튼도 시작 경로도 없다.
+  # 자격 증명은 저장소에 두지 않고 환경 변수로만 넣는다(plan Provider integration).
+  auth:
+    social:
+      # 브라우저가 보는 서비스 주소. 제공자 redirect URI = {public-base-url}/api/auth/oauth2/callback/{provider}.
+      # 로컬 Vite proxy는 Host를 백엔드 주소로 바꾸므로 요청 주소로 추정하지 않는다.
+      public-base-url: ${THORP_PUBLIC_BASE_URL:http://localhost:5173}
+      kakao:
+        client-id: ${KAKAO_CLIENT_ID:}
+        client-secret: ${KAKAO_CLIENT_SECRET:}
+      google:
+        client-id: ${GOOGLE_CLIENT_ID:}
+        client-secret: ${GOOGLE_CLIENT_SECRET:}
+      naver:
+        client-id: ${NAVER_CLIENT_ID:}
+        client-secret: ${NAVER_CLIENT_SECRET:}
   learning:
     # 배우기 관리 계정 허용 목록(spec 013 research R5). 쉼표로 구분한 사용자 ID(users.id)다.
     # 비어 있으면 관리자가 없다 — 관리 경로가 모두 404 다. 014 가 역할을 주면 ConfiguredLearningAdminPolicy

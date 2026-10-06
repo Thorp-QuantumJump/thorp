@@ -7,6 +7,7 @@ import com.ssafy.thorp.common.web.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Supplier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,8 +42,13 @@ public class SecurityConfig {
             ObjectMapper objectMapper,
             CsrfTokenRepository csrfTokenRepository,
             SecurityContextRepository securityContextRepository,
-            SessionAuthenticationStrategy sessionAuthenticationStrategy)
+            SessionAuthenticationStrategy sessionAuthenticationStrategy,
+            List<HttpSecurityContributor> contributors)
             throws Exception {
+        // 도메인이 더하는 설정(소셜 로그인 등)을 먼저 붙인다. 아래 공통 설정이 같은 항목을 다시 정하면 공통 쪽이 이긴다.
+        for (HttpSecurityContributor contributor : contributors) {
+            contributor.contribute(http);
+        }
         return http.csrf(
                         csrf ->
                                 csrf.csrfTokenRepository(csrfTokenRepository)

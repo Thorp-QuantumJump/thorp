@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { StrictMode } from 'react'
@@ -159,12 +159,32 @@ describe('SignupPage', () => {
     await screen.findByText('new@example.com 인증 완료')
   })
 
+  it('인증번호를 다 틀리면 안내를 보여 주고 새 번호를 받는 단계로 돌아간다', async () => {
+    apiMocks.confirmEmailVerification.mockRejectedValue(
+      new ApiClientError('api', '인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요.', {
+        code: 'EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED',
+      }),
+    )
+    const user = userEvent.setup()
+    renderSignup()
+
+    await user.type(screen.getByLabelText('이메일'), 'new@example.com')
+    await user.click(screen.getByRole('button', { name: '인증번호 받기' }))
+    await user.type(await screen.findByLabelText('인증번호'), '000000')
+    await user.click(screen.getByRole('button', { name: '인증 확인' }))
+
+    expect(
+      (await screen.findAllByText('인증번호를 여러 번 틀렸습니다. 인증번호를 다시 요청해 주세요.'))
+        .length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: '인증번호 받기' })).toBeTruthy()
+  })
+
   it('인증·가입 성공 후 정규화한 이메일만 로그인 화면으로 전달한다', async () => {
     const user = userEvent.setup()
     renderSignup()
     await completeAccountStep(user)
     await user.type(screen.getByLabelText('닉네임'), '새사용자')
-    await user.type(screen.getByLabelText('휴대폰 번호'), '01012345678')
     await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
     const state = await screen.findByTestId('login-state')
@@ -188,7 +208,6 @@ describe('SignupPage', () => {
     renderSignup()
     await completeAccountStep(user)
     await user.type(screen.getByLabelText('닉네임'), '새사용자')
-    await user.type(screen.getByLabelText('휴대폰 번호'), '01012345678')
     const submitButton = screen.getByRole('button', { name: '계정 만들기' })
     await user.click(submitButton)
     await user.click(submitButton)
@@ -208,24 +227,18 @@ describe('SignupPage', () => {
     await screen.findByTestId('login-state')
   })
 
-  it('서버의 전화번호 중복 오류를 해당 입력에 연결하고 다시 수정할 수 있게 한다', async () => {
-    apiMocks.signup.mockRejectedValue(
-      new ApiClientError('api', '이미 가입된 전화번호입니다.', {
-        code: 'DUPLICATE_PHONE',
-      }),
-    )
+  it('휴대폰 번호 칸이 없고 가입 요청에 번호를 싣지 않는다', async () => {
     const user = userEvent.setup()
     renderSignup()
     await completeAccountStep(user)
     await user.type(screen.getByLabelText('닉네임'), '새사용자')
-    await user.type(screen.getByLabelText('휴대폰 번호'), '01012345678')
+
+    // 가입에서 휴대폰 번호를 묻지 않는다(spec 014 2026-10-02).
+    expect(screen.queryByLabelText('휴대폰 번호')).toBeNull()
     await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
-    expect(await screen.findAllByText('이미 가입된 전화번호입니다.')).toHaveLength(2)
-    expect(screen.getByLabelText('휴대폰 번호').getAttribute('aria-invalid')).toBe('true')
-    await waitFor(() => {
-      expect(document.activeElement).toBe(screen.getByLabelText('휴대폰 번호'))
-    })
+    await screen.findByTestId('login-state')
+    expect(apiMocks.signup.mock.calls[0][0]).not.toHaveProperty('phoneNumber')
   })
 
   it('개발용 미리보기에서는 서버 요청 없이 두 단계를 확인하고 로그인으로 이동한다', async () => {
@@ -241,7 +254,6 @@ describe('SignupPage', () => {
     await user.type(screen.getByLabelText('비밀번호 확인'), 'safe-password')
     await user.click(screen.getByRole('button', { name: '다음 단계' }))
     await user.type(await screen.findByLabelText('닉네임'), '미리보기')
-    await user.type(screen.getByLabelText('휴대폰 번호'), '01012345678')
     await user.click(screen.getByRole('button', { name: '계정 만들기' }))
 
     expect((await screen.findByTestId('login-state')).textContent).toBe(

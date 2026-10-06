@@ -201,6 +201,7 @@ function renderPage(entry: string, support: AnalysisSupport) {
     logout: vi.fn(),
     recheck: vi.fn(),
     updateNickname: vi.fn(),
+    completeSignIn: vi.fn(),
   };
 
   return render(

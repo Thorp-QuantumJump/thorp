@@ -7,7 +7,6 @@ import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.EmailVerification;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,11 +17,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class EmailVerificationService {
 
-    /** 인증번호는 6자리. */
-    private static final int CODE_BOUND = 1_000_000;
-
-    private static final String CODE_FORMAT = "%06d";
-
     /** 인증번호 유효시간. */
     private static final Duration CODE_TTL = Duration.ofMinutes(3);
 
@@ -31,8 +25,6 @@ public class EmailVerificationService {
     private final PasswordEncoder passwordEncoder;
     private final VerificationMailSender verificationMailSender;
     private final TransactionTemplate transactionTemplate;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     public EmailVerificationService(
             EmailVerificationRepository emailVerificationRepository,
@@ -68,24 +60,44 @@ public class EmailVerificationService {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
+        Instant now = Instant.now();
+
+        // 이 주소의 발급·대조를 한 줄로 세운다. 동시에 들어온 재발송이 간격 판정을 함께 넘지 못하게 한다.
+        emailVerificationRepository.lockEmail(email);
+        EmailVerification previous =
+                emailVerificationRepository.findLatestByEmail(email).orElse(null);
+        if (EmailVerification.resendTooSoon(previous, now)) {
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON);
+        }
+
         emailVerificationRepository.deleteByEmail(email);
 
-        String verificationCode = String.format(CODE_FORMAT, secureRandom.nextInt(CODE_BOUND));
+        String verificationCode = VerificationCodes.next();
 
         String verificationCodeHash = passwordEncoder.encode(verificationCode);
 
+        // 재발송해도 발송 수는 한 시간 창 안에서 이어서 센다. 직전 기록을 지우기 전에 읽어 둔 값으로 잇는다.
         EmailVerification verification =
-                EmailVerification.issue(email, verificationCodeHash, Instant.now().plus(CODE_TTL));
+                EmailVerification.issue(
+                        email, verificationCodeHash, now.plus(CODE_TTL), previous, now);
 
         emailVerificationRepository.save(verification);
 
         return verificationCode;
     }
 
-    /** 인증번호가 일치하고 만료되지 않았을 때만 인증 완료로 기록한다. */
-    @Transactional
+    /**
+     * 인증번호를 대조한다. 일치하고 만료되지 않았을 때만 인증 완료로 기록한다.
+     *
+     * <p>대조 수는 대조 전에 센다. 번호 하나를 {@link EmailVerification#MAX_ATTEMPTS}번까지만 대조하고, 넘으면 새로 받아야 한다. 최신
+     * 요청을 잠가 읽으므로 같은 주소로 동시에 보내도 상한을 함께 넘지 못한다. 틀린 대조도 센 수가 남아야 하므로 {@link BusinessException}에서
+     * 롤백하지 않는다.
+     */
+    @Transactional(noRollbackFor = BusinessException.class)
     public void verifyCode(String email, String verificationCode) {
         String canonicalEmail = EmailNormalizer.normalize(email);
+        // 발급과 같은 잠금이다. 재발송이 행을 바꾸는 중이면 끝난 뒤의 최신 요청을 본다.
+        emailVerificationRepository.lockEmail(canonicalEmail);
         EmailVerification verification =
                 emailVerificationRepository
                         .findLatestByEmail(canonicalEmail)
@@ -104,6 +116,12 @@ public class EmailVerificationService {
         if (verification.isExpired(now)) {
             throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_EXPIRED);
         }
+
+        if (verification.attemptsExhausted()) {
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED);
+        }
+        verification.recordAttempt();
+        emailVerificationRepository.save(verification);
 
         if (!passwordEncoder.matches(verificationCode, verification.getVerificationCodeHash())) {
             throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_INVALID);
