@@ -11,7 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
-/** {@code social_accounts}. 고유 제약 둘은 마이그레이션 {@code V20261001120000__social_accounts.sql}에 있다. */
+/** {@code social_accounts}. 고유 제약 둘은 마이그레이션 {@code V20261006190000__social_accounts.sql}에 있다. */
 @Entity
 @Table(name = "social_accounts")
 public class SocialAccountEntity {

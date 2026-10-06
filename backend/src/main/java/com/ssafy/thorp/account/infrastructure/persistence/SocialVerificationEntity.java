@@ -12,7 +12,7 @@ import java.time.Instant;
 
 /**
  * {@code social_pending_verifications}. 마이그레이션은 {@code
- * V20261001150000__social_pending_verifications.sql}.
+ * V20261006191000__social_pending_verifications.sql}.
  */
 @Entity
 @Table(name = "social_pending_verifications")
