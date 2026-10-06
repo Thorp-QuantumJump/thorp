@@ -13,8 +13,3 @@
   outline: var(--thorp-focus-outline-compact);
   outline-offset: var(--thorp-focus-offset-compact);
 }
-
-.label {
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
-}

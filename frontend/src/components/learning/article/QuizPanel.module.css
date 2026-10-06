@@ -1,0 +1,129 @@
+.panel {
+  display: grid;
+  gap: 12px;
+  padding: var(--thorp-pad-card, 20px 22px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 14px);
+  background: var(--thorp-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--thorp-text-heading, 1.05rem);
+}
+
+.progress {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.82rem);
+}
+
+.prompt {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.prompt:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.choices {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 누르는 곳은 44px 이상이다(design-notes §6). */
+.choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-inset, 10px);
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--thorp-line-control-hover);
+}
+
+.choice:focus-visible,
+.next:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.choice:disabled {
+  cursor: default;
+}
+
+/* 답한 뒤: 정답은 초록 테두리, 고른 틀린 보기는 중립 회색 두꺼운 테두리와 글자로 보인다. 빨강을 쓰지 않는다. */
+.choice[data-correct] {
+  border-color: var(--thorp-accent);
+}
+
+.choice[data-chosen]:not([data-correct]) {
+  border-width: 2px;
+  border-color: var(--thorp-line-control);
+}
+
+.mark {
+  flex: none;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+}
+
+.choice[data-correct] .mark {
+  color: var(--thorp-accent-soft);
+}
+
+.result {
+  display: grid;
+  gap: 6px;
+}
+
+.result p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.verdict {
+  font-weight: 650;
+}
+
+.explanation {
+  color: var(--thorp-copy);
+}
+
+.score {
+  color: var(--thorp-foreground);
+  font-weight: 600;
+}
+
+.next {
+  justify-self: start;
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  cursor: pointer;
+}

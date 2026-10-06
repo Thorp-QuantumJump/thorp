@@ -1,0 +1,65 @@
+.end {
+  display: grid;
+  gap: 20px;
+}
+
+.next {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+/* 다음 글 카드. 누르는 곳 전체가 한 링크다. */
+.nextLink {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--thorp-pad-inset, 14px 18px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 12px);
+  color: var(--thorp-foreground);
+  text-decoration: none;
+}
+
+.nextLink:hover {
+  border-color: var(--thorp-line-control);
+}
+
+.nextLabel {
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.8rem);
+}
+
+.nextTitle {
+  font-weight: 650;
+}
+
+.listLink,
+.loginLink {
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.nextLink:focus-visible,
+.listLink:focus-visible,
+.loginLink:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.preparing {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.guest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+}

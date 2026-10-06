@@ -21,6 +21,8 @@ export default defineConfig({
       'src/**/*.test.tsx',
       'src/api/*.test.ts',
       'src/auth/**/*.test.ts',
+      // 013 배우기 2판. 글 화면·커리큘럼·나의 학습·관리 하위 폴더의 `.test.ts`가 이 한 줄로 들어온다.
+      'src/components/learning/**/*.test.ts',
       'src/components/marketflow/*.test.ts',
       // 011 사례 연결. 금지 표현 정적 검사가 이 폴더의 `.test.ts`로 들어온다(011 T081).
       'src/components/regimelink/*.test.ts',
