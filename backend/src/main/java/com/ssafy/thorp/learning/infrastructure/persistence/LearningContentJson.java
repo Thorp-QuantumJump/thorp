@@ -1,5 +1,11 @@
 package com.ssafy.thorp.learning.infrastructure.persistence;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramBlock.Series;
@@ -31,12 +37,15 @@ import com.ssafy.thorp.learning.domain.vo.ChoiceId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -78,8 +87,81 @@ public final class LearningContentJson {
 
     private LearningContentJson() {}
 
-    /** 글자 조각. 종류마다 키가 하나({@code text}만, {@code term}+{@code text}, {@code source})다. */
-    public record RunJson(String text, String term, SourceJson source) {}
+    /**
+     * 글자 조각. 종류마다 키가 하나({@code text}만, {@code term}+{@code text}, {@code source})다.
+     *
+     * @param unknownKeys 읽을 때 만난 세 키 밖의 키(값이 문자열·객체가 아닌 키 포함). 쓰지 않는다. 영속성 매퍼는 모르는 키를 무시하므로 읽기에서
+     *     이름을 모아 두고 {@link #runFromJson}이 거절한다. 조용히 버리면 문장 일부가 사라진 채 공개된다(원칙 VI)
+     */
+    @JsonDeserialize(using = RunJsonDeserializer.class)
+    public record RunJson(String text, String term, SourceJson source, List<String> unknownKeys) {
+
+        public RunJson {
+            unknownKeys = unknownKeys == null ? List.of() : List.copyOf(unknownKeys);
+        }
+
+        RunJson(String text, String term, SourceJson source) {
+            this(text, term, source, List.of());
+        }
+
+        @Override
+        @JsonIgnore
+        public List<String> unknownKeys() {
+            return unknownKeys;
+        }
+    }
+
+    /**
+     * {@link RunJson}을 읽는다. 세 키는 그대로 받고, 그 밖의 키와 값 모양이 틀린 키는 이름만 모은다. JSON {@code null} 값은 키가 없는
+     * 것으로 본다.
+     */
+    public static final class RunJsonDeserializer extends JsonDeserializer<RunJson> {
+
+        @Override
+        public RunJson deserialize(JsonParser parser, DeserializationContext context)
+                throws IOException {
+            JsonNode node = parser.readValueAsTree();
+            if (!node.isObject()) {
+                return new RunJson(null, null, null, List.of("(" + node.getNodeType() + ")"));
+            }
+            String text = null;
+            String term = null;
+            SourceJson source = null;
+            List<String> unknown = new ArrayList<>();
+            for (Iterator<Map.Entry<String, JsonNode>> fields = node.fields(); fields.hasNext(); ) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                JsonNode value = field.getValue();
+                if (value.isNull()) {
+                    continue;
+                }
+                switch (field.getKey()) {
+                    case "text" -> {
+                        if (value.isTextual()) {
+                            text = value.textValue();
+                        } else {
+                            unknown.add("text");
+                        }
+                    }
+                    case "term" -> {
+                        if (value.isTextual()) {
+                            term = value.textValue();
+                        } else {
+                            unknown.add("term");
+                        }
+                    }
+                    case "source" -> {
+                        if (value.isObject()) {
+                            source = parser.getCodec().treeToValue(value, SourceJson.class);
+                        } else {
+                            unknown.add("source");
+                        }
+                    }
+                    default -> unknown.add(field.getKey());
+                }
+            }
+            return new RunJson(text, term, source, unknown);
+        }
+    }
 
     /**
      * 본문 블록. 종류와 형식에 해당하는 키만 있다. V1의 {@code paragraph}·{@code hypothetical}은 {@code text}, V2는
@@ -386,8 +468,12 @@ public final class LearningContentJson {
         return required(lists, key).stream().map(runs -> runsFromJson(runs, key)).toList();
     }
 
-    /** 조각 하나에는 키가 하나뿐이다. 둘 이상이거나 없으면 저장 데이터가 깨진 것이다. */
+    /** 조각 하나에는 키가 하나뿐이다. 둘 이상이거나 없거나 모르는 키가 있으면 저장 데이터가 깨진 것이다. */
     private static Run runFromJson(RunJson run, String key) {
+        if (!run.unknownKeys().isEmpty()) {
+            throw new IllegalStateException(
+                    "stored run has unknown keys at " + key + ": " + run.unknownKeys());
+        }
         if (run.source() != null) {
             if (run.text() != null || run.term() != null) {
                 throw new IllegalStateException("stored source run has extra keys at " + key);

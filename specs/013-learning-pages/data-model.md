@@ -330,6 +330,7 @@ O/X 문제는 보기 두 개로 쓴다. 관리 화면의 원고 가져오기는 
 ### 6-2. 식별자 주기
 
 - 저장할 때 `questionId`나 `choiceId`가 `null`인 항목에 서버가 `quiz_seq`를 1씩 올려 `q{n}`·`c{n}`을 준다. 문제와 보기가 같은 카운터를 쓴다. 지운 번호는 다시 쓰지 않는다.
+- 식별자 형식(§2)은 `n`이 9999까지다. 줄 번호가 9999를 넘게 되면 그 저장과, 정답이 바뀐 문제에 새 식별자를 줘야 하는 게시(§6-3)는 `400 INVALID_INPUT`(`details.fields`의 `quiz`)으로 거절한다. 지운 번호를 다시 쓰지 않으므로 그 글에는 더 줄 식별자가 없다.
 - 저장 응답은 식별자가 채워진 초안을 돌려준다. 화면은 다음 저장에 그 식별자를 그대로 보낸다.
 
 ### 6-3. 같은 문제 판정 (게시할 때)
@@ -465,7 +466,7 @@ quiz:
 | `title` · `question` · `example` | 없음 | 해당 필드 |
 | `block` | `index`(0부터), `field`(선택. 예: `lines[1]`, `wrong`, `items[2]`, `rows[0][1]`, `description`) | 본문 블록. 본문 전체를 가리킬 때(소제목 수, 읽기 시간 등)는 `index`가 없다 |
 | `term` | `termId`, `field`(선택) | 용어 설명 |
-| `quiz` **(2판)** | `questionId`(새 문제면 `index`), `choiceId`(선택) | 확인 문제 |
+| `quiz` **(2판)** | `questionId`(새 문제면 `index`), `choiceId`(선택), `field`(선택. 문제 안의 `prompt`·`explanation`) | 확인 문제. 질문과 풀이에 같은 표현이 있으면 `field`로 갈라 둘 다 싣는다 |
 
 ## 9. 예시(`example`)
 

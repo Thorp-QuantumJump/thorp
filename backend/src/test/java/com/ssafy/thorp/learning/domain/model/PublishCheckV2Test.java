@@ -356,7 +356,9 @@ class PublishCheckV2Test {
         assertThat(assertOnly(broken, Check.QUIZ))
                 .extracting(PublishCheckFailure::location, PublishCheckFailure::message)
                 .containsExactly(
-                        tuple(CheckLocation.quizQuestion(new QuestionId("q4"), 1), "질문이 비어 있습니다."),
+                        tuple(
+                                CheckLocation.quizQuestion(new QuestionId("q4"), 1, "prompt"),
+                                "질문이 비어 있습니다."),
                         tuple(
                                 CheckLocation.quizChoice(
                                         new QuestionId("q4"), 1, new ChoiceId("c5")),
@@ -364,7 +366,9 @@ class PublishCheckV2Test {
                         tuple(
                                 CheckLocation.quizQuestion(new QuestionId("q4"), 1),
                                 "정답 보기가 하나가 아닙니다."),
-                        tuple(CheckLocation.quizQuestion(new QuestionId("q4"), 1), "풀이가 비어 있습니다."));
+                        tuple(
+                                CheckLocation.quizQuestion(new QuestionId("q4"), 1, "explanation"),
+                                "풀이가 비어 있습니다."));
 
         Draft oneChoice = Draft.passing();
         oneChoice.quiz.set(0, question("q1", "질문", "풀이", choice("c2", "가", true)));
@@ -459,6 +463,26 @@ class PublishCheckV2Test {
                                 CheckLocation.quizChoice(
                                         new QuestionId("q1"), 0, new ChoiceId("c3")),
                                 "추천합니다"));
+    }
+
+    @Test
+    @DisplayName("질문과 풀이에 같은 금지 표현이 있으면 field로 갈라 둘 다 돌려준다 (data-model §8-4)")
+    void quizPromptAndExplanationAreReportedApart() {
+        Draft draft = Draft.passing();
+        draft.quiz.set(
+                0,
+                question(
+                        "q1",
+                        "오를 확률은?",
+                        "확률로 말하지 않는다.",
+                        choice("c2", "그렇다", false),
+                        choice("c3", "아니다", true)));
+
+        assertThat(assertOnly(draft, Check.FORBIDDEN_EXPRESSION))
+                .extracting(PublishCheckFailure::location)
+                .containsExactly(
+                        CheckLocation.quizQuestion(new QuestionId("q1"), 0, "prompt"),
+                        CheckLocation.quizQuestion(new QuestionId("q1"), 0, "explanation"));
     }
 
     @Test

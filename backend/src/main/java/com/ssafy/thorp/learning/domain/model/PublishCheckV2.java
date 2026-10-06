@@ -265,7 +265,11 @@ public final class PublishCheckV2 {
             QuizQuestion question = questions.get(index);
             CheckLocation location = CheckLocation.quizQuestion(question.questionId(), index);
             if (question.prompt().isBlank()) {
-                failures.add(fail(Check.QUIZ, location, "질문이 비어 있습니다."));
+                failures.add(
+                        fail(
+                                Check.QUIZ,
+                                CheckLocation.quizQuestion(question.questionId(), index, "prompt"),
+                                "질문이 비어 있습니다."));
             }
             int choices = question.choices().size();
             if (choices < rules.minChoices() || choices > rules.maxChoices()) {
@@ -296,7 +300,12 @@ public final class PublishCheckV2 {
                 failures.add(fail(Check.QUIZ, location, "정답 보기가 하나가 아닙니다."));
             }
             if (question.explanation().isBlank()) {
-                failures.add(fail(Check.QUIZ, location, "풀이가 비어 있습니다."));
+                failures.add(
+                        fail(
+                                Check.QUIZ,
+                                CheckLocation.quizQuestion(
+                                        question.questionId(), index, "explanation"),
+                                "풀이가 비어 있습니다."));
             }
         }
     }
@@ -426,8 +435,10 @@ public final class PublishCheckV2 {
         List<QuizQuestion> questions = draft.quiz();
         for (int index = 0; index < questions.size(); index++) {
             QuizQuestion question = questions.get(index);
-            CheckLocation location = CheckLocation.quizQuestion(question.questionId(), index);
-            texts.add(new LocatedText(location, question.prompt()));
+            texts.add(
+                    new LocatedText(
+                            CheckLocation.quizQuestion(question.questionId(), index, "prompt"),
+                            question.prompt()));
             for (QuizChoice choice : question.choices()) {
                 if (choice.correct()) {
                     texts.add(
@@ -437,7 +448,10 @@ public final class PublishCheckV2 {
                                     choice.text()));
                 }
             }
-            texts.add(new LocatedText(location, question.explanation()));
+            texts.add(
+                    new LocatedText(
+                            CheckLocation.quizQuestion(question.questionId(), index, "explanation"),
+                            question.explanation()));
         }
         return texts;
     }

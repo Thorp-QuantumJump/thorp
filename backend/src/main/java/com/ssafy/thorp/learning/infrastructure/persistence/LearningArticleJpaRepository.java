@@ -13,6 +13,10 @@ public interface LearningArticleJpaRepository
 
     Optional<LearningArticleJpaEntity> findByArticleKey(String articleKey);
 
+    /** 대리키만. 본문 JSON을 읽지 않는다. */
+    @Query("select a.id from LearningArticleJpaEntity a where a.articleKey = :articleKey")
+    Optional<Long> findIdByArticleKey(@Param("articleKey") String articleKey);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from LearningArticleJpaEntity a where a.articleKey = :articleKey")
     Optional<LearningArticleJpaEntity> lockByArticleKey(@Param("articleKey") String articleKey);

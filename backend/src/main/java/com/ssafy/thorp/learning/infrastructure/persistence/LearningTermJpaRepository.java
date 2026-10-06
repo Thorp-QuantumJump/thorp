@@ -11,6 +11,9 @@ public interface LearningTermJpaRepository extends JpaRepository<LearningTermJpa
 
     List<LearningTermJpaEntity> findByArticleIdOrderByIdAsc(Long articleId);
 
+    /** 모든 글의 용어. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */
+    List<LearningTermJpaEntity> findAllByOrderByIdAsc();
+
     Optional<LearningTermJpaEntity> findByTermKey(String termKey);
 
     @Query("select t.termKey from LearningTermJpaEntity t")

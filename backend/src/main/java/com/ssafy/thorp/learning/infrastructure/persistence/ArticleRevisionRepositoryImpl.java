@@ -2,8 +2,12 @@ package com.ssafy.thorp.learning.infrastructure.persistence;
 
 import com.ssafy.thorp.learning.application.repository.ArticleRevisionRepository;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
+import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -39,6 +43,34 @@ public class ArticleRevisionRepositoryImpl implements ArticleRevisionRepository 
     @Override
     public Optional<ArticleRevision> findById(long revisionId) {
         return revisionJpaRepository.findById(revisionId).map(ArticleRevisionMapper::toDomain);
+    }
+
+    @Override
+    public Optional<ArticleRevision> findLatestByArticleId(ArticleId articleId) {
+        return articleJpaRepository
+                .findIdByArticleKey(articleId.value())
+                .flatMap(revisionJpaRepository::findFirstByArticleIdOrderByRevisionNoDesc)
+                .map(ArticleRevisionMapper::toDomain);
+    }
+
+    @Override
+    public boolean existsByArticleIdAndEdition(ArticleId articleId, Edition edition) {
+        return articleJpaRepository
+                .findIdByArticleKey(articleId.value())
+                .map(id -> revisionJpaRepository.existsByArticleIdAndEdition(id, edition))
+                .orElse(false);
+    }
+
+    @Override
+    public Map<Long, Integer> findRevisionNos(Collection<Long> revisionIds) {
+        Map<Long, Integer> revisionNos = new HashMap<>();
+        if (revisionIds.isEmpty()) {
+            return revisionNos;
+        }
+        revisionJpaRepository
+                .findRevisionNos(revisionIds)
+                .forEach(row -> revisionNos.put(row.getId(), row.getRevisionNo()));
+        return revisionNos;
     }
 
     @Override
