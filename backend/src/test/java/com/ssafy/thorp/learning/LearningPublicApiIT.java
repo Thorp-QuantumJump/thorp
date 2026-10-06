@@ -6,12 +6,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.thorp.learning.support.LearningSeeds;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,10 +25,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 배우기 공개 조회 세 주소를 실제로 호출한다(learning-public-api, quickstart 2-1·2-2·3-5·4-4 서버 쪽).
+ * 배우기 공개 조회 세 주소를 실제로 호출한다(learning-public-api, quickstart 2-1·2-2·3-5·4-4·6-1·9-2 서버 쪽).
  *
  * <p><b>응답이 {@code docs/specs/learning-api/examples/}의 예시 파일과 JSON 동치인지 단언한다.</b> 계약이 구현과 어긋나면 여기서
- * 깨진다.
+ * 깨진다. 9월 판 글 응답 {@code article.json}만은 2판에서 필드가 더해졌으므로 응답 가운데 그 파일에 있는 키만 골라 비교한다({@link
+ * #onlyKeysOf}). 9월 판 필드의 모양과 값이 그대로인지 보는 배포 순서 호환 확인이다. 2판 글 응답은 {@code edition}마다 파일이 따로 있고 전체를
+ * 비교한다.
  *
  * <p>게시 유스케이스(B02)가 아직 없어 판·색인·글 상태를 {@link LearningSeeds}가 SQL로 심는다. 심는 값은 예시 파일에서 거꾸로 만든다. 그래서
  * 예시를 바꾸면 심는 판도 함께 바뀌고, 비교가 스스로를 확인하는 것이 아니라 "판 → 응답" 변환을 확인한다.
@@ -160,12 +165,125 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("글 응답이 article.json과 같다")
+    @DisplayName("9월 판 필드는 article.json과 같다 (2판 필드는 더해질 뿐이다)")
     void articleMatchesExample() throws Exception {
         seedFullSectorMap();
         publishListFixture();
 
-        assertThat(data("/learning/articles/" + ARTICLE)).isEqualTo(example("article.json"));
+        JsonNode expected = example("article.json");
+        assertThat(onlyKeysOf(data("/learning/articles/" + ARTICLE), expected)).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("단계를 하나도 공개하지 않았으면 LEGACY 판은 article-pre-release.json과 같다 (quickstart 6-1)")
+    void preReleaseArticleMatchesExample() throws Exception {
+        seedFullSectorMap();
+        publishListFixture();
+
+        assertThat(data("/learning/articles/" + ARTICLE))
+                .isEqualTo(example("article-pre-release.json"));
+    }
+
+    @Test
+    @DisplayName("공개된 단계가 있으면 LEGACY 판은 article-previous.json과 같다 (quickstart 9-5 서버 쪽)")
+    void previousArticleMatchesExample() throws Exception {
+        seedFullSectorMap();
+        publishListFixture();
+        seeds.markStageReleased("etf-market-basics");
+
+        assertThat(data("/learning/articles/" + ARTICLE))
+                .isEqualTo(example("article-previous.json"));
+    }
+
+    /**
+     * {@code article-current.json}의 상태를 심는다. 1~3단계를 공개하고, 2단계에 이 글 앞의 세 글과 3단계 첫 글을 최소 CURRENT 판으로
+     * 게시한다. {@code returns-and-losses}가 {@code max-drawdown}을 다른 이름과 함께 게시한다. {@code rebalancing}은
+     * 게시하지 않는다.
+     */
+    private void publishCurrentFixture() throws Exception {
+        seeds.markStageReleased("etf-market-basics");
+        seeds.markStageReleased("returns-and-risk");
+        seeds.markStageReleased("allocation-rules");
+        seeds.publishCurrentMinimal(
+                "returns-and-losses",
+                "수익과 손실",
+                Map.of("max-drawdown", List.of("최대 낙폭", "MDD", "maximum drawdown")));
+        seeds.publishCurrentMinimal("same-return-different-feel", "같은 수익률인데 왜 느낌이 다를까?", Map.of());
+        seeds.publishCurrentMinimal("recovery-period", "떨어진 뒤 얼마나 걸려 돌아왔을까?", Map.of());
+        seeds.publishCurrentMinimal("weights-and-rebalancing", "비중과 리밸런싱", Map.of());
+        seeds.publishCurrentFromResponse(example("article-current.json"));
+    }
+
+    @Test
+    @DisplayName("CURRENT 글 응답이 article-current.json과 같다 (V2 블록·번호·다음 글·언급의 다른 이름)")
+    void currentArticleMatchesExample() throws Exception {
+        publishCurrentFixture();
+
+        assertThat(data("/learning/articles/volatility-is-not-loss"))
+                .isEqualTo(example("article-current.json"));
+    }
+
+    @Test
+    @DisplayName("다른 글 용어의 다른 이름은 게시 색인에서 오고, 그 색인이 없으면 빈 배열이다 (quickstart 9-2 서버 쪽)")
+    void foreignMentionAliasesComeFromIndex() throws Exception {
+        publishCurrentFixture();
+        jdbcTemplate.update("DELETE FROM learning_published_term WHERE term_key = 'max-drawdown'");
+
+        JsonNode mention =
+                data("/learning/articles/volatility-is-not-loss").at("/blocks/2/content/3");
+
+        assertThat(mention.get("term").asText()).isEqualTo("max-drawdown");
+        assertThat(mention.get("owned").asBoolean()).isFalse();
+        assertThat(mention.get("aliases")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("CURRENT 판 용어의 도움말 문장은 그 글 용어 블록의 뜻 문장과 같고 모양은 term.json과 같다 (SC-003)")
+    void currentTermSentenceIsMeaning() throws Exception {
+        publishCurrentFixture();
+
+        JsonNode term = data("/learning/terms/volatility");
+        JsonNode termBlock = data("/learning/articles/volatility-is-not-loss").at("/blocks/3");
+
+        assertThat(termBlock.get("type").asText()).isEqualTo("term");
+        assertThat(term.get("sentence").asText()).isEqualTo(termBlock.get("meaning").asText());
+        assertThat(term.get("articleId").asText()).isEqualTo("volatility-is-not-loss");
+        assertThat(term.get("articleTitle").asText()).isEqualTo("변동성은 손실일까?");
+        assertThat(fieldNames(term)).containsExactlyElementsOf(fieldNames(example("term.json")));
+    }
+
+    @Test
+    @DisplayName("9월 판 목록 경로는 CURRENT 글도 같은 모양으로 싣는다")
+    void legacyListIncludesCurrentArticles() throws Exception {
+        publishCurrentFixture();
+
+        assertThat(data("/learning/articles").get("articles"))
+                .extracting(item -> item.get("articleId").asText())
+                .contains("volatility-is-not-loss", "returns-and-losses");
+        assertThat(data("/learning/articles").get("articles"))
+                .allSatisfy(
+                        item ->
+                                assertThat(fieldNames(item))
+                                        .containsExactly(
+                                                "articleId", "title", "question", "readingOrder"));
+    }
+
+    /** {@code actual}에서 {@code expected}의 최상위 키만 남긴다. 2판에서 더한 필드를 빼고 9월 판 필드만 비교할 때 쓴다. */
+    private ObjectNode onlyKeysOf(JsonNode actual, JsonNode expected) {
+        ObjectNode subset = objectMapper.createObjectNode();
+        expected.fieldNames()
+                .forEachRemaining(
+                        name -> {
+                            assertThat(actual.has(name)).as(name).isTrue();
+                            subset.set(name, actual.get(name));
+                        });
+        return subset;
+    }
+
+    private static List<String> fieldNames(JsonNode node) {
+        List<String> names = new ArrayList<>();
+        node.fieldNames().forEachRemaining(names::add);
+        return names;
     }
 
     @Test

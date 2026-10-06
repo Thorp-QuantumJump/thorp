@@ -9,6 +9,7 @@ import com.ssafy.thorp.backtest.infrastructure.persistence.StrategyRulesReposito
 import com.ssafy.thorp.common.config.JpaAuditingConfig;
 import com.ssafy.thorp.learning.infrastructure.persistence.ArticleRevisionRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.LearningArticleRepositoryImpl;
+import com.ssafy.thorp.learning.infrastructure.persistence.LearningStageRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.LearningTermRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.PublicationEventRepositoryImpl;
 import com.ssafy.thorp.learning.infrastructure.persistence.PublishedTermRepositoryImpl;
@@ -50,6 +51,7 @@ import org.springframework.context.annotation.Import;
     StrategyRulesRepositoryImpl.class,
     LearningArticleRepositoryImpl.class,
     LearningTermRepositoryImpl.class,
+    LearningStageRepositoryImpl.class,
     ArticleRevisionRepositoryImpl.class,
     PublicationEventRepositoryImpl.class,
     PublishedTermRepositoryImpl.class,
