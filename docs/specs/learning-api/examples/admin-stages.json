@@ -1,0 +1,335 @@
+{
+  "stages": [
+    {
+      "stageKey": "etf-market-basics",
+      "number": 1,
+      "name": "ETF와 국내 시장 기초",
+      "levelLabel": "입문",
+      "summary": "ETF가 무엇을 담고 있고 가격과 비용이 어떻게 정해지는지 봅니다.",
+      "releasedAt": null,
+      "releasedByUserId": null,
+      "releasable": true,
+      "articles": [
+        {
+          "articleId": "sectors-and-etf",
+          "title": "섹터와 ETF",
+          "format": "V2",
+          "status": "PUBLISHED",
+          "publishedEdition": "LEGACY",
+          "draftVersion": 9,
+          "stagePosition": 1
+        },
+        {
+          "articleId": "etf-tracking-difference",
+          "title": "ETF 가격은 왜 지수와 똑같이 움직이지 않을까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 3,
+          "stagePosition": 2
+        },
+        {
+          "articleId": "etf-distributions",
+          "title": "분배금을 받으면 돈이 늘어난 걸까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 3
+        },
+        {
+          "articleId": "etf-fees",
+          "title": "ETF 보수는 어디로 빠져나갈까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 4
+        }
+      ],
+      "placementOnlyArticles": []
+    },
+    {
+      "stageKey": "returns-and-risk",
+      "number": 2,
+      "name": "수익과 위험 읽기",
+      "levelLabel": "입문",
+      "summary": "수익률, 하락 폭, 회복 기간, 변동성을 읽는 법을 익힙니다.",
+      "releasedAt": null,
+      "releasedByUserId": null,
+      "releasable": false,
+      "articles": [
+        {
+          "articleId": "returns-and-losses",
+          "title": "수익과 손실",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 1
+        },
+        {
+          "articleId": "same-return-different-feel",
+          "title": "같은 수익률인데 왜 느낌이 다를까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 2
+        },
+        {
+          "articleId": "recovery-period",
+          "title": "떨어진 뒤 얼마나 걸려 돌아왔을까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 3
+        },
+        {
+          "articleId": "volatility-is-not-loss",
+          "title": "변동성은 손실일까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 4
+        }
+      ],
+      "placementOnlyArticles": []
+    },
+    {
+      "stageKey": "allocation-rules",
+      "number": 3,
+      "name": "배분 규칙과 설정",
+      "levelLabel": "입문~초급",
+      "summary": "다섯 가지 배분 규칙과 설정 항목이 결과를 어떻게 바꾸는지 봅니다.",
+      "releasedAt": null,
+      "releasedByUserId": null,
+      "releasable": false,
+      "articles": [
+        {
+          "articleId": "weights-and-rebalancing",
+          "title": "비중과 리밸런싱",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 1
+        },
+        {
+          "articleId": "diversification-and-correlation",
+          "title": "나누기만 하면 분산일까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 2
+        },
+        {
+          "articleId": "inverse-volatility",
+          "title": "변동성에 따라 나누기",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 3
+        },
+        {
+          "articleId": "sector-momentum",
+          "title": "섹터 모멘텀",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 4
+        },
+        {
+          "articleId": "minimum-variance",
+          "title": "최소분산",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 5
+        },
+        {
+          "articleId": "why-lookback-period",
+          "title": "관측 기간은 왜 고르는 항목일까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 6
+        },
+        {
+          "articleId": "skip-recent-month",
+          "title": "왜 최근 한 달을 빼고 볼까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 7
+        },
+        {
+          "articleId": "top-n-or-threshold",
+          "title": "상위 몇 개와 기준 수익률 이상은 어떻게 다를까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 8
+        },
+        {
+          "articleId": "why-weight-cap",
+          "title": "비중 상한은 왜 둘까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 9
+        }
+      ],
+      "placementOnlyArticles": []
+    },
+    {
+      "stageKey": "backtest-and-costs",
+      "number": 4,
+      "name": "백테스트와 비용",
+      "levelLabel": "초급",
+      "summary": "같은 조건에서 비교하는 법과 거래비용, 회전율의 영향을 봅니다.",
+      "releasedAt": null,
+      "releasedByUserId": null,
+      "releasable": false,
+      "articles": [
+        {
+          "articleId": "same-conditions",
+          "title": "같은 조건에서 비교하기란 무엇일까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 2
+        },
+        {
+          "articleId": "transaction-cost",
+          "title": "거래비용",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 3
+        },
+        {
+          "articleId": "turnover",
+          "title": "회전율이 높으면 왜 결과가 뒤집힐까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 4
+        },
+        {
+          "articleId": "short-history",
+          "title": "자료 기간이 짧으면 무엇을 알 수 없을까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 5
+        }
+      ],
+      "placementOnlyArticles": [
+        {
+          "articleId": "backtest",
+          "title": "백테스트",
+          "format": "V1",
+          "status": "PUBLISHED",
+          "publishedEdition": "LEGACY",
+          "draftVersion": 0,
+          "stagePosition": 1
+        }
+      ]
+    },
+    {
+      "stageKey": "pitfalls-and-validation",
+      "number": 5,
+      "name": "함정과 검증",
+      "levelLabel": "초급",
+      "summary": "좋아 보이는 과거 결과를 믿기 전에 확인할 점을 봅니다.",
+      "releasedAt": null,
+      "releasedByUserId": null,
+      "releasable": false,
+      "articles": [
+        {
+          "articleId": "past-is-not-future",
+          "title": "과거가 미래를 보장하지 않는 이유",
+          "format": "V1",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 1
+        },
+        {
+          "articleId": "best-of-many-settings",
+          "title": "50개 설정 중 1등은 왜 믿기 어려울까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 2
+        },
+        {
+          "articleId": "neighboring-settings",
+          "title": "이웃 설정도 좋은가?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 3
+        },
+        {
+          "articleId": "backtest",
+          "title": "백테스트",
+          "format": "V1",
+          "status": "PUBLISHED",
+          "publishedEdition": "LEGACY",
+          "draftVersion": 0,
+          "stagePosition": 4
+        }
+      ],
+      "placementOnlyArticles": []
+    },
+    {
+      "stageKey": "economy-and-regimes",
+      "number": 6,
+      "name": "경제환경과 국면",
+      "levelLabel": "초급",
+      "summary": "시장 흐름의 분야와 비슷했던 때를 찾는 방법을 봅니다.",
+      "releasedAt": null,
+      "releasedByUserId": null,
+      "releasable": false,
+      "articles": [
+        {
+          "articleId": "market-flow-fields",
+          "title": "시장 흐름의 7개 분야는 무엇을 보여줄까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 1
+        },
+        {
+          "articleId": "similar-periods",
+          "title": "'비슷했던 때'는 어떻게 찾을까?",
+          "format": "V2",
+          "status": "DRAFT",
+          "publishedEdition": null,
+          "draftVersion": 0,
+          "stagePosition": 2
+        }
+      ],
+      "placementOnlyArticles": []
+    }
+  ]
+}

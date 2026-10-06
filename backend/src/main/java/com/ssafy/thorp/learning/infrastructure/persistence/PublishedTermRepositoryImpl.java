@@ -7,6 +7,7 @@ import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -100,5 +101,22 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
     public void deleteForArticle(ArticleId articleId) {
         publishedTermJpaRepository.deleteByArticleIdInBulk(
                 PersistenceLookups.requireArticleId(articleJpaRepository, articleId));
+    }
+
+    @Override
+    public void deleteTerm(ArticleId articleId, TermId termId) {
+        publishedTermJpaRepository.deleteTermInBulk(
+                PersistenceLookups.requireArticleId(articleJpaRepository, articleId),
+                termId.value());
+    }
+
+    @Override
+    public Map<ArticleId, Integer> countPublishedByArticle() {
+        Map<ArticleId, Integer> counts = new HashMap<>();
+        for (LearningPublishedTermJpaRepository.TermCountRow row :
+                publishedTermJpaRepository.countPublishedByArticle()) {
+            counts.put(new ArticleId(row.getArticleId()), Math.toIntExact(row.getTermCount()));
+        }
+        return counts;
     }
 }

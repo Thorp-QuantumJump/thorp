@@ -14,6 +14,9 @@ import org.hibernate.type.SqlTypes;
 /**
  * {@code learning_term} 매핑. 초안 용어 설명이며 통째로 바꾼다(지우고 다시 넣는다). V1 용어는 {@code sentence}를, V2 용어는 다른 이름과
  * 세 문장을 쓰고 쓰지 않는 열은 빈 값이다(data-model §3-3).
+ *
+ * <p>{@code transferFromArticleId}가 있으면 넘겨받는 중인 행이다. {@code term_key}의 유일은 소유 중인 행끼리, 넘겨받는 중인 행끼리
+ * 각각 건다(부분 유일 색인 {@code uq_learning_term_key_owned}·{@code uq_learning_term_key_incoming}).
  */
 @Entity
 @Table(name = "learning_term")
@@ -48,6 +51,8 @@ public class LearningTermJpaEntity extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String caveat;
 
+    private Long transferFromArticleId;
+
     protected LearningTermJpaEntity() {}
 
     LearningTermJpaEntity(
@@ -58,7 +63,8 @@ public class LearningTermJpaEntity extends BaseEntity {
             List<String> aliases,
             String meaning,
             String reading,
-            String caveat) {
+            String caveat,
+            Long transferFromArticleId) {
         this.termKey = termKey;
         this.articleId = articleId;
         this.label = label;
@@ -67,6 +73,12 @@ public class LearningTermJpaEntity extends BaseEntity {
         this.meaning = meaning;
         this.reading = reading;
         this.caveat = caveat;
+        this.transferFromArticleId = transferFromArticleId;
+    }
+
+    /** 넘기기를 마쳤다. 이 글이 소유한다. */
+    void completeTransfer() {
+        this.transferFromArticleId = null;
     }
 
     String getTermKey() {
@@ -99,5 +111,9 @@ public class LearningTermJpaEntity extends BaseEntity {
 
     String getCaveat() {
         return caveat;
+    }
+
+    Long getTransferFromArticleId() {
+        return transferFromArticleId;
     }
 }

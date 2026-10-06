@@ -8,6 +8,9 @@ import com.ssafy.thorp.learning.domain.vo.ChoiceId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -33,6 +36,7 @@ import java.util.Set;
  * @param draftVersion 초안을 저장할 때마다 1 오른다(research R12)
  * @param quiz 확인 문제 초안. 식별자가 모두 채워져 있다
  * @param quizSeq 문제·보기 식별자 카운터. 줄지 않는다(R21)
+ * @param firstReleasedAt 공개된 단계에 처음 게시된 시각. 한 번 쓴 뒤 비우지 않는다. 비어 있으면 다음 공개가 '처음'이다(R27)
  */
 public record LearningArticle(
         Long id,
@@ -51,7 +55,8 @@ public record LearningArticle(
         int draftVersion,
         List<LearningTerm> terms,
         List<QuizQuestion> quiz,
-        int quizSeq) {
+        int quizSeq,
+        Instant firstReleasedAt) {
 
     public static final int TITLE_MAX_LENGTH = 100;
     public static final int QUESTION_MAX_LENGTH = 200;
@@ -159,7 +164,8 @@ public record LearningArticle(
                 0,
                 List.of(),
                 List.of(),
-                0);
+                0,
+                null);
     }
 
     /** 저장소가 새 행에 준 대리키를 채운다. 그 밖의 값은 그대로다. */
@@ -181,7 +187,8 @@ public record LearningArticle(
                 draftVersion,
                 terms,
                 quiz,
-                quizSeq);
+                quizSeq,
+                firstReleasedAt);
     }
 
     /**
@@ -243,7 +250,8 @@ public record LearningArticle(
                 draftVersion + 1,
                 content.terms(),
                 assigned.quiz(),
-                assigned.quizSeq());
+                assigned.quizSeq(),
+                firstReleasedAt);
     }
 
     /**
@@ -268,7 +276,8 @@ public record LearningArticle(
                 draftVersion,
                 terms,
                 reconciled.quiz(),
-                reconciled.quizSeq());
+                reconciled.quizSeq(),
+                firstReleasedAt);
     }
 
     /**
@@ -289,6 +298,54 @@ public record LearningArticle(
         return withPublication(ArticleStatus.DRAFT, null, null);
     }
 
+    /**
+     * 공개된 단계에 처음 게시되었다고 적는다. 이미 적혀 있으면 그대로 둔다. 다시 게시·공개된 단계 사이 이동은 '처음'이 아니다(R27).
+     *
+     * @param releasedAt 그 게시의 시각
+     */
+    public LearningArticle firstReleased(Instant releasedAt) {
+        if (firstReleasedAt != null) {
+            return this;
+        }
+        return new LearningArticle(
+                id,
+                articleId,
+                title,
+                question,
+                readingOrder,
+                format,
+                placement,
+                publishedPlacement,
+                blocks,
+                example,
+                sources,
+                status,
+                publishedRevisionId,
+                draftVersion,
+                terms,
+                quiz,
+                quizSeq,
+                releasedAt);
+    }
+
+    /**
+     * 넘겨받는 중인 용어를 모두 이 글이 소유하게 한다(data-model §7-2). 게시가 넘기기를 마친 뒤 부른다. <b>초안 번호를 올리지 않는다.</b> 그래서
+     * 게시 전에 읽은 초안의 {@code transferFrom}은 옛 값이 남고, 그대로 저장하면 소유 글이 맞지 않아 거절된다.
+     */
+    public LearningArticle withTransfersCompleted() {
+        return withTerms(terms.stream().map(LearningTerm::transferred).toList(), draftVersion);
+    }
+
+    /**
+     * 다른 글이 이 글의 용어를 넘겨받았다. 초안에서 그 용어들을 빼고 초안 번호를 1 올린다(R24). 용어를 여럿 넘겨도 한 번만 올린다. 초안의 다른 부분은 바꾸지
+     * 않는다. 이 글을 열어 둔 편집 화면은 번호 불일치로 새 초안을 다시 읽는다.
+     */
+    public LearningArticle termsTransferredAway(Collection<TermId> termIds) {
+        List<LearningTerm> kept = new ArrayList<>(terms);
+        kept.removeIf(term -> termIds.contains(term.termId()));
+        return withTerms(kept, draftVersion + 1);
+    }
+
     /** 초안 판 번호가 기대한 값인가. */
     public boolean isDraftVersion(int expectedDraftVersion) {
         return draftVersion == expectedDraftVersion;
@@ -298,6 +355,28 @@ public record LearningArticle(
         if (!isDraftVersion(expectedDraftVersion)) {
             throw new DraftChangedException(draftVersion);
         }
+    }
+
+    private LearningArticle withTerms(List<LearningTerm> newTerms, int newDraftVersion) {
+        return new LearningArticle(
+                id,
+                articleId,
+                title,
+                question,
+                readingOrder,
+                format,
+                placement,
+                publishedPlacement,
+                blocks,
+                example,
+                sources,
+                status,
+                publishedRevisionId,
+                newDraftVersion,
+                newTerms,
+                quiz,
+                quizSeq,
+                firstReleasedAt);
     }
 
     private LearningArticle withPublication(
@@ -319,7 +398,8 @@ public record LearningArticle(
                 draftVersion,
                 terms,
                 quiz,
-                quizSeq);
+                quizSeq,
+                firstReleasedAt);
     }
 
     /** V1 초안에는 확인 문제가 없다. 저장된 초안의 문제·보기는 식별자가 모두 있고 한 글 안에서 겹치지 않는다. */

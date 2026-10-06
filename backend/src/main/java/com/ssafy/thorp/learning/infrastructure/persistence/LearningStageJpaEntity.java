@@ -11,7 +11,7 @@ import java.time.Instant;
 
 /**
  * {@code learning_stage} 매핑. 정의 열(식별자·번호·이름·수준 표시·한 줄 설명)은 마이그레이션만 쓰므로 {@code updatable = false}다.
- * 공개 열은 '단계 공개'(B08)가 한 번 쓴다.
+ * 공개 열은 '단계 공개'가 잠근 행에 한 번 쓴다({@link #release}).
  */
 @Entity
 @Table(name = "learning_stage")
@@ -41,6 +41,12 @@ public class LearningStageJpaEntity extends BaseEntity {
     private Long releasedByUserId;
 
     protected LearningStageJpaEntity() {}
+
+    /** 공개 열을 한 번 쓴다. 공개 여부는 도메인({@code LearningStage.release})이 먼저 확인한다. */
+    void release(Instant at, Long userId) {
+        this.releasedAt = at;
+        this.releasedByUserId = userId;
+    }
 
     Long getId() {
         return id;

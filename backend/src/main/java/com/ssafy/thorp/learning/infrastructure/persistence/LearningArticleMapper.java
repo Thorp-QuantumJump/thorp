@@ -6,6 +6,7 @@ import com.ssafy.thorp.learning.domain.model.Placement;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 글 초안 작업본 ↔ {@link LearningArticleJpaEntity}·{@link LearningTermJpaEntity}. 단계는 {@link
@@ -18,20 +19,24 @@ final class LearningArticleMapper {
     /**
      * 저장된 행이 도메인 규칙을 어기면(예: 형식에 맞지 않는 용어) 글 키를 담은 {@link IllegalStateException}으로 실패한다. 요청 입력이 아니라
      * 저장 데이터의 문제이므로 400으로 내보내지 않는다({@link LearningContentJson#storedValue}).
+     *
+     * @param articleKeys 글 대리키 → {@code articleId}. 넘겨받는 중인 용어의 지금 소유 글을 옮긴다
      */
     static LearningArticle toDomain(
             LearningArticleJpaEntity entity,
             List<LearningTermJpaEntity> terms,
-            StageLookup stages) {
+            StageLookup stages,
+            Function<Long, ArticleId> articleKeys) {
         return LearningContentJson.storedValue(
                 "learning_article(" + entity.getArticleKey() + ")",
-                () -> build(entity, terms, stages));
+                () -> build(entity, terms, stages, articleKeys));
     }
 
     private static LearningArticle build(
             LearningArticleJpaEntity entity,
             List<LearningTermJpaEntity> terms,
-            StageLookup stages) {
+            StageLookup stages,
+            Function<Long, ArticleId> articleKeys) {
         return new LearningArticle(
                 entity.getId(),
                 new ArticleId(entity.getArticleKey()),
@@ -53,9 +58,10 @@ final class LearningArticleMapper {
                 entity.getStatus(),
                 entity.getPublishedRevisionId(),
                 entity.getDraftVersion(),
-                terms.stream().map(LearningArticleMapper::termToDomain).toList(),
+                terms.stream().map(term -> termToDomain(term, articleKeys)).toList(),
                 LearningContentJson.draftQuizFromJson(entity.getQuiz()),
-                entity.getQuizSeq());
+                entity.getQuizSeq(),
+                entity.getFirstReleasedAt());
     }
 
     /** 새 행이면 엔티티를 만든다. {@code createdAt}을 덮지 않도록 있는 행에는 merge 대신 {@link #apply}를 쓴다. */
@@ -87,10 +93,15 @@ final class LearningArticleMapper {
                         ? null
                         : article.publishedPlacement().position(),
                 LearningContentJson.draftQuizToJson(article.quiz()),
-                article.quizSeq());
+                article.quizSeq(),
+                article.firstReleasedAt());
     }
 
-    static LearningTermJpaEntity termToEntity(LearningTerm term, Long articleInternalId) {
+    /**
+     * @param transferFromInternalId 넘겨받는 중이면 지금 소유 글의 대리키. 아니면 null
+     */
+    static LearningTermJpaEntity termToEntity(
+            LearningTerm term, Long articleInternalId, Long transferFromInternalId) {
         return new LearningTermJpaEntity(
                 term.termId().value(),
                 articleInternalId,
@@ -99,10 +110,12 @@ final class LearningArticleMapper {
                 term.aliases(),
                 term.meaning(),
                 term.reading(),
-                term.caveat());
+                term.caveat(),
+                transferFromInternalId);
     }
 
-    private static LearningTerm termToDomain(LearningTermJpaEntity entity) {
+    private static LearningTerm termToDomain(
+            LearningTermJpaEntity entity, Function<Long, ArticleId> articleKeys) {
         return new LearningTerm(
                 new TermId(entity.getTermKey()),
                 entity.getLabel(),
@@ -110,6 +123,9 @@ final class LearningArticleMapper {
                 LearningContentJson.required(entity.getAliases(), "learning_term.aliases"),
                 entity.getMeaning(),
                 entity.getReading(),
-                entity.getCaveat());
+                entity.getCaveat(),
+                entity.getTransferFromArticleId() == null
+                        ? null
+                        : articleKeys.apply(entity.getTransferFromArticleId()));
     }
 }

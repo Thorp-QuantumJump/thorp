@@ -445,7 +445,7 @@ GET /admin/learning/stages/{stageKey}/readiness
 |---|---|
 | `blockers` | 글 검사와 별개로 공개를 막는 것: `ALREADY_RELEASED`, `ORDER`(앞 단계 공개 전), `EMPTY`(글 없음) |
 | `articles` | 공개 집합의 글 전부(§9의 `articles`와 `placementOnlyArticles`) |
-| `articles[].failures` | v2 검사([data-model](../data-model.md) §8-2)에 더해 `FORMAT`(V1 초안), `PLACEMENT`(초안을 다른 단계로 옮긴 글. 옮긴 단계로 다시 게시하거나 게시 취소한 뒤 공개한다), `TERM_TRANSFER`(넘겨받기 소유 불일치), `TERM_ID_TAKEN`(다른 글이 게시 중인 용어를 넘겨받기 없이 씀) 항목이 올 수 있다 |
+| `articles[].failures` | v2 검사([data-model](../data-model.md) §8-2)에 더해 `FORMAT`(V1 초안), `PLACEMENT`(초안을 다른 단계로 옮긴 글. 옮긴 단계로 다시 게시하거나 게시 취소한 뒤 공개한다), `TERM_TRANSFER`(넘겨받기 소유 불일치), `TERM_ID_TAKEN`(다른 글이 게시 중인 용어를 넘겨받기 없이 씀) 항목이 올 수 있다. 순서는 이 넷, 그다음 v2 검사다. `FORMAT`·`PLACEMENT`의 위치는 `{ "part": "article" }`, 용어 소유 항목의 위치는 `{ "part": "term", "termId": … }`다([data-model](../data-model.md) §8-4). V1 초안은 v2 검사를 받을 수 없어 `FORMAT`과 용어 소유 항목만 싣는다 |
 | `articles[].draftVersion` | 화면이 §11 요청에 그대로 싣는다 |
 | `ready` | `blockers`와 모든 `failures`가 비었다 |
 
@@ -496,7 +496,7 @@ POST /admin/learning/stages/{stageKey}/release
 
 ### 응답 422 `LEARNING_STAGE_CHECK_FAILED`
 
-글 하나라도 걸리면 **아무것도 바뀌지 않는다.** 글마다 걸린 항목을 모두 싣는다. 모양은 §10의 `articles`와 같다.
+글 하나라도 걸리면 **아무것도 바뀌지 않는다.** 글마다 걸린 항목을 모두 싣는다. 모양은 §10의 `articles`에서 `draftVersion`을 뺀 것이고, 걸린 글만 싣는다.
 
 ```json
 {

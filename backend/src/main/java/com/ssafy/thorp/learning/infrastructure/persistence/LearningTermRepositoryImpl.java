@@ -26,9 +26,17 @@ public class LearningTermRepositoryImpl implements LearningTermRepository {
     @Override
     public Optional<ArticleId> findOwnerArticleKey(TermId termId) {
         return termJpaRepository
-                .findByTermKey(termId.value())
-                .flatMap(term -> articleJpaRepository.findById(term.getArticleId()))
-                .map(article -> new ArticleId(article.getArticleKey()));
+                .findByTermKeyAndTransferFromArticleIdIsNull(termId.value())
+                .flatMap(term -> articleJpaRepository.findArticleKeyById(term.getArticleId()))
+                .map(ArticleId::new);
+    }
+
+    @Override
+    public Optional<ArticleId> findIncomingArticleKey(TermId termId) {
+        return termJpaRepository
+                .findByTermKeyAndTransferFromArticleIdIsNotNull(termId.value())
+                .flatMap(term -> articleJpaRepository.findArticleKeyById(term.getArticleId()))
+                .map(ArticleId::new);
     }
 
     @Override
@@ -46,7 +54,33 @@ public class LearningTermRepositoryImpl implements LearningTermRepository {
         termJpaRepository.deleteByArticleIdInBulk(articleInternalId);
         termJpaRepository.saveAll(
                 terms.stream()
-                        .map(term -> LearningArticleMapper.termToEntity(term, articleInternalId))
+                        .map(
+                                term ->
+                                        LearningArticleMapper.termToEntity(
+                                                term,
+                                                articleInternalId,
+                                                term.transferFrom() == null
+                                                        ? null
+                                                        : PersistenceLookups.requireArticleId(
+                                                                articleJpaRepository,
+                                                                term.transferFrom())))
                         .toList());
+    }
+
+    @Override
+    public void deleteOwnedTerm(ArticleId ownerArticleId, TermId termId) {
+        termJpaRepository.deleteOwnedInBulk(
+                PersistenceLookups.requireArticleId(articleJpaRepository, ownerArticleId),
+                termId.value());
+    }
+
+    /** 엔티티를 고쳐 저장한다. 벌크 갱신은 수정 시각(auditing)을 건너뛴다. */
+    @Override
+    public void completeTransfers(ArticleId articleId) {
+        List<LearningTermJpaEntity> incoming =
+                termJpaRepository.findByArticleIdAndTransferFromArticleIdIsNotNull(
+                        PersistenceLookups.requireArticleId(articleJpaRepository, articleId));
+        incoming.forEach(LearningTermJpaEntity::completeTransfer);
+        termJpaRepository.saveAllAndFlush(incoming);
     }
 }
