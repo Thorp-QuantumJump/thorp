@@ -2,8 +2,11 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { CurrentArticleBlock, LegacyArticleBlock } from '@/types/learning'
+import { cssDeclarations } from '@/test/cssRule'
 import { currentArticle, tideArticle } from '@/test/learningFixtures'
 import { ArticleBody } from './ArticleBody'
+
+const bodyCss = 'components/learning/article/ArticleBody.module.css'
 
 /**
  * 013 T134. 블록마다 표시와 이름표를 그리고, 텍스트로만 받은 그대로 그리는지 본다(research R3, FR-005,
@@ -48,6 +51,8 @@ describe('ArticleBody — 9월 판', () => {
       '합성 용어 문장이다. 줄이거나 바꾸지 않고 보여야 한다.',
     )
     const aside = screen.getByRole('complementary', { name: '가상의 계산 예' })
+    // 이름표는 눈에 보이는 글자여야 한다. aria-label만으로는 화면에 아무것도 없다(FR-005).
+    expect(within(aside).getByText('가상의 계산 예')).not.toBeNull()
     expect(within(aside).getByText(/3칸 들어왔다가 1칸 빠졌다/)).not.toBeNull()
   })
 
@@ -132,12 +137,15 @@ describe('ArticleBody — 새 기준', () => {
 
     const box = screen.getByRole('complementary', { name: '가상의 계산 예' })
     expect(box.className).toMatch(/hypotheticalCurrent/)
+    // CSS 모듈은 테스트에서 아무 이름이나 돌려주므로 규칙이 실제로 실선을 선언하는지 함께 본다.
+    expect(cssDeclarations(bodyCss, '.hypotheticalCurrent')).toMatch(/border-style:\s*solid/)
   })
 
   it('가상의 계산 예와 도식에 가상 표시가, 도식 아래에 설명 문장이 있다', () => {
     renderCurrent()
 
-    expect(screen.getByRole('complementary', { name: '가상의 계산 예' })).not.toBeNull()
+    const hypothetical = screen.getByRole('complementary', { name: '가상의 계산 예' })
+    expect(within(hypothetical).getByText('가상의 계산 예')).not.toBeNull()
     expect(
       screen.getByText('가 항구는 크게 오르내리고 나 항구는 거의 그대로지만 둘 다 1.5에서 끝난다.')
         .tagName,
@@ -194,6 +202,40 @@ describe('ArticleBody — 새 기준', () => {
     expect(end?.previousElementSibling?.getAttribute('aria-label')).toBe('제도 안내')
     expect(end?.textContent).toBe('본문 끝')
     expect(end?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+  })
+})
+
+describe('ArticleBody — 화면 규칙', () => {
+  it('비교 표 제목은 표 위 제목 칸 그대로이고 꼬리표와 제목은 안쪽 줄에 놓인다', () => {
+    renderCurrent()
+
+    const caption = screen.getByRole('table').querySelector('caption')!
+    expect(caption.children).toHaveLength(1)
+    expect(caption.firstElementChild?.className).toMatch(/captionRow/)
+    expect(within(caption).getByText('가상의 예')).not.toBeNull()
+    // caption에 display를 주면 표 안의 이름 없는 행으로 감싸여 머리 행 아래에 끼어 그려진다.
+    expect(cssDeclarations(bodyCss, '.table caption')).not.toMatch(/display\s*:/)
+    expect(cssDeclarations(bodyCss, '.captionRow')).toMatch(/display:\s*flex/)
+  })
+
+  it('번호 목록에는 번호를, 글머리 목록과 핵심 요약에는 글머리 기호를 되살린다', () => {
+    expect(cssDeclarations(bodyCss, 'ol.list')).toMatch(/list-style:\s*decimal/)
+    expect(cssDeclarations(bodyCss, 'ul.list')).toMatch(/list-style:\s*disc/)
+    expect(cssDeclarations(bodyCss, '.summary ul')).toMatch(/list-style:\s*disc/)
+  })
+
+  it('새 기준 소제목만 굵기를 올리고 9월 판 소제목은 그대로 둔다', () => {
+    const { unmount } = renderCurrent()
+    expect(screen.getByRole('heading', { name: '너울은 무엇을 재나' }).className).toMatch(
+      /headingCurrent/,
+    )
+    unmount()
+
+    renderLegacy(tideArticle.blocks)
+    expect(screen.getByRole('heading', { name: '물이 가장 낮았던 때' }).className).not.toMatch(
+      /headingCurrent/,
+    )
+    expect(cssDeclarations(bodyCss, '.headingCurrent')).toMatch(/font-weight:\s*750/)
   })
 })
 

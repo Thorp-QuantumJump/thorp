@@ -101,6 +101,8 @@ describe('QuizPanel — 비로그인', () => {
     const explanation = screen.getByText('합성 풀이 하나다.', { exact: false })
     expect(document.activeElement).toBe(explanation)
     expect(explanation.textContent).toContain('고른 답 1번, 틀린 보기.')
+    // 이름표와 풀이 사이에 실제 띄어쓰기가 있어야 읽기·복사에서 붙지 않는다.
+    expect(explanation.textContent).toContain('풀이 합성 풀이 하나다.')
   })
 
   it('답한 문제는 결과와 풀이를 남긴 채 다음 문제가 이어 보이고, 모두 답하면 맞힌 개수를 보인다', async () => {
