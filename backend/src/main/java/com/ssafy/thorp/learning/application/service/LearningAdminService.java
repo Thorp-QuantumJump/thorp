@@ -254,8 +254,10 @@ public class LearningAdminService {
                                 command.terms(),
                                 quiz),
                         hasLegacyRevision);
-        articleRepository.save(saved);
+        // 용어를 먼저 바꾼다. 글 저장이 저장된 용어로 글을 다시 만들므로, 형식을 바꿀 때 옛 형식의 용어가 남아 있으면 새 형식에 맞지 않아 실패한다.
+        // 용어를 먼저 바꾼다. 글 저장은 저장된 용어로 글을 다시 만들므로, 형식을 바꿀 때 옛 형식의 용어가 남아 있으면 새 형식에 맞지 않아 실패한다.
         termRepository.replaceForArticle(id, command.terms());
+        articleRepository.save(saved);
         LearningArticle reloaded =
                 articleRepository
                         .findByArticleKey(id)

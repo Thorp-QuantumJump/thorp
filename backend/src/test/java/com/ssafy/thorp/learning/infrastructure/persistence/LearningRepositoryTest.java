@@ -693,7 +693,8 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                                 "{\"type\":\"keySummary\",\"lines\":[]}"));
 
         assertThatThrownBy(() -> revisionRepository.findById(id))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("V2 block type in a V1 article: keySummary");
     }
 
     @Test

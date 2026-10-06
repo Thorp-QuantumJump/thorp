@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import com.ssafy.thorp.learning.domain.exception.FormatOutdatedException;
 import com.ssafy.thorp.learning.domain.exception.StageNotReleasedException;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.KeySummaryBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
 import com.ssafy.thorp.learning.domain.model.LearningArticle.DraftContent;
@@ -15,6 +16,7 @@ import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -151,6 +153,39 @@ class LearningArticleV2Test {
                                                 List.of(),
                                                 List.of(newQuestion())),
                                         true))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("V2 초안은 블록 80개까지 담고 81개면 거절한다 (data-model §5-3)")
+    void v2BlockLimit() {
+        LearningArticle draft = v2Draft();
+        List<ArticleBlock> eighty = Collections.nCopies(80, new HeadingBlock("소제목"));
+        List<ArticleBlock> eightyOne = Collections.nCopies(81, new HeadingBlock("소제목"));
+
+        assertThat(
+                        draft.saveDraft(
+                                        0,
+                                        content(
+                                                ArticleFormat.V2,
+                                                eighty,
+                                                List.of(),
+                                                List.of(),
+                                                List.of()),
+                                        false)
+                                .blocks())
+                .hasSize(80);
+        assertThatThrownBy(
+                        () ->
+                                draft.saveDraft(
+                                        0,
+                                        content(
+                                                ArticleFormat.V2,
+                                                eightyOne,
+                                                List.of(),
+                                                List.of(),
+                                                List.of()),
+                                        false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -170,7 +170,11 @@ class LearningStagesMigrationUpgradeIT {
                         + " created_at, updated_at)"
                         + " VALUES ('operator-made', '관리 화면에서 만든 글', '', 10, 'DRAFT', now(), now())");
 
-        assertThatThrownBy(() -> flyway(url, null).migrate()).isInstanceOf(FlywayException.class);
+        // 다른 이유(새 글 키 충돌, 뒤 문장의 오타)로 실패해도 되돌아가므로, 걸린 것이 stage_id NOT NULL인지 본다.
+        assertThatThrownBy(() -> flyway(url, null).migrate())
+                .isInstanceOf(FlywayException.class)
+                .hasMessageContaining(
+                        "column \"stage_id\" of relation \"learning_article\" contains null values");
 
         assertThat(
                         jdbc.queryForObject(
