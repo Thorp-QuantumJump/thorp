@@ -1,0 +1,71 @@
+/*
+  '(*출처)'는 인용한 글자 바로 옆의 작은 표시다. 글자 크기를 한 단계 줄이고 위로 올려 본문 흐름을 끊지 않는다.
+  출처 이름은 마우스를 올리거나 초점을 두면 표시 위에 뜬다(013 FR-026).
+*/
+.source {
+  position: relative;
+  margin-inline-start: 2px;
+  color: var(--thorp-accent-soft);
+  font-size: 0.78em;
+  vertical-align: super;
+  line-height: 0;
+  text-decoration: underline;
+  text-decoration-color: var(--thorp-line-control);
+  text-underline-offset: 2px;
+}
+
+.source:hover {
+  text-decoration-color: currentColor;
+}
+
+.source:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.sourceName {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 10;
+  display: none;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  padding: 6px 10px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-inset, 8px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-caption, 0.75rem);
+  line-height: 1.4;
+  text-decoration: none;
+  vertical-align: baseline;
+  white-space: normal;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.source:hover .sourceName,
+.source:focus-visible .sourceName {
+  display: block;
+}
+
+/*
+  누르는 곳은 44×44px 이상이다(design-notes §6). 글자 사이에 놓인 '(*출처)'와 도움말 '?'는 보이는 크기를 그대로
+  두고, 가운데에 44px 정사각형의 보이지 않는 누름 영역을 덧댄다. 도움말 '?'는 003 설정 화면과 같은 부품이라 글
+  안에서만 넓힌다.
+*/
+.source::after,
+.help > button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.help > button {
+  position: relative;
+}

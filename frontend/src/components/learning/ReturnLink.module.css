@@ -2,8 +2,10 @@
 .link {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
+  /* 누르는 곳은 44×44px 이상이다(design-notes §6). */
+  min-height: 44px;
   margin-bottom: 20px;
   color: var(--thorp-accent-soft);
   font-size: var(--thorp-text-body, 0.9rem);
@@ -12,9 +14,4 @@
 .link:focus-visible {
   outline: var(--thorp-focus-outline-compact);
   outline-offset: var(--thorp-focus-offset-compact);
-}
-
-.label {
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
 }
