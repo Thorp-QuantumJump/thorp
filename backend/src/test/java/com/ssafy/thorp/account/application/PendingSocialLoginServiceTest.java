@@ -71,6 +71,7 @@ class PendingSocialLoginServiceTest {
                 new PendingSocialLoginAccess(
                         store,
                         new SocialVerificationGuard(verifications, targets, clock),
+                        users,
                         encoder,
                         clock);
         SocialLinkService linkService =
@@ -230,6 +231,32 @@ class PendingSocialLoginServiceTest {
     }
 
     @Test
+    @DisplayName("제공자 이메일이 기존 계정의 주소면 그 번호의 발송·대조를 그 계정 단위로도 센다")
+    void providerEmailCodeCountsAgainstExistingAccount() {
+        // 확인을 통과하면 이 계정에 추가 확인 없이 연결된다. 대기 상태마다만 세면 제공자 로그인을 다시 하는 것으로 상한이 새로 시작한다.
+        when(users.findByEmail(EMAIL)).thenReturn(Optional.of(activeUser(42L, EMAIL)));
+        store.save(verificationPending());
+        String code = sendAndCapture(EMAIL);
+        String wrong = code.equals("000000") ? "111111" : "000000";
+
+        assertThatThrownBy(() -> service.confirmProviderEmail(wrong))
+                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_INVALID));
+
+        com.ssafy.thorp.account.domain.model.SocialLinkTarget target = targets.get(42L);
+        assertThat(target.getCodesSent()).isEqualTo(1);
+        assertThat(target.getAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("제공자 이메일이 어느 계정의 주소도 아니면 계정 단위 기록을 만들지 않는다")
+    void providerEmailCodeForUnknownEmailLeavesNoTargetRecord() {
+        store.save(verificationPending());
+        sendAndCapture(EMAIL);
+
+        assertThat(targets.get(42L)).isNull();
+    }
+
+    @Test
     @DisplayName("제공자 이메일 번호도 상한만큼 틀리면 지워져 맞는 번호로 확인할 수 없다")
     void providerEmailCodeAttemptsAreCapped() {
         store.save(verificationPending());
@@ -241,7 +268,7 @@ class PendingSocialLoginServiceTest {
         }
 
         assertThatThrownBy(() -> service.confirmProviderEmail(code))
-                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED));
         assertThat(store.current().emailVerified()).isFalse();
     }
 

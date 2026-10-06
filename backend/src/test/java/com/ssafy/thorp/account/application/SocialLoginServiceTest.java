@@ -67,6 +67,7 @@ class SocialLoginServiceTest {
                         store,
                         new SocialVerificationGuard(
                                 new InMemorySocialVerificationRepository(), targets, clock),
+                        users,
                         mock(PasswordEncoder.class),
                         clock);
         SocialLinkService linkService =
