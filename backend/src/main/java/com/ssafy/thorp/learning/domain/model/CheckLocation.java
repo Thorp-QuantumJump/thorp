@@ -8,13 +8,14 @@ import java.util.Objects;
 /**
  * 게시 전 검사에 걸린 위치(data-model §8-4, learning-admin-api §6).
  *
- * <p>v1 검사는 {@code index}·{@code termId}만 쓴다. 그래서 v1 거절 응답의 모양은 9월 판 그대로다. v2 검사는 블록·용어 안의
+ * <p>v1 검사는 {@code index}·{@code termId}만 쓴다. 그래서 v1 거절 응답의 모양은 9월 판 그대로다. v2 검사는 블록·용어·문제 안의
  * 필드({@code field})와 확인 문제 위치를 더한다.
  *
  * @param index {@code BLOCK}이면 {@code blocks} 순번(0부터), {@code QUIZ}면 식별자 없는 새 문제의 순번. 본문 전체나 문제 전체를
  *     가리키면 null이다
  * @param termId {@code TERM}일 때만 있다
- * @param field 블록·용어 안의 필드. 예: {@code lines[1]}, {@code wrong}, {@code rows[0][1]}, {@code meaning}
+ * @param field 블록·용어·문제 안의 필드. 예: {@code lines[1]}, {@code wrong}, {@code rows[0][1]}, {@code
+ *     meaning}, 문제의 {@code prompt}·{@code explanation}
  * @param questionId {@code QUIZ}에서 문제를 가리킬 때
  * @param choiceId {@code QUIZ}에서 보기를 가리킬 때
  */
@@ -45,9 +46,9 @@ public record CheckLocation(
         if ((termId != null) != (part == Part.TERM)) {
             throw new IllegalArgumentException("termId must be present exactly for term locations");
         }
-        if (field != null && part != Part.BLOCK && part != Part.TERM) {
+        if (field != null && part != Part.BLOCK && part != Part.TERM && part != Part.QUIZ) {
             throw new IllegalArgumentException(
-                    "field is only for block and term locations: " + part);
+                    "field is only for block, term and quiz locations: " + part);
         }
         if ((questionId != null || choiceId != null) && part != Part.QUIZ) {
             throw new IllegalArgumentException(
@@ -100,6 +101,16 @@ public record CheckLocation(
         return questionId == null
                 ? new CheckLocation(Part.QUIZ, index, null, null, null, null)
                 : new CheckLocation(Part.QUIZ, null, null, null, questionId, null);
+    }
+
+    /**
+     * 문제 안의 글자 칸 하나({@code prompt}·{@code explanation}). 같은 문제의 두 칸에 같은 표현이 있으면 둘을 따로 보고해야 운영자가 한
+     * 번에 고친다.
+     */
+    public static CheckLocation quizQuestion(QuestionId questionId, int index, String field) {
+        return questionId == null
+                ? new CheckLocation(Part.QUIZ, index, null, field, null, null)
+                : new CheckLocation(Part.QUIZ, null, null, field, questionId, null);
     }
 
     /** 문제의 보기 하나. */

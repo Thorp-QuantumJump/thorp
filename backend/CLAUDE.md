@@ -157,7 +157,7 @@ common: 모든 계층에서 참조 가능
   - `common/persistence/MigrationFileConventionTest` 파일명 규칙과 버전 중복. **Docker 없이 돈다**
   - `common/persistence/FlywayMigrationTest`·`paramsearch/.../ParamSearchMigrationTest` 빈 DB 적용과 스키마 구조
   - `infra/scripts/check-migration-version.sh` 기준 브랜치 대비 버전 역전(out-of-order). 빈 DB 테스트로는 잡히지 않아 CI가 따로 돌린다. 타임스탬프 버전에서는 이 검사가 중복 검사보다 중요하다 — 파일명이 겹치지 않으니 Git이 조용히 병합하고, 낮은 버전이 뒤늦게 머지되면 운영에서만 기동이 막힌다
-- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다
+- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다. **예외는 Spring 컨텍스트 없이 Flyway API로 마이그레이션만 적용한 DB를 보는 테스트다**: 스키마 제약만 보는 `EtfMarketDataSchemaIT`(공용 컨테이너의 커넥션 여유가 없다)와, 특정 마이그레이션 직전 버전까지 적용한 DB에 나머지를 올려 보는 `LearningStagesMigrationUpgradeIT`(시나리오마다 Flyway `target`을 정한다). 이들은 전용 컨테이너를 띄우고 커넥션을 하나만 열며, 같은 skip 규칙(`@Testcontainers(disabledWithoutDocker = true)`)을 따른다. 버전 번호가 필요하면 이 경우에도 `support/MigrationFiles`로 찾는다
 
 - **내 기록(`myrecord`)은 계산 결과를 복제하지 않고 `backtest_request`·`param_search`·`regime_search_log`를 가리킨다. 삭제는 `my_record.deleted_at`만 바꾼다.** 상태(완료·실패·진행 중)는 컬럼이 아니라 읽을 때 원본을 조인해 파생하고(`MyRecordViewQuery`), 목록 응답에 수익률·하락 폭·비용을 싣지 않는다(원칙 III). 항목 생성은 004·007 접수 이벤트(`BacktestRequestAccepted`·`ParamSearchAccepted`)를 `MyRecordRegistrar`가 듣는 방식이라 접수 서비스가 006을 부르지 않는다 — 방향은 `myrecord → paramsearch` 하나다(ArchUnit 규칙 11). 탐색 묶음 저장 상한은 `SaveSlotGuard` 포트로 접수 직전에 판정하고 409 `RECORD_LIMIT_REACHED`다. 시간 기반 자동 삭제 배치를 만들지 않는다(spec 006 PD-13)
 

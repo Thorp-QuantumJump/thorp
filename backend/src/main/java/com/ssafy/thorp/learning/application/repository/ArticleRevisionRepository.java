@@ -1,8 +1,11 @@
 package com.ssafy.thorp.learning.application.repository;
 
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
+import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -24,4 +27,13 @@ public interface ArticleRevisionRepository {
 
     /** 이 글의 판 전부. {@code revision_no} 오름차순. */
     List<ArticleRevision> findByArticleId(ArticleId articleId);
+
+    /** 이 글의 가장 최근 판({@code revision_no}가 가장 큰 판). 판이 없으면 비어 있다. 옛 판을 모두 읽지 않는다. */
+    Optional<ArticleRevision> findLatestByArticleId(ArticleId articleId);
+
+    /** 이 글에 그 종류의 판이 있는가. 판 본문을 읽지 않는다. */
+    boolean existsByArticleIdAndEdition(ArticleId articleId, Edition edition);
+
+    /** 판 대리키 → 판 번호. 없는 대리키는 결과에 없다. 판 본문을 읽지 않는다. */
+    Map<Long, Integer> findRevisionNos(Collection<Long> revisionIds);
 }

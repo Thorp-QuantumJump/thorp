@@ -167,6 +167,35 @@ class QuizIdentityTest {
     }
 
     @Test
+    @DisplayName("카운터가 9999를 넘게 되면 식별자를 주지 않고 quiz 자리로 거절한다 (data-model §6-2)")
+    void exhaustedSequenceIsRejected() {
+        QuizIdentity.Assigned last =
+                QuizIdentity.assign(List.of(question(null, choice(null, true))), List.of(), 9997);
+        assertThat(last.quizSeq()).isEqualTo(9999);
+        assertThat(ids(last.quiz())).containsExactly("q9998", "c9999");
+
+        assertThatThrownBy(
+                        () ->
+                                QuizIdentity.assign(
+                                        List.of(question(null, choice(null, true))),
+                                        List.of(),
+                                        9998))
+                .isInstanceOfSatisfying(
+                        InvalidDraftException.class,
+                        invalid ->
+                                assertThat(invalid.violations())
+                                        .extracting(FieldViolation::field)
+                                        .containsExactly("quiz"));
+
+        List<QuizQuestion> latest =
+                List.of(question("q1", choice("c2", true), choice("c3", false)));
+        List<QuizQuestion> changed =
+                List.of(question("q1", choice("c2", false), choice("c3", true)));
+        assertThatThrownBy(() -> QuizIdentity.reconcile(changed, latest, 9999))
+                .isInstanceOf(InvalidDraftException.class);
+    }
+
+    @Test
     @DisplayName("보기가 빠져도 새 문제이고 새 식별자를 받는다 (data-model §6-3)")
     void removedChoiceIsRenamed() {
         List<QuizQuestion> latest =

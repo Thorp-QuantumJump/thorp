@@ -7,6 +7,7 @@ import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -41,6 +42,9 @@ public interface LearningArticleRepository {
     /** 이 글의 공개 중인 판. 초안이거나 없는 글이면 비어 있다. */
     Optional<ArticleRevision> findPublishedRevision(ArticleId articleId);
 
+    /** 공개 중인 판 전부(글 → 판). 초안인 글은 결과에 없다. */
+    Map<ArticleId, ArticleRevision> findPublishedRevisions();
+
     /** 이 글의 공개 중인 판과 공개 배치. 초안이거나 없는 글이면 비어 있다. */
     Optional<PublishedArticleView> findPublished(ArticleId articleId);
 
@@ -50,7 +54,12 @@ public interface LearningArticleRepository {
      */
     List<CurrentArticleEntry> findCurrentInReadingOrder();
 
-    /** 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다. */
+    /**
+     * 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다.
+     *
+     * @return 넘겨받은 글에 대리키를 채운 것. 저장된 용어 행으로 다시 만들지 않으므로 용어 교체({@code LearningTermRepository})와 부르는
+     *     순서에 기대지 않는다
+     */
     LearningArticle save(LearningArticle article);
 
     boolean existsByArticleKey(ArticleId articleId);

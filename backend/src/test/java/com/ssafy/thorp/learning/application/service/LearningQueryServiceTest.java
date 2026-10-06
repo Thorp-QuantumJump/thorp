@@ -64,6 +64,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionAttribute;
 
 /**
  * 공개 조회 유스케이스의 판정(learning-public-api §2·§3). 저장소·단계·대응표 포트는 목이고 규칙 파일은 실제 파일이다.
@@ -506,5 +509,22 @@ class LearningQueryServiceTest {
         when(publishedTermRepository.findPublished(MAX_DRAWDOWN)).thenReturn(Optional.of(term));
 
         assertThat(service.getPublishedTerm("max-drawdown")).isEqualTo(term);
+    }
+
+    @Test
+    @DisplayName(
+            "공개 글 하나는 한 스냅숏(REPEATABLE_READ, 읽기 전용)에서 읽는다 — 여러 문장 사이의 게시 취소·다시 게시와 겹쳐도 판과 배치가 어긋나지 않는다")
+    void getPublishedReadsOneSnapshot() throws NoSuchMethodException {
+        // Spring이 프록시에 실제로 적용하는 속성(메서드 설정이 클래스 설정보다 앞선다)으로 본다.
+        TransactionAttribute attribute =
+                new AnnotationTransactionAttributeSource()
+                        .getTransactionAttribute(
+                                LearningQueryService.class.getMethod("getPublished", String.class),
+                                LearningQueryService.class);
+
+        assertThat(attribute).isNotNull();
+        assertThat(attribute.getIsolationLevel())
+                .isEqualTo(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        assertThat(attribute.isReadOnly()).isTrue();
     }
 }

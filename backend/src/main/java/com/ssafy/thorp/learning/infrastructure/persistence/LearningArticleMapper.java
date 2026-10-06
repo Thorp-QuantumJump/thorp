@@ -15,7 +15,20 @@ final class LearningArticleMapper {
 
     private LearningArticleMapper() {}
 
+    /**
+     * 저장된 행이 도메인 규칙을 어기면(예: 형식에 맞지 않는 용어) 글 키를 담은 {@link IllegalStateException}으로 실패한다. 요청 입력이 아니라
+     * 저장 데이터의 문제이므로 400으로 내보내지 않는다({@link LearningContentJson#storedValue}).
+     */
     static LearningArticle toDomain(
+            LearningArticleJpaEntity entity,
+            List<LearningTermJpaEntity> terms,
+            StageLookup stages) {
+        return LearningContentJson.storedValue(
+                "learning_article(" + entity.getArticleKey() + ")",
+                () -> build(entity, terms, stages));
+    }
+
+    private static LearningArticle build(
             LearningArticleJpaEntity entity,
             List<LearningTermJpaEntity> terms,
             StageLookup stages) {
