@@ -20,8 +20,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * spec 013 마이그레이션을 빈 DB에 적용한 결과를 확인한다(quickstart 1 "마이그레이션"·"2판 마이그레이션").
  *
  * <p>매핑과 스키마가 어긋나면 {@link PostgresTestSupport}의 {@code ddl-auto=validate}로 컨텍스트 로딩부터 실패한다. 여기서는 초기
- * 자리와 CHECK·UNIQUE 제약을 본다. <b>버전 번호를 적지 않는다</b>(backend/CLAUDE.md). 게시 중이던 글의 공개 배치처럼 기존 데이터가 있어야
- * 보이는 것은 {@code LearningStagesMigrationUpgradeIT}가 본다.
+ * 자리와 CHECK·UNIQUE 제약(B08의 변경 기록과 용어 부분 유일 색인 포함)을 본다. <b>버전 번호를 적지 않는다</b>(backend/CLAUDE.md). 게시
+ * 중이던 글의 공개 배치처럼 기존 데이터가 있어야 보이는 것은 {@code LearningStagesMigrationUpgradeIT}가 본다.
  *
  * <p><b>거절 테스트는 걸린 제약의 이름까지 단언한다</b>({@link #assertRejectedBy}). 예외 종류만 보면 다른 제약(NOT NULL·외래키)이 먼저
  * 걸려도 통과한다. 2판에서 {@code stage_id}·{@code stage_position}에 NOT NULL이 걸렸으므로 INSERT는 단계 배치를 채워 대상 제약만
@@ -343,6 +343,130 @@ class LearningMigrationTest extends RepositoryTestSupport {
                         jdbcTemplate.queryForObject(
                                 "SELECT edition FROM learning_article_revision", String.class))
                 .isEqualTo("LEGACY");
+    }
+
+    // --- B08: 변경 기록·첫 공개 시각·넘겨받기 (data-model §3-2·§3-3·§3-7) ---
+
+    @Test
+    @DisplayName("변경 기록은 비어 있고, 모든 글의 첫 공개 시각과 모든 용어의 넘겨받기가 비어 있다")
+    void stageReleaseColumnsStartEmpty() {
+        assertThat(count("learning_release_log")).isZero();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM learning_article WHERE first_released_at IS NOT NULL",
+                                Integer.class))
+                .isZero();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM learning_term"
+                                        + " WHERE transfer_from_article_id IS NOT NULL",
+                                Integer.class))
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("같은 term_key를 소유 행 둘로 넣으면 소유 부분 유일 색인으로 거절된다")
+    void rejectsTwoOwnedRowsWithSameKey() {
+        assertRejectedBy(
+                "uq_learning_term_key_owned", () -> insertTerm("sector", "backtest", null));
+    }
+
+    @Test
+    @DisplayName("같은 term_key라도 소유 행 하나와 넘겨받는 행 하나는 함께 있을 수 있다")
+    void allowsOwnedAndIncomingRowWithSameKey() {
+        insertTerm("volatility", "volatility-is-not-loss", "inverse-volatility");
+
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT a.article_key FROM learning_term t"
+                                        + " JOIN learning_article a ON a.id = t.article_id"
+                                        + " WHERE t.term_key = 'volatility' ORDER BY t.id",
+                                String.class))
+                .containsExactly("inverse-volatility", "volatility-is-not-loss");
+    }
+
+    @Test
+    @DisplayName("같은 term_key를 넘겨받는 행 둘로 넣으면 넘겨받기 부분 유일 색인으로 거절된다")
+    void rejectsTwoIncomingRowsWithSameKey() {
+        insertTerm("volatility", "volatility-is-not-loss", "inverse-volatility");
+
+        assertRejectedBy(
+                "uq_learning_term_key_incoming",
+                () -> insertTerm("volatility", "recovery-period", "inverse-volatility"));
+    }
+
+    @Test
+    @DisplayName("자기 글에서 넘겨받는 행은 그 CHECK로 거절된다")
+    void rejectsSelfTransfer() {
+        assertRejectedBy(
+                "ck_learning_term_transfer_not_self",
+                () -> insertTerm("new-term", "backtest", "backtest"));
+    }
+
+    @Test
+    @DisplayName("글을 가리키지 않는 ARTICLE_ADDED 줄은 그 CHECK로 거절된다")
+    void rejectsArticleEntryWithoutArticle() {
+        assertRejectedBy(
+                "ck_learning_release_log_article",
+                () -> insertReleaseLog("article:etf-fees", "ARTICLE_ADDED", "NULL"));
+    }
+
+    @Test
+    @DisplayName("글을 가리키는 STAGE_RELEASED 줄은 그 CHECK로 거절된다")
+    void rejectsStageEntryWithArticle() {
+        assertRejectedBy(
+                "ck_learning_release_log_article",
+                () ->
+                        insertReleaseLog(
+                                "stage:etf-market-basics",
+                                "STAGE_RELEASED",
+                                String.valueOf(articleIdOf("etf-fees"))));
+    }
+
+    @Test
+    @DisplayName("두 종류 밖의 줄은 그 CHECK로 거절된다")
+    void rejectsUnknownReleaseLogKind() {
+        assertRejectedBy(
+                "ck_learning_release_log_kind",
+                () -> insertReleaseLog("stage:etf-market-basics", "STAGE_HIDDEN", "NULL"));
+    }
+
+    @Test
+    @DisplayName("같은 entry_key의 줄은 그 UNIQUE로 거절된다")
+    void rejectsDuplicateEntryKey() {
+        insertReleaseLog("stage:etf-market-basics", "STAGE_RELEASED", "NULL");
+
+        assertRejectedBy(
+                "uq_learning_release_log_entry_key",
+                () -> insertReleaseLog("stage:etf-market-basics", "STAGE_RELEASED", "NULL"));
+    }
+
+    /**
+     * 용어 행 하나. 문장은 비운다.
+     *
+     * @param transferFrom 넘겨받는 행이면 지금 소유 글의 {@code articleId}. 소유 행이면 null
+     */
+    private void insertTerm(String termKey, String articleKey, String transferFrom) {
+        jdbcTemplate.update(
+                "INSERT INTO learning_term (term_key, article_id, label, sentence,"
+                        + " transfer_from_article_id, created_at, updated_at)"
+                        + " VALUES (?, ?, 't', '', ?, now(), now())",
+                termKey,
+                articleIdOf(articleKey),
+                transferFrom == null ? null : articleIdOf(transferFrom));
+    }
+
+    /** 1단계에 변경 기록 한 줄. 글 대리키는 SQL 조각으로 받는다. */
+    private void insertReleaseLog(String entryKey, String kind, String articleId) {
+        jdbcTemplate.update(
+                "INSERT INTO learning_release_log (entry_key, kind, stage_id, article_id, new_count,"
+                        + " rewritten_count, actor_user_id, occurred_at)"
+                        + " VALUES (?, ?, (SELECT id FROM learning_stage"
+                        + " WHERE stage_key = 'etf-market-basics'), "
+                        + articleId
+                        + ", 1, 0, 7, now())",
+                entryKey,
+                kind);
     }
 
     /**

@@ -67,13 +67,17 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
         for (LearningTermJpaEntity term : termJpaRepository.findAllByOrderByIdAsc()) {
             termsByArticle.computeIfAbsent(term.getArticleId(), key -> new ArrayList<>()).add(term);
         }
-        return articleJpaRepository.findAllInStageOrder().stream()
+        List<LearningArticleJpaEntity> entities = articleJpaRepository.findAllInStageOrder();
+        Map<Long, ArticleId> keys = new HashMap<>();
+        entities.forEach(entity -> keys.put(entity.getId(), new ArticleId(entity.getArticleKey())));
+        return entities.stream()
                 .map(
                         entity ->
                                 LearningArticleMapper.toDomain(
                                         entity,
                                         termsByArticle.getOrDefault(entity.getId(), List.of()),
-                                        stages))
+                                        stages,
+                                        id -> requireKey(keys.get(id), id)))
                 .toList();
     }
 
@@ -115,19 +119,26 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
     public Optional<PublishedArticleView> findPublished(ArticleId articleId) {
         return revisionJpaRepository
                 .findCurrentlyPublishedWithPlacement(articleId.value())
-                .map(
-                        row ->
-                                new PublishedArticleView(
-                                        ArticleRevisionMapper.toDomain(row.revision()),
-                                        new Placement(
-                                                StageLookup.load(stageJpaRepository)
-                                                        .keyOf(
-                                                                LearningContentJson.required(
-                                                                        row.publishedStageId(),
-                                                                        "published_stage_id")),
-                                                LearningContentJson.required(
-                                                        row.publishedStagePosition(),
-                                                        "published_stage_position"))));
+                .map(row -> toView(row, StageLookup.load(stageJpaRepository)));
+    }
+
+    @Override
+    public List<PublishedArticleView> findAllPublished() {
+        StageLookup stages = StageLookup.load(stageJpaRepository);
+        return revisionJpaRepository.findAllCurrentlyPublished().stream()
+                .map(row -> toView(row, stages))
+                .toList();
+    }
+
+    private static PublishedArticleView toView(PublishedRevisionRow row, StageLookup stages) {
+        return new PublishedArticleView(
+                ArticleRevisionMapper.toDomain(row.revision()),
+                new Placement(
+                        stages.keyOf(
+                                LearningContentJson.required(
+                                        row.publishedStageId(), "published_stage_id")),
+                        LearningContentJson.required(
+                                row.publishedStagePosition(), "published_stage_position")));
     }
 
     @Override
@@ -173,8 +184,26 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
         return articleJpaRepository.existsByArticleKey(articleId.value());
     }
 
+    /** 넘겨받는 중인 용어가 있을 때만 소유 글의 {@code articleId}를 읽는다. */
     private LearningArticle withTerms(LearningArticleJpaEntity entity, StageLookup stages) {
         return LearningArticleMapper.toDomain(
-                entity, termJpaRepository.findByArticleIdOrderByIdAsc(entity.getId()), stages);
+                entity,
+                termJpaRepository.findByArticleIdOrderByIdAsc(entity.getId()),
+                stages,
+                id ->
+                        requireKey(
+                                articleJpaRepository
+                                        .findArticleKeyById(id)
+                                        .map(ArticleId::new)
+                                        .orElse(null),
+                                id));
+    }
+
+    /** 외래키가 가리키는 글이 없으면 저장 데이터가 깨진 것이다. */
+    private static ArticleId requireKey(ArticleId key, Long id) {
+        if (key == null) {
+            throw new IllegalStateException("learning article not found: id=" + id);
+        }
+        return key;
     }
 }

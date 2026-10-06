@@ -2,6 +2,7 @@ package com.ssafy.thorp.learning.presentation.controller;
 
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.learning.application.service.LearningQueryService;
+import com.ssafy.thorp.learning.presentation.response.CurriculumResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningArticleListResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningArticleResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningTermResponse;
@@ -28,6 +29,13 @@ public class LearningController {
 
     public LearningController(LearningQueryService learningQueryService) {
         this.learningQueryService = learningQueryService;
+    }
+
+    /** 커리큘럼. 여섯 단계와 공개 상태, 공개된 글, 변경 기록이다. 게시된 글이 없어도 200이다. */
+    @GetMapping("/curriculum")
+    public ResponseEntity<ApiResponse<CurriculumResponse>> curriculum() {
+        return ResponseEntity.ok(
+                ApiResponse.ok(CurriculumResponse.from(learningQueryService.curriculum())));
     }
 
     /** 공개 중인 글 목록. 게시된 글이 없으면 {@code articles: []}로 200이다. */

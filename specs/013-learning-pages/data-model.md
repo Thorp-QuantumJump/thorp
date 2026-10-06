@@ -113,6 +113,7 @@ users ─┬─ learning_progress    (사용자 × 글: 읽은 위치·완료·�
 **(2판) 유일 제약**: 9월 판의 `uq_learning_term_key`를 지우고 부분 유일 색인 둘로 바꾼다.
 - `uq_learning_term_key_owned`: `UNIQUE (term_key) WHERE transfer_from_article_id IS NULL`
 - `uq_learning_term_key_incoming`: `UNIQUE (term_key) WHERE transfer_from_article_id IS NOT NULL`
+- `ck_learning_term_transfer_not_self`: `transfer_from_article_id`가 있으면 자기 글(`article_id`)과 다르다. 자기 글에서 넘겨받을 수 없다
 
 `presentation/support/UniqueConstraintViolations`의 제약 이름 대응도 함께 바꾼다. 초안에서 용어를 목록에서 빼면 행을 지운다. 이 행은 초안 작업본이며 게시 기록이 아니다. 게시 기록은 판과 이벤트에 남는다.
 
@@ -467,6 +468,7 @@ quiz:
 | `block` | `index`(0부터), `field`(선택. 예: `lines[1]`, `wrong`, `items[2]`, `rows[0][1]`, `description`) | 본문 블록. 본문 전체를 가리킬 때(소제목 수, 읽기 시간 등)는 `index`가 없다 |
 | `term` | `termId`, `field`(선택) | 용어 설명 |
 | `quiz` **(2판)** | `questionId`(새 문제면 `index`), `choiceId`(선택), `field`(선택. 문제 안의 `prompt`·`explanation`) | 확인 문제. 질문과 풀이에 같은 표현이 있으면 `field`로 갈라 둘 다 싣는다 |
+| `article` **(2판)** | 없음 | 글 전체. 단계 공개와 그 미리 검사의 `FORMAT`(V1 초안)·`PLACEMENT`(초안을 다른 단계로 옮김) 항목만 쓴다. 용어 소유 항목(`TERM_TRANSFER`·`TERM_ID_TAKEN`)은 `term` 위치다 |
 
 ## 9. 예시(`example`)
 
@@ -533,8 +535,8 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 1. `learning_stage` 행 잠금. 이미 공개됐으면 409 `LEARNING_STAGE_ALREADY_RELEASED`. 앞 번호 단계가 공개 전이면 409 `LEARNING_STAGE_ORDER`.
 2. 공개 집합 = (초안 단계 = 이 단계인 글) ∪ (공개 배치 = 이 단계인 글). 비었으면 409 `LEARNING_STAGE_EMPTY`. 집합의 글 행을 `id` 순서로 잠근다.
 3. 요청의 글 목록이 공개 집합과 같고 `expectedDraftVersion`이 모두 맞는지 본다. 아니면 409 `LEARNING_STAGE_CHANGED`.
-4. 글마다 형식(V2인가, 아니면 `FORMAT`)·초안 단계(이 단계인가, 아니면 `PLACEMENT`)·용어 소유(넘겨받기 소유 불일치 `TERM_TRANSFER`, 다른 글이 게시 중인 용어 `TERM_ID_TAKEN`)·v2 검사(§8-2)를 돌린다. 하나라도 걸리면 아무것도 쓰지 않고 422 `LEARNING_STAGE_CHECK_FAILED`로 글마다 걸린 항목을 모두 돌려준다.
-5. 시각 하나(`releasedAt`)로 글마다 게시(§10-1), 넘기기, 비어 있는 `first_released_at`에 `releasedAt`, `released_at`·`released_by_user_id`, `STAGE_RELEASED` 변경 기록 한 줄을 쓴다. 편수는 `first_released_at`이 비어 있던 글만 세고, 그 가운데 `LEGACY` 판이 있던 글이 다시 쓴 글이다. 공개된 단계에서 옮겨 온 글은 세지 않는다.
+4. 글마다 형식(V2인가, 아니면 `FORMAT`)·초안 단계(이 단계인가, 아니면 `PLACEMENT`)·용어 소유(넘겨받기 소유 불일치 `TERM_TRANSFER`, 다른 글이 게시 중인 용어 `TERM_ID_TAKEN`)·v2 검사(§8-2)를 돌린다. 공개 집합의 다른 글이 넘겨받을 용어를 옛 소유 글이 아직 초안에 두었으면 옛 소유 글에 `TERM_TRANSFER` 항목을 단다. 그대로 공개하면 옛 글의 새 판이 넘겨준 용어를 소유한 채 공개되고, 두 글이 서로의 용어를 넘겨받는 고리는 게시 순서를 정할 수 없기 때문이다. 하나라도 걸리면 아무것도 쓰지 않고 422 `LEARNING_STAGE_CHECK_FAILED`로 글마다 걸린 항목을 모두 돌려준다.
+5. 시각 하나(`releasedAt`)로 글마다 게시(§10-1), 넘기기, 비어 있는 `first_released_at`에 `releasedAt`, `released_at`·`released_by_user_id`, `STAGE_RELEASED` 변경 기록 한 줄을 쓴다. 같은 집합 안에서 넘겨주는 글을 넘겨받는 글보다 먼저 게시한다. 편수는 `first_released_at`이 비어 있던 글만 세고, 그 가운데 `LEGACY` 판이 있던 글이 다시 쓴 글이다. 공개된 단계에서 옮겨 온 글은 세지 않는다.
 
 ## 11. 나의 학습 테이블 **(2판)**
 

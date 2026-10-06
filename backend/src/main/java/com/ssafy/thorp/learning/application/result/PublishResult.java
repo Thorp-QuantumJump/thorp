@@ -12,7 +12,7 @@ import java.util.List;
  * @param sectorMapVersion 게시 검사 때 대조한 001 대응표 버전. 예시가 없는 V2 판은 {@code NOT_CHECKED}다
  * @param edition 새 판의 종류
  * @param renamedQuestions 같은 문제 판정으로 새 식별자를 받은 문제(data-model §6-3). 초안에서도 새 식별자가 됐다
- * @param transferredTerms 넘겨받은 용어(R24). 넘겨받기는 B08이 채운다
+ * @param transferredTerms 넘겨받은 용어(R24). 초안에서도 이 용어들의 {@code transferFrom}이 비워졌다
  */
 public record PublishResult(
         String articleId,

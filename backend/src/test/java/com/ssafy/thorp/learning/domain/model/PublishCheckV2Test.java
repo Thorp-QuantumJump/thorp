@@ -160,7 +160,8 @@ class PublishCheckV2Test {
                     3,
                     terms,
                     quiz,
-                    9);
+                    9,
+                    null);
         }
     }
 
@@ -696,7 +697,8 @@ class PublishCheckV2Test {
                         0,
                         List.of(),
                         List.of(),
-                        0);
+                        0,
+                        null);
 
         assertThatThrownBy(() -> PublishCheckV2.run(v1, RULES, OPEN_MAP, KNOWN, TODAY))
                 .isInstanceOf(IllegalStateException.class);

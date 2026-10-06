@@ -25,6 +25,7 @@ import com.ssafy.thorp.learning.domain.model.RichText.SourceRun;
 import com.ssafy.thorp.learning.domain.model.RichText.TermMentionRun;
 import com.ssafy.thorp.learning.domain.model.RichText.TextRun;
 import com.ssafy.thorp.learning.domain.model.SourceRef;
+import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ChoiceId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.QuestionId;
@@ -205,10 +206,17 @@ final class DraftCommands {
 
     /**
      * V1 용어는 설명 문장을, V2 용어는 다른 이름과 세 문장을 쓴다. 쓰지 않는 쪽은 도메인에 빈 값으로 넘긴다. 형식에 맞지 않는 자리는 형식별 위반으로 남긴다.
+     * 넘겨받기({@code transferFrom})는 V2 용어에만 둘 수 있다(data-model §7-1). 소유 글이 맞는지는 서비스가 본다.
      */
     private LearningTerm term(SaveDraftRequest.Term term, String field) {
+        ArticleId transferFrom = null;
         if (term.transferFrom() != null) {
-            invalid.add(new FieldViolation(field + ".transferFrom", "넘겨받기는 아직 받지 않습니다"));
+            v2Only(field + ".transferFrom");
+            try {
+                transferFrom = new ArticleId(term.transferFrom());
+            } catch (IllegalArgumentException malformed) {
+                invalid.add(new FieldViolation(field + ".transferFrom", "articleId 형식이 아닙니다"));
+            }
         }
         if (term.sentence() != null) {
             v1Only(field + ".sentence");
@@ -226,7 +234,8 @@ final class DraftCommands {
                 term.aliases() == null ? List.of() : term.aliases(),
                 term.meaning() == null ? "" : term.meaning(),
                 term.reading() == null ? "" : term.reading(),
-                term.caveat() == null ? "" : term.caveat());
+                term.caveat() == null ? "" : term.caveat(),
+                transferFrom);
     }
 
     /** V2 용어의 필드. 있으면 V1에서 거절하고, 없으면 V2에서 거절한다. */

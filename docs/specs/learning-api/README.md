@@ -7,7 +7,7 @@
 - 관리: [learning-admin-api.md](../../../specs/013-learning-pages/contracts/learning-admin-api.md)
 - 화면 부품(도움말·돌아가기·002 예시 진입): [term-help-ui.md](../../../specs/013-learning-pages/contracts/term-help-ui.md)
 
-**예시 파일이 계약의 기준이다.** 백엔드 통합 테스트(`LearningPublicApiIT`, `LearningAdminApiIT`)가 이 파일을
+**예시 파일이 계약의 기준이다.** 백엔드 통합 테스트(`LearningPublicApiIT`, `LearningCurriculumIT`, `LearningAdminApiIT`, `LearningStageReleaseIT` 등)가 이 파일을
 읽어 실제 응답과 대조하므로, 계약과 구현이 어긋나면 빌드가 실패한다. 대조 방식은 파일마다 다르고 아래 표에 적는다.
 **JSON 동치**는 응답 전체가 파일과 같아야 한다. **키 구성**은 시각·대응표 버전처럼 실행마다 달라지는 값이 있어
 객체의 키 집합(배열은 첫 원소)만 비교하고, 값은 테스트가 따로 단언한다. 9월 판 글 응답 `article.json`은 2판에서
@@ -22,12 +22,15 @@
 
 | 요청 | 200 `data` | 실패 |
 |---|---|---|
+| `GET /learning/curriculum` | 첫 단계를 공개한 뒤: [`curriculum.json`](examples/curriculum.json)(1·2단계 공개), 공개하기 전: [`curriculum-pre-release.json`](examples/curriculum-pre-release.json). 게시된 글이 없어도 200 | 5xx는 빈 배열로 대신하지 않는다 |
 | `GET /learning/articles` | [`articles-list.json`](examples/articles-list.json). 게시된 글이 없으면 `articles: []` | 5xx는 빈 배열로 대신하지 않는다 |
 | `GET /learning/articles/{articleId}` | `edition`마다 하나: [`article-current.json`](examples/article-current.json)(`CURRENT`), [`article-previous.json`](examples/article-previous.json)(`PREVIOUS`), [`article-pre-release.json`](examples/article-pre-release.json)(`PRE_RELEASE`). [`article.json`](examples/article.json)은 9월 판 필드의 기준이다 | 404 `LEARNING_ARTICLE_UNAVAILABLE` (없음·초안·게시 취소·형식 오류를 가르지 않는다) |
 | `GET /learning/terms/{termId}` | [`term.json`](examples/term.json) | 404 `LEARNING_TERM_NOT_READY` (초안뿐·게시 취소·없음·형식 오류를 가르지 않는다) |
 
-| 파일 | `LearningPublicApiIT` 대조 방식 |
+| 파일 | `LearningPublicApiIT`·`LearningCurriculumIT` 대조 방식 |
 |---|---|
+| `curriculum-pre-release.json` | JSON 동치(실제 요청) |
+| `curriculum.json` | JSON 동치. `notices`가 지금 시각에 따라 달라지므로 시계를 2026-11-20T00:00:00Z로 고정한 조회 결과와 비교한다. 실제 요청은 `notices` 밖의 값을 같은지 본다. 변경 기록에는 두 종류(`STAGE_RELEASED`·`ARTICLE_ADDED`)가 모두 있고, 7일 안의 공개 안내가 두 줄이다 |
 | `articles-list.json`, `term.json` | JSON 동치 |
 | `article.json` | 응답 가운데 이 파일에 있는 키만 JSON 동치(9월 판 필드) |
 | `article-current.json`, `article-previous.json`, `article-pre-release.json` | JSON 동치 |
@@ -39,12 +42,13 @@
 - `example.missingSectorCodes`는 `SECTOR_MAP_NOT_READY`일 때도 빈 배열이다(판정하지 못했다). 안내 문장은 `unavailableReason`으로 가른다.
 - `sources[].url`은 없으면 키를 싣지 않는다.
 - `weightTenths`는 0.1%p 단위 정수이고 `1000`이 100%다(002 selection-handoff 계약과 같다).
+- 커리큘럼의 `stages[].releasedAt`·`preReleaseArticles`·`notices[].articleTitle`·`changeLog[].articleTitle`은 값이 없으면 명시적 `null`이다. 공개되지 않은 단계는 `articles: []`이고, 그 단계의 새 글 제목·편수·날짜는 어디에도 싣지 않는다(SC-017).
 
 ## 관리 (관리 계정만)
 
-| 파일 | 원본 절 | `LearningAdminApiIT`·`LearningAdminV2ApiIT` 대조 방식 |
+| 파일 | 원본 절 | `LearningAdminApiIT`·`LearningAdminV2ApiIT`·`LearningStageReleaseIT` 대조 방식 |
 |---|---|---|
-| [`admin-article-v2.json`](examples/admin-article-v2.json) | §4 V2 초안 200 `data` | 키 구성. 초안의 값은 이 파일의 `draft`(문제·보기 식별자를 비운 것)를 저장 요청으로 보낸 뒤 응답 초안과 같은지 따로 본다 (`transferFrom`은 넘겨받기 묶음 전까지 응답이 늘 `null`이라 값은 따로 단언) |
+| [`admin-article-v2.json`](examples/admin-article-v2.json) | §4 V2 초안 200 `data` | 키 구성. 초안의 값은 이 파일의 `draft`(문제·보기 식별자를 비운 것)를 저장 요청으로 보낸 뒤 응답 초안과 같은지 따로 본다 (`transferFrom` 값은 `LearningTermTransferIT`가 따로 단언) |
 | [`admin-preview.json`](examples/admin-preview.json) | §8 `GET …/preview` 200 `data`. §3 글 응답 모양에 `preview: true`를 더하고 `number`·`next`·`stageArticleCount`·`publishedAt`은 `null`이다 | JSON 동치 (`admin-article-v2.json`의 초안을 저장한 뒤 부른다) |
 | [`publish-check-failed-v2.json`](examples/publish-check-failed-v2.json) | §6 422 V2 게시 — **`error` 전체**다 | JSON 동치 |
 | [`admin-articles-list.json`](examples/admin-articles-list.json) | 관리 계약 §2 `GET /admin/learning/articles` 200 `data`. 첫 글은 §13-3 배치의 초안이다 | 키 구성 |
@@ -52,3 +56,7 @@
 | [`publish-success.json`](examples/publish-success.json) | §6 `POST …/publish` 200 `data` | 키 구성 (`publishedAt`·`sectorMapVersion`이 실행마다 다르다) |
 | [`publish-check-failed.json`](examples/publish-check-failed.json) | §6 422 — **`error` 전체**다 | JSON 동치 |
 | [`unpublish.json`](examples/unpublish.json) | §7 `POST …/unpublish` 200 `data` | 키 구성 (값은 `unpublishedRevisionNo` 등을 따로 단언) |
+| [`admin-stages.json`](examples/admin-stages.json) | §9 `GET /admin/learning/stages` 200 `data`. 1단계의 `sectors-and-etf`는 LEGACY 판이 게시 중인 V2 초안, 4단계의 `backtest`는 초안을 5단계로 옮긴 공개 배치만 있는 글이다 | JSON 동치 (`LearningStageReleaseIT`) |
+| [`stage-readiness.json`](examples/stage-readiness.json) | §10 `GET …/stages/{stageKey}/readiness` 200 `data`. 1단계가 공개된 뒤 2단계를 미리 검사한다 | JSON 동치 |
+| [`stage-release.json`](examples/stage-release.json) | §11 `POST …/stages/{stageKey}/release` 200 `data` | `releasedAt` 밖의 키는 JSON 동치. `releasedAt`은 실행마다 다르므로 단계의 공개일·판의 게시 시각·변경 기록의 시각과 같은지 따로 본다 |
+| [`stage-check-failed.json`](examples/stage-check-failed.json) | §11 422 — **`error` 전체**다. 걸린 글만 싣는다 | JSON 동치 |

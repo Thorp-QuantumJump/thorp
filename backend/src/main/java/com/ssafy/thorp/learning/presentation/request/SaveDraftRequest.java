@@ -339,7 +339,7 @@ public record SaveDraftRequest(
      * 용어 설명. V1 용어는 {@code sentence}를, V2 용어는 {@code aliases}·{@code meaning}·{@code
      * reading}·{@code caveat}을 쓴다(data-model §7-1). 빈 문장은 게시 전 검사가 막는다.
      *
-     * @param transferFrom 넘겨받기(R24). 받는 처리는 단계 공개 묶음이 더한다
+     * @param transferFrom 넘겨받기(R24). V2 용어만 둘 수 있고 지금 소유 글의 {@code articleId}다
      */
     public record Term(
             @NotNull

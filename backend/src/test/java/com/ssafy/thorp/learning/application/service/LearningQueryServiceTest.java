@@ -2,6 +2,7 @@ package com.ssafy.thorp.learning.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,7 +18,13 @@ import com.ssafy.thorp.learning.application.port.SectorMapPort.SectorMapView;
 import com.ssafy.thorp.learning.application.repository.LearningArticleRepository;
 import com.ssafy.thorp.learning.application.repository.LearningStageRepository;
 import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
+import com.ssafy.thorp.learning.application.repository.ReleaseLogRepository;
 import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
+import com.ssafy.thorp.learning.application.result.CurriculumResult;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.LogLine;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.OpenArticle;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.StageStatus;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.StageView;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.LegacyTermBlock;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.MentionRunView;
@@ -43,6 +50,7 @@ import com.ssafy.thorp.learning.domain.model.Placement;
 import com.ssafy.thorp.learning.domain.model.QuizChoice;
 import com.ssafy.thorp.learning.domain.model.QuizQuestion;
 import com.ssafy.thorp.learning.domain.model.ReadingEstimate;
+import com.ssafy.thorp.learning.domain.model.ReleaseLogEntry;
 import com.ssafy.thorp.learning.domain.model.RichText;
 import com.ssafy.thorp.learning.domain.model.RichText.TermMentionRun;
 import com.ssafy.thorp.learning.domain.model.RichText.TextRun;
@@ -54,7 +62,10 @@ import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import com.ssafy.thorp.learning.infrastructure.rules.YamlPublishCheckRulesLoader;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,11 +93,13 @@ class LearningQueryServiceTest {
     private static final TermId VOLATILITY = new TermId("volatility");
     private static final StageKey RETURNS_AND_RISK = new StageKey("returns-and-risk");
     private static final Placement FIRST_IN_STAGE_2 = new Placement(RETURNS_AND_RISK, 1);
+    private static final Instant NOW = Instant.parse("2026-11-20T00:00:00Z");
 
     private LearningArticleRepository articleRepository;
     private PublishedTermRepository publishedTermRepository;
     private LearningStageRepository stageRepository;
     private SectorMapPort sectorMapPort;
+    private ReleaseLogRepository releaseLogRepository;
     private LearningQueryService service;
 
     @BeforeEach
@@ -95,14 +108,17 @@ class LearningQueryServiceTest {
         publishedTermRepository = mock(PublishedTermRepository.class);
         stageRepository = mock(LearningStageRepository.class);
         sectorMapPort = mock(SectorMapPort.class);
+        releaseLogRepository = mock(ReleaseLogRepository.class);
         PublishCheckRulesPort rulesPort = new YamlPublishCheckRulesLoader();
         service =
                 new LearningQueryService(
                         articleRepository,
                         publishedTermRepository,
                         stageRepository,
+                        releaseLogRepository,
                         sectorMapPort,
-                        rulesPort);
+                        rulesPort,
+                        Clock.fixed(NOW, ZoneOffset.UTC));
         givenStages(false);
     }
 
@@ -526,5 +542,105 @@ class LearningQueryServiceTest {
         assertThat(attribute.getIsolationLevel())
                 .isEqualTo(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         assertThat(attribute.isReadOnly()).isTrue();
+    }
+
+    // --- 커리큘럼 (T125) ---
+
+    @Test
+    @DisplayName("커리큘럼도 한 스냅숏(REPEATABLE_READ, 읽기 전용)에서 읽는다 — 단계 공개와 겹쳐도 공개된 단계에 글이 비어 보이지 않는다")
+    void curriculumReadsOneSnapshot() throws NoSuchMethodException {
+        TransactionAttribute attribute =
+                new AnnotationTransactionAttributeSource()
+                        .getTransactionAttribute(
+                                LearningQueryService.class.getMethod("curriculum"),
+                                LearningQueryService.class);
+
+        assertThat(attribute).isNotNull();
+        assertThat(attribute.getIsolationLevel())
+                .isEqualTo(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        assertThat(attribute.isReadOnly()).isTrue();
+    }
+
+    @Test
+    @DisplayName("첫 단계 공개 전에는 9월 판 목록을 preReleaseArticles로 싣고, 단계에는 이전 판 글도 싣지 않는다")
+    void curriculumBeforeFirstRelease() {
+        LearningArticleSummaryResult listed =
+                new LearningArticleSummaryResult("returns-and-losses", "수익과 손실", "질문", 8);
+        when(articleRepository.findPublishedOrdered()).thenReturn(List.of(listed));
+        when(articleRepository.findAllPublished())
+                .thenReturn(List.of(new PublishedArticleView(revision("문장"), FIRST_IN_STAGE_2)));
+
+        CurriculumResult curriculum = service.curriculum();
+
+        assertThat(curriculum.releasedStageCount()).isZero();
+        assertThat(curriculum.preReleaseArticles()).containsExactly(listed);
+        assertThat(curriculum.stages())
+                .allSatisfy(
+                        stage -> {
+                            assertThat(stage.status()).isEqualTo(StageStatus.PREPARING);
+                            assertThat(stage.articles()).isEmpty();
+                            assertThat(stage.previousEditionArticles()).isEmpty();
+                        });
+        verify(publishedTermRepository, never()).countPublishedByArticle();
+    }
+
+    @Test
+    @DisplayName(
+            "공개된 단계는 CURRENT 글을 번호와 함께 싣고, 공개된 글이 없으면 REPREPARING이다. 공개 전 단계의 CURRENT 판은 싣지 않는다 (SC-017)")
+    void curriculumAfterRelease() {
+        givenStages(true);
+        when(articleRepository.findAllPublished())
+                .thenReturn(
+                        List.of(
+                                new PublishedArticleView(
+                                        currentRevision(), new Placement(RETURNS_AND_RISK, 4))));
+        when(publishedTermRepository.countPublishedByArticle())
+                .thenReturn(Map.of(CURRENT_ARTICLE, 1));
+
+        CurriculumResult curriculum = service.curriculum();
+
+        assertThat(curriculum.releasedStageCount()).isEqualTo(2);
+        assertThat(curriculum.allStagesReleased()).isTrue();
+        assertThat(curriculum.preReleaseArticles()).isNull();
+        assertThat(curriculum.stages().get(0).status()).isEqualTo(StageStatus.REPREPARING);
+        StageView second = curriculum.stages().get(1);
+        assertThat(second.status()).isEqualTo(StageStatus.OPEN);
+        assertThat(second.articles())
+                .extracting(OpenArticle::articleId, OpenArticle::number, OpenArticle::termCount)
+                .containsExactly(tuple("volatility-is-not-loss", "2-1", 1));
+        verify(articleRepository, never()).findPublishedOrdered();
+    }
+
+    @Test
+    @DisplayName("공개 안내는 지금부터 7일 안의 변경 기록이고, 변경 기록은 단계 번호·이름을 붙여 모두 싣는다")
+    void noticesAreTheLastSevenDays() {
+        givenStages(true);
+        when(articleRepository.findAllPublished()).thenReturn(List.of());
+        when(releaseLogRepository.findAllLatestFirst())
+                .thenReturn(
+                        List.of(
+                                ReleaseLogEntry.stageReleased(
+                                        RETURNS_AND_RISK,
+                                        3,
+                                        List.of("수익과 손실"),
+                                        7L,
+                                        NOW.minus(Duration.ofDays(7))),
+                                ReleaseLogEntry.stageReleased(
+                                        new StageKey("etf-market-basics"),
+                                        3,
+                                        List.of(),
+                                        7L,
+                                        NOW.minus(Duration.ofDays(7)).minusSeconds(1))));
+
+        CurriculumResult curriculum = service.curriculum();
+
+        assertThat(curriculum.notices())
+                .extracting(LogLine::entryKey)
+                .containsExactly("stage:returns-and-risk");
+        assertThat(curriculum.changeLog())
+                .extracting(LogLine::entryKey, LogLine::stageNumber, LogLine::stageName)
+                .containsExactly(
+                        tuple("stage:returns-and-risk", 2, "수익과 위험 읽기"),
+                        tuple("stage:etf-market-basics", 1, "ETF와 국내 시장 기초"));
     }
 }

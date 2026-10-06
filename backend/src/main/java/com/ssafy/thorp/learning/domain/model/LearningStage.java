@@ -40,4 +40,16 @@ public record LearningStage(
     public boolean released() {
         return releasedAt != null;
     }
+
+    /**
+     * 단계를 공개한다. 공개일은 그 공개 트랜잭션의 시각 하나다(R23).
+     *
+     * @throws IllegalStateException 이미 공개했다. 공개는 되돌리거나 다시 쓰지 않는다. 유스케이스가 먼저 409로 막는다
+     */
+    public LearningStage release(Instant at, long userId) {
+        if (released()) {
+            throw new IllegalStateException("stage already released: " + stageKey);
+        }
+        return new LearningStage(id, stageKey, number, name, levelLabel, summary, at, userId);
+    }
 }

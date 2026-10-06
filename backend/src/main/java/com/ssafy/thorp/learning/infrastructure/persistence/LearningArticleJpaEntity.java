@@ -15,6 +15,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.List;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -86,6 +87,8 @@ public class LearningArticleJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private int quizSeq;
 
+    private Instant firstReleasedAt;
+
     protected LearningArticleJpaEntity() {}
 
     LearningArticleJpaEntity(String articleKey) {
@@ -108,7 +111,8 @@ public class LearningArticleJpaEntity extends BaseEntity {
             Long publishedStageId,
             Integer publishedStagePosition,
             List<QuizJson> quiz,
-            int quizSeq) {
+            int quizSeq,
+            Instant firstReleasedAt) {
         this.title = title;
         this.question = question;
         this.readingOrder = readingOrder;
@@ -126,6 +130,7 @@ public class LearningArticleJpaEntity extends BaseEntity {
                 publishedStagePosition == null ? null : publishedStagePosition.shortValue();
         this.quiz = quiz;
         this.quizSeq = quizSeq;
+        this.firstReleasedAt = firstReleasedAt;
     }
 
     Long getId() {
@@ -198,5 +203,9 @@ public class LearningArticleJpaEntity extends BaseEntity {
 
     int getQuizSeq() {
         return quizSeq;
+    }
+
+    Instant getFirstReleasedAt() {
+        return firstReleasedAt;
     }
 }

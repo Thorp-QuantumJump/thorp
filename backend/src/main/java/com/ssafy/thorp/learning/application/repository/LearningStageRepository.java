@@ -16,6 +16,12 @@ public interface LearningStageRepository {
 
     Optional<LearningStage> findByStageKey(StageKey stageKey);
 
+    /** 행을 잠그고 <b>잠근 시점의 값을 다시 읽는다</b>. 같은 단계를 두 요청이 동시에 공개하면 뒤엣것은 앞엣것이 커밋한 공개일을 본다(R23). */
+    Optional<LearningStage> findByStageKeyForUpdate(StageKey stageKey);
+
+    /** 공개일과 공개한 계정을 쓴다. 정의 열은 바꾸지 않는다. 잠근 행에만 쓴다. */
+    void saveRelease(LearningStage stage);
+
     /** 공개된 단계가 하나라도 있는가. 없으면 기존 글이 첫 단계 공개 전 모습({@code PRE_RELEASE})으로 보인다(FR-031). */
     boolean anyReleased();
 }

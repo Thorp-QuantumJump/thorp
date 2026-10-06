@@ -8,6 +8,7 @@ import com.ssafy.thorp.learning.application.exception.ArticleIdTakenException;
 import com.ssafy.thorp.learning.application.exception.ArticleNotFoundException;
 import com.ssafy.thorp.learning.application.exception.StageNotFoundException;
 import com.ssafy.thorp.learning.application.exception.TermIdTakenException;
+import com.ssafy.thorp.learning.application.exception.TermTransferInvalidException;
 import com.ssafy.thorp.learning.application.port.InstitutionNoteReviewPeriod;
 import com.ssafy.thorp.learning.application.port.PublishCheckRulesPort;
 import com.ssafy.thorp.learning.application.port.SectorMapPort;
@@ -18,6 +19,7 @@ import com.ssafy.thorp.learning.application.repository.LearningStageRepository;
 import com.ssafy.thorp.learning.application.repository.LearningTermRepository;
 import com.ssafy.thorp.learning.application.repository.PublicationEventRepository;
 import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
+import com.ssafy.thorp.learning.application.repository.ReleaseLogRepository;
 import com.ssafy.thorp.learning.application.result.AdminArticleResult;
 import com.ssafy.thorp.learning.application.result.AdminArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.AdminArticleSummaryResult.LastPublication;
@@ -26,7 +28,6 @@ import com.ssafy.thorp.learning.application.result.LearningArticleResult;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.Source;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.StageRef;
 import com.ssafy.thorp.learning.application.result.PublishResult;
-import com.ssafy.thorp.learning.application.result.PublishResult.RenamedQuestion;
 import com.ssafy.thorp.learning.application.result.UnpublishResult;
 import com.ssafy.thorp.learning.application.service.ArticleViewAssembler.Mode;
 import com.ssafy.thorp.learning.domain.exception.DraftChangedException;
@@ -39,7 +40,6 @@ import com.ssafy.thorp.learning.domain.model.ArticleBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.InstitutionNoteBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleFormat;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
-import com.ssafy.thorp.learning.domain.model.ArticleSnapshot;
 import com.ssafy.thorp.learning.domain.model.ArticleStatus;
 import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
@@ -55,9 +55,9 @@ import com.ssafy.thorp.learning.domain.model.PublishCheckRules;
 import com.ssafy.thorp.learning.domain.model.PublishCheckRulesV2;
 import com.ssafy.thorp.learning.domain.model.PublishCheckV2;
 import com.ssafy.thorp.learning.domain.model.PublishMode;
-import com.ssafy.thorp.learning.domain.model.QuizIdentity;
 import com.ssafy.thorp.learning.domain.model.QuizQuestion;
 import com.ssafy.thorp.learning.domain.model.ReadingEstimate;
+import com.ssafy.thorp.learning.domain.model.ReleaseLogEntry;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.StageKey;
@@ -108,6 +108,9 @@ public class LearningAdminService {
     private final SectorMapPort sectorMapPort;
     private final PublishCheckRulesPort rulesPort;
     private final InstitutionNoteReviewPeriod reviewPeriod;
+    private final ReleaseLogRepository releaseLogRepository;
+    private final TermOwnership termOwnership;
+    private final ArticlePublisher publisher;
     private final Clock clock;
 
     public LearningAdminService(
@@ -120,6 +123,9 @@ public class LearningAdminService {
             SectorMapPort sectorMapPort,
             PublishCheckRulesPort rulesPort,
             InstitutionNoteReviewPeriod reviewPeriod,
+            ReleaseLogRepository releaseLogRepository,
+            TermOwnership termOwnership,
+            ArticlePublisher publisher,
             Clock clock) {
         this.articleRepository = articleRepository;
         this.termRepository = termRepository;
@@ -130,6 +136,9 @@ public class LearningAdminService {
         this.sectorMapPort = sectorMapPort;
         this.rulesPort = rulesPort;
         this.reviewPeriod = reviewPeriod;
+        this.releaseLogRepository = releaseLogRepository;
+        this.termOwnership = termOwnership;
+        this.publisher = publisher;
         this.clock = clock;
     }
 
@@ -217,8 +226,8 @@ public class LearningAdminService {
     /**
      * 초안을 통째로 바꾼다. 공개 내용은 바뀌지 않는다(data-model §10-1).
      *
-     * <p>판 번호를 먼저 본다. 옛 화면에서 온 요청이면 다른 실패보다 "새로 불러오라"가 먼저다. 그다음 단계·형식(되돌리기)·형식 모양·용어 소유·문제 식별자 순서로
-     * 본다.
+     * <p>판 번호를 먼저 본다. 옛 화면에서 온 요청이면 다른 실패보다 "새로 불러오라"가 먼저다. 그다음 단계·형식(되돌리기)·형식 모양·용어 소유(넘겨받기 포함)·문제
+     * 식별자 순서로 본다.
      *
      * <p>{@code format}·{@code stageKey}·{@code stagePosition}·{@code quiz}가 없으면 지금 초안의 값을 그대로
      * 둔다(9월 판 화면 호환). 형식을 바꾸면 요청 전체가 새 형식의 모양이어야 한다.
@@ -228,7 +237,9 @@ public class LearningAdminService {
      * @throws StageNotFoundException 없는 단계
      * @throws FormatOutdatedException LEGACY 판이 없는 글을 V1로 되돌리려 했다
      * @throws InvalidDraftException 형식에 맞지 않는 요소, 지어 낸 문제·보기 식별자
-     * @throws TermIdTakenException 요청의 {@code termId}를 다른 글이 초안에 두었거나 게시 중이다
+     * @throws TermIdTakenException 요청의 {@code termId}를 다른 글이 초안에 두었거나 게시 중이고 넘겨받기가 없다
+     * @throws TermTransferInvalidException 넘겨받기의 {@code transferFrom}이 지금 소유 글이 아니거나 다른 글이 이미 넘겨받는
+     *     중이다
      */
     public AdminArticleResult saveDraft(String articleId, SaveDraftCommand command) {
         ArticleId id = parseArticleId(articleId);
@@ -253,7 +264,7 @@ public class LearningAdminService {
         }
         List<QuizQuestion> quiz = command.quiz() == null ? article.quiz() : command.quiz();
         requireFormatShape(format, command, quiz);
-        requireTermIdsAvailable(id, command.terms());
+        termOwnership.require(id, command.terms());
         Placement placement =
                 new Placement(
                         command.stageKey() == null
@@ -288,17 +299,22 @@ public class LearningAdminService {
     }
 
     /**
-     * 게시 방식({@link PublishMode})을 정하고, 그 방식의 게시 전 검사를 통과하면 한 트랜잭션에서 새 판·글 상태·공개 배치·게시 용어 색인·게시 기록을
-     * 남긴다. 걸리면 아무것도 바꾸지 않는다.
+     * 게시 방식({@link PublishMode})을 정하고, 그 방식의 게시 전 검사와 용어 소유 판정을 통과하면 한 트랜잭션에서 게시한다({@link
+     * ArticlePublisher}). 걸리면 아무것도 바꾸지 않는다.
      *
-     * <p>V2 게시는 같은 문제 판정(data-model §6-3)으로 새 문제가 된 문제에 새 식별자를 주고 초안의 그 문제도 같은 식별자로 바꾼다. 초안 번호는 올리지
-     * 않는다. 판에 읽기 값을 넣고, 게시 용어 색인에는 뜻 문장과 다른 이름을 쓴다. 예시가 없으면 대응표를 읽지 않고 {@code NOT_CHECKED}를 남긴다.
+     * <p>V2 게시는 같은 문제 판정(data-model §6-3)으로 새 문제가 된 문제에 새 식별자를 주고 초안의 그 문제도 같은 식별자로 바꾼다. 넘겨받는 용어는 옛
+     * 소유 글에서 가져온다(R24). 초안 번호는 올리지 않는다. 예시가 없으면 대응표를 읽지 않고 {@code NOT_CHECKED}를 남긴다.
+     *
+     * <p>공개된 단계에 처음 게시되는 글이면 {@code first_released_at}과 {@code ARTICLE_ADDED} 변경 기록을 같은 트랜잭션에서
+     * 쓴다(R27). 다시 게시, 게시 취소 뒤 다시 게시, 공개된 단계 사이 이동은 기록하지 않는다.
      *
      * @throws ArticleNotFoundException 없는 글
      * @throws DraftChangedException 운영자가 보지 않은 초안을 게시하지 않는다
      * @throws StageNotReleasedException V2 초안인데 초안 단계가 공개 전이다
      * @throws FormatOutdatedException V1 초안인데 초안 단계가 공개됐다
      * @throws PublishCheckFailedException 검사에 걸린 항목이 있다. 모두 싣는다
+     * @throws TermIdTakenException 이 글의 용어를 다른 글이 게시 중이고 넘겨받기가 없다
+     * @throws TermTransferInvalidException 넘겨받기의 소유 글이 그사이 바뀌었다
      */
     public PublishResult publish(String articleId, PublishCommand command) {
         ArticleId id = parseArticleId(articleId);
@@ -314,6 +330,7 @@ public class LearningAdminService {
 
         String checkVersion;
         String mapVersion;
+        PublishCheckRulesV2 rulesV2 = rulesPort.v2();
         if (mode == PublishMode.LEGACY_FIX) {
             Optional<SectorMapView> map = sectorMapPort.currentMap();
             PublishCheckRules rules = rulesPort.v1();
@@ -322,14 +339,13 @@ public class LearningAdminService {
             // 검사를 통과했으면 예시와 대응표가 모두 있다(EXAMPLE_PRESENT·EXAMPLE_SECTOR_IN_MAP).
             mapVersion = requireMapVersion(map);
         } else {
-            PublishCheckRulesV2 rules = rulesPort.v2();
             Optional<SectorMapView> map =
                     article.example() == null ? Optional.empty() : sectorMapPort.currentMap();
             requirePassed(
-                    rules.version(),
+                    rulesV2.version(),
                     PublishCheckV2.run(
-                            article, rules, openSectorCodes(map), knownTermIds(), today()));
-            checkVersion = rules.version();
+                            article, rulesV2, openSectorCodes(map), knownTermIds(), today()));
+            checkVersion = rulesV2.version();
             // 예시가 없으면 대응표를 대조하지 않았다. 판정하지 않은 것을 판정한 것처럼 적지 않는다(원칙 VI).
             mapVersion =
                     article.example() == null
@@ -337,86 +353,39 @@ public class LearningAdminService {
                             : requireMapVersion(map);
         }
 
-        requireTermsNotPublishedElsewhere(id, article.terms());
+        // 저장 뒤 소유가 바뀌었을 수 있다(옛 소유 글이 그 용어를 빼고 게시 취소함). 넘기기 전에 다시 확인한다(R24).
+        termOwnership.require(id, article.terms());
 
         Instant now = now();
-        // 다음 판 번호와 같은 문제 판정의 기준은 가장 최근 판 하나로 정한다. 옛 판 본문을 모두 읽지 않는다.
-        Optional<ArticleRevision> latest = revisionRepository.findLatestByArticleId(id);
-        int revisionNo = latest.map(ArticleRevision::revisionNo).orElse(0) + 1;
-        List<RenamedQuestion> renamed = List.of();
-        ArticleSnapshot snapshot;
-        if (mode == PublishMode.CURRENT) {
-            List<QuizQuestion> latestQuiz =
-                    latest.map(revision -> revision.snapshot().quiz()).orElse(List.of());
-            QuizIdentity.Reconciled reconciled =
-                    QuizIdentity.reconcile(article.quiz(), latestQuiz, article.quizSeq());
-            article = article.withReconciledQuiz(reconciled);
-            renamed =
-                    reconciled.renamed().stream()
-                            .map(
-                                    rename ->
-                                            new RenamedQuestion(
-                                                    rename.from().value(), rename.to().value()))
-                            .toList();
-            snapshot =
-                    new ArticleSnapshot(
-                            ArticleFormat.V2,
-                            id,
-                            article.title(),
-                            article.question(),
-                            article.readingOrder(),
-                            article.blocks(),
-                            article.example(),
-                            article.sources(),
-                            article.terms(),
-                            article.draftVersion(),
-                            article.quiz(),
-                            PublishCheckV2.reading(article, rulesPort.v2().reading()));
-        } else {
-            snapshot =
-                    ArticleSnapshot.legacy(
-                            id,
-                            article.title(),
-                            article.question(),
-                            article.readingOrder(),
-                            article.blocks(),
-                            article.example(),
-                            article.sources(),
-                            article.terms(),
-                            article.draftVersion());
-        }
-        ArticleRevision revision =
-                revisionRepository.save(
-                        new ArticleRevision(
-                                null,
-                                revisionNo,
-                                mode.edition(),
-                                snapshot,
-                                checkVersion,
-                                mapVersion,
-                                command.actorUserId(),
-                                now));
-        articleRepository.save(article.publish(command.expectedDraftVersion(), revision.id()));
-        publishedTermRepository.replaceForArticle(
-                id, revision.id(), article.terms(), article.format());
-        eventRepository.append(
-                new PublicationEvent(
-                        null,
-                        id,
-                        PublicationAction.PUBLISH,
-                        revision.id(),
+        ArticlePublisher.Outcome outcome =
+                publisher.publish(
+                        article,
+                        command.expectedDraftVersion(),
+                        mode,
+                        checkVersion,
+                        mapVersion,
+                        rulesV2.reading(),
                         command.actorUserId(),
-                        now));
+                        now);
+        if (outcome.firstRelease()) {
+            releaseLogRepository.append(
+                    ReleaseLogEntry.articleAdded(
+                            stage.stageKey(),
+                            id,
+                            outcome.article().title(),
+                            command.actorUserId(),
+                            now));
+        }
         return new PublishResult(
                 id.value(),
                 ArticleStatus.PUBLISHED,
-                revisionNo,
+                outcome.revisionNo(),
                 checkVersion,
                 mapVersion,
                 now,
                 mode.edition(),
-                renamed,
-                List.of());
+                outcome.renamed(),
+                outcome.transferred());
     }
 
     /**
@@ -577,7 +546,7 @@ public class LearningAdminService {
                 article.placement().position(),
                 published.map(ArticleRevision::edition).orElse(null),
                 published.map(revision -> needsReview(revision, context.today())).orElse(null),
-                0);
+                (int) article.terms().stream().filter(LearningTerm::transferring).count());
     }
 
     /**
@@ -643,42 +612,11 @@ public class LearningAdminService {
      *
      * @throws ArticleNotFoundException 없는 글
      * @throws TermIdTakenException 다른 글이 초안에 두었거나 게시 중인 용어가 있다
+     * @throws TermTransferInvalidException 다른 글이 이미 넘겨받는 중인 용어가 있다
      */
     @Transactional(readOnly = true)
     public void requireTermIdsAvailable(String articleId, List<LearningTerm> terms) {
-        requireTermIdsAvailable(parseArticleId(articleId), terms);
-    }
-
-    /** 다른 글의 초안이나 게시 색인이 가진 {@code termId}를 이 글이 쓰지 못하게 한다. */
-    private void requireTermIdsAvailable(ArticleId id, List<LearningTerm> terms) {
-        for (LearningTerm term : terms) {
-            termRepository
-                    .findOwnerArticleKey(term.termId())
-                    .filter(owner -> !owner.equals(id))
-                    .ifPresent(
-                            owner -> {
-                                throw new TermIdTakenException(term.termId(), owner);
-                            });
-        }
-        requireTermsNotPublishedElsewhere(id, terms);
-    }
-
-    /**
-     * 다른 글이 게시 중인 {@code termId}를 이 글이 가져가지 못하게 한다. 초안 용어의 유일성만 보면, 글 A가 초안에서 뺐지만 아직 공개 중인 용어를 글 B가
-     * 넣고 게시해 A의 도움말을 가져간다.
-     *
-     * @throws TermIdTakenException 다른 글이 그 용어를 게시 중이다
-     */
-    private void requireTermsNotPublishedElsewhere(ArticleId id, List<LearningTerm> terms) {
-        for (LearningTerm term : terms) {
-            publishedTermRepository
-                    .findOwnerArticleKey(term.termId())
-                    .filter(owner -> !owner.equals(id))
-                    .ifPresent(
-                            owner -> {
-                                throw new TermIdTakenException(term.termId(), owner);
-                            });
-        }
+        termOwnership.require(parseArticleId(articleId), terms);
     }
 
     /** 언급 조각이 가리킬 수 있는 용어: 모든 글의 초안 용어와 게시 용어 색인의 합집합(data-model §8-2 #13). */
