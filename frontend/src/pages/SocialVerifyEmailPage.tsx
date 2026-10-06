@@ -34,7 +34,7 @@ export function SocialVerifyEmailPage() {
       panelTitle="이메일 확인"
     >
       {state.status === 'ready' ? (
-        <VerifyForm pending={state.pending} />
+        <VerifyForm pending={state.pending} reload={reload} />
       ) : (
         <SocialPendingFallback state={state} onRetry={reload} />
       )}
@@ -42,7 +42,15 @@ export function SocialVerifyEmailPage() {
   )
 }
 
-function VerifyForm({ pending }: { pending: PendingSocialView }) {
+/** 서버가 대기 상태를 버리는 오류. 상한을 넘었거나(대기 상태 삭제) 이미 없다. */
+function pendingGone(error: unknown) {
+  return (
+    error instanceof ApiClientError &&
+    (error.is('SOCIAL_VERIFICATION_LIMIT') || error.is('SOCIAL_PENDING_NOT_FOUND'))
+  )
+}
+
+function VerifyForm({ pending, reload }: { pending: PendingSocialView; reload: () => void }) {
   const navigate = useNavigate()
   const codeRef = useRef<HTMLInputElement>(null)
   const requestRef = useRef<AbortController | null>(null)
@@ -70,6 +78,11 @@ function VerifyForm({ pending }: { pending: PendingSocialView }) {
       codeRef.current?.focus()
     } catch (error) {
       if (controller.signal.aborted) return
+      if (pendingGone(error)) {
+        // 폼을 남겨 두면 누를 때마다 "찾을 수 없음"만 돌아온다 — 다시 읽어 "처음부터 다시" 안내로 바꾼다.
+        reload()
+        return
+      }
       setStatus({
         message:
           error instanceof ApiClientError
@@ -101,6 +114,10 @@ function VerifyForm({ pending }: { pending: PendingSocialView }) {
       if (controller.signal.aborted) return
       if (error instanceof ApiClientError && error.is('SOCIAL_PROVIDER_ALREADY_LINKED')) {
         navigate(`/auth/social/already-linked?provider=${pending.provider}`, { replace: true })
+        return
+      }
+      if (pendingGone(error)) {
+        reload()
         return
       }
       setCodeError(

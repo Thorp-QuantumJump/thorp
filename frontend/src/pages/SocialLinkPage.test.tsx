@@ -89,6 +89,26 @@ describe('SocialLinkPage', () => {
     expect(screen.getByRole('heading', { name: '이미 가입된 계정이 있어요.' })).toBeTruthy()
   })
 
+  it('확인 상한을 넘어 대기 상태가 사라지면 폼 대신 처음부터 다시 하라는 안내로 바뀐다', async () => {
+    const user = userEvent.setup()
+    socialMocks.socialLink.mockRejectedValue(
+      new ApiClientError('api', '확인 시도 횟수를 넘었습니다.', { code: 'SOCIAL_VERIFICATION_LIMIT' }),
+    )
+    renderSocialRoutes('/auth/social/link')
+
+    await user.type(await screen.findByLabelText('비밀번호'), 'wrong')
+    // 서버는 상한을 넘기면서 대기 상태를 버렸다. 다시 읽으면 없다.
+    socialMocks.getPendingSocial.mockRejectedValue(
+      new ApiClientError('api', '없음', { code: 'SOCIAL_PENDING_NOT_FOUND' }),
+    )
+    await user.click(screen.getAllByRole('button', { name: '확인하고 연결하기' })[0])
+
+    expect(
+      await screen.findByText('소셜 로그인 시간이 지났습니다. 처음부터 다시 시도해 주세요.'),
+    ).toBeTruthy()
+    expect(screen.queryByLabelText('비밀번호')).toBeNull()
+  })
+
   it('기존 계정 이메일로 인증번호를 받아 확인할 수 있다', async () => {
     const user = userEvent.setup()
     socialMocks.socialLink.mockResolvedValue(authenticatedUser)
