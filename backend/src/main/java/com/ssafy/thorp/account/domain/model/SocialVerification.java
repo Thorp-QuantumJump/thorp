@@ -42,6 +42,8 @@ public class SocialVerification {
         EXPIRED,
         RESEND_TOO_SOON,
         LIMIT_REACHED,
+        /** 번호 하나의 대조 횟수를 다 썼다. 번호는 지웠고 새로 받아야 한다 — 이메일 가입의 ATTEMPTS_EXCEEDED와 같은 안내다. */
+        ATTEMPTS_EXHAUSTED,
         /** 대상 계정 단위 누적 상한({@link SocialLinkTarget})에 걸렸다. 대기 상태는 그대로 둔다. */
         TARGET_LOCKED
     }
@@ -125,7 +127,7 @@ public class SocialVerification {
         }
         if (codeAttempts >= MAX_CODE_ATTEMPTS) {
             discardCode();
-            throw new RejectedAttempt(Rejection.NO_CODE);
+            throw new RejectedAttempt(Rejection.ATTEMPTS_EXHAUSTED);
         }
         codeAttempts++;
         return codeHash;

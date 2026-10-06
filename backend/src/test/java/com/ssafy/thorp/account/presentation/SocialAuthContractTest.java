@@ -296,9 +296,11 @@ class SocialAuthContractTest extends SocialLoginIntegrationTestSupport {
                 .as(counts.toString())
                 .isEqualTo(
                         com.ssafy.thorp.account.domain.model.SocialVerification.MAX_CODE_ATTEMPTS);
-        // 나머지는 모두 대조 없이 거절이다. 번호를 다 썼거나(NOT_FOUND), 같은 계정을 향한 시도가 한 시간 상한을 넘었다(LOCKED).
+        // 나머지는 모두 대조 없이 거절이다. 상한에 처음 닿은 요청이 번호를 지우고(ATTEMPTS_EXCEEDED), 그 뒤는 번호가 없거나(NOT_FOUND)
+        // 같은 계정을 향한 시도가 한 시간 상한을 넘었다(LOCKED).
         assertThat(
-                        counts.getOrDefault("EMAIL_VERIFICATION_NOT_FOUND", 0)
+                        counts.getOrDefault("EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED", 0)
+                                + counts.getOrDefault("EMAIL_VERIFICATION_NOT_FOUND", 0)
                                 + counts.getOrDefault("SOCIAL_LINK_TEMPORARILY_LOCKED", 0))
                 .as(counts.toString())
                 .isEqualTo(

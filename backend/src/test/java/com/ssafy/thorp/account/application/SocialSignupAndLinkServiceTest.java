@@ -80,6 +80,7 @@ class SocialSignupAndLinkServiceTest {
                 new PendingSocialLoginAccess(
                         store,
                         new SocialVerificationGuard(verifications, targets, clock),
+                        users,
                         encoder,
                         clock);
         linkService =
@@ -437,7 +438,7 @@ class SocialSignupAndLinkServiceTest {
                                         new SocialLinkCommand(Method.EMAIL_CODE, null, "654321"),
                                         request,
                                         response))
-                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+                .satisfies(code(ErrorCode.EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED));
         verify(socialAccounts, never()).save(any());
     }
 

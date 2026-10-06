@@ -1,10 +1,12 @@
 package com.ssafy.thorp.account.application.service;
 
 import com.ssafy.thorp.account.application.port.PendingSocialLoginStore;
+import com.ssafy.thorp.account.application.repository.UserRepository;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin;
 import com.ssafy.thorp.account.domain.model.PendingSocialLogin.Stage;
 import com.ssafy.thorp.account.domain.model.SocialVerification;
 import com.ssafy.thorp.account.domain.model.SocialVerification.CodeTarget;
+import com.ssafy.thorp.account.domain.model.User;
 import com.ssafy.thorp.common.exception.BusinessException;
 import com.ssafy.thorp.common.exception.ErrorCode;
 import java.time.Clock;
@@ -22,16 +24,19 @@ public class PendingSocialLoginAccess {
 
     private final PendingSocialLoginStore store;
     private final SocialVerificationGuard guard;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     public PendingSocialLoginAccess(
             PendingSocialLoginStore store,
             SocialVerificationGuard guard,
+            UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             Clock clock) {
         this.store = store;
         this.guard = guard;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -112,9 +117,18 @@ public class PendingSocialLoginAccess {
         guard.discard(pending.verificationId());
     }
 
-    /** 연결 대상 계정 이메일로 가는 번호만 계정 단위로 센다. 제공자 이메일 확인은 아직 어느 계정과도 무관하다. */
-    private static Long linkTargetOf(PendingSocialLogin pending, CodeTarget target) {
-        return target == CodeTarget.LINK_TARGET_EMAIL ? pending.linkTargetUserId() : null;
+    /**
+     * 이 번호가 향하는 기존 계정. 연결 대상 계정 이메일로 가는 번호는 그 계정이고, 제공자 이메일로 가는 번호는 그 주소로 가입한 계정이 있을 때 그 계정이다.
+     *
+     * <p>제공자 이메일 확인을 통과하면 같은 이메일의 기존 계정에 추가 확인 없이 연결된다(VERIFIED_EMAIL). 그러니 그 번호의 발송·대조도 그 계정을 향한
+     * 시도다 — 대기 상태마다만 세면 제공자 로그인을 다시 하는 것으로 상한이 새로 시작한다(2026-10-06 code review). 아무 계정의 주소도 아니면 셀
+     * 계정이 없다.
+     */
+    private Long linkTargetOf(PendingSocialLogin pending, CodeTarget target) {
+        if (target == CodeTarget.LINK_TARGET_EMAIL) {
+            return pending.linkTargetUserId();
+        }
+        return userRepository.findByEmail(pending.email()).map(User::getId).orElse(null);
     }
 
     private <T> T guarded(Supplier<T> action) {
@@ -128,6 +142,7 @@ public class PendingSocialLoginAccess {
     private ErrorCode errorOf(SocialVerification.Rejection rejection) {
         return switch (rejection) {
             case NO_CODE -> ErrorCode.EMAIL_VERIFICATION_NOT_FOUND;
+            case ATTEMPTS_EXHAUSTED -> ErrorCode.EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED;
             case EXPIRED -> ErrorCode.EMAIL_VERIFICATION_EXPIRED;
             case RESEND_TOO_SOON -> ErrorCode.EMAIL_VERIFICATION_RESEND_TOO_SOON;
             case TARGET_LOCKED -> ErrorCode.SOCIAL_LINK_TEMPORARILY_LOCKED;
