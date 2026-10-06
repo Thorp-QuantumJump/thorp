@@ -79,7 +79,7 @@ GET /learning/me
 | `continueReading.kind` | `RESUME`(읽는 중 글을 기록된 위치에서) · `START`(첫 안 읽은 글을 맨 위에서, `percent: null`) · `ALL_DONE`(`articleId` 등이 `null`) | FR-020, [data-model](../data-model.md) §12-2 |
 | `articles` | 공개된 글마다 상태(`UNREAD`·`READING`·`COMPLETED`)와 비율, 용어 수. `READING`의 `percent`는 1~99 | FR-020, FR-023 |
 | `stages` | 여섯 단계 전부. `OPEN`은 두 수가 있고, `REPREPARING`은 `completedCount: 0`·`publishedCount: 0`, `PREPARING`은 둘 다 `null`이다 | FR-020, FR-031 |
-| `badges` | 31개 전부, 갈래(`LEVEL`·`READ`·`CORRECT`·`PERFECT`·`STAGE`·`TERMS`·`SPECIAL`) 순서. `status`는 `EARNED`·`NOT_YET`·`PREPARING` | FR-024, [data-model](../data-model.md) §12-4 |
+| `badges` | 31개 전부, 갈래(`LEVEL`·`READ`·`CORRECT`·`PERFECT`·`STAGE`·`TERMS`·`SPECIAL`) 순서. `status`는 `EARNED`·`NOT_YET`·`PREPARING`이다. 배지의 `PREPARING`은 지금 공개된 콘텐츠로는 받을 수 없다는 뜻이고(사유는 `preparingReason`), `stages[].status`의 `PREPARING`(단계 공개 전)과 이름만 같다 | FR-024, [data-model](../data-model.md) §12-4 |
 | `badges[].preparingReason` | `MORE_STAGES`·`MORE_ARTICLES`·`ALL_STAGES`·`STAGE_NOT_RELEASED`·`STAGE_EMPTY`. 화면이 [design-notes](../design-notes.md) §7 문구로 바꾼다 | FR-024 |
 | `badges[].isNew` | 받은 지 7일 안 | FR-030 |
 | `gained` | 이번 정산에서 새로 생긴 것(§8). 화면은 조용한 알림으로 보인다 | FR-030 |
@@ -204,7 +204,7 @@ POST /learning/me/articles/{articleId}/answers
 
 - 서버가 공개 판으로 맞음·틀림을 판정하고 첫 답을 저장한 뒤 응답한다. 화면은 이 응답을 받은 뒤에만 맞았는지와 정답·풀이를 보인다(FR-022).
 - **이미 답한 문제**면 저장된 첫 답을 `alreadyAnswered: true`로 돌려준다. 요청의 `choiceId`와 달라도(다른 탭에서 먼저 답함) 저장된 값을 돌려주고 바꾸지 않는다. '다시 시도'가 같은 보기를 다시 보내도 같은 결과다.
-- 경험치·익힘·모두 맞힘은 [data-model](../data-model.md) §12-3의 규칙대로 같은 트랜잭션에서 정한다. 그 글의 `learning_progress` 행을 잠근다(R29).
+- 경험치·익힘·모두 맞힘은 [data-model](../data-model.md) §12-3의 규칙대로 같은 트랜잭션에서 정한다. 첫 답이 맞으면 모든 문제에 답하기 전이어도 그 글이 익힘(`FIRST_ANSWER`)이 되고(이미 익힘이면 그대로), 응답의 `quiz.mastered`·`masteredVia`에 바로 보인다(FR-022). 그 글의 `learning_progress` 행을 잠근다(R29).
 
 ### 실패
 
