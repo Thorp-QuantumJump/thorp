@@ -27,21 +27,11 @@ public record StageReleaseResponse(
                                                 article.articleId(),
                                                 article.revisionNo(),
                                                 article.renamedQuestions().stream()
-                                                        .map(
-                                                                renamed ->
-                                                                        new PublishResponse
-                                                                                .RenamedQuestion(
-                                                                                renamed.from(),
-                                                                                renamed.to()))
+                                                        .map(PublishResponse.RenamedQuestion::from)
                                                         .toList()))
                         .toList(),
                 result.transferredTerms().stream()
-                        .map(
-                                term ->
-                                        new PublishResponse.TransferredTerm(
-                                                term.termId(),
-                                                term.fromArticleId(),
-                                                term.toArticleId()))
+                        .map(PublishResponse.TransferredTerm::from)
                         .toList(),
                 result.logEntryKey(),
                 result.checkVersion());

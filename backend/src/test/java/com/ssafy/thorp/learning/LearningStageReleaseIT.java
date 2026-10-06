@@ -1,28 +1,27 @@
 package com.ssafy.thorp.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ssafy.thorp.learning.application.service.LearningStageAdminService;
+import com.ssafy.thorp.learning.domain.exception.StageCheckFailedException;
+import com.ssafy.thorp.learning.support.AdminCalls;
 import com.ssafy.thorp.learning.support.LearningSeeds;
+import com.ssafy.thorp.learning.support.LockWaits;
 import com.ssafy.thorp.learning.support.V2Draft;
 import com.ssafy.thorp.support.IntegrationTestSupport;
 import com.ssafy.thorp.support.Requesters;
-import com.zaxxer.hikari.HikariDataSource;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -72,12 +71,15 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private DataSource dataSource;
+    @Autowired private LearningStageAdminService stageService;
 
     private LearningSeeds seeds;
+    private AdminCalls calls;
 
     @BeforeEach
     void setUp() {
         seeds = new LearningSeeds(jdbcTemplate, objectMapper);
+        calls = new AdminCalls(mockMvc, objectMapper, ADMIN);
         seeds.reset();
     }
 
@@ -87,45 +89,6 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
     }
 
     // --- 호출 도우미 ---
-
-    private JsonNode call(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        String body =
-                mockMvc.perform(request)
-                        .andExpect(status().is(expectedStatus))
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-        return objectMapper.readTree(body);
-    }
-
-    /** 상태를 기대하지 않고 응답 본문만 읽는다. 동시 요청처럼 어느 쪽이 성공할지 정해지지 않을 때 쓴다. */
-    private JsonNode callAny(MockHttpServletRequestBuilder request) throws Exception {
-        return objectMapper.readTree(
-                mockMvc.perform(request)
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8));
-    }
-
-    private JsonNode admin(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        return call(request.with(Requesters.as(ADMIN)).with(csrf()), expectedStatus);
-    }
-
-    private JsonNode adminData(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        JsonNode body = admin(request, expectedStatus);
-        assertThat(body.get("success").asBoolean()).isTrue();
-        return body.get("data");
-    }
-
-    private JsonNode adminError(MockHttpServletRequestBuilder request, int expectedStatus)
-            throws Exception {
-        JsonNode body = admin(request, expectedStatus);
-        assertThat(body.get("success").asBoolean()).isFalse();
-        return body.get("error");
-    }
 
     private JsonNode example(String file) throws Exception {
         return objectMapper.readTree(Files.readString(EXAMPLES.resolve(file)));
@@ -236,7 +199,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         for (int revision = 0; revision < 3; revision++) {
             seeds.publishMinimal("returns-and-losses", "수익과 손실", "합성 질문", 8);
         }
-        adminData(
+        calls.adminData(
                 save(
                         "returns-and-losses",
                         draft("수익과 손실", 1)
@@ -244,13 +207,13 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                                 .term("max-drawdown", "가장 크게 줄었던 폭")
                                 .build(0)),
                 200);
-        adminData(
+        calls.adminData(
                 save(
                         "same-return-different-feel",
                         draft("같은 수익률인데 왜 느낌이 다를까?", 2).term("path-dependence", "지나온 길").build(0)),
                 200);
-        adminData(save("recovery-period", recovery.build(0)), 200);
-        adminData(
+        calls.adminData(save("recovery-period", recovery.build(0)), 200);
+        calls.adminData(
                 save(
                         "volatility-is-not-loss",
                         draft("변동성은 손실일까?", 4)
@@ -280,7 +243,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                         + " WHERE stage_key = 'pitfalls-and-validation'), stage_position = 4"
                         + " WHERE article_key = 'backtest'");
 
-        assertThat(adminData(get("/admin/learning/stages"), 200))
+        assertThat(calls.adminData(get("/admin/learning/stages"), 200))
                 .isEqualTo(example("admin-stages.json"));
     }
 
@@ -295,14 +258,15 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         setDraftVersion("recovery-period", 4);
         setDraftVersion("volatility-is-not-loss", 7);
         List<Object> before = publicationState();
-        JsonNode adminListBefore = adminData(get("/admin/learning/articles"), 200);
+        JsonNode adminListBefore = calls.adminData(get("/admin/learning/articles"), 200);
 
-        JsonNode readiness = adminData(readiness(STAGE_2), 200);
+        JsonNode readiness = calls.adminData(readiness(STAGE_2), 200);
 
         assertThat(readiness).isEqualTo(example("stage-readiness.json"));
         assertThat(publicationState()).isEqualTo(before);
-        assertThat(adminData(get("/admin/learning/articles"), 200)).isEqualTo(adminListBefore);
-        assertThat(call(get("/learning/curriculum"), 200).at("/data/changeLog")).isEmpty();
+        assertThat(calls.adminData(get("/admin/learning/articles"), 200))
+                .isEqualTo(adminListBefore);
+        assertThat(calls.call(get("/learning/curriculum"), 200).at("/data/changeLog")).isEmpty();
     }
 
     @Test
@@ -314,7 +278,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                         + " WHERE stage_key = 'pitfalls-and-validation'), stage_position = 4"
                         + " WHERE article_key = 'backtest'");
 
-        JsonNode readiness = adminData(readiness("backtest-and-costs"), 200);
+        JsonNode readiness = calls.adminData(readiness("backtest-and-costs"), 200);
 
         assertThat(readiness.get("ready").asBoolean()).isFalse();
         assertThat(readiness.get("blockers")).extracting(JsonNode::asText).containsExactly("ORDER");
@@ -341,7 +305,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                 .extracting(failure -> failure.get("check").asText())
                 .contains("REQUIRED_FIELDS", "KEY_SUMMARY", "QUIZ");
 
-        assertThat(adminError(readiness("no-such-stage"), 404).get("code").asText())
+        assertThat(calls.adminError(readiness("no-such-stage"), 404).get("code").asText())
                 .isEqualTo("LEARNING_STAGE_NOT_FOUND");
     }
 
@@ -354,7 +318,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         List<Object> before = publicationState();
 
         JsonNode error =
-                adminError(
+                calls.adminError(
                         release(STAGE_2, Map.of("returns-and-losses", 0, "recovery-period", 0)),
                         409);
 
@@ -379,12 +343,15 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                         + " WHERE stage_key = 'pitfalls-and-validation'), stage_position = 9"
                         + " WHERE article_key IN ('market-flow-fields', 'similar-periods')");
 
-        assertThat(adminData(readiness("economy-and-regimes"), 200).get("blockers"))
+        assertThat(calls.adminData(readiness("economy-and-regimes"), 200).get("blockers"))
                 .extracting(JsonNode::asText)
                 .containsExactly("EMPTY");
-        assertThat(adminError(release("economy-and-regimes", Map.of()), 409).get("code").asText())
+        assertThat(
+                        calls.adminError(release("economy-and-regimes", Map.of()), 409)
+                                .get("code")
+                                .asText())
                 .isEqualTo("LEARNING_STAGE_EMPTY");
-        assertThat(adminError(release("no-such-stage", Map.of()), 404).get("code").asText())
+        assertThat(calls.adminError(release("no-such-stage", Map.of()), 404).get("code").asText())
                 .isEqualTo("LEARNING_STAGE_NOT_FOUND");
     }
 
@@ -392,7 +359,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
     @DisplayName("요청의 글 목록이나 초안 번호가 공개 집합과 다르면 409 LEARNING_STAGE_CHANGED와 서버의 목록이다")
     void changedListOrVersionIsConflict() throws Exception {
         prepareStageTwo(passingRecovery());
-        Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
+        Map<String, Integer> versions = versionsFrom(calls.adminData(readiness(STAGE_2), 200));
         List<Object> before = publicationState();
 
         Map<String, Integer> missing = new LinkedHashMap<>(versions);
@@ -403,7 +370,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         extra.put("etf-fees", 0);
 
         for (Map<String, Integer> request : List.of(missing, stale, extra)) {
-            JsonNode error = adminError(release(STAGE_2, request), 409);
+            JsonNode error = calls.adminError(release(STAGE_2, request), 409);
             assertThat(error.get("code").asText()).isEqualTo("LEARNING_STAGE_CHANGED");
             assertThat(error.at("/details/articles"))
                     .extracting(
@@ -425,19 +392,22 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
             "글 하나라도 걸리면 stage-check-failed.json(422)이고 판·기록·색인·공개일·변경 기록·초안이 그대로다 (quickstart 8-3)")
     void oneFailingArticleBlocksTheWholeStage() throws Exception {
         prepareStageTwo(passingRecovery().firstQuestionChoices(3).secondQuestionBothCorrect());
-        Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
+        Map<String, Integer> versions = versionsFrom(calls.adminData(readiness(STAGE_2), 200));
         List<Object> before = publicationState();
         JsonNode inverseVolatility =
-                adminData(get("/admin/learning/articles/inverse-volatility"), 200);
+                calls.adminData(get("/admin/learning/articles/inverse-volatility"), 200);
 
-        JsonNode error = adminError(release(STAGE_2, versions), 422);
+        JsonNode error = calls.adminError(release(STAGE_2, versions), 422);
 
         assertThat(error).isEqualTo(example("stage-check-failed.json"));
         assertThat(publicationState()).isEqualTo(before);
-        assertThat(adminData(get("/admin/learning/articles/inverse-volatility"), 200))
+        assertThat(calls.adminData(get("/admin/learning/articles/inverse-volatility"), 200))
                 .as("넘기기도 일어나지 않았다")
                 .isEqualTo(inverseVolatility);
-        assertThat(call(get("/learning/curriculum"), 200).at("/data/releasedStageCount").asInt())
+        assertThat(
+                        calls.call(get("/learning/curriculum"), 200)
+                                .at("/data/releasedStageCount")
+                                .asInt())
                 .isEqualTo(1);
     }
 
@@ -447,10 +417,10 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
     void releaseMatchesExample() throws Exception {
         prepareStageTwo(passingRecovery());
         int inverseVolatilityVersion = draftVersion("inverse-volatility");
-        Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
-        assertThat(adminData(readiness(STAGE_2), 200).get("ready").asBoolean()).isTrue();
+        Map<String, Integer> versions = versionsFrom(calls.adminData(readiness(STAGE_2), 200));
+        assertThat(calls.adminData(readiness(STAGE_2), 200).get("ready").asBoolean()).isTrue();
 
-        JsonNode released = adminData(release(STAGE_2, versions), 200);
+        JsonNode released = calls.adminData(release(STAGE_2, versions), 200);
 
         ObjectNode withoutTime = released.deepCopy();
         withoutTime.remove("releasedAt");
@@ -509,17 +479,18 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         // 넘기기: 옛 글의 초안에서 용어가 빠지고 초안 번호가 1 오른다. 새 글 초안의 transferFrom은 비고 초안 번호는 그대로다.
         assertThat(draftVersion("inverse-volatility")).isEqualTo(inverseVolatilityVersion + 1);
         assertThat(
-                        adminData(get("/admin/learning/articles/inverse-volatility"), 200)
+                        calls.adminData(get("/admin/learning/articles/inverse-volatility"), 200)
                                 .at("/draft/terms"))
                 .extracting(term -> term.get("termId").asText())
                 .containsExactly("inverse-volatility");
-        JsonNode newOwner = adminData(get("/admin/learning/articles/volatility-is-not-loss"), 200);
+        JsonNode newOwner =
+                calls.adminData(get("/admin/learning/articles/volatility-is-not-loss"), 200);
         assertThat(newOwner.get("draftVersion").asInt()).isEqualTo(1);
         assertThat(newOwner.at("/draft/terms/0/transferFrom").isNull()).isTrue();
         assertThat(newOwner.get("publishedEdition").asText()).isEqualTo("CURRENT");
 
         // 공개 조회: 2단계가 OPEN이고 번호가 2-1…2-4다.
-        JsonNode curriculum = call(get("/learning/curriculum"), 200).get("data");
+        JsonNode curriculum = calls.call(get("/learning/curriculum"), 200).get("data");
         assertThat(curriculum.at("/stages/1/status").asText()).isEqualTo("OPEN");
         assertThat(curriculum.at("/stages/1/articles"))
                 .extracting(article -> article.get("number").asText())
@@ -527,15 +498,18 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         assertThat(curriculum.at("/stages/1/releasedAt").asText()).isEqualTo(releasedAt.toString());
         assertThat(curriculum.get("changeLog")).hasSize(1);
         assertThat(
-                        call(get("/learning/articles/returns-and-losses"), 200)
+                        calls.call(get("/learning/articles/returns-and-losses"), 200)
                                 .at("/data/edition")
                                 .asText())
                 .isEqualTo("CURRENT");
-        assertThat(call(get("/learning/terms/volatility"), 200).at("/data/articleId").asText())
+        assertThat(
+                        calls.call(get("/learning/terms/volatility"), 200)
+                                .at("/data/articleId")
+                                .asText())
                 .isEqualTo("volatility-is-not-loss");
 
         // 되돌리는 경로는 없다. 다시 공개하면 409다.
-        assertThat(adminError(release(STAGE_2, versions), 409).get("code").asText())
+        assertThat(calls.adminError(release(STAGE_2, versions), 409).get("code").asText())
                 .isEqualTo("LEARNING_STAGE_ALREADY_RELEASED");
     }
 
@@ -548,15 +522,15 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         jdbcTemplate.update(
                 "UPDATE learning_article SET first_released_at = TIMESTAMPTZ '2026-11-12 10:00:00+09'"
                         + " WHERE article_key = 'etf-fees'");
-        adminData(
+        calls.adminData(
                 save(
                         "etf-fees",
                         draft("ETF 보수는 어디로 빠져나갈까?", 5).term("total-expense", "총보수").build(0)),
                 200);
-        Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
+        Map<String, Integer> versions = versionsFrom(calls.adminData(readiness(STAGE_2), 200));
         assertThat(versions).containsKey("etf-fees");
 
-        JsonNode released = adminData(release(STAGE_2, versions), 200);
+        JsonNode released = calls.adminData(release(STAGE_2, versions), 200);
 
         assertThat(released.get("published"))
                 .extracting(article -> article.get("articleId").asText())
@@ -586,29 +560,30 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
             "공개된 단계에 새 글을 글마다 게시하면 ARTICLE_ADDED 한 줄이고, 게시 취소 뒤 다시 게시하거나 공개된 다른 단계로 옮겨 게시해도 늘지 않는다 (quickstart 8-6, T163)")
     void addingArticleToReleasedStageLogsOnce() throws Exception {
         prepareStageTwo(passingRecovery());
-        adminData(release(STAGE_2, versionsFrom(adminData(readiness(STAGE_2), 200))), 200);
-        adminData(
+        calls.adminData(
+                release(STAGE_2, versionsFrom(calls.adminData(readiness(STAGE_2), 200))), 200);
+        calls.adminData(
                 post("/admin/learning/articles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(
                                 "{\"articleId\":\"drawdown-depth\",\"title\":\"하락 폭은 어떻게 읽을까?\","
                                         + "\"stageKey\":\"returns-and-risk\",\"stagePosition\":5}"),
                 201);
-        adminData(
+        calls.adminData(
                 save(
                         "drawdown-depth",
                         draft("하락 폭은 어떻게 읽을까?", 5).term("drawdown-depth", "하락 폭").build(0)),
                 200);
 
         JsonNode published =
-                adminData(
+                calls.adminData(
                         post("/admin/learning/articles/drawdown-depth/publish")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"expectedDraftVersion\":1}"),
                         200);
         assertThat(published.get("edition").asText()).isEqualTo("CURRENT");
 
-        JsonNode curriculum = call(get("/learning/curriculum"), 200).get("data");
+        JsonNode curriculum = calls.call(get("/learning/curriculum"), 200).get("data");
         assertThat(curriculum.at("/stages/1/articles/4/number").asText()).isEqualTo("2-5");
         assertThat(curriculum.at("/changeLog/0/entryKey").asText())
                 .isEqualTo("article:drawdown-depth");
@@ -616,8 +591,8 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         assertThat(curriculum.at("/notices/0/entryKey").asText())
                 .isEqualTo("article:drawdown-depth");
 
-        adminData(post("/admin/learning/articles/drawdown-depth/unpublish"), 200);
-        adminData(
+        calls.adminData(post("/admin/learning/articles/drawdown-depth/unpublish"), 200);
+        calls.adminData(
                 post("/admin/learning/articles/drawdown-depth/publish")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expectedDraftVersion\":1}"),
@@ -625,20 +600,20 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         assertThat(count("learning_release_log")).isEqualTo(2);
 
         // 공개된 단계 사이 이동(2단계 → 이미 공개된 1단계)도 변경 기록에 올리지 않는다(FR-031, T163).
-        adminData(
+        calls.adminData(
                 save(
                         "drawdown-depth",
                         V2Draft.of(objectMapper, "하락 폭은 어떻게 읽을까?", "etf-market-basics", 5)
                                 .term("drawdown-depth", "하락 폭")
                                 .build(1)),
                 200);
-        adminData(
+        calls.adminData(
                 post("/admin/learning/articles/drawdown-depth/publish")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expectedDraftVersion\":2}"),
                 200);
         assertThat(count("learning_release_log")).isEqualTo(2);
-        JsonNode moved = call(get("/learning/curriculum"), 200).get("data");
+        JsonNode moved = calls.call(get("/learning/curriculum"), 200).get("data");
         assertThat(moved.at("/stages/0/articles/0/articleId").asText()).isEqualTo("drawdown-depth");
         assertThat(moved.at("/stages/0/articles/0/number").asText()).isEqualTo("1-1");
         assertThat(moved.at("/stages/1/articles")).hasSize(4);
@@ -650,22 +625,23 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
         prepareStageTwo(passingRecovery());
         Instant releasedAt =
                 Instant.parse(
-                        adminData(
+                        calls.adminData(
                                         release(
                                                 STAGE_2,
-                                                versionsFrom(adminData(readiness(STAGE_2), 200))),
+                                                versionsFrom(
+                                                        calls.adminData(readiness(STAGE_2), 200))),
                                         200)
                                 .get("releasedAt")
                                 .asText());
         for (String articleId : STAGE_2_ARTICLES) {
-            adminData(post("/admin/learning/articles/" + articleId + "/unpublish"), 200);
+            calls.adminData(post("/admin/learning/articles/" + articleId + "/unpublish"), 200);
         }
 
-        JsonNode reprepared = call(get("/learning/curriculum"), 200).get("data");
+        JsonNode reprepared = calls.call(get("/learning/curriculum"), 200).get("data");
         assertThat(reprepared.at("/stages/1/status").asText()).isEqualTo("REPREPARING");
         assertThat(reprepared.get("releasedStageCount").asInt()).isEqualTo(2);
 
-        adminData(
+        calls.adminData(
                 post("/admin/learning/articles/recovery-period/publish")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(
@@ -673,68 +649,36 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                                         + draftVersion("recovery-period")
                                         + "}"),
                 200);
-        JsonNode reopened = call(get("/learning/curriculum"), 200).get("data");
+        JsonNode reopened = calls.call(get("/learning/curriculum"), 200).get("data");
         assertThat(reopened.at("/stages/1/status").asText()).isEqualTo("OPEN");
         assertThat(reopened.at("/stages/1/releasedAt").asText()).isEqualTo(releasedAt.toString());
         assertThat(reopened.get("changeLog")).hasSize(1);
         assertThat(releasedAt(STAGE_2).toInstant()).isEqualTo(releasedAt);
     }
 
+    @Test
+    @DisplayName("공개가 용어 제약에 걸린 뒤의 다시 판정은 걸린 글이 있으면 422 예외를, 없으면 아무것도 하지 않는다 (컨트롤러의 제약 위반 변환)")
+    void requireChecksPassJudgesCurrentState() throws Exception {
+        prepareStageTwo(passingRecovery());
+
+        stageService.requireChecksPass(STAGE_2);
+
+        calls.adminData(
+                save("recovery-period", passingRecovery().keySummaryLines(2).build(1)), 200);
+        assertThatThrownBy(() -> stageService.requireChecksPass(STAGE_2))
+                .isInstanceOf(StageCheckFailedException.class);
+    }
+
     // --- 동시성 (T166) ---
-
-    /** 테스트 연결 풀과 별개인 연결. 커밋하지 않은 잠금으로 요청을 세워 두는 데 쓴다. */
-    private Connection rawConnection() throws Exception {
-        HikariDataSource hikari = dataSource.unwrap(HikariDataSource.class);
-        return DriverManager.getConnection(
-                hikari.getJdbcUrl(), hikari.getUsername(), hikari.getPassword());
-    }
-
-    /**
-     * {@code holder} 뒤에 줄 선 세션이 {@code sessions}개가 될 때까지 기다린다. DB 전체의 잠금 대기를 세면 다른 세션의 대기 때문에 곧바로
-     * 넘어간다({@code LearningAdminApiIT}와 같은 이유). 같은 행을 기다리는 둘째 요청은 holder가 아니라 첫째 요청의 행 잠금을 기다리므로,
-     * holder에서 시작하는 대기 사슬 전체를 센다.
-     */
-    private static void awaitBlockedBy(Connection holder, Connection watcher, int sessions)
-            throws Exception {
-        int holderPid;
-        try (ResultSet pid = holder.createStatement().executeQuery("SELECT pg_backend_pid()")) {
-            pid.next();
-            holderPid = pid.getInt(1);
-        }
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
-        while (System.nanoTime() < deadline) {
-            try (PreparedStatement blocked =
-                    watcher.prepareStatement(
-                            """
-                            WITH RECURSIVE chain (pid) AS (
-                                SELECT pid FROM pg_stat_activity WHERE ? = ANY (pg_blocking_pids(pid))
-                                UNION
-                                SELECT a.pid FROM pg_stat_activity a JOIN chain c
-                                  ON c.pid = ANY (pg_blocking_pids(a.pid))
-                            )
-                            SELECT count(*) FROM chain
-                            """)) {
-                blocked.setInt(1, holderPid);
-                try (ResultSet rows = blocked.executeQuery()) {
-                    rows.next();
-                    if (rows.getInt(1) >= sessions) {
-                        return;
-                    }
-                }
-            }
-            Thread.sleep(50);
-        }
-        throw new AssertionError("requests never waited on the lock held by pid " + holderPid);
-    }
 
     @Test
     @DisplayName("같은 단계 공개 둘이 동시에 오면 하나만 성공하고 다른 하나는 409 LEARNING_STAGE_ALREADY_RELEASED다")
     void concurrentReleasesSucceedOnce() throws Exception {
         prepareStageTwo(passingRecovery());
-        Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
+        Map<String, Integer> versions = versionsFrom(calls.adminData(readiness(STAGE_2), 200));
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        try (Connection holder = rawConnection();
-                Connection watcher = rawConnection()) {
+        try (Connection holder = LockWaits.rawConnection(dataSource);
+                Connection watcher = LockWaits.rawConnection(dataSource)) {
             holder.setAutoCommit(false);
             holder.createStatement()
                     .executeQuery(
@@ -745,12 +689,12 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                 requests.add(
                         executor.submit(
                                 () ->
-                                        callAny(
+                                        calls.callAny(
                                                 release(STAGE_2, versions)
                                                         .with(Requesters.as(ADMIN))
                                                         .with(csrf()))));
             }
-            awaitBlockedBy(holder, watcher, 2);
+            LockWaits.awaitBlockedBy(holder, watcher, 2);
             holder.rollback();
 
             List<String> outcomes = new ArrayList<>();
@@ -776,10 +720,10 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
             "공개가 글 잠금을 기다리는 사이 그 글의 저장이 먼저 커밋되면 저장은 정상이고 공개는 409 LEARNING_STAGE_CHANGED로 아무것도 쓰지 않는다 (T166)")
     void saveCommittedWhileReleaseWaitsIsConflict() throws Exception {
         prepareStageTwo(passingRecovery());
-        Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
+        Map<String, Integer> versions = versionsFrom(calls.adminData(readiness(STAGE_2), 200));
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        try (Connection holder = rawConnection();
-                Connection watcher = rawConnection()) {
+        try (Connection holder = LockWaits.rawConnection(dataSource);
+                Connection watcher = LockWaits.rawConnection(dataSource)) {
             holder.setAutoCommit(false);
             // 글 행을 잠가 둔다. 행 잠금은 기다린 순서대로 넘어가므로, 먼저 온 저장이 공개보다 먼저 잠금을 얻어 커밋한다.
             holder.createStatement()
@@ -790,19 +734,19 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
             Future<JsonNode> saving =
                     executor.submit(
                             () ->
-                                    callAny(
+                                    calls.callAny(
                                             save("recovery-period", passingRecovery().build(1))
                                                     .with(Requesters.as(ADMIN))
                                                     .with(csrf())));
-            awaitBlockedBy(holder, watcher, 1);
+            LockWaits.awaitBlockedBy(holder, watcher, 1);
             Future<JsonNode> releasing =
                     executor.submit(
                             () ->
-                                    callAny(
+                                    calls.callAny(
                                             release(STAGE_2, versions)
                                                     .with(Requesters.as(ADMIN))
                                                     .with(csrf())));
-            awaitBlockedBy(holder, watcher, 2);
+            LockWaits.awaitBlockedBy(holder, watcher, 2);
             holder.commit();
 
             JsonNode saved = saving.get(30, TimeUnit.SECONDS);
@@ -829,9 +773,10 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
     @DisplayName("공개가 먼저 끝나면 공개 전에 읽은 초안의 저장은 LEARNING_DRAFT_CHANGED 없이 저장된다 — 공개는 초안 번호를 바꾸지 않는다")
     void saveAfterReleaseKeepsDraftVersion() throws Exception {
         prepareStageTwo(passingRecovery());
-        adminData(release(STAGE_2, versionsFrom(adminData(readiness(STAGE_2), 200))), 200);
+        calls.adminData(
+                release(STAGE_2, versionsFrom(calls.adminData(readiness(STAGE_2), 200))), 200);
 
-        JsonNode saved = adminData(save("recovery-period", passingRecovery().build(1)), 200);
+        JsonNode saved = calls.adminData(save("recovery-period", passingRecovery().build(1)), 200);
 
         assertThat(saved.get("draftVersion").asInt()).isEqualTo(2);
     }

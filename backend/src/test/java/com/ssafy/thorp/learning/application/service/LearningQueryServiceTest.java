@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -23,6 +24,7 @@ import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
 import com.ssafy.thorp.learning.application.result.CurriculumResult;
 import com.ssafy.thorp.learning.application.result.CurriculumResult.LogLine;
 import com.ssafy.thorp.learning.application.result.CurriculumResult.OpenArticle;
+import com.ssafy.thorp.learning.application.result.CurriculumResult.PreviousArticle;
 import com.ssafy.thorp.learning.application.result.CurriculumResult.StageStatus;
 import com.ssafy.thorp.learning.application.result.CurriculumResult.StageView;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult;
@@ -33,6 +35,7 @@ import com.ssafy.thorp.learning.application.result.LearningArticleResult.TermVie
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.UnavailableReason;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
+import com.ssafy.thorp.learning.application.result.PublishedArticleEntry;
 import com.ssafy.thorp.learning.application.result.PublishedArticleView;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
@@ -567,8 +570,6 @@ class LearningQueryServiceTest {
         LearningArticleSummaryResult listed =
                 new LearningArticleSummaryResult("returns-and-losses", "수익과 손실", "질문", 8);
         when(articleRepository.findPublishedOrdered()).thenReturn(List.of(listed));
-        when(articleRepository.findAllPublished())
-                .thenReturn(List.of(new PublishedArticleView(revision("문장"), FIRST_IN_STAGE_2)));
 
         CurriculumResult curriculum = service.curriculum();
 
@@ -582,6 +583,7 @@ class LearningQueryServiceTest {
                             assertThat(stage.previousEditionArticles()).isEmpty();
                         });
         verify(publishedTermRepository, never()).countPublishedByArticle();
+        verify(articleRepository, never()).findPublishedEntries();
     }
 
     @Test
@@ -589,11 +591,18 @@ class LearningQueryServiceTest {
             "공개된 단계는 CURRENT 글을 번호와 함께 싣고, 공개된 글이 없으면 REPREPARING이다. 공개 전 단계의 CURRENT 판은 싣지 않는다 (SC-017)")
     void curriculumAfterRelease() {
         givenStages(true);
-        when(articleRepository.findAllPublished())
+        when(articleRepository.findPublishedEntries())
                 .thenReturn(
                         List.of(
-                                new PublishedArticleView(
-                                        currentRevision(), new Placement(RETURNS_AND_RISK, 4))));
+                                new PublishedArticleEntry(
+                                        CURRENT_ARTICLE,
+                                        Edition.CURRENT,
+                                        RETURNS_AND_RISK,
+                                        4,
+                                        "변동성은 손실이 아니다",
+                                        "질문",
+                                        5,
+                                        false)));
         when(publishedTermRepository.countPublishedByArticle())
                 .thenReturn(Map.of(CURRENT_ARTICLE, 1));
 
@@ -612,10 +621,67 @@ class LearningQueryServiceTest {
     }
 
     @Test
+    @DisplayName("공개 전 단계의 이전 판 글은 그 글의 판만 따로 읽어 본문으로 읽기 분을 계산한다. 공개된 단계의 글은 판 본문을 읽지 않는다")
+    void previousEditionReadsOnlyItsOwnRevision() {
+        when(stageRepository.findAllOrdered())
+                .thenReturn(
+                        List.of(
+                                new LearningStage(
+                                        1L,
+                                        new StageKey("etf-market-basics"),
+                                        1,
+                                        "ETF와 국내 시장 기초",
+                                        "입문",
+                                        "s",
+                                        Instant.EPOCH,
+                                        7L),
+                                new LearningStage(
+                                        2L,
+                                        RETURNS_AND_RISK,
+                                        2,
+                                        "수익과 위험 읽기",
+                                        "입문",
+                                        "s",
+                                        null,
+                                        null)));
+        when(articleRepository.findPublishedEntries())
+                .thenReturn(
+                        List.of(
+                                new PublishedArticleEntry(
+                                        ARTICLE,
+                                        Edition.LEGACY,
+                                        RETURNS_AND_RISK,
+                                        1,
+                                        "수익과 손실",
+                                        "질문",
+                                        null,
+                                        true)));
+        when(articleRepository.findPublishedRevisions(anyCollection()))
+                .thenReturn(Map.of(ARTICLE, revision("문장")));
+
+        CurriculumResult curriculum = service.curriculum();
+
+        ArticleSnapshot snapshot = revision("문장").snapshot();
+        assertThat(curriculum.stages().get(1).previousEditionArticles())
+                .extracting(PreviousArticle::articleId, PreviousArticle::readingMinutes)
+                .containsExactly(
+                        tuple(
+                                "returns-and-losses",
+                                ReadingEstimate.minutes(
+                                        ReadingEstimate.bodyChars(
+                                                snapshot.bodyBlocks(), snapshot.terms()),
+                                        new YamlPublishCheckRulesLoader()
+                                                .v2()
+                                                .reading()
+                                                .charsPerMinute())));
+        verify(articleRepository).findPublishedRevisions(List.of(ARTICLE));
+    }
+
+    @Test
     @DisplayName("공개 안내는 지금부터 7일 안의 변경 기록이고, 변경 기록은 단계 번호·이름을 붙여 모두 싣는다")
     void noticesAreTheLastSevenDays() {
         givenStages(true);
-        when(articleRepository.findAllPublished()).thenReturn(List.of());
+        when(articleRepository.findPublishedEntries()).thenReturn(List.of());
         when(releaseLogRepository.findAllLatestFirst())
                 .thenReturn(
                         List.of(

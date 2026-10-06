@@ -4,9 +4,12 @@ import com.ssafy.thorp.learning.application.repository.LearningTermRepository;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import com.ssafy.thorp.learning.infrastructure.persistence.LearningTermJpaRepository.TermArticleRow;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Repository;
 
@@ -24,19 +27,26 @@ public class LearningTermRepositoryImpl implements LearningTermRepository {
     }
 
     @Override
-    public Optional<ArticleId> findOwnerArticleKey(TermId termId) {
-        return termJpaRepository
-                .findByTermKeyAndTransferFromArticleIdIsNull(termId.value())
-                .flatMap(term -> articleJpaRepository.findArticleKeyById(term.getArticleId()))
-                .map(ArticleId::new);
+    public Map<TermId, ArticleId> findOwnerArticleKeys(Collection<TermId> termIds) {
+        return termIds.isEmpty() ? Map.of() : byTerm(termJpaRepository.findOwners(keys(termIds)));
     }
 
     @Override
-    public Optional<ArticleId> findIncomingArticleKey(TermId termId) {
-        return termJpaRepository
-                .findByTermKeyAndTransferFromArticleIdIsNotNull(termId.value())
-                .flatMap(term -> articleJpaRepository.findArticleKeyById(term.getArticleId()))
-                .map(ArticleId::new);
+    public Map<TermId, ArticleId> findIncomingArticleKeys(Collection<TermId> termIds) {
+        return termIds.isEmpty() ? Map.of() : byTerm(termJpaRepository.findIncoming(keys(termIds)));
+    }
+
+    private static List<String> keys(Collection<TermId> termIds) {
+        return termIds.stream().map(TermId::value).distinct().toList();
+    }
+
+    private static Map<TermId, ArticleId> byTerm(List<TermArticleRow> rows) {
+        Map<TermId, ArticleId> owners = new HashMap<>();
+        rows.forEach(
+                row ->
+                        owners.put(
+                                new TermId(row.getTermKey()), new ArticleId(row.getArticleKey())));
+        return owners;
     }
 
     @Override
