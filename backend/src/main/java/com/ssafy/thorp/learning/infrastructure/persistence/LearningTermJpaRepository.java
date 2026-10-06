@@ -1,7 +1,7 @@
 package com.ssafy.thorp.learning.infrastructure.persistence;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,16 +11,36 @@ public interface LearningTermJpaRepository extends JpaRepository<LearningTermJpa
 
     List<LearningTermJpaEntity> findByArticleIdOrderByIdAsc(Long articleId);
 
+    List<LearningTermJpaEntity> findByArticleIdInOrderByIdAsc(Collection<Long> articleIds);
+
     /** 모든 글의 용어. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */
     List<LearningTermJpaEntity> findAllByOrderByIdAsc();
 
-    /** 이 용어를 소유 중인 행. 소유 중인 행은 {@code term_key}마다 하나다({@code uq_learning_term_key_owned}). */
-    Optional<LearningTermJpaEntity> findByTermKeyAndTransferFromArticleIdIsNull(String termKey);
+    /** 용어와 그 행이 속한 글의 키. */
+    interface TermArticleRow {
+        String getTermKey();
+
+        String getArticleKey();
+    }
+
+    /** 이 용어들을 소유 중인 행의 글. 소유 중인 행은 {@code term_key}마다 하나다({@code uq_learning_term_key_owned}). */
+    @Query(
+            "select t.termKey as termKey, a.articleKey as articleKey"
+                    + " from LearningTermJpaEntity t, LearningArticleJpaEntity a"
+                    + " where a.id = t.articleId and t.transferFromArticleId is null"
+                    + " and t.termKey in :termKeys")
+    List<TermArticleRow> findOwners(@Param("termKeys") Collection<String> termKeys);
 
     /**
-     * 이 용어를 넘겨받는 중인 행. 넘겨받는 중인 행은 {@code term_key}마다 하나다({@code uq_learning_term_key_incoming}).
+     * 이 용어들을 넘겨받는 중인 행의 글. 넘겨받는 중인 행은 {@code term_key}마다 하나다({@code
+     * uq_learning_term_key_incoming}).
      */
-    Optional<LearningTermJpaEntity> findByTermKeyAndTransferFromArticleIdIsNotNull(String termKey);
+    @Query(
+            "select t.termKey as termKey, a.articleKey as articleKey"
+                    + " from LearningTermJpaEntity t, LearningArticleJpaEntity a"
+                    + " where a.id = t.articleId and t.transferFromArticleId is not null"
+                    + " and t.termKey in :termKeys")
+    List<TermArticleRow> findIncoming(@Param("termKeys") Collection<String> termKeys);
 
     /** 이 글에서 넘겨받는 중인 행. */
     List<LearningTermJpaEntity> findByArticleIdAndTransferFromArticleIdIsNotNull(Long articleId);

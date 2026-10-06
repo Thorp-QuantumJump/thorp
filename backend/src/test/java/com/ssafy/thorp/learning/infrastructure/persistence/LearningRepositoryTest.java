@@ -2,6 +2,7 @@ package com.ssafy.thorp.learning.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
@@ -167,8 +168,8 @@ class LearningRepositoryTest extends RepositoryTestSupport {
         assertThat(load().terms())
                 .extracting(term -> term.termId().value(), LearningTerm::sentence)
                 .containsExactly(tuple("max-drawdown", "새 문장"), tuple("drawdown-period", ""));
-        assertThat(termRepository.findOwnerArticleKey(NET_TOTAL_RETURN)).isEmpty();
-        assertThat(termRepository.findOwnerArticleKey(MAX_DRAWDOWN)).contains(ARTICLE);
+        assertThat(termRepository.findOwnerArticleKeys(List.of(NET_TOTAL_RETURN, MAX_DRAWDOWN)))
+                .containsExactly(entry(MAX_DRAWDOWN, ARTICLE));
     }
 
     @Test

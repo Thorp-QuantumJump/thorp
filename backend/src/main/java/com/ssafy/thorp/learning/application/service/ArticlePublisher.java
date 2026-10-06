@@ -1,5 +1,6 @@
 package com.ssafy.thorp.learning.application.service;
 
+import com.ssafy.thorp.learning.application.port.SectorMapPort.SectorMapView;
 import com.ssafy.thorp.learning.application.repository.ArticleRevisionRepository;
 import com.ssafy.thorp.learning.application.repository.LearningArticleRepository;
 import com.ssafy.thorp.learning.application.repository.LearningTermRepository;
@@ -24,23 +25,28 @@ import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
+import java.util.Set;
+import java.util.TreeSet;
 import org.springframework.stereotype.Component;
 
 /**
- * 검사를 통과한 글 하나를 게시한다(data-model §10-1 '글마다 게시'). 글마다 게시와 단계 공개가 같은 쓰기를 쓴다. 호출자가 트랜잭션을 열고 글 행을 잠그고
- * 게시 전 검사와 용어 소유 판정({@link TermOwnership})을 먼저 통과시킨다.
+ * 검사를 통과한 글 하나를 게시한다(data-model §10-1 '글마다 게시'). 글마다 게시와 단계 공개가 같은 쓰기를 쓴다. 호출자가 트랜잭션을 열고 {@link
+ * #lockWithGivers}로 글과 넘겨줄 옛 소유 글을 잠근 뒤, 게시 전 검사와 용어 소유 판정({@link TermOwnership})을 먼저 통과시킨다.
  *
  * <p>쓰는 것: 새 판(같은 문제 판정 포함), 넘기기, 글 상태·공개 배치, 비어 있는 {@code first_released_at}(CURRENT 게시), 게시 용어
  * 색인, {@code PUBLISH} 기록. 변경 기록은 호출자가 쓴다. 글마다 게시는 {@code ARTICLE_ADDED} 한 줄, 단계 공개는 단계에 한 줄이다.
  *
- * <p><b>넘기기</b>(data-model §7-2, research R24): 옛 소유 글의 그 용어 게시 색인 행과 초안 행을 지우고 옛 글의 초안 번호를 1 올린 뒤,
- * 이 글의 넘겨받는 중인 행을 소유 중인 행으로 바꾸고 이 글의 판으로 색인을 쓴다. 옛 글의 판과 초안의 다른 부분은 바꾸지 않는다. 지우기가 먼저여야 부분 유일 색인과 색인
- * 기본키에 걸리지 않는다.
+ * <p><b>넘기기</b>(data-model §7-2, research R24): 옛 소유 글의 그 용어 게시 색인 행과 초안 행을 지우고 옛 글의 초안 번호를 1 올린
+ * 뒤(한 단계 공개 안에서는 옛 글마다 한 번), 이 글의 넘겨받는 중인 행을 소유 중인 행으로 바꾸고 이 글의 판으로 색인을 쓴다. 옛 글의 판과 초안의 다른 부분은 바꾸지
+ * 않는다. 지우기가 먼저여야 부분 유일 색인과 색인 기본키에 걸리지 않는다.
  */
 @Component
 public class ArticlePublisher {
@@ -86,9 +92,42 @@ public class ArticlePublisher {
     }
 
     /**
+     * 게시할 글과 그 글들이 넘겨받는 옛 소유 글을 {@code articleId} 순서로 한 번에 잠그고, 잠근 뒤의 값을 다시 읽는다(data-model
+     * §10-1·§10-3).
+     *
+     * <p>글마다 게시와 단계 공개가 같은 순서로 잠근다. 받는 글을 먼저 잠그고 옛 글을 나중에 잠그면, 두 글이 서로의 용어를 넘겨받거나 단계 공개와 글마다 게시가 같은
+     * 두 글을 거꾸로 잠가 서로 기다린다. 기다림이 고리가 되면 PostgreSQL이 한쪽을 실패시켜 500이 된다.
+     *
+     * <p>용어 소유 판정은 이 잠금 뒤에 한다. 옛 글의 소유는 그 글을 잠가야만 바뀌므로, 판정한 뒤 넘기기까지 소유 글이 바뀌지 않는다.
+     *
+     * @param targets 잠그기 전에 읽은 게시할 글. 호출자는 잠근 뒤 초안 번호가 그대로인지 다시 본다. 번호가 같으면 초안의 넘겨받는 용어도 같으므로 옛 글을
+     *     빠뜨리지 않는다
+     * @return 잠근 뒤 다시 읽은 글(게시할 글과 옛 소유 글). 그사이 없어진 글은 결과에 없다
+     */
+    public Map<ArticleId, LearningArticle> lockWithGivers(Collection<LearningArticle> targets) {
+        Set<ArticleId> ids = new TreeSet<>(Comparator.comparing(ArticleId::value));
+        for (LearningArticle target : targets) {
+            ids.add(target.articleId());
+            target.terms().stream()
+                    .filter(LearningTerm::transferring)
+                    .map(LearningTerm::transferFrom)
+                    .forEach(ids::add);
+        }
+        Map<ArticleId, LearningArticle> locked = new HashMap<>();
+        for (ArticleId id : ids) {
+            articleRepository
+                    .findByArticleKeyForUpdate(id)
+                    .ifPresent(article -> locked.put(id, article));
+        }
+        return locked;
+    }
+
+    /**
+     * 글 하나를 게시한다(글마다 게시).
+     *
      * @param article 잠근 뒤 다시 읽은 글. 검사와 용어 소유 판정을 통과했다
      * @param reading {@code CURRENT} 게시가 판에 넣을 읽기 값의 규칙
-     * @param publishedAt 판·기록의 시각. 단계 공개는 모든 글에 같은 값을 넘긴다
+     * @param publishedAt 판·기록의 시각
      */
     public Outcome publish(
             LearningArticle article,
@@ -99,6 +138,34 @@ public class ArticlePublisher {
             ReadingRules reading,
             long actorUserId,
             Instant publishedAt) {
+        return publish(
+                article,
+                expectedDraftVersion,
+                mode,
+                checkVersion,
+                mapVersion,
+                reading,
+                actorUserId,
+                publishedAt,
+                new HashSet<>());
+    }
+
+    /**
+     * 단계 공개의 글 하나를 게시한다. 같은 공개의 글들이 {@code bumpedGivers}를 함께 쓴다.
+     *
+     * @param bumpedGivers 이 공개에서 이미 초안 번호를 올린 옛 소유 글. 이 게시가 번호를 올린 옛 글을 더한다. 한 옛 글이 여러 글에 용어를 넘겨도
+     *     번호는 한 번만 오른다(learning-admin-api §11)
+     */
+    public Outcome publish(
+            LearningArticle article,
+            int expectedDraftVersion,
+            PublishMode mode,
+            String checkVersion,
+            String mapVersion,
+            ReadingRules reading,
+            long actorUserId,
+            Instant publishedAt,
+            Set<ArticleId> bumpedGivers) {
         ArticleId id = article.articleId();
         // 다음 판 번호와 같은 문제 판정의 기준은 가장 최근 판 하나로 정한다. 옛 판 본문을 모두 읽지 않는다.
         Optional<ArticleRevision> latest = revisionRepository.findLatestByArticleId(id);
@@ -123,7 +190,7 @@ public class ArticlePublisher {
                             .toList();
         }
 
-        List<TransferredTerm> transferred = transferTerms(article);
+        List<TransferredTerm> transferred = transferTerms(article, bumpedGivers);
         article = article.withTransfersCompleted();
 
         ArticleRevision revision =
@@ -157,14 +224,30 @@ public class ArticlePublisher {
     }
 
     /**
-     * 이 글이 넘겨받는 용어를 옛 소유 글에서 가져온다. 옛 글마다 초안 번호는 한 번만 올린다. 용어를 여럿 넘겨도 편집 화면이 다시 읽을 일은 하나다.
+     * 판에 남길 대응표 버전. 예시가 없으면 대응표를 대조하지 않았으므로 {@code NOT_CHECKED}다. 판정하지 않은 것을 판정한 것처럼 적지 않는다(원칙 VI).
+     */
+    public static String mapVersion(LearningArticle article, Optional<SectorMapView> map) {
+        return article.example() == null ? ArticleRevision.NOT_CHECKED : requireMapVersion(map);
+    }
+
+    /** 검사를 통과한 예시가 있는 글은 대응표가 있었다(EXAMPLE_SECTOR_IN_MAP). 그 버전을 판에 남긴다. */
+    public static String requireMapVersion(Optional<SectorMapView> map) {
+        return map.map(SectorMapView::mapVersion)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "publish check passed without a sector map"));
+    }
+
+    /**
+     * 이 글이 넘겨받는 용어를 옛 소유 글에서 가져온다. 옛 글마다 초안 번호는 한 번만 올린다. 용어를 여럿 넘겨도, 단계 공개에서 여러 글에 넘겨도 편집 화면이 다시
+     * 읽을 일은 하나다. 옛 글은 호출자가 {@link #lockWithGivers}로 이미 잠갔다.
      *
      * @return 넘긴 용어, 이 글의 용어 순서
      */
-    private List<TransferredTerm> transferTerms(LearningArticle article) {
-        // 옛 소유 글을 articleId 순서로 잠근다. 두 글이 같은 옛 글 둘에서 거꾸로 된 순서로 넘겨받아 서로 기다리는 일을 막는다.
-        Map<ArticleId, List<TermId>> byOwner =
-                new TreeMap<>(Comparator.comparing(ArticleId::value));
+    private List<TransferredTerm> transferTerms(
+            LearningArticle article, Set<ArticleId> bumpedGivers) {
+        Map<ArticleId, List<TermId>> byOwner = new LinkedHashMap<>();
         for (LearningTerm term : article.terms()) {
             if (term.transferring()) {
                 byOwner.computeIfAbsent(term.transferFrom(), owner -> new ArrayList<>())
@@ -177,25 +260,21 @@ public class ArticlePublisher {
         List<TransferredTerm> transferred = new ArrayList<>();
         for (Map.Entry<ArticleId, List<TermId>> entry : byOwner.entrySet()) {
             ArticleId owner = entry.getKey();
-            // 옛 글을 먼저 잠근다. 옛 글의 게시가 같은 때 색인을 다시 쓰고 있으면 그 커밋을 기다린 뒤 지운다.
-            // 잠그기 전에 지우면 그 게시가 새로 넣은 색인 행을 보지 못해 남기고, 이 글의 색인 행과 겹친다.
-            articleRepository
-                    .findByArticleKeyForUpdate(owner)
-                    .orElseThrow(
-                            () -> new IllegalStateException("transfer source vanished: " + owner));
             for (TermId termId : entry.getValue()) {
                 publishedTermRepository.deleteTerm(owner, termId);
                 termRepository.deleteOwnedTerm(owner, termId);
             }
-            // 행을 지운 뒤 다시 읽는다. 벌크 삭제가 영속성 컨텍스트를 비우므로 잠근 시점의 객체를 다시 쓰지 않는다.
-            LearningArticle previous =
-                    articleRepository
-                            .findByArticleKeyForUpdate(owner)
-                            .orElseThrow(
-                                    () ->
-                                            new IllegalStateException(
-                                                    "transfer source vanished: " + owner));
-            articleRepository.save(previous.termsTransferredAway(entry.getValue()));
+            if (bumpedGivers.add(owner)) {
+                // 같은 공개에서 먼저 게시됐거나 다른 글에 넘겨 번호가 바뀌었을 수 있다. 이미 잠근 행을 지금 값으로 다시 읽는다(기다리지 않는다).
+                LearningArticle previous =
+                        articleRepository
+                                .findByArticleKeyForUpdate(owner)
+                                .orElseThrow(
+                                        () ->
+                                                new IllegalStateException(
+                                                        "transfer source vanished: " + owner));
+                articleRepository.save(previous.termsTransferredAway(entry.getValue()));
+            }
         }
         termRepository.completeTransfers(article.articleId());
         for (LearningTerm term : article.terms()) {

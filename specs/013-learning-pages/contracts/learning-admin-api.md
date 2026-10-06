@@ -495,7 +495,7 @@ POST /admin/learning/stages/{stageKey}/release
 
 한 트랜잭션에서 모든 글을 게시하고 단계 공개일·변경 기록을 쓴다([data-model](../data-model.md) §10-3). 공개일은 이 요청의 시각 하나다.
 
-글마다 §6처럼 초안의 문제 식별자와 `transferFrom`이 바뀔 수 있고 초안 번호는 그대로다. 관리 화면은 `published[].renamedQuestions`와 `transferredTerms`(`toArticleId`로 글을 가른다)로 이 탭에 보관한 그 글들의 편집 내용을 고친다. 넘겨준 글(`fromArticleId`)은 §6처럼 그 용어가 초안에서 빠지고 초안 번호가 1 오른다. 넘겨준 글이 같은 단계에서 함께 게시되면 넘겨받는 글보다 먼저 게시되고, 그 글의 초안 번호도 이 공개 안에서 오른다.
+글마다 §6처럼 초안의 문제 식별자와 `transferFrom`이 바뀔 수 있고 초안 번호는 그대로다. 관리 화면은 `published[].renamedQuestions`와 `transferredTerms`(`toArticleId`로 글을 가른다)로 이 탭에 보관한 그 글들의 편집 내용을 고친다. 넘겨준 글(`fromArticleId`)은 §6처럼 그 용어가 초안에서 빠지고 초안 번호가 1 오른다. 한 공개에서 여러 글에 용어를 넘겨도 한 번만 오른다. 넘겨준 글이 같은 단계에서 함께 게시되면 넘겨받는 글보다 먼저 게시되고, 그 글의 초안 번호도 이 공개 안에서 오른다.
 
 ### 응답 422 `LEARNING_STAGE_CHECK_FAILED`
 
@@ -523,8 +523,8 @@ POST /admin/learning/stages/{stageKey}/release
 | `409 LEARNING_STAGE_ALREADY_RELEASED` | 이미 공개했다 |
 | `409 LEARNING_STAGE_ORDER` | 앞 번호 단계가 공개되지 않았다(US5 시나리오 7) |
 | `409 LEARNING_STAGE_EMPTY` | 단계에 글이 없다 |
-| `409 LEARNING_STAGE_CHANGED` | 요청의 글 목록이 공개 집합과 다르거나 초안 번호가 다르다(같은 글을 두 번 실어도 다르다). `error.details.articles`에 잠근 뒤 다시 읽은 공개 집합을 §10의 `articles` 순서로 `{ "articleId", "draftVersion" }` 목록으로 싣는다 |
+| `409 LEARNING_STAGE_CHANGED` | 요청의 글 목록이 공개 집합과 다르거나 초안 번호가 다르다(같은 글을 두 번 실어도 다르다). `error.details.articles`에 서버가 읽은 공개 집합(잠그기 전에 이미 다르면 그때 읽은 값, 아니면 잠근 뒤 다시 읽은 값)을 §10의 `articles` 순서로 `{ "articleId", "draftVersion" }` 목록으로 싣는다 |
 
-단계 공개에서는 용어 소유 문제(넘겨받기 소유 불일치, 넘겨받기 없이 쓴 다른 글의 게시 용어)를 409로 따로 돌려주지 않고 422의 글별 항목(`TERM_TRANSFER`·`TERM_ID_TAKEN`)으로 함께 싣는다. 운영자가 한 번에 모든 문제를 보게 하려는 것이다.
+단계 공개에서는 용어 소유 문제(넘겨받기 소유 불일치, 넘겨받기 없이 쓴 다른 글의 게시 용어)를 409로 따로 돌려주지 않고 422의 글별 항목(`TERM_TRANSFER`·`TERM_ID_TAKEN`)으로 함께 싣는다. 운영자가 한 번에 모든 문제를 보게 하려는 것이다. 판정 뒤 먼저 커밋한 다른 저장·게시가 같은 용어를 가져가 용어 제약에 걸려도, 지금 상태로 다시 판정해 같은 422로 돌려준다.
 
 단계 공개를 되돌리는 엔드포인트는 없다(FR-031).

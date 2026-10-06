@@ -65,10 +65,7 @@ import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,15 +86,14 @@ import org.springframework.transaction.annotation.Transactional;
  * LEGACY})을 고치고, V2 초안은 공개된 단계에서 v2 검사로 새 기준 판({@code CURRENT})을 만든다.
  *
  * <p>저장·게시·게시 취소는 글 행을 잠그고 잠근 시점의 값을 다시 읽는다. 같은 글을 두 탭에서 고치면 뒤엣것이 {@code draftVersion} 불일치로
- * 거절된다(research R12).
+ * 거절된다(research R12). 게시는 초안 단계 행을 먼저 잠그고, 글과 넘겨줄 옛 소유 글을 단계 공개와 같은 순서로 잠근다({@link
+ * ArticlePublisher#lockWithGivers}).
  *
  * <p>삭제 유스케이스는 없다(spec Out of Scope).
  */
 @Service
 @Transactional
 public class LearningAdminService {
-
-    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     private final LearningArticleRepository articleRepository;
     private final LearningTermRepository termRepository;
@@ -155,7 +151,7 @@ public class LearningAdminService {
                 new ListContext(
                         stagesByKey(),
                         openSectorCodes(sectorMapPort.currentMap()),
-                        today(),
+                        LearningTime.today(clock),
                         articleRepository.findPublishedRevisions(),
                         lastEvents,
                         revisionRepository.findRevisionNos(
@@ -308,6 +304,10 @@ public class LearningAdminService {
      * <p>공개된 단계에 처음 게시되는 글이면 {@code first_released_at}과 {@code ARTICLE_ADDED} 변경 기록을 같은 트랜잭션에서
      * 쓴다(R27). 다시 게시, 게시 취소 뒤 다시 게시, 공개된 단계 사이 이동은 기록하지 않는다.
      *
+     * <p>잠그는 순서는 초안 단계 행 → 글과 넘겨줄 옛 소유 글({@code articleId} 순서)이다. 단계 공개와 같은 순서라 둘이 서로 기다리지 않는다. 단계
+     * 행을 잠그므로 그 단계의 공개가 도는 동안에는 기다렸다가 공개된 단계를 보고 판정한다. 공개 중인 단계로 옮긴 V1 글이 LEGACY 판으로 공개된 단계에 남지
+     * 않는다(data-model §10-1).
+     *
      * @throws ArticleNotFoundException 없는 글
      * @throws DraftChangedException 운영자가 보지 않은 초안을 게시하지 않는다
      * @throws StageNotReleasedException V2 초안인데 초안 단계가 공개 전이다
@@ -318,14 +318,20 @@ public class LearningAdminService {
      */
     public PublishResult publish(String articleId, PublishCommand command) {
         ArticleId id = parseArticleId(articleId);
-        LearningArticle article =
-                articleRepository
-                        .findByArticleKeyForUpdate(id)
-                        .orElseThrow(ArticleNotFoundException::new);
+        LearningArticle unlocked =
+                articleRepository.findByArticleKey(id).orElseThrow(ArticleNotFoundException::new);
+        if (!unlocked.isDraftVersion(command.expectedDraftVersion())) {
+            throw new DraftChangedException(unlocked.draftVersion());
+        }
+        LearningStage stage = lockStage(unlocked.placement().stageKey());
+        LearningArticle article = publisher.lockWithGivers(List.of(unlocked)).get(id);
+        if (article == null) {
+            throw new ArticleNotFoundException();
+        }
+        // 잠근 뒤 다시 본다. 번호가 같으면 초안(단계 배치·넘겨받는 용어)이 잠그기 전에 읽은 것과 같아, 잠근 단계와 옛 글이 맞다.
         if (!article.isDraftVersion(command.expectedDraftVersion())) {
             throw new DraftChangedException(article.draftVersion());
         }
-        LearningStage stage = requireStage(article.placement().stageKey());
         PublishMode mode = PublishMode.decide(article.format(), stage.released());
 
         String checkVersion;
@@ -337,26 +343,27 @@ public class LearningAdminService {
             requirePassed(rules.version(), PublishCheck.run(article, rules, openSectorCodes(map)));
             checkVersion = rules.version();
             // 검사를 통과했으면 예시와 대응표가 모두 있다(EXAMPLE_PRESENT·EXAMPLE_SECTOR_IN_MAP).
-            mapVersion = requireMapVersion(map);
+            mapVersion = ArticlePublisher.requireMapVersion(map);
         } else {
             Optional<SectorMapView> map =
                     article.example() == null ? Optional.empty() : sectorMapPort.currentMap();
             requirePassed(
                     rulesV2.version(),
                     PublishCheckV2.run(
-                            article, rulesV2, openSectorCodes(map), knownTermIds(), today()));
+                            article,
+                            rulesV2,
+                            openSectorCodes(map),
+                            termOwnership.knownTermIds(),
+                            LearningTime.today(clock)));
             checkVersion = rulesV2.version();
-            // 예시가 없으면 대응표를 대조하지 않았다. 판정하지 않은 것을 판정한 것처럼 적지 않는다(원칙 VI).
-            mapVersion =
-                    article.example() == null
-                            ? ArticleRevision.NOT_CHECKED
-                            : requireMapVersion(map);
+            mapVersion = ArticlePublisher.mapVersion(article, map);
         }
 
         // 저장 뒤 소유가 바뀌었을 수 있다(옛 소유 글이 그 용어를 빼고 게시 취소함). 넘기기 전에 다시 확인한다(R24).
+        // 옛 소유 글은 잠갔으므로 이 판정과 넘기기 사이에 소유 글이 바뀌지 않는다.
         termOwnership.require(id, article.terms());
 
-        Instant now = now();
+        Instant now = LearningTime.now(clock);
         ArticlePublisher.Outcome outcome =
                 publisher.publish(
                         article,
@@ -421,7 +428,7 @@ public class LearningAdminService {
                         PublicationAction.UNPUBLISH,
                         revisionId,
                         command.actorUserId(),
-                        now()));
+                        LearningTime.now(clock)));
         return new UnpublishResult(id.value(), ArticleStatus.DRAFT, revisionNo);
     }
 
@@ -619,31 +626,16 @@ public class LearningAdminService {
         termOwnership.require(parseArticleId(articleId), terms);
     }
 
-    /** 언급 조각이 가리킬 수 있는 용어: 모든 글의 초안 용어와 게시 용어 색인의 합집합(data-model §8-2 #13). */
-    private Set<TermId> knownTermIds() {
-        Set<TermId> known = new HashSet<>(termRepository.findAllTermIds());
-        known.addAll(publishedTermRepository.findAllTermIds());
-        return known;
-    }
-
     private static void requirePassed(String checkVersion, PublishCheckResult checked) {
         if (!checked.passed()) {
             throw new PublishCheckFailedException(checkVersion, checked.failures());
         }
     }
 
-    private static String requireMapVersion(Optional<SectorMapView> map) {
-        return map.map(SectorMapView::mapVersion)
-                .orElseThrow(
-                        () ->
-                                new IllegalStateException(
-                                        "publish check passed without a sector map"));
-    }
-
     /** 초안 배치는 외래키로 단계를 가리킨다. 없으면 저장 데이터가 깨진 것이다. */
-    private LearningStage requireStage(StageKey stageKey) {
+    private LearningStage lockStage(StageKey stageKey) {
         return stageRepository
-                .findByStageKey(stageKey)
+                .findByStageKeyForUpdate(stageKey)
                 .orElseThrow(
                         () -> new IllegalStateException("learning stage not found: " + stageKey));
     }
@@ -664,16 +656,6 @@ public class LearningAdminService {
 
     private static Optional<Set<String>> openSectorCodes(Optional<SectorMapView> map) {
         return map.map(view -> view.sectorNamesByCode().keySet());
-    }
-
-    /** DB가 마이크로초까지 저장하므로 응답 값과 저장 값이 같도록 자른다. */
-    private Instant now() {
-        return clock.instant().truncatedTo(ChronoUnit.MICROS);
-    }
-
-    /** 게시 전 검사와 '확인 필요'의 기준 날짜. 서비스가 운영되는 서울 날짜다. */
-    private LocalDate today() {
-        return LocalDate.ofInstant(clock.instant(), SEOUL);
     }
 
     private static ArticleId parseArticleId(String raw) {

@@ -2,10 +2,13 @@ package com.ssafy.thorp.learning.application.repository;
 
 import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
+import com.ssafy.thorp.learning.application.result.PublishedArticleEntry;
 import com.ssafy.thorp.learning.application.result.PublishedArticleView;
+import com.ssafy.thorp.learning.application.result.StageArticleEntry;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +33,12 @@ public interface LearningArticleRepository {
     /** 모든 글. 초안 단계 번호, 단계 안 순서, {@code article_key} 순서다(learning-admin-api §2). */
     List<LearningArticle> findAllOrdered();
 
+    /** 이 글들. 없는 글은 결과에 없다. 순서는 정하지 않는다. 용어까지 한 번에 읽는다. */
+    List<LearningArticle> findByArticleKeys(Collection<ArticleId> articleIds);
+
+    /** 모든 글의 단계 관리 값. {@link #findAllOrdered}와 같은 순서다. 본문·용어·퀴즈를 읽지 않는다. 단계 목록과 공개 집합을 정할 때 쓴다. */
+    List<StageArticleEntry> findStageEntries();
+
     /**
      * 지금 공개 중인 글의 목록 항목. 판 내용의 {@code readingOrder}, {@code articleId} 오름차순이다.
      *
@@ -45,11 +54,17 @@ public interface LearningArticleRepository {
     /** 공개 중인 판 전부(글 → 판). 초안인 글은 결과에 없다. */
     Map<ArticleId, ArticleRevision> findPublishedRevisions();
 
+    /** 이 글들의 공개 중인 판(글 → 판). 초안인 글은 결과에 없다. */
+    Map<ArticleId, ArticleRevision> findPublishedRevisions(Collection<ArticleId> articleIds);
+
     /** 이 글의 공개 중인 판과 공개 배치. 초안이거나 없는 글이면 비어 있다. */
     Optional<PublishedArticleView> findPublished(ArticleId articleId);
 
-    /** 공개 중인 글 전부의 판과 공개 배치. 한 문장으로 읽는다. 순서는 정하지 않는다. 커리큘럼이 쓴다. */
-    List<PublishedArticleView> findAllPublished();
+    /**
+     * 공개 중인 글 전부의 커리큘럼 항목. 공개 배치의 단계 번호, 단계 안 순서, {@code articleId} 순서다({@link
+     * #findCurrentInReadingOrder}와 같다). 본문을 읽지 않는다. 판 하나의 본문이 깨져도 커리큘럼이 나가야 한다.
+     */
+    List<PublishedArticleEntry> findPublishedEntries();
 
     /**
      * 새 기준 판({@code CURRENT})이 게시 중인 글. 읽는 순서(공개 배치 단계 번호, 단계 안 순서, {@code articleId})다(data-model

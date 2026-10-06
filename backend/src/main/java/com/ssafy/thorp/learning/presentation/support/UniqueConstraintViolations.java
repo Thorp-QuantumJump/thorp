@@ -26,6 +26,13 @@ public final class UniqueConstraintViolations {
 
     private UniqueConstraintViolations() {}
 
+    /** 용어 식별자의 UNIQUE 제약(초안 소유·넘겨받기·게시 색인) 가운데 하나에 걸렸는가. */
+    public static boolean violatesTermKey(DataIntegrityViolationException violation) {
+        return violates(violation, TERM_KEY_OWNED)
+                || violates(violation, TERM_KEY_INCOMING)
+                || violates(violation, PUBLISHED_TERM_KEY);
+    }
+
     /** 이 예외가 이름이 {@code constraint}인 제약 위반인가. PostgreSQL 오류 문장에 제약 이름이 따옴표로 실린다. */
     public static boolean violates(DataIntegrityViolationException violation, String constraint) {
         String message = violation.getMostSpecificCause().getMessage();

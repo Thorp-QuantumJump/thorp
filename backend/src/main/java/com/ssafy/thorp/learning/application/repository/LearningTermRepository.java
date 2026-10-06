@@ -3,8 +3,9 @@ package com.ssafy.thorp.learning.application.repository;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -17,11 +18,11 @@ import java.util.Set;
  */
 public interface LearningTermRepository {
 
-    /** 이 {@code termId}를 소유 중인 글. 넘겨받는 중인 행은 보지 않는다. */
-    Optional<ArticleId> findOwnerArticleKey(TermId termId);
+    /** 이 용어들을 소유 중인 글(용어 → 글). 넘겨받는 중인 행은 보지 않는다. 소유 글이 없는 용어는 결과에 없다. 한 문장으로 읽는다. */
+    Map<TermId, ArticleId> findOwnerArticleKeys(Collection<TermId> termIds);
 
-    /** 이 {@code termId}를 넘겨받는 중인 글. */
-    Optional<ArticleId> findIncomingArticleKey(TermId termId);
+    /** 이 용어들을 넘겨받는 중인 글(용어 → 글). 넘겨받는 글이 없는 용어는 결과에 없다. 한 문장으로 읽는다. */
+    Map<TermId, ArticleId> findIncomingArticleKeys(Collection<TermId> termIds);
 
     /** 모든 글의 초안 용어 {@code termId}. 언급 조각이 가리킬 수 있는 용어를 판정할 때 쓴다({@code TERM_MENTION_KNOWN}). */
     Set<TermId> findAllTermIds();
