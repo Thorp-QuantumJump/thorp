@@ -49,3 +49,23 @@
 .source:focus-visible .sourceName {
   display: block;
 }
+
+/*
+  누르는 곳은 44×44px 이상이다(design-notes §6). 글자 사이에 놓인 '(*출처)'와 도움말 '?'는 보이는 크기를 그대로
+  두고, 가운데에 44px 정사각형의 보이지 않는 누름 영역을 덧댄다. 도움말 '?'는 003 설정 화면과 같은 부품이라 글
+  안에서만 넓힌다.
+*/
+.source::after,
+.help > button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.help > button {
+  position: relative;
+}

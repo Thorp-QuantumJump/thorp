@@ -24,8 +24,10 @@ const apiMocks = vi.hoisted(() => ({
   fetchLearningArticles: vi.fn(),
   fetchLearningArticle: vi.fn(),
 }))
+const glossaryMocks = vi.hoisted(() => ({ fetchGlossaryEntry: vi.fn() }))
 
 vi.mock('@/api/learning', () => apiMocks)
+vi.mock('@/api/learningGlossary', () => glossaryMocks)
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
 beforeAll(() => {
@@ -52,11 +54,11 @@ function Probe({ name }: { name: string }) {
   )
 }
 
-function renderArticle(
+function articleTree(
   entry: string | { pathname: string; state: unknown },
-  auth: AuthContextValue = anonymousAuthContext,
+  auth: AuthContextValue,
 ) {
-  return render(
+  return (
     <AuthContext.Provider value={auth}>
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
@@ -67,8 +69,25 @@ function renderArticle(
           <Route path="*" element={<Probe name="돌아온 화면" />} />
         </Routes>
       </MemoryRouter>
-    </AuthContext.Provider>,
+    </AuthContext.Provider>
   )
+}
+
+function renderArticle(
+  entry: string | { pathname: string; state: unknown },
+  auth: AuthContextValue = anonymousAuthContext,
+) {
+  const result = render(articleTree(entry, auth))
+  /** 같은 화면을 둔 채 로그인 상태만 바꿔 다시 그린다. 014의 재확인을 흉내 낸다. */
+  const setAuth = (next: AuthContextValue) => result.rerender(articleTree(entry, next))
+  return { ...result, setAuth }
+}
+
+const checkingAuth: AuthContextValue = { ...anonymousAuthContext, status: 'checking', user: null }
+const signedInAuth: AuthContextValue = {
+  ...anonymousAuthContext,
+  status: 'authenticated',
+  user: authenticatedUser,
 }
 
 function loaded(article: Extract<LearningArticleResult, { status: 'loaded' }>['article']) {
@@ -81,6 +100,7 @@ const recordWords = /학습 완료|수강|진도|완료율|읽는 중|경험치|
 describe('LearningArticlePage', () => {
   beforeEach(() => {
     apiMocks.fetchLearningArticle.mockReset()
+    glossaryMocks.fetchGlossaryEntry.mockReset()
     probedState = undefined
   })
 
@@ -261,6 +281,12 @@ describe('LearningArticlePage', () => {
     const header = title.closest('header')!
     expect(within(header).getByText('이전 판')).not.toBeNull()
     expect(within(header).queryByText(/^\d+-\d+$/)).toBeNull()
+    expect(within(header).getByRole('link', { name: '3단계 · 물때표 읽기' })).not.toBeNull()
+    // 글 끝에는 한 줄과 목록 연결만 둔다. 9월 판의 글 끝 출처 목록과 목록 돌아가기 연결은 없다(FR-007, FR-031).
+    expect(screen.queryByRole('region', { name: '출처' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '목록으로 돌아가기' })).toBeNull()
+    // 예시는 9월 판 본문의 일부라 그대로 둔다.
+    expect(screen.getByRole('button', { name: '이 예시로 전략 진단하기' })).not.toBeNull()
     const notice = screen.getByRole('region', { name: '이전 판 안내' })
     expect(notice.textContent).toContain(
       '이 글은 새 기준으로 다시 쓰기 전의 판입니다. 그래서 읽은 기록과 확인 문제를 남기지 않습니다.',
@@ -272,16 +298,21 @@ describe('LearningArticlePage', () => {
     expect(probedState).toEqual(received)
   })
 
-  it('새 기준 글은 단계·번호·예상 읽기 시간 머리와 새 요소를 보이고 글 끝 출처 목록이 없다', async () => {
+  it('새 기준 글은 경로·번호·예상 읽기 시간 머리와 새 요소를 보이고 글 끝 출처 목록이 없다', async () => {
     loaded(currentArticle)
 
     renderArticle('/learn/swell-reading')
 
     const title = await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
     const header = title.closest('header')!
-    expect(within(header).getByText('2단계 너울과 위험')).not.toBeNull()
+    const crumb = within(header).getByRole('navigation', { name: '경로' })
+    expect(within(crumb).getByRole('link', { name: '배우기' }).getAttribute('href')).toBe('/learn')
+    expect(
+      within(crumb).getByRole('link', { name: '2단계 · 너울과 위험' }).getAttribute('href'),
+    ).toBe('/learn')
     expect(within(header).getByText('2-3')).not.toBeNull()
     expect(within(header).getByText('약 4분')).not.toBeNull()
+    expect(screen.getByText('본문 끝')).not.toBeNull()
     expect(screen.getByRole('region', { name: '핵심 요약' })).not.toBeNull()
     expect(screen.getByRole('complementary', { name: '제도 안내' })).not.toBeNull()
     expect(screen.queryByRole('region', { name: '출처' })).toBeNull()
@@ -321,14 +352,14 @@ describe('LearningArticlePage', () => {
     const { unmount } = renderArticle('/learn/swell-reading')
 
     expect(await screen.findByRole('link', { name: '배우기 목록으로' })).not.toBeNull()
-    expect(screen.getByText('다음 단계는 준비 중입니다')).not.toBeNull()
+    expect(screen.getByText('다음 단계는 준비 중입니다.')).not.toBeNull()
     unmount()
 
     loaded({ ...currentArticle, next: null, hasUnreleasedStages: false })
     renderArticle('/learn/swell-reading')
 
     expect(await screen.findByRole('link', { name: '배우기 목록으로' })).not.toBeNull()
-    expect(screen.queryByText('다음 단계는 준비 중입니다')).toBeNull()
+    expect(screen.queryByText('다음 단계는 준비 중입니다.')).toBeNull()
   })
 
   it('로그인 연결은 지금 글 주소만 014 키에 적고 로그인 화면으로 간다', async () => {
@@ -346,15 +377,98 @@ describe('LearningArticlePage', () => {
   it('로그인 사용자에게는 비로그인 확인 문제와 로그인 안내를 보이지 않는다', async () => {
     loaded(currentArticle)
 
-    renderArticle('/learn/swell-reading', {
-      ...anonymousAuthContext,
-      status: 'authenticated',
-      user: authenticatedUser,
-    })
+    renderArticle('/learn/swell-reading', signedInAuth)
 
     expect(await screen.findByRole('link', { name: /다음 글/ })).not.toBeNull()
     expect(screen.queryByRole('region', { name: '확인 문제' })).toBeNull()
     expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
+  })
+
+  it('로그인 상태를 다시 확인하는 동안 확인 문제를 숨기기만 하고, 비로그인으로 돌아오면 고른 답이 그대로다', async () => {
+    const user = userEvent.setup()
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading')
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+    expect(screen.getByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
+
+    // 탭이 다시 보이면 014가 상태를 checking으로 둔다(research R33).
+    setAuth(checkingAuth)
+    const quiz = screen.getByText('합성 질문 하나다.').closest('section')!
+    expect(quiz.parentElement?.className).toMatch(/concealed/)
+    expect(screen.getByText('로그인하면 학습 기록이 남습니다.').closest('p')?.className).toMatch(
+      /concealed/,
+    )
+
+    setAuth(anonymousAuthContext)
+    expect(screen.getByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /합성 보기 나/ })).toBeNull()
+    expect(quiz.parentElement?.className ?? '').not.toMatch(/concealed/)
+  })
+
+  it('비로그인에서 로그인으로 바뀌면 비로그인으로 답한 확인 문제를 버리고, 다시 비로그인이 되면 처음부터다', async () => {
+    const user = userEvent.setup()
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading')
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+
+    setAuth(checkingAuth)
+    setAuth(signedInAuth)
+    expect(screen.queryByRole('region', { name: '확인 문제' })).toBeNull()
+
+    setAuth(anonymousAuthContext)
+    expect(screen.getByRole('button', { name: /합성 보기 나/ })).not.toBeNull()
+    expect(screen.queryByText('합성 풀이 하나다.', { exact: false })).toBeNull()
+  })
+
+  it('처음 확인하는 동안에는 확인 문제와 로그인 안내를 그리지 않는다', async () => {
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', checkingAuth)
+
+    expect(await screen.findByRole('link', { name: /다음 글/ })).not.toBeNull()
+    expect(screen.queryByRole('region', { name: '확인 문제' })).toBeNull()
+    expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
+  })
+
+  it('글 안 도움말의 글 연결은 받은 learningReturn을 그대로 싣는다', async () => {
+    const user = userEvent.setup()
+    glossaryMocks.fetchGlossaryEntry.mockResolvedValue({
+      status: 'ready',
+      entry: {
+        termId: 'ebb-gap',
+        label: '썰물 간격',
+        sentence: '합성 뜻 문장이다.',
+        articleId: 'tide-reading',
+        articleTitle: '물때 읽기',
+      },
+    })
+    loaded(currentArticle)
+
+    renderArticle({
+      pathname: '/learn/swell-reading',
+      state: { learningReturn: { path: '/market-flow', label: '' } },
+    })
+    await user.click(await screen.findByRole('button', { name: '썰물 간격 도움말' }))
+    loaded(tideArticle)
+    await user.click(await screen.findByRole('link', { name: '‘물때 읽기’ 글 읽기' }))
+
+    await screen.findByRole('heading', { level: 1, name: '물때 읽기' })
+    expect(screen.getByRole('link', { name: /시장 흐름으로 돌아가기/ })).not.toBeNull()
+  })
+
+  it('경로 연결은 받은 learningReturn을 그대로 넘긴다', async () => {
+    const user = userEvent.setup()
+    const received = { learningReturn: { path: '/strategy', label: '전략 선택' } }
+    loaded(currentArticle)
+
+    renderArticle({ pathname: '/learn/swell-reading', state: received })
+    const crumb = await screen.findByRole('navigation', { name: '경로' })
+    await user.click(within(crumb).getByRole('link', { name: '배우기' }))
+
+    expect(await screen.findByText(/주제 목록 화면/)).not.toBeNull()
+    expect(probedState).toEqual(received)
   })
 
   it('글을 열고 확인 문제에 답하고 닫는 동안 브라우저 저장소에 쓰지 않는다', async () => {

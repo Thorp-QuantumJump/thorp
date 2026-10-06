@@ -37,6 +37,11 @@
 
 .listLink,
 .loginLink {
+  display: inline-flex;
+  align-items: center;
+  /* 누르는 곳은 44×44px 이상이다(design-notes §6). 글자 모양은 그대로 두고 높이만 채운다. */
+  min-width: 44px;
+  min-height: 44px;
   color: var(--thorp-accent-soft);
   font-size: var(--thorp-text-body, 0.9rem);
 }
@@ -57,9 +62,14 @@
 .guest {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 6px 12px;
   margin: 0;
   color: var(--thorp-copy);
   font-size: var(--thorp-text-body, 0.9rem);
+}
+
+/* 로그인 상태를 다시 확인하는 동안. 자리를 둔 채 화면과 보조 기술에서 모두 뺀다(research R33). */
+.concealed {
+  visibility: hidden;
 }

@@ -35,17 +35,31 @@ interface ArticleBodyProps {
  * 조용히 사라지면 원인을 찾기 어려우므로 개발 모드에서만 경고를 남긴다.
  *
  * <p><b>본문 끝 표지를 둔다.</b> 마지막 블록 바로 뒤의 `data-article-end` 요소가 완료 판정의 본문 끝이다
- * (FR-021). 예시와 글 끝 자리보다 앞이라 진단 버튼 아래까지 내려가지 않아도 된다.
+ * (FR-021). 예시와 글 끝 자리보다 앞이라 진단 버튼 아래까지 내려가지 않아도 된다. 새 기준 글은 목업 '글 끝'처럼
+ * 가는 줄 사이에 '본문 끝'을 보이고, 9월 판 글은 지금 모습 그대로라 보이지 않는 표지만 둔다(FR-031).
  */
 export function ArticleBody({ article, learningReturn }: ArticleBodyProps) {
   return (
     <div className={styles.body}>
       {article.edition === 'CURRENT' ? (
-        <CurrentBlocks blocks={article.blocks} learningReturn={learningReturn} />
+        <>
+          <CurrentBlocks blocks={article.blocks} learningReturn={learningReturn} />
+          <div className={styles.endMark} data-article-end="">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" strokeWidth="1" />
+            </svg>
+            <span>본문 끝</span>
+          </div>
+        </>
       ) : (
-        article.blocks.map((block, index) => <LegacyBlock key={index} block={block} />)
+        <>
+          {article.blocks.map((block, index) => (
+            <LegacyBlock key={index} block={block} />
+          ))}
+          <div className={styles.end} data-article-end="" aria-hidden="true" />
+        </>
       )}
-      <div className={styles.end} data-article-end="" aria-hidden="true" />
     </div>
   )
 }
@@ -134,7 +148,10 @@ function CurrentBlock({
       )
     case 'hypothetical':
       return (
-        <aside className={styles.hypothetical} aria-label="가상의 계산 예">
+        <aside
+          className={`${styles.hypothetical} ${styles.hypotheticalCurrent}`}
+          aria-label="가상의 계산 예"
+        >
           <span className={styles.hypotheticalLabel}>가상의 계산 예</span>
           <p>
             <RichText runs={block.content} blockIndex={blockIndex} field="content" />

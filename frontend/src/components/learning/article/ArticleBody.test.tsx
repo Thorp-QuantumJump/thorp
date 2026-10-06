@@ -73,12 +73,14 @@ describe('ArticleBody — 9월 판', () => {
     expect(screen.getByText('보여야 하는 문단')).not.toBeNull()
   })
 
-  it('마지막 블록 바로 뒤에 본문 끝 표지가 있다', () => {
+  it('마지막 블록 바로 뒤에 보이지 않는 본문 끝 표지가 있다(9월 판은 지금 모습 그대로)', () => {
     const { container } = renderLegacy(tideArticle.blocks)
 
     const end = container.querySelector('[data-article-end]')
     expect(end).not.toBeNull()
     expect(end?.previousElementSibling?.getAttribute('aria-label')).toBe('가상의 계산 예')
+    expect(end?.textContent).toBe('')
+    expect(end?.getAttribute('aria-hidden')).toBe('true')
   })
 })
 
@@ -114,6 +116,22 @@ describe('ArticleBody — 새 기준', () => {
     expect(headers.map((header) => header.textContent)).toEqual(['구분', '가 항구', '나 항구'])
     expect(headers.every((header) => header.getAttribute('scope') === 'col')).toBe(true)
     expect(within(table).getByText('가상의 예')).not.toBeNull()
+  })
+
+  it('비교 표의 각 행 첫 칸은 행 머리 칸이라 행과 열의 뜻을 함께 알린다', () => {
+    renderCurrent()
+
+    const rowHeaders = within(screen.getByRole('table')).getAllByRole('rowheader')
+    expect(rowHeaders.map((header) => header.textContent)).toEqual(['너울', '물때'])
+    expect(rowHeaders.every((header) => header.getAttribute('scope') === 'row')).toBe(true)
+    expect(within(screen.getByRole('table')).getAllByRole('cell')).toHaveLength(4)
+  })
+
+  it('새 기준 가상의 계산 예 상자는 점선이 아니다(점선은 준비 중만 쓴다)', () => {
+    renderCurrent()
+
+    const box = screen.getByRole('complementary', { name: '가상의 계산 예' })
+    expect(box.className).toMatch(/hypotheticalCurrent/)
   })
 
   it('가상의 계산 예와 도식에 가상 표시가, 도식 아래에 설명 문장이 있다', () => {
@@ -169,11 +187,13 @@ describe('ArticleBody — 새 기준', () => {
     expect(screen.getByRole('heading', { name: '보여야 하는 소제목' })).not.toBeNull()
   })
 
-  it('본문 끝 표지는 마지막 블록 바로 뒤에 있다', () => {
+  it('본문 끝 표지는 마지막 블록 바로 뒤에서 본문 끝이라고 보인다', () => {
     const { container } = renderCurrent()
 
     const end = container.querySelector('[data-article-end]')
     expect(end?.previousElementSibling?.getAttribute('aria-label')).toBe('제도 안내')
+    expect(end?.textContent).toBe('본문 끝')
+    expect(end?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
   })
 })
 
