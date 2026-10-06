@@ -1,9 +1,14 @@
 package com.ssafy.thorp.learning.domain.model;
 
 import com.ssafy.thorp.learning.domain.model.PublishCheckFailure.Check;
+import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.StageKey;
+import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 단계 공개의 전제 판정(data-model §10-2·§10-3, research R23). 저장소를 읽지 않는 순수 함수다. 단계 공개와 그 미리 검사가 같은 판정을 쓴다.
@@ -81,6 +86,51 @@ public final class StageRelease {
                             "초안을 다른 단계로 옮긴 글입니다. 옮긴 단계로 다시 게시하거나 게시 취소한 뒤 공개합니다."));
         }
         return failures;
+    }
+
+    /**
+     * 같은 공개에서 넘겨받을 용어를 옛 소유 글이 아직 초안에 둔 경우(옛 소유 글 → 용어 → 넘겨받는 글). 옛 소유 글도 이 공개에 들 때만 본다.
+     *
+     * <p>그대로 공개하면 옛 글의 새 판이 넘겨준 용어를 소유한 채 공개되어, 그 용어의 도움말이 가리키는 글과 어긋난다(FR-008). 두 글이 서로의 용어를 넘겨받는
+     * 고리도 이 경우에 들어 게시 순서를 정할 수 없다. 그래서 옛 글의 {@code TERM_TRANSFER} 항목으로 막는다({@link
+     * #keptTermFailure}). 옛 글이 이 공개 밖에 있으면 data-model §7-2대로 넘기기가 그 초안 행을 지우고, 남은 용어 블록은 그 글의 다음
+     * 게시에서 걸린다.
+     *
+     * @return 옛 소유 글마다 넘겨줄 용어와 넘겨받는 글. 해당하는 글이 없으면 빈 맵이다
+     */
+    public static Map<ArticleId, Map<TermId, ArticleId>> termsKeptByGivers(
+            List<LearningArticle> releaseSet) {
+        Map<ArticleId, LearningArticle> members = new HashMap<>();
+        releaseSet.forEach(article -> members.put(article.articleId(), article));
+        Map<ArticleId, Map<TermId, ArticleId>> kept = new LinkedHashMap<>();
+        for (LearningArticle receiver : releaseSet) {
+            for (LearningTerm term : receiver.terms()) {
+                if (!term.transferring()) {
+                    continue;
+                }
+                LearningArticle giver = members.get(term.transferFrom());
+                if (giver != null
+                        && giver.terms().stream()
+                                .anyMatch(own -> own.termId().equals(term.termId()))) {
+                    kept.computeIfAbsent(giver.articleId(), key -> new LinkedHashMap<>())
+                            .put(term.termId(), receiver.articleId());
+                }
+            }
+        }
+        return kept;
+    }
+
+    /** {@link #termsKeptByGivers}가 찾은 용어 하나의 항목. 옛 소유 글에 붙고 위치는 그 용어다. */
+    public static PublishCheckFailure keptTermFailure(TermId termId, ArticleId receiver) {
+        return new PublishCheckFailure(
+                Check.TERM_TRANSFER,
+                CheckLocation.term(termId),
+                null,
+                "같은 단계의 '"
+                        + receiver.value()
+                        + "'가 '"
+                        + termId.value()
+                        + "'를 넘겨받습니다. 이 글의 초안에서 그 용어와 용어 블록을 뺀 뒤 공개합니다.");
     }
 
     /**

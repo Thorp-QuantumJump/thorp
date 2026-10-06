@@ -207,6 +207,10 @@ public class LearningStageAdminService {
                                 .map(article -> locked.get(article.articleId()))
                                 .filter(article -> article != null)
                                 .toList());
+        // 잠그는 사이 글이 모두 다른 단계로 옮겨 갔으면 빈 단계다. 빈 요청과 맞아떨어져 글 없이 공개되지 않게 다시 본다.
+        if (releaseSet.isEmpty()) {
+            throw new StageReleaseBlockedException(Blocker.EMPTY);
+        }
         if (!matches(command.articles(), releaseSet)) {
             throw new StageChangedException(releaseSet);
         }
@@ -230,7 +234,16 @@ public class LearningStageAdminService {
 
         Instant releasedAt = now();
         Map<ArticleId, ArticlePublisher.Outcome> outcomes = new HashMap<>();
-        for (LearningArticle article : publishOrder(releaseSet)) {
+        for (LearningArticle candidate : publishOrder(releaseSet)) {
+            // 앞서 게시한 글의 넘기기가 이 글의 초안 번호를 올렸을 수 있다(넘겨준 글). 잠근 행을 다시 읽어 그 값으로 게시한다.
+            LearningArticle article =
+                    articleRepository
+                            .findByArticleKeyForUpdate(candidate.articleId())
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalStateException(
+                                                    "locked article vanished: "
+                                                            + candidate.articleId()));
             outcomes.put(
                     article.articleId(),
                     publisher.publish(
@@ -275,8 +288,8 @@ public class LearningStageAdminService {
     }
 
     /**
-     * 공개 집합의 글마다 걸리는 항목: 형식·초안 배치, 용어 소유, v2 검사 순서다. V1 초안은 v2 검사를 받을 수 없어 {@code FORMAT}과 용어 소유
-     * 항목만 싣는다.
+     * 공개 집합의 글마다 걸리는 항목: 형식·초안 배치, 용어 소유(초안 용어 순서), v2 검사 순서다. V1 초안은 v2 검사를 받을 수 없어 앞의 두 갈래만 싣는다.
+     * 용어 소유에는 같은 공개에서 넘겨받을 용어를 옛 소유 글이 아직 초안에 둔 경우({@link StageRelease#termsKeptByGivers})가 든다.
      *
      * @param map 예시 검사에 쓸 대응표. 예시가 있는 글이 없으면 읽지 않아 비어 있다
      */
@@ -288,13 +301,22 @@ public class LearningStageAdminService {
         Set<TermId> known = null;
         Optional<Set<String>> openSectorCodes = map.map(view -> view.sectorNamesByCode().keySet());
         LocalDate today = LocalDate.ofInstant(clock.instant(), SEOUL);
+        Map<ArticleId, Map<TermId, ArticleId>> kept = StageRelease.termsKeptByGivers(releaseSet);
         Map<ArticleId, List<PublishCheckFailure>> failures = new HashMap<>();
         for (LearningArticle article : releaseSet) {
             List<PublishCheckFailure> found =
                     new ArrayList<>(StageRelease.articleFailures(article, stageKey));
-            termOwnership.violations(article.articleId(), article.terms()).stream()
-                    .map(TermOwnership.Violation::toFailure)
-                    .forEach(found::add);
+            Map<TermId, PublishCheckFailure> ownership = new HashMap<>();
+            termOwnership
+                    .violations(article.articleId(), article.terms())
+                    .forEach(violation -> ownership.put(violation.termId(), violation.toFailure()));
+            Map<TermId, ArticleId> given = kept.getOrDefault(article.articleId(), Map.of());
+            for (LearningTerm term : article.terms()) {
+                Optional.ofNullable(ownership.get(term.termId())).ifPresent(found::add);
+                Optional.ofNullable(given.get(term.termId()))
+                        .map(receiver -> StageRelease.keptTermFailure(term.termId(), receiver))
+                        .ifPresent(found::add);
+            }
             if (article.format() == ArticleFormat.V2) {
                 if (known == null) {
                     known = knownTermIds();
@@ -369,10 +391,12 @@ public class LearningStageAdminService {
     }
 
     /**
-     * 게시 순서. 같은 공개 안에서 다른 글이 용어를 넘겨받는 옛 소유 글은 넘겨받는 글보다 먼저 게시한다. 넘겨받는 글을 먼저 게시하면 넘기기가 옛 글의 초안 행을 지우고
-     * 초안 번호를 올린 뒤라, 잠가 둔 옛 글의 값으로 게시하면 그 변경을 덮어쓰고 그 용어의 색인 행이 겹친다. 그 밖의 순서는 단계 안 순서다.
+     * 게시 순서. 같은 공개 안에서 다른 글이 용어를 넘겨받는 옛 소유 글은 넘겨받는 글보다 먼저 게시한다. 그래야 옛 글의 판에 운영자가 미리 검사에서 확인한 초안 번호가
+     * 남는다. 넘기기가 옛 글의 초안 번호를 먼저 올리면 판에는 운영자가 보지 않은 번호가 남는다. 그 밖의 순서는 단계 안 순서다.
      *
-     * <p>넘겨받기가 고리를 이루면(서로의 용어를 넘겨받음) 지킬 순서가 없다. 그 글들은 단계 안 순서로 두고, 색인 행이 겹쳐 트랜잭션 전체가 되돌려진다.
+     * <p>넘겨받기가 고리를 이루면(서로의 용어를 넘겨받음) 지킬 순서가 없어 단계 안 순서로 둔다. 옛 소유 글이 넘겨줄 용어를 초안에 남긴 고리는 판정이 먼저
+     * 막으므로({@link StageRelease#termsKeptByGivers}) 여기 오는 고리는 서로 넘겨줄 용어를 이미 초안에서 뺀 경우다. 그때는 어느 순서로
+     * 게시해도 색인 행이 겹치지 않고, 게시 직전에 글을 다시 읽으므로 넘기기가 올린 초안 번호를 덮어쓰지 않는다.
      */
     private static List<LearningArticle> publishOrder(List<LearningArticle> releaseSet) {
         List<LearningArticle> pending = new ArrayList<>(releaseSet);

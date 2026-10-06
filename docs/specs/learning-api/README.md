@@ -30,7 +30,7 @@
 | 파일 | `LearningPublicApiIT`·`LearningCurriculumIT` 대조 방식 |
 |---|---|
 | `curriculum-pre-release.json` | JSON 동치(실제 요청) |
-| `curriculum.json` | JSON 동치. `notices`가 지금 시각에 따라 달라지므로 시계를 2026-11-20T00:00:00Z로 고정한 조회 결과와 비교한다. 실제 요청은 `notices` 밖의 값을 같은지 본다 |
+| `curriculum.json` | JSON 동치. `notices`가 지금 시각에 따라 달라지므로 시계를 2026-11-20T00:00:00Z로 고정한 조회 결과와 비교한다. 실제 요청은 `notices` 밖의 값을 같은지 본다. 변경 기록에는 두 종류(`STAGE_RELEASED`·`ARTICLE_ADDED`)가 모두 있고, 7일 안의 공개 안내가 두 줄이다 |
 | `articles-list.json`, `term.json` | JSON 동치 |
 | `article.json` | 응답 가운데 이 파일에 있는 키만 JSON 동치(9월 판 필드) |
 | `article-current.json`, `article-previous.json`, `article-pre-release.json` | JSON 동치 |
@@ -46,7 +46,7 @@
 
 ## 관리 (관리 계정만)
 
-| 파일 | 원본 절 | `LearningAdminApiIT`·`LearningAdminV2ApiIT` 대조 방식 |
+| 파일 | 원본 절 | `LearningAdminApiIT`·`LearningAdminV2ApiIT`·`LearningStageReleaseIT` 대조 방식 |
 |---|---|---|
 | [`admin-article-v2.json`](examples/admin-article-v2.json) | §4 V2 초안 200 `data` | 키 구성. 초안의 값은 이 파일의 `draft`(문제·보기 식별자를 비운 것)를 저장 요청으로 보낸 뒤 응답 초안과 같은지 따로 본다 (`transferFrom` 값은 `LearningTermTransferIT`가 따로 단언) |
 | [`admin-preview.json`](examples/admin-preview.json) | §8 `GET …/preview` 200 `data`. §3 글 응답 모양에 `preview: true`를 더하고 `number`·`next`·`stageArticleCount`·`publishedAt`은 `null`이다 | JSON 동치 (`admin-article-v2.json`의 초안을 저장한 뒤 부른다) |

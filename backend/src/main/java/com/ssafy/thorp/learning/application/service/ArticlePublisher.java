@@ -24,10 +24,11 @@ import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import org.springframework.stereotype.Component;
 
 /**
@@ -161,7 +162,9 @@ public class ArticlePublisher {
      * @return 넘긴 용어, 이 글의 용어 순서
      */
     private List<TransferredTerm> transferTerms(LearningArticle article) {
-        Map<ArticleId, List<TermId>> byOwner = new LinkedHashMap<>();
+        // 옛 소유 글을 articleId 순서로 잠근다. 두 글이 같은 옛 글 둘에서 거꾸로 된 순서로 넘겨받아 서로 기다리는 일을 막는다.
+        Map<ArticleId, List<TermId>> byOwner =
+                new TreeMap<>(Comparator.comparing(ArticleId::value));
         for (LearningTerm term : article.terms()) {
             if (term.transferring()) {
                 byOwner.computeIfAbsent(term.transferFrom(), owner -> new ArrayList<>())
@@ -174,10 +177,17 @@ public class ArticlePublisher {
         List<TransferredTerm> transferred = new ArrayList<>();
         for (Map.Entry<ArticleId, List<TermId>> entry : byOwner.entrySet()) {
             ArticleId owner = entry.getKey();
+            // 옛 글을 먼저 잠근다. 옛 글의 게시가 같은 때 색인을 다시 쓰고 있으면 그 커밋을 기다린 뒤 지운다.
+            // 잠그기 전에 지우면 그 게시가 새로 넣은 색인 행을 보지 못해 남기고, 이 글의 색인 행과 겹친다.
+            articleRepository
+                    .findByArticleKeyForUpdate(owner)
+                    .orElseThrow(
+                            () -> new IllegalStateException("transfer source vanished: " + owner));
             for (TermId termId : entry.getValue()) {
                 publishedTermRepository.deleteTerm(owner, termId);
                 termRepository.deleteOwnedTerm(owner, termId);
             }
+            // 행을 지운 뒤 다시 읽는다. 벌크 삭제가 영속성 컨텍스트를 비우므로 잠근 시점의 객체를 다시 쓰지 않는다.
             LearningArticle previous =
                     articleRepository
                             .findByArticleKeyForUpdate(owner)

@@ -125,6 +125,84 @@ class StageReleaseTest {
         assertThat(tally.rewrittenTitles()).containsExactly("수익과 손실");
     }
 
+    private static LearningArticle v2With(String articleId, LearningTerm... terms) {
+        return new LearningArticle(
+                null,
+                new ArticleId(articleId),
+                articleId,
+                "",
+                204,
+                ArticleFormat.V2,
+                new Placement(SECOND, 1),
+                null,
+                List.of(),
+                null,
+                List.of(),
+                ArticleStatus.DRAFT,
+                null,
+                1,
+                List.of(terms),
+                List.of(),
+                0,
+                null);
+    }
+
+    private static LearningTerm owned(String termId) {
+        return LearningTerm.v2(new TermId(termId), termId, List.of(), "뜻", "읽는 법", "한계");
+    }
+
+    private static LearningTerm incoming(String termId, String from) {
+        return new LearningTerm(
+                new TermId(termId), termId, "", List.of(), "뜻", "읽는 법", "한계", new ArticleId(from));
+    }
+
+    @Test
+    @DisplayName("같은 공개의 옛 소유 글이 넘겨줄 용어를 초안에 두면 찾고, 이미 뺐거나 옛 글이 공개 밖이면 찾지 않는다")
+    void termsKeptByGiversInTheSameRelease() {
+        LearningArticle giver =
+                v2With("returns-and-losses", owned("max-drawdown"), owned("net-total-return"));
+        LearningArticle receiver =
+                v2With("recovery-period", incoming("max-drawdown", "returns-and-losses"));
+        LearningArticle dropped = v2With("returns-and-losses", owned("net-total-return"));
+        LearningArticle outsider =
+                v2With("volatility-is-not-loss", incoming("volatility", "inverse-volatility"));
+
+        assertThat(StageRelease.termsKeptByGivers(List.of(giver, receiver, outsider)))
+                .containsExactly(
+                        java.util.Map.entry(
+                                new ArticleId("returns-and-losses"),
+                                java.util.Map.of(
+                                        new TermId("max-drawdown"),
+                                        new ArticleId("recovery-period"))));
+        assertThat(StageRelease.termsKeptByGivers(List.of(dropped, receiver, outsider))).isEmpty();
+        assertThat(
+                        StageRelease.keptTermFailure(
+                                        new TermId("max-drawdown"),
+                                        new ArticleId("recovery-period"))
+                                .check())
+                .isEqualTo(Check.TERM_TRANSFER);
+    }
+
+    @Test
+    @DisplayName("두 글이 서로의 용어를 넘겨받으며 둘 다 남겨 두면 두 글 모두 찾는다")
+    void crossingTransfersAreBothFound() {
+        LearningArticle first =
+                v2With(
+                        "returns-and-losses",
+                        owned("max-drawdown"),
+                        incoming("path-dependence", "same-return-different-feel"));
+        LearningArticle second =
+                v2With(
+                        "same-return-different-feel",
+                        owned("path-dependence"),
+                        incoming("max-drawdown", "returns-and-losses"));
+
+        assertThat(StageRelease.termsKeptByGivers(List.of(first, second)).keySet())
+                .containsExactlyInAnyOrder(
+                        new ArticleId("returns-and-losses"),
+                        new ArticleId("same-return-different-feel"));
+    }
+
     // --- 변경 기록 ---
 
     @Test

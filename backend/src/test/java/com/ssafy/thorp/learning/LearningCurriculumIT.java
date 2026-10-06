@@ -59,6 +59,9 @@ class LearningCurriculumIT extends IntegrationTestSupport {
     private static final Instant STAGE_1_RELEASED = Instant.parse("2026-11-12T01:00:00Z");
     private static final Instant STAGE_2_RELEASED = Instant.parse("2026-11-19T01:00:00Z");
 
+    /** 1단계 공개 뒤 그 단계에 더한 글({@code etf-fees})의 첫 게시 시각. */
+    private static final Instant ETF_FEES_ADDED = Instant.parse("2026-11-15T01:00:00Z");
+
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -126,8 +129,8 @@ class LearningCurriculumIT extends IntegrationTestSupport {
     }
 
     /**
-     * {@code curriculum.json}의 상태. 1·2단계가 공개됐고 그 여덟 글이 CURRENT 판이다. 3~5단계의 기존 글은 LEGACY 판이 게시 중이다.
-     * 6단계와 3~5단계의 새 글은 초안뿐이다.
+     * {@code curriculum.json}의 상태. 1·2단계가 공개됐고 그 여덟 글이 CURRENT 판이다. 1단계의 {@code etf-fees}는 단계 공개 뒤에
+     * 더한 글이다({@code ARTICLE_ADDED}). 3~5단계의 기존 글은 LEGACY 판이 게시 중이다. 6단계와 3~5단계의 새 글은 초안뿐이다.
      */
     private void seedTwoStagesReleased() {
         seeds.markStageReleased("etf-market-basics", STAGE_1_RELEASED);
@@ -198,7 +201,9 @@ class LearningCurriculumIT extends IntegrationTestSupport {
                 "과거에 좋았던 결과가 앞으로도 좋으리라 말할 수 없는 이유는?",
                 9,
                 1000);
-        seeds.logStageReleased("etf-market-basics", 3, List.of("섹터와 ETF"), STAGE_1_RELEASED);
+        seeds.logStageReleased("etf-market-basics", 2, List.of("섹터와 ETF"), STAGE_1_RELEASED);
+        seeds.logArticleAdded(
+                "etf-market-basics", "etf-fees", "ETF 보수는 어디로 빠져나갈까?", ETF_FEES_ADDED);
         seeds.logStageReleased("returns-and-risk", 3, List.of("수익과 손실"), STAGE_2_RELEASED);
     }
 
@@ -257,29 +262,39 @@ class LearningCurriculumIT extends IntegrationTestSupport {
         assertThat(justAfter.get("notices")).isEmpty();
         assertThat(justAfter.get("changeLog"))
                 .extracting(line -> line.get("entryKey").asText())
-                .containsExactly("stage:returns-and-risk", "stage:etf-market-basics");
+                .containsExactly(
+                        "stage:returns-and-risk", "article:etf-fees", "stage:etf-market-basics");
     }
 
     @Test
-    @DisplayName("공개된 단계에 더한 글의 ARTICLE_ADDED 줄은 글 제목과 함께 최신 순서로 실린다 (quickstart 8-6)")
+    @DisplayName(
+            "공개된 단계에 더한 글의 ARTICLE_ADDED 줄은 그때 제목·새 글 1편으로 실리고, 같은 시각이면 나중에 쓴 줄이 먼저다 (quickstart 8-6)")
     void articleAddedLineCarriesTitle() {
         seedTwoStagesReleased();
-        Instant added = STAGE_2_RELEASED.plus(Duration.ofHours(12));
-        seeds.logArticleAdded("etf-market-basics", "etf-fees", "ETF 보수는 어디로 빠져나갈까?", added);
+        // 2단계 공개와 같은 시각에 쓴 글 추가 줄. 같은 시각이면 나중에 더한 줄이 먼저 온다.
+        seeds.logArticleAdded(
+                "returns-and-risk", "recovery-period", "떨어진 뒤 얼마나 걸려 돌아왔을까?", STAGE_2_RELEASED);
 
-        JsonNode changeLog = curriculumAt(NOW).get("changeLog");
+        JsonNode curriculum = curriculumAt(NOW);
 
-        assertThat(changeLog)
+        assertThat(curriculum.get("changeLog"))
                 .extracting(line -> line.get("entryKey").asText())
                 .containsExactly(
-                        "article:etf-fees", "stage:returns-and-risk", "stage:etf-market-basics");
-        JsonNode line = changeLog.get(0);
+                        "article:recovery-period",
+                        "stage:returns-and-risk",
+                        "article:etf-fees",
+                        "stage:etf-market-basics");
+        JsonNode line = curriculum.at("/changeLog/2");
         assertThat(line.get("kind").asText()).isEqualTo("ARTICLE_ADDED");
         assertThat(line.get("stageNumber").asInt()).isEqualTo(1);
+        assertThat(line.get("stageName").asText()).isEqualTo("ETF와 국내 시장 기초");
         assertThat(line.get("newCount").asInt()).isEqualTo(1);
         assertThat(line.get("rewrittenCount").asInt()).isZero();
         assertThat(line.get("rewrittenTitles")).isEmpty();
         assertThat(line.get("articleTitle").asText()).isEqualTo("ETF 보수는 어디로 빠져나갈까?");
+        assertThat(curriculum.at("/changeLog/1/articleTitle").isNull())
+                .as("단계 공개 줄은 글 제목이 null이다")
+                .isTrue();
     }
 
     @Test
@@ -308,7 +323,7 @@ class LearningCurriculumIT extends IntegrationTestSupport {
         assertThat(second.get("releasedAt").asText()).isEqualTo(STAGE_2_RELEASED.toString());
         assertThat(curriculum.get("releasedStageCount").asInt()).isEqualTo(2);
         assertThat(curriculum.at("/stages/0/status").asText()).isEqualTo("OPEN");
-        assertThat(curriculum.get("changeLog")).hasSize(2);
+        assertThat(curriculum.get("changeLog")).hasSize(3);
     }
 
     @Test

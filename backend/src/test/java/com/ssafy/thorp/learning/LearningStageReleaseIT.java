@@ -583,7 +583,7 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
 
     @Test
     @DisplayName(
-            "공개된 단계에 새 글을 글마다 게시하면 ARTICLE_ADDED 한 줄이고, 게시 취소 뒤 다시 게시해도 늘지 않는다 (quickstart 8-6)")
+            "공개된 단계에 새 글을 글마다 게시하면 ARTICLE_ADDED 한 줄이고, 게시 취소 뒤 다시 게시하거나 공개된 다른 단계로 옮겨 게시해도 늘지 않는다 (quickstart 8-6, T163)")
     void addingArticleToReleasedStageLogsOnce() throws Exception {
         prepareStageTwo(passingRecovery());
         adminData(release(STAGE_2, versionsFrom(adminData(readiness(STAGE_2), 200))), 200);
@@ -623,6 +623,25 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
                         .content("{\"expectedDraftVersion\":1}"),
                 200);
         assertThat(count("learning_release_log")).isEqualTo(2);
+
+        // 공개된 단계 사이 이동(2단계 → 이미 공개된 1단계)도 변경 기록에 올리지 않는다(FR-031, T163).
+        adminData(
+                save(
+                        "drawdown-depth",
+                        V2Draft.of(objectMapper, "하락 폭은 어떻게 읽을까?", "etf-market-basics", 5)
+                                .term("drawdown-depth", "하락 폭")
+                                .build(1)),
+                200);
+        adminData(
+                post("/admin/learning/articles/drawdown-depth/publish")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expectedDraftVersion\":2}"),
+                200);
+        assertThat(count("learning_release_log")).isEqualTo(2);
+        JsonNode moved = call(get("/learning/curriculum"), 200).get("data");
+        assertThat(moved.at("/stages/0/articles/0/articleId").asText()).isEqualTo("drawdown-depth");
+        assertThat(moved.at("/stages/0/articles/0/number").asText()).isEqualTo("1-1");
+        assertThat(moved.at("/stages/1/articles")).hasSize(4);
     }
 
     @Test
@@ -753,31 +772,57 @@ class LearningStageReleaseIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("공개가 글 잠금을 기다리는 사이 그 글의 저장이 커밋되면 409 LEARNING_STAGE_CHANGED이고 아무것도 쓰지 않는다")
+    @DisplayName(
+            "공개가 글 잠금을 기다리는 사이 그 글의 저장이 먼저 커밋되면 저장은 정상이고 공개는 409 LEARNING_STAGE_CHANGED로 아무것도 쓰지 않는다 (T166)")
     void saveCommittedWhileReleaseWaitsIsConflict() throws Exception {
         prepareStageTwo(passingRecovery());
         Map<String, Integer> versions = versionsFrom(adminData(readiness(STAGE_2), 200));
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
         try (Connection holder = rawConnection();
                 Connection watcher = rawConnection()) {
             holder.setAutoCommit(false);
-            // 저장과 같은 효과: 글 행을 잠그고 초안 번호를 올린 채 커밋하지 않는다.
+            // 글 행을 잠가 둔다. 행 잠금은 기다린 순서대로 넘어가므로, 먼저 온 저장이 공개보다 먼저 잠금을 얻어 커밋한다.
             holder.createStatement()
-                    .executeUpdate(
-                            "UPDATE learning_article SET draft_version = draft_version + 1"
-                                    + " WHERE article_key = 'recovery-period'");
-            Future<JsonNode> late = executor.submit(() -> admin(release(STAGE_2, versions), 409));
+                    .executeQuery(
+                            "SELECT id FROM learning_article WHERE article_key = 'recovery-period'"
+                                    + " FOR UPDATE")
+                    .close();
+            Future<JsonNode> saving =
+                    executor.submit(
+                            () ->
+                                    callAny(
+                                            save("recovery-period", passingRecovery().build(1))
+                                                    .with(Requesters.as(ADMIN))
+                                                    .with(csrf())));
             awaitBlockedBy(holder, watcher, 1);
+            Future<JsonNode> releasing =
+                    executor.submit(
+                            () ->
+                                    callAny(
+                                            release(STAGE_2, versions)
+                                                    .with(Requesters.as(ADMIN))
+                                                    .with(csrf())));
+            awaitBlockedBy(holder, watcher, 2);
             holder.commit();
 
-            JsonNode error = late.get(30, TimeUnit.SECONDS).get("error");
+            JsonNode saved = saving.get(30, TimeUnit.SECONDS);
+            assertThat(saved.get("success").asBoolean()).isTrue();
+            assertThat(saved.at("/data/draftVersion").asInt()).isEqualTo(2);
+            JsonNode error = releasing.get(30, TimeUnit.SECONDS).get("error");
             assertThat(error.get("code").asText()).isEqualTo("LEARNING_STAGE_CHANGED");
+            assertThat(error.at("/details/articles/2/articleId").asText())
+                    .isEqualTo("recovery-period");
             assertThat(error.at("/details/articles/2/draftVersion").asInt()).isEqualTo(2);
         } finally {
             executor.shutdownNow();
         }
         assertThat(releasedAt(STAGE_2)).isNull();
         assertThat(count("learning_release_log")).isZero();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(*) FROM learning_article_revision WHERE edition = 'CURRENT'",
+                                Integer.class))
+                .isZero();
     }
 
     @Test
