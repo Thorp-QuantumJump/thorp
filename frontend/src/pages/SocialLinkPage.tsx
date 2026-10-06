@@ -56,7 +56,7 @@ export function SocialLinkPage() {
       panelTitle="계정 연결 확인"
     >
       {state.status === 'ready' ? (
-        <LinkOptions pending={state.pending} />
+        <LinkOptions pending={state.pending} reload={reload} />
       ) : (
         <SocialPendingFallback state={state} onRetry={reload} />
       )}
@@ -64,7 +64,12 @@ export function SocialLinkPage() {
   )
 }
 
-function LinkOptions({ pending }: { pending: PendingSocialView }) {
+/** 서버가 대기 상태를 버리는 오류. 상한을 넘었거나(대기 상태 삭제) 이미 없다. */
+function pendingGone(error: ApiClientError) {
+  return error.is('SOCIAL_VERIFICATION_LIMIT') || error.is('SOCIAL_PENDING_NOT_FOUND')
+}
+
+function LinkOptions({ pending, reload }: { pending: PendingSocialView; reload: () => void }) {
   const navigate = useNavigate()
   const { completeSignIn } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -111,6 +116,11 @@ function LinkOptions({ pending }: { pending: PendingSocialView }) {
       if (error instanceof ApiClientError) {
         if (error.is('SOCIAL_PROVIDER_ALREADY_LINKED')) {
           navigate(`/auth/social/already-linked?provider=${pending.provider}`, { replace: true })
+          return
+        }
+        if (pendingGone(error)) {
+          // 서버가 대기 상태를 버렸다. 폼을 남겨 두면 누를 때마다 "찾을 수 없음"만 돌아온다 — 다시 읽어 "처음부터 다시" 안내로 바꾼다.
+          reload()
           return
         }
         if (error.is('INVALID_CREDENTIALS')) {
@@ -160,6 +170,10 @@ function LinkOptions({ pending }: { pending: PendingSocialView }) {
       })
       codeRef.current?.focus()
     } catch (error) {
+      if (error instanceof ApiClientError && pendingGone(error)) {
+        reload()
+        return
+      }
       setStatus({
         message:
           error instanceof ApiClientError
