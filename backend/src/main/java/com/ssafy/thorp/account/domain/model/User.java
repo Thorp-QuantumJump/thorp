@@ -4,6 +4,11 @@ import java.time.Instant;
 
 public class User {
 
+    /** 하이픈·공백 없는 국내 휴대폰 번호(FR-001). 요청 검증과 서비스 검사가 같은 식을 쓴다. */
+    public static final String PHONE_NUMBER_REGEX = "^01[016789]\\d{7,8}$";
+
+    public static final String PHONE_NUMBER_MESSAGE = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678";
+
     private final Long id;
     private final String email;
 

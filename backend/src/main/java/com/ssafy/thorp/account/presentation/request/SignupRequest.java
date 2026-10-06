@@ -2,6 +2,7 @@ package com.ssafy.thorp.account.presentation.request;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.ssafy.thorp.account.application.EmailNormalizer;
+import com.ssafy.thorp.account.domain.model.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -28,7 +29,7 @@ public class SignupRequest {
      * <p><b>선택 항목이다</b>(spec 014 2026-10-02). 화면은 묻지 않는다. 문자 인증과 함께 다시 받을 때를 위해 형식 검사는 남긴다 —
      * {@code @Pattern}은 {@code null}을 통과시킨다.
      */
-    @Pattern(regexp = "^01[016789]\\d{7,8}$", message = "국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678")
+    @Pattern(regexp = User.PHONE_NUMBER_REGEX, message = User.PHONE_NUMBER_MESSAGE)
     private String phoneNumber;
 
     public String getEmail() {
