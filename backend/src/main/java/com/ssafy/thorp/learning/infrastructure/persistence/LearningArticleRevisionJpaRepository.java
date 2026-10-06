@@ -47,6 +47,40 @@ public interface LearningArticleRevisionJpaRepository
             nativeQuery = true)
     List<PublishedSummaryRow> findPublishedSummaries();
 
+    /** 새 기준 판이 게시 중인 글 한 줄. native alias는 따옴표로 감싼다. */
+    interface CurrentArticleRow {
+        String getArticleId();
+
+        String getTitle();
+
+        String getStageKey();
+
+        Integer getStageNumber();
+
+        Integer getPosition();
+    }
+
+    /**
+     * {@code CURRENT} 판이 게시 중인 글. 공개 배치의 단계 번호, 단계 안 순서, {@code article_key} 순서다(data-model §12-2).
+     * 제목만 판 JSON에서 꺼내고 본문은 읽지 않는다.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT a.article_key AS "articleId",
+                           r.snapshot ->> 'title' AS "title",
+                           s.stage_key AS "stageKey",
+                           CAST(s.number AS INTEGER) AS "stageNumber",
+                           CAST(a.published_stage_position AS INTEGER) AS "position"
+                    FROM learning_article a
+                    JOIN learning_article_revision r ON r.id = a.published_revision_id
+                    JOIN learning_stage s ON s.id = a.published_stage_id
+                    WHERE a.status = 'PUBLISHED' AND r.edition = 'CURRENT'
+                    ORDER BY s.number, a.published_stage_position, a.article_key
+                    """,
+            nativeQuery = true)
+    List<CurrentArticleRow> findCurrentInReadingOrder();
+
     /** 이 글의 공개 중인 판. */
     @Query(
             "select r from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"

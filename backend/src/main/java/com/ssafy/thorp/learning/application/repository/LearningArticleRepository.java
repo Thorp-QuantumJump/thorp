@@ -1,6 +1,8 @@
 package com.ssafy.thorp.learning.application.repository;
 
+import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
+import com.ssafy.thorp.learning.application.result.PublishedArticleView;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
@@ -24,7 +26,7 @@ public interface LearningArticleRepository {
      */
     Optional<LearningArticle> findByArticleKeyForUpdate(ArticleId articleId);
 
-    /** 모든 글. {@code reading_order}, {@code article_key} 오름차순. */
+    /** 모든 글. 초안 단계 번호, 단계 안 순서, {@code article_key} 순서다(learning-admin-api §2). */
     List<LearningArticle> findAllOrdered();
 
     /**
@@ -38,6 +40,15 @@ public interface LearningArticleRepository {
 
     /** 이 글의 공개 중인 판. 초안이거나 없는 글이면 비어 있다. */
     Optional<ArticleRevision> findPublishedRevision(ArticleId articleId);
+
+    /** 이 글의 공개 중인 판과 공개 배치. 초안이거나 없는 글이면 비어 있다. */
+    Optional<PublishedArticleView> findPublished(ArticleId articleId);
+
+    /**
+     * 새 기준 판({@code CURRENT})이 게시 중인 글. 읽는 순서(공개 배치 단계 번호, 단계 안 순서, {@code articleId})다(data-model
+     * §12-2). 본문을 읽지 않는다.
+     */
+    List<CurrentArticleEntry> findCurrentInReadingOrder();
 
     /** 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다. */
     LearningArticle save(LearningArticle article);

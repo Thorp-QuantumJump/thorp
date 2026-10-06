@@ -4,8 +4,10 @@ import com.ssafy.thorp.learning.application.repository.LearningTermRepository;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.TermId;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -27,6 +29,13 @@ public class LearningTermRepositoryImpl implements LearningTermRepository {
                 .findByTermKey(termId.value())
                 .flatMap(term -> articleJpaRepository.findById(term.getArticleId()))
                 .map(article -> new ArticleId(article.getArticleKey()));
+    }
+
+    @Override
+    public Set<TermId> findAllTermIds() {
+        Set<TermId> termIds = new LinkedHashSet<>();
+        termJpaRepository.findAllTermKeys().forEach(key -> termIds.add(new TermId(key)));
+        return termIds;
     }
 
     /** 벌크 삭제 뒤 다시 넣는다. 같은 {@code term_key}를 유지하는 용어도 행이 새로 생긴다. 초안 작업본이라 행 식별이 의미를 갖지 않는다. */

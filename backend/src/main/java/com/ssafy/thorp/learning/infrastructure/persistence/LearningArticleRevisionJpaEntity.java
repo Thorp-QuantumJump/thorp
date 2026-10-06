@@ -1,8 +1,11 @@
 package com.ssafy.thorp.learning.infrastructure.persistence;
 
+import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.infrastructure.persistence.LearningContentJson.SnapshotJson;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -49,6 +52,10 @@ public class LearningArticleRevisionJpaEntity {
     @Column(nullable = false, updatable = false)
     private Instant publishedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 8, updatable = false)
+    private Edition edition;
+
     protected LearningArticleRevisionJpaEntity() {}
 
     LearningArticleRevisionJpaEntity(
@@ -58,7 +65,8 @@ public class LearningArticleRevisionJpaEntity {
             String checkVersion,
             String sectorMapVersion,
             long publishedByUserId,
-            Instant publishedAt) {
+            Instant publishedAt,
+            Edition edition) {
         this.articleId = articleId;
         this.revisionNo = revisionNo;
         this.snapshot = snapshot;
@@ -66,6 +74,7 @@ public class LearningArticleRevisionJpaEntity {
         this.sectorMapVersion = sectorMapVersion;
         this.publishedByUserId = publishedByUserId;
         this.publishedAt = publishedAt;
+        this.edition = edition;
     }
 
     Long getId() {
@@ -98,5 +107,9 @@ public class LearningArticleRevisionJpaEntity {
 
     Instant getPublishedAt() {
         return publishedAt;
+    }
+
+    Edition getEdition() {
+        return edition;
     }
 }

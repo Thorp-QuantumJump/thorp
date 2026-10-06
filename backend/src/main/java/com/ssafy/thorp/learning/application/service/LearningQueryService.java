@@ -2,40 +2,40 @@ package com.ssafy.thorp.learning.application.service;
 
 import com.ssafy.thorp.learning.application.exception.ArticleUnavailableException;
 import com.ssafy.thorp.learning.application.exception.TermNotReadyException;
+import com.ssafy.thorp.learning.application.port.PublishCheckRulesPort;
 import com.ssafy.thorp.learning.application.port.SectorMapPort;
-import com.ssafy.thorp.learning.application.port.SectorMapPort.SectorMapView;
 import com.ssafy.thorp.learning.application.repository.LearningArticleRepository;
+import com.ssafy.thorp.learning.application.repository.LearningStageRepository;
 import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
+import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.Block;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.Example;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.ExampleSector;
+import com.ssafy.thorp.learning.application.result.LearningArticleResult.NextArticle;
 import com.ssafy.thorp.learning.application.result.LearningArticleResult.Source;
-import com.ssafy.thorp.learning.application.result.LearningArticleResult.UnavailableReason;
+import com.ssafy.thorp.learning.application.result.LearningArticleResult.StageRef;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.HypotheticalBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
-import com.ssafy.thorp.learning.domain.model.ArticleBlock.TermBlock;
+import com.ssafy.thorp.learning.application.result.PublishedArticleView;
+import com.ssafy.thorp.learning.application.service.ArticleViewAssembler.Mode;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.ArticleSnapshot;
-import com.ssafy.thorp.learning.domain.model.LearningTerm;
+import com.ssafy.thorp.learning.domain.model.Edition;
+import com.ssafy.thorp.learning.domain.model.LearningStage;
+import com.ssafy.thorp.learning.domain.model.ReadingEstimate;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
-import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 배우기 공개 조회 유스케이스(US1·US3 서버, learning-public-api).
  *
- * <p><b>공개 중인 판과 게시 용어 색인만 읽는다.</b> 초안 작업본({@code learning_article}의 본문 컬럼, {@code
- * learning_term})으로 응답을 만들지 않는다. 게시 뒤 초안을 고쳐도 공개 내용이 바뀌지 않아야 한다(SC-006).
+ * <p><b>공개 중인 판, 공개 상태(단계의 공개 여부, 글의 공개 배치)와 게시 용어 색인만 읽는다.</b> 초안 작업본({@code learning_article}의 본문
+ * 컬럼, {@code learning_term})으로 응답을 만들지 않는다. 게시 뒤 초안을 고쳐도 공개 내용이 바뀌지 않아야 한다(SC-006).
  *
  * <p>사용자를 식별하지 않고 조회를 사용자별로 남기지 않는다(FR-012).
  */
@@ -45,19 +45,26 @@ public class LearningQueryService {
 
     private final LearningArticleRepository articleRepository;
     private final PublishedTermRepository publishedTermRepository;
+    private final LearningStageRepository stageRepository;
     private final SectorMapPort sectorMapPort;
+    private final PublishCheckRulesPort rulesPort;
 
     public LearningQueryService(
             LearningArticleRepository articleRepository,
             PublishedTermRepository publishedTermRepository,
-            SectorMapPort sectorMapPort) {
+            LearningStageRepository stageRepository,
+            SectorMapPort sectorMapPort,
+            PublishCheckRulesPort rulesPort) {
         this.articleRepository = articleRepository;
         this.publishedTermRepository = publishedTermRepository;
+        this.stageRepository = stageRepository;
         this.sectorMapPort = sectorMapPort;
+        this.rulesPort = rulesPort;
     }
 
     /**
-     * 공개 중인 글. 판의 {@code readingOrder}, {@code articleId} 오름차순이다.
+     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로가 쓴다
+     * (learning-public-api §2). 017의 글 열거도 이 조회를 쓴다.
      *
      * @return 게시된 글이 없으면 빈 목록. 빈 목록은 정상 화면이다(spec Edge Cases)
      */
@@ -66,15 +73,24 @@ public class LearningQueryService {
     }
 
     /**
-     * 공개 중인 글 하나.
+     * 공개 중인 글 하나(learning-public-api §3).
+     *
+     * <p>{@code edition}은 판의 종류와 단계 공개 상태로 정한다. {@code CURRENT} 판은 {@code CURRENT}, {@code LEGACY}
+     * 판은 공개된 단계가 하나도 없으면 {@code PRE_RELEASE}(지금 모습 그대로), 있으면 {@code PREVIOUS}(이전 판)다(R16). {@code
+     * LEGACY} 판의 블록은 9월 판 모양 그대로다.
+     *
+     * <p>판·공개 배치·읽는 순서·게시 색인을 여러 문장으로 읽으므로 한 스냅숏({@code REPEATABLE_READ})에서 읽는다. 기본 격리 수준이면 그 사이에
+     * 커밋된 게시 취소가 공개 배치를 비워 404가 아닌 500이 되거나, 다시 게시한 글의 옛 판과 새 배치가 짝지어진다.
      *
      * @throws ArticleUnavailableException 없는 글, 게시되지 않은 글, 형식이 틀린 식별자. 셋을 가르지 않는다
      */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public LearningArticleResult getPublished(String articleId) {
-        ArticleRevision revision =
+        PublishedArticleView view =
                 parseArticleId(articleId)
-                        .flatMap(articleRepository::findPublishedRevision)
+                        .flatMap(articleRepository::findPublished)
                         .orElseThrow(ArticleUnavailableException::new);
+        ArticleRevision revision = view.revision();
         ArticleSnapshot snapshot = revision.snapshot();
         // 공개 판 포인터가 다른 글의 판을 가리키면 그 글의 본문을 이 주소로 내보내게 된다.
         // 스키마가 막지 않는 관계라 여기서 확인하고, 어긋나면 조용히 보이지 않고 실패시킨다.
@@ -85,17 +101,80 @@ public class LearningQueryService {
                             + " belongs to another article: "
                             + snapshot.articleId());
         }
+        List<LearningStage> stages = stageRepository.findAllOrdered();
+        LearningStage stage = stage(stages, view);
+        boolean current = revision.edition() == Edition.CURRENT;
+
+        String number = null;
+        NextArticle next = null;
+        Integer stageArticleCount = null;
+        if (current) {
+            List<CurrentArticleEntry> order = articleRepository.findCurrentInReadingOrder();
+            int position = indexOf(order, articleId);
+            CurrentArticleEntry self = order.get(position);
+            number = number(order, self);
+            if (position + 1 < order.size()) {
+                CurrentArticleEntry following = order.get(position + 1);
+                next =
+                        new NextArticle(
+                                following.articleId(), number(order, following), following.title());
+            }
+            stageArticleCount =
+                    (int)
+                            order.stream()
+                                    .filter(entry -> entry.stageKey().equals(self.stageKey()))
+                                    .count();
+        }
+
+        Set<TermId> foreign =
+                current
+                        ? ArticleViewAssembler.foreignMentions(
+                                snapshot.bodyBlocks(), snapshot.terms())
+                        : Set.of();
+        Map<TermId, List<String>> foreignAliases =
+                foreign.isEmpty()
+                        ? Map.of()
+                        : publishedTermRepository.findPublishedAliases(foreign);
         return new LearningArticleResult(
                 snapshot.articleId().value(),
+                current
+                        ? "CURRENT"
+                        : stages.stream().anyMatch(LearningStage::released)
+                                ? "PREVIOUS"
+                                : "PRE_RELEASE",
                 snapshot.title(),
                 snapshot.question(),
                 snapshot.readingOrder(),
-                snapshot.bodyBlocks().stream().map(block -> toBlock(snapshot, block)).toList(),
-                judgeExample(snapshot),
+                new StageRef(stage.stageKey().value(), stage.number(), stage.name()),
+                number,
+                current
+                        ? snapshot.reading().readingMinutes()
+                        : ReadingEstimate.minutes(
+                                ReadingEstimate.bodyChars(snapshot.bodyBlocks(), snapshot.terms()),
+                                rulesPort.v2().reading().charsPerMinute()),
+                current ? snapshot.reading().minDwellSeconds() : null,
+                ArticleViewAssembler.blocks(
+                        snapshot.articleId(),
+                        snapshot.format(),
+                        snapshot.bodyBlocks(),
+                        snapshot.terms(),
+                        foreignAliases,
+                        Mode.PUBLISHED),
+                ArticleViewAssembler.quiz(snapshot.quiz(), Mode.PUBLISHED),
+                ArticleViewAssembler.example(
+                        snapshot.articleId(),
+                        snapshot.format(),
+                        snapshot.example(),
+                        sectorMapPort::currentMap,
+                        Mode.PUBLISHED),
                 snapshot.sources().stream()
                         .map(source -> new Source(source.label(), source.url()))
                         .toList(),
-                revision.publishedAt());
+                next,
+                stageArticleCount,
+                stages.stream().anyMatch(candidate -> !candidate.released()),
+                revision.publishedAt(),
+                false);
     }
 
     /**
@@ -110,73 +189,42 @@ public class LearningQueryService {
     }
 
     /**
-     * 블록을 응답 모양으로 옮긴다. {@code term} 블록의 이름·문장은 <b>같은 판</b>의 용어에서 채운다.
-     *
-     * <p>판에 없는 용어를 가리키면 실패시킨다. 게시 전 검사({@code TERM_BLOCKS_MATCH})가 막는 상태라 여기 오면 저장 데이터가 깨졌다는 뜻이고, 빈
-     * 문장으로 채우면 없는 설명을 만들어 내게 된다(원칙 VI).
+     * 글 번호 {@code {단계 번호}-{그 단계의 공개된 글 가운데 읽는 순서 순번}}(data-model §12-2). {@code order}는 읽는 순서라 같은
+     * 단계 글이 이어져 있다.
      */
-    private static Block toBlock(ArticleSnapshot snapshot, ArticleBlock block) {
-        return switch (block) {
-            case HeadingBlock heading -> Block.text("heading", heading.text());
-            case ParagraphBlock paragraph -> Block.text("paragraph", paragraph.text());
-            case HypotheticalBlock hypothetical -> Block.text("hypothetical", hypothetical.text());
-            case TermBlock termBlock -> {
-                LearningTerm term =
-                        snapshot.term(termBlock.termId())
-                                .orElseThrow(
-                                        () ->
-                                                new IllegalStateException(
-                                                        "published revision of "
-                                                                + snapshot.articleId()
-                                                                + " has a term block without its term: "
-                                                                + termBlock.termId()));
-                yield Block.term(term.termId().value(), term.label(), term.sentence());
+    private static String number(List<CurrentArticleEntry> order, CurrentArticleEntry entry) {
+        int ordinal = 0;
+        for (CurrentArticleEntry candidate : order) {
+            if (candidate.stageKey().equals(entry.stageKey())) {
+                ordinal++;
             }
-        };
+            if (candidate.articleId().equals(entry.articleId())) {
+                return entry.stageNumber() + "-" + ordinal;
+            }
+        }
+        throw new IllegalStateException("article is not in the reading order: " + entry);
     }
 
-    /**
-     * 조회 시점의 열린 대응표로 예시를 판정한다(research R8). 판정 결과를 저장하지 않고 판의 예시 값도 바꾸지 않는다.
-     *
-     * <p>대응표는 이 조회에서 한 번만 읽는다. 판에 예시가 없으면 실패시킨다. 게시 전 검사({@code EXAMPLE_PRESENT})가 막는 상태다.
-     */
-    private Example judgeExample(ArticleSnapshot snapshot) {
-        ExampleAllocation example = snapshot.example();
-        if (example == null) {
-            throw new IllegalStateException(
-                    "published revision of " + snapshot.articleId() + " has no example");
+    /** CURRENT 판이 게시 중인 글이면 읽는 순서에 있다. 없으면 글 행과 판이 어긋난 것이라 실패시킨다. */
+    private static int indexOf(List<CurrentArticleEntry> order, String articleId) {
+        for (int index = 0; index < order.size(); index++) {
+            if (order.get(index).articleId().equals(articleId)) {
+                return index;
+            }
         }
-        Optional<SectorMapView> map = sectorMapPort.currentMap();
-        if (map.isEmpty()) {
-            return new Example(
-                    false,
-                    example.sectors().stream()
-                            .map(
-                                    sector ->
-                                            new ExampleSector(
-                                                    sector.code(), null, sector.weightTenths()))
-                            .toList(),
-                    List.of(),
-                    UnavailableReason.SECTOR_MAP_NOT_READY);
-        }
-        Map<String, String> names = map.get().sectorNamesByCode();
-        List<ExampleSector> sectors =
-                example.sectors().stream()
-                        .map(
-                                sector ->
-                                        new ExampleSector(
-                                                sector.code(),
-                                                names.get(sector.code()),
-                                                sector.weightTenths()))
-                        .toList();
-        List<String> missing =
-                example.sectors().stream()
-                        .map(ExampleAllocation.SectorWeight::code)
-                        .filter(code -> !names.containsKey(code))
-                        .toList();
-        return missing.isEmpty()
-                ? new Example(true, sectors, List.of(), null)
-                : new Example(false, sectors, missing, UnavailableReason.SECTOR_NOT_IN_MAP);
+        throw new IllegalStateException(
+                "current article is missing from the reading order: " + articleId);
+    }
+
+    private static LearningStage stage(List<LearningStage> stages, PublishedArticleView view) {
+        return stages.stream()
+                .filter(stage -> stage.stageKey().equals(view.placement().stageKey()))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "published placement points to a missing stage: "
+                                                + view.placement()));
     }
 
     private static Optional<ArticleId> parseArticleId(String raw) {

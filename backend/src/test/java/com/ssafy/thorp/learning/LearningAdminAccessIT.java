@@ -49,12 +49,12 @@ class LearningAdminAccessIT extends IntegrationTestSupport {
     }
 
     /**
-     * 관리 일곱 엔드포인트. 본문은 검증을 통과하는 값이다. 틀린 본문이면 권한 판정보다 요청 검증(400)이 먼저 돈다. 요청은 권한 판정에서 끝나므로 DB는 바뀌지
+     * 관리 여덟 엔드포인트. 본문은 검증을 통과하는 값이다. 틀린 본문이면 권한 판정보다 요청 검증(400)이 먼저 돈다. 요청은 권한 판정에서 끝나므로 DB는 바뀌지
      * 않는다.
      */
     private record Endpoint(boolean changesState, MockHttpServletRequestBuilder request) {}
 
-    private static List<Endpoint> sevenEndpoints() {
+    private static List<Endpoint> eightEndpoints() {
         String saveBody =
                 """
                 {"expectedDraftVersion":0,"title":"t","question":"q","readingOrder":8,
@@ -68,7 +68,7 @@ class LearningAdminAccessIT extends IntegrationTestSupport {
                         post("/admin/learning/articles")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
-                                        "{\"articleId\":\"new-article\",\"title\":\"t\",\"readingOrder\":10}")),
+                                        "{\"articleId\":\"new-article\",\"title\":\"t\",\"stageKey\":\"returns-and-risk\",\"stagePosition\":5}")),
                 new Endpoint(false, get(ARTICLE)),
                 new Endpoint(
                         true,
@@ -78,7 +78,8 @@ class LearningAdminAccessIT extends IntegrationTestSupport {
                         post(ARTICLE + "/publish")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"expectedDraftVersion\":0}")),
-                new Endpoint(true, post(ARTICLE + "/unpublish")));
+                new Endpoint(true, post(ARTICLE + "/unpublish")),
+                new Endpoint(false, get(ARTICLE + "/preview")));
     }
 
     @Test
@@ -92,9 +93,9 @@ class LearningAdminAccessIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("허용 목록에 없는 로그인 계정은 일곱 엔드포인트 모두 404 RESOURCE_NOT_FOUND이고 admin:false 200이 없다")
+    @DisplayName("허용 목록에 없는 로그인 계정은 여덟 엔드포인트 모두 404 RESOURCE_NOT_FOUND이고 admin:false 200이 없다")
     void nonAdminGetsNotFoundEverywhere() throws Exception {
-        for (Endpoint endpoint : sevenEndpoints()) {
+        for (Endpoint endpoint : eightEndpoints()) {
             JsonNode body =
                     call(endpoint.request().with(Requesters.as(NOT_ADMIN)).with(csrf()), 404);
 
@@ -125,7 +126,7 @@ class LearningAdminAccessIT extends IntegrationTestSupport {
     @Test
     @DisplayName("관리 계정이라도 상태 변경 요청에 CSRF 토큰이 없으면 403 CSRF_TOKEN_INVALID다")
     void stateChangeWithoutCsrfIsForbidden() throws Exception {
-        for (Endpoint endpoint : sevenEndpoints()) {
+        for (Endpoint endpoint : eightEndpoints()) {
             if (!endpoint.changesState()) {
                 continue;
             }
