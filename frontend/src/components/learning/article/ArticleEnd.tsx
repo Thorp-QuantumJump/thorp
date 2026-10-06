@@ -11,6 +11,11 @@ interface ArticleEndProps {
    * 로그인 사용자의 확인 문제와 완료 카드는 B12가 이 자리에 더한다. 그 전까지는 다음 글 연결만 보인다.
    */
   guest: boolean
+  /**
+   * 로그인 상태를 다시 확인하는 중인가(research R33). 그동안 확인 문제와 로그인 안내를 내리지 않고 자리를 둔 채
+   * 보이지 않게만 한다. 내리면 비로그인으로 고른 답이 탭을 오갈 때마다 사라진다.
+   */
+  concealed: boolean
   /** 다음 글·목록으로 옮겨 가도 처음 떠난 화면을 잃지 않게 받은 돌아갈 자리를 싣는다(term-help-ui §3) */
   learningReturn?: LearningReturnState
 }
@@ -24,13 +29,18 @@ interface ArticleEndProps {
  * <p>로그인 연결은 014의 `useLoginReturn`으로 지금 글 주소를 적어 두고 떠난다(research R34). 013이 따로
  * 저장 키를 만들지 않는다.
  */
-export function ArticleEnd({ article, guest, learningReturn }: ArticleEndProps) {
+export function ArticleEnd({ article, guest, concealed, learningReturn }: ArticleEndProps) {
   const rememberReturn = useLoginReturn()
   const carried = learningReturn ? { learningReturn } : undefined
 
   return (
     <div className={styles.end}>
-      {guest ? <QuizPanel questions={article.quiz} mode="guest" /> : null}
+      {/* 숨길 때도 같은 자리에 같은 부품을 둔다. 감싸는 요소를 바꾸면 확인 문제가 다시 그려져 답을 잃는다. */}
+      {guest ? (
+        <div className={concealed ? styles.concealed : undefined}>
+          <QuizPanel questions={article.quiz} mode="guest" />
+        </div>
+      ) : null}
 
       <nav className={styles.next} aria-label="다음 읽을 글">
         {article.next ? (
@@ -51,14 +61,14 @@ export function ArticleEnd({ article, guest, learningReturn }: ArticleEndProps) 
               배우기 목록으로
             </Link>
             {article.hasUnreleasedStages ? (
-              <p className={styles.preparing}>다음 단계는 준비 중입니다</p>
+              <p className={styles.preparing}>다음 단계는 준비 중입니다.</p>
             ) : null}
           </>
         )}
       </nav>
 
       {guest ? (
-        <p className={styles.guest}>
+        <p className={concealed ? `${styles.guest} ${styles.concealed}` : styles.guest}>
           <span>로그인하면 학습 기록이 남습니다.</span>
           <Link className={styles.loginLink} to="/login" onClick={rememberReturn}>
             로그인

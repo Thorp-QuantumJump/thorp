@@ -97,7 +97,9 @@ export function RichText({ runs, blockIndex, field }: RichTextProps) {
             {run.text}
             {withAliases ? aliasSuffix(run.aliases) : null}
             {withHelp ? (
-              <TermHelp termId={run.term} label={run.text} returnTo={learningReturn} />
+              <span className={styles.help}>
+                <TermHelp termId={run.term} label={run.text} returnTo={learningReturn} />
+              </span>
             ) : null}
           </span>
         )

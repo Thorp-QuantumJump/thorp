@@ -25,6 +25,10 @@
 }
 
 .listLink {
+  display: inline-flex;
+  align-items: center;
+  /* 누르는 곳은 44×44px 이상이다(design-notes §6). */
+  min-height: 44px;
   color: var(--thorp-accent-soft);
   font-size: var(--thorp-text-body, 0.9rem);
 }

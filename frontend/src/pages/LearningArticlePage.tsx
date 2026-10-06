@@ -2,10 +2,10 @@ import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchLearningArticle, type LearningArticleResult } from '@/api/learning'
-import { useAuth } from '@/auth/auth-context'
 import { ArticleBody } from '@/components/learning/article/ArticleBody'
 import { ArticleEnd } from '@/components/learning/article/ArticleEnd'
 import { EditionNotice } from '@/components/learning/article/EditionNotice'
+import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
 import { ExampleEntry } from '@/components/learning/ExampleEntry'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { ReturnLink } from '@/components/learning/ReturnLink'
@@ -23,8 +23,9 @@ type ArticleState = { status: 'loading' } | LearningArticleResult
  * <p><b>응답만으로 그린다.</b> 제목·질문·본문·예시·확인 문제가 모두 공개 중인 판에서 온다(013 FR-015).
  * 판(`edition`)에 따라 머리와 글 끝이 다르다.
  *
- * - `CURRENT`: 단계·번호·예상 읽기 시간 머리, 새 기준 본문, (예시가 있으면) 예시, 글 끝 자리
- * - `PREVIOUS`: '이전 판' 머리, 9월 판 본문과 예시, 기록하지 않는다는 한 줄과 목록 연결(FR-031)
+ * - `CURRENT`: 경로·번호·예상 읽기 시간 머리, 새 기준 본문, (예시가 있으면) 예시, 글 끝 자리(목업 '글 끝')
+ * - `PREVIOUS`: 경로와 '이전 판' 머리, 9월 판 본문과 예시, 글 끝에는 기록하지 않는다는 한 줄과 목록 연결만
+ *   (FR-031). 9월 판의 글 끝 출처 목록은 두지 않는다(FR-007)
  * - `PRE_RELEASE`: 첫 단계 공개 전 모습 그대로(FR-031)
  *
  * <p><b>볼 수 없는 글은 오류가 아니다.</b> 없는 글과 게시되지 않은 글을 서버가 가르지 않으므로 화면도
@@ -35,7 +36,7 @@ type ArticleState = { status: 'loading' } | LearningArticleResult
 export function LearningArticlePage() {
   const { articleId = '' } = useParams()
   const location = useLocation()
-  const { status: authStatus } = useAuth()
+  const { settled, concealed } = useSettledAuth()
   const learningReturn = carriedLearningReturn(location.state)
   const [state, setState] = useState<ArticleState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -85,7 +86,8 @@ export function LearningArticlePage() {
           <ArticleView
             article={state.article}
             listLink={listLink}
-            guest={authStatus === 'anonymous'}
+            guest={settled.kind === 'anonymous'}
+            concealed={concealed}
             learningReturn={learningReturn}
           />
         ) : null}
@@ -116,17 +118,22 @@ interface ArticleViewProps {
   article: LearningArticle
   listLink: ReactNode
   guest: boolean
+  /** 로그인 상태를 다시 확인하는 중이라 글 끝의 기록 자리를 숨기기만 하는가(research R33) */
+  concealed: boolean
   learningReturn?: LearningReturnState
 }
 
-function ArticleView({ article, listLink, guest, learningReturn }: ArticleViewProps) {
+function ArticleView({ article, listLink, guest, concealed, learningReturn }: ArticleViewProps) {
   return (
     <article className={styles.article} aria-labelledby="learning-article-title">
       <header className={styles.header}>
-        <ArticleHeadLine article={article} />
+        <ArticleHeadLine article={article} learningReturn={learningReturn} />
         <h1 id="learning-article-title" className={styles.title}>
           {article.title}
         </h1>
+        {article.edition !== 'PRE_RELEASE' ? (
+          <p className={styles.meta}>약 {article.readingMinutes}분</p>
+        ) : null}
         <p className={styles.question}>{article.question}</p>
       </header>
 
@@ -138,14 +145,24 @@ function ArticleView({ article, listLink, guest, learningReturn }: ArticleViewPr
       ) : null}
 
       {article.edition === 'CURRENT' ? (
-        <ArticleEnd article={article} guest={guest} learningReturn={learningReturn} />
-      ) : (
-        // 9월 판 글의 출처는 지금처럼 글 끝 목록이다. 새 기준 글은 글자 옆 '(*출처)'로 옮겨 목록이 없다(FR-007).
+        <ArticleEnd
+          article={article}
+          guest={guest}
+          concealed={concealed}
+          learningReturn={learningReturn}
+        />
+      ) : null}
+
+      {/*
+        첫 단계 공개 전 글만 9월 판 글 끝(목록 연결과 출처 목록)을 그대로 둔다(FR-031). 새 기준 글은 출처를 글자 옆
+        '(*출처)'로 보이고, 이전 판 글의 글 끝에는 기록하지 않는다는 한 줄과 목록 연결만 둔다(FR-007, FR-031).
+      */}
+      {article.edition === 'PRE_RELEASE' ? (
         <div className={styles.articleFooter}>
-          {article.edition === 'PRE_RELEASE' ? listLink : null}
+          {listLink}
           <SourceList article={article} />
         </div>
-      )}
+      ) : null}
 
       <EditionNotice edition={article.edition} place="end" learningReturn={learningReturn} />
     </article>
@@ -153,10 +170,17 @@ function ArticleView({ article, listLink, guest, learningReturn }: ArticleViewPr
 }
 
 /**
- * 제목 위 한 줄. 첫 단계 공개 전 글은 1판 그대로 'LEARN'이다. 새 기준 글은 단계·번호·예상 읽기 시간,
- * 이전 판 글은 '이전 판' 표시와 단계·예상 읽기 시간을 보인다(이전 판에는 번호가 없다).
+ * 제목 위. 첫 단계 공개 전 글은 1판 그대로 'LEARN'이다. 새 기준 글과 이전 판 글은 목업 '글 끝'처럼 경로
+ * ('배우기 › 2단계 · 이름')를 두고, 그 아래에 단계 안 번호를 둔다. 이전 판 글은 번호 대신 '이전 판' 표시다
+ * (FR-031). 경로의 두 연결은 목록으로 가므로 받은 돌아갈 자리를 싣는다(term-help-ui §3).
  */
-function ArticleHeadLine({ article }: { article: LearningArticle }) {
+function ArticleHeadLine({
+  article,
+  learningReturn,
+}: {
+  article: LearningArticle
+  learningReturn?: LearningReturnState
+}) {
   if (article.edition === 'PRE_RELEASE') {
     return (
       <p className={heading.eyebrow} aria-hidden="true">
@@ -164,15 +188,29 @@ function ArticleHeadLine({ article }: { article: LearningArticle }) {
       </p>
     )
   }
+  const carried = learningReturn ? { learningReturn } : undefined
   return (
-    <p className={styles.headLine}>
-      <EditionNotice edition={article.edition} place="head" />
-      <span>
-        {article.stage.number}단계 {article.stage.name}
-      </span>
-      {article.number ? <span>{article.number}</span> : null}
-      <span>약 {article.readingMinutes}분</span>
-    </p>
+    <>
+      <nav className={styles.crumb} aria-label="경로">
+        <Link to="/learn" state={carried}>
+          배우기
+        </Link>
+        <span className={styles.crumbSeparator} aria-hidden="true">
+          ›
+        </span>
+        {/* 단계 자리로 바로 가는 연결은 커리큘럼이 생기는 B11에서 잇는다. 지금은 목록으로 간다. */}
+        <Link to="/learn" state={carried}>
+          {article.stage.number}단계 · {article.stage.name}
+        </Link>
+      </nav>
+      {article.edition === 'PREVIOUS' ? (
+        <p className={styles.number}>
+          <EditionNotice edition={article.edition} place="head" />
+        </p>
+      ) : article.number ? (
+        <p className={styles.number}>{article.number}</p>
+      ) : null}
+    </>
   )
 }
 
