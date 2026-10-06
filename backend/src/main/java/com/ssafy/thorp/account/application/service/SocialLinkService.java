@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 같은 이메일·휴대폰 번호의 기존 계정에 소셜 계정을 연결한다(spec 014 US7, FR-024).
@@ -130,8 +129,13 @@ public class SocialLinkService {
         return false;
     }
 
-    /** 대기 중인 소셜 계정을 대상 계정에 붙이고 대기 상태를 지운다. 소유 확인은 호출하는 쪽이 마쳤어야 한다. */
-    @Transactional
+    /**
+     * 대기 중인 소셜 계정을 대상 계정에 붙이고 대기 상태를 지운다. 소유 확인은 호출하는 쪽이 마쳤어야 한다.
+     *
+     * <p>트랜잭션으로 묶지 않는다. {@link #link}가 같은 빈 안에서 부르므로 어노테이션을 달아도 프록시를 지나지 않고, 바깥 트랜잭션은 확인 기록의 {@code
+     * REQUIRES_NEW}와 연결 풀을 두고 교착했다. 같은 제공자 중복은 DB 고유 제약이 최종 방어이고, 연결 뒤 기록 정리가 실패해도 정리는 한 시간마다 도는
+     * 청소가 맡는다.
+     */
     public void attach(PendingSocialLogin pending, User target) {
         if (socialAccountRepository.existsByUserIdAndProvider(target.getId(), pending.provider())) {
             store.clear();

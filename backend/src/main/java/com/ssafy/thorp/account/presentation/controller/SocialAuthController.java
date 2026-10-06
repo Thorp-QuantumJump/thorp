@@ -125,7 +125,7 @@ public class SocialAuthController {
             HttpServletResponse httpResponse) {
         AuthenticatedUserResult result =
                 signupService.signup(
-                        new SocialSignupCommand(request.getNickname(), request.getPhoneNumber()),
+                        new SocialSignupCommand(request.nickname(), request.phoneNumber()),
                         httpRequest,
                         httpResponse);
         return ResponseEntity.status(HttpStatus.CREATED)

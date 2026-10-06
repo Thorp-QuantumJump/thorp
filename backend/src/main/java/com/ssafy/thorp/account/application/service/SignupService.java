@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SignupService {
 
-    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("^01[016789]\\d{7,8}$");
+    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile(User.PHONE_NUMBER_REGEX);
 
     private final UserRepository userRepository;
     private final EmailVerificationRepository emailVerificationRepository;
