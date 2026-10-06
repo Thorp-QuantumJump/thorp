@@ -1,0 +1,202 @@
+/* 목업 '글 끝'의 확인 문제 카드(.qcard)를 따른다. */
+.panel {
+  padding: 22px 28px;
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 16px);
+  background: var(--thorp-surface);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--thorp-text-heading, 1.05rem);
+  font-weight: 750;
+}
+
+/* 확인 문제의 '가상의 예'. 목업처럼 무채색 상자다(가상의 숫자를 쓰는 자리, FR-026). */
+.hypothetical {
+  padding: 2px 8px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--thorp-line-strong);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  white-space: nowrap;
+}
+
+.question {
+  margin-top: 16px;
+}
+
+.prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.number {
+  color: var(--thorp-muted);
+  font-family: var(--thorp-font-number, inherit);
+  font-size: var(--thorp-text-small, 0.8rem);
+  font-weight: 700;
+  line-height: 1.9;
+  white-space: nowrap;
+}
+
+.choices,
+.answered {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 보기 한 줄. 누르는 곳은 44px 이상이고(design-notes §6) 윤곽선은 3:1 이상인 회색이다. */
+.choice,
+.answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--thorp-radius-inset, 10px);
+  background: transparent;
+  color: var(--thorp-copy);
+  font: inherit;
+  text-align: left;
+}
+
+.choice {
+  box-shadow: inset 0 0 0 1.5px var(--thorp-muted);
+  color: var(--thorp-foreground);
+  cursor: pointer;
+}
+
+.choice:hover {
+  box-shadow: inset 0 0 0 1.5px var(--thorp-foreground);
+}
+
+.choice:focus-visible,
+.explanation:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.choiceNumber {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--thorp-line-control);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
+  font-weight: 700;
+}
+
+.choiceText {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* 답한 뒤: 정답은 초록 윤곽과 옅은 초록 바탕, 고른 틀린 보기는 회백 윤곽이다. 빨강을 쓰지 않는다(design-notes §4). */
+.answer[data-correct] {
+  box-shadow: inset 0 0 0 1.5px var(--thorp-accent-soft);
+  /* '정답' 꼬리표(초록 12%)가 묻히지 않게 줄 바탕은 그보다 옅게 깐다. */
+  background: color-mix(in srgb, var(--thorp-accent) 8%, transparent);
+  color: var(--thorp-foreground);
+}
+
+.answer[data-correct] .choiceNumber {
+  background: var(--thorp-accent-soft);
+  box-shadow: none;
+  color: var(--thorp-background);
+}
+
+.answer[data-picked]:not([data-correct]) {
+  box-shadow: inset 0 0 0 1.5px var(--thorp-copy);
+  color: var(--thorp-foreground);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* 꼬리표는 테두리 없는 채움이다. 실선 회색 윤곽은 '아직 하지 않음'으로 읽히기 때문이다(design-notes §3.5·§4). */
+.tagPicked,
+.tagCorrect,
+.tagWrong {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 5px;
+  font-size: var(--thorp-text-small, 0.8rem);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.tagPicked {
+  background: rgb(255 255 255 / 9%);
+  color: var(--thorp-foreground);
+}
+
+.tagCorrect {
+  border-radius: 999px;
+  background: var(--thorp-accent-muted);
+  color: var(--thorp-accent-soft);
+}
+
+.tagWrong {
+  background: rgb(255 255 255 / 6%);
+  color: var(--thorp-copy);
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.8rem);
+}
+
+.explanation {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--thorp-radius-inset, 10px);
+  background: var(--thorp-surface-raised);
+  color: var(--thorp-copy);
+  line-height: 1.65;
+}
+
+.explanation b {
+  margin-right: 6px;
+  color: var(--thorp-foreground);
+}
+
+.score {
+  margin: 12px 0 0;
+  color: var(--thorp-foreground);
+  font-weight: 650;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 18px 16px;
+  }
+}

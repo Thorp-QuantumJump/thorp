@@ -1,0 +1,75 @@
+.end {
+  display: grid;
+  gap: 20px;
+}
+
+.next {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+/* 다음 글 카드. 누르는 곳 전체가 한 링크다. */
+.nextLink {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--thorp-pad-inset, 14px 18px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-inset, 12px);
+  color: var(--thorp-foreground);
+  text-decoration: none;
+}
+
+.nextLink:hover {
+  border-color: var(--thorp-line-control);
+}
+
+.nextLabel {
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.8rem);
+}
+
+.nextTitle {
+  font-weight: 650;
+}
+
+.listLink,
+.loginLink {
+  display: inline-flex;
+  align-items: center;
+  /* 누르는 곳은 44×44px 이상이다(design-notes §6). 글자 모양은 그대로 두고 높이만 채운다. */
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.nextLink:focus-visible,
+.listLink:focus-visible,
+.loginLink:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.preparing {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.guest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+/* 로그인 상태를 다시 확인하는 동안. 자리를 둔 채 화면과 보조 기술에서 모두 뺀다(research R33). */
+.concealed {
+  visibility: hidden;
+}
