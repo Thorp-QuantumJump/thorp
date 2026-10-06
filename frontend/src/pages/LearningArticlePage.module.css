@@ -237,3 +237,19 @@
   }
 }
 
+/* 제목 위 한 줄: 이전 판 표시, 단계, 단계 안 번호, 예상 읽기 시간. 항목 사이는 가운데 점으로 가른다. */
+.headLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 12px;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.85rem);
+}
+
+.headLine > span:not(:first-child)::before {
+  content: '·';
+  margin-right: 10px;
+  color: var(--thorp-line-control);
+}
