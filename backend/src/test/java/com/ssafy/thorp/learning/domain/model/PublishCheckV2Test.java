@@ -526,6 +526,96 @@ class PublishCheckV2Test {
     }
 
     @Test
+    @DisplayName("오해·비교 표·도식의 숫자는 숫자 검사 대상이 아니다 (data-model §8-2 '숫자 검사 대상')")
+    void numbersOutsideNumberTargets() {
+        Draft draft = Draft.passing();
+        draft.blocks.set(
+                6, new MisconceptionBlock(text("20% 올랐으니 잃지 않았다."), text("2배 뒤 50% 내리면 제자리다.")));
+        draft.blocks.set(
+                8,
+                new TableBlock(
+                        "가상의 12% 두 경우",
+                        List.of("구분", "30%"), List.of(List.of(text("끝 값"), text("12%")))));
+        draft.blocks.set(
+                9,
+                new DiagramBlock(
+                        DiagramKind.LINE,
+                        "가상의 30% 흐름",
+                        "만 원",
+                        List.of("1월", "2월"),
+                        List.of(
+                                new Series(
+                                        "12% 계열",
+                                        List.of(new BigDecimal("100"), new BigDecimal("92.5")))),
+                        "값이 20% 내려갔다가 돌아온다."));
+
+        assertThat(run(draft)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("금지 표현은 핵심 요약·가상의 예·비교 표·도식·제도 안내·목록에서도 그 필드 자리로 잡는다 (data-model §8-2)")
+    void forbiddenExpressionsInEveryElement() {
+        Draft draft = Draft.passing();
+        draft.blocks.set(
+                0, new KeySummaryBlock(List.of(text("첫 줄"), text("오를 확률이 높다."), text("셋째"))));
+        draft.blocks.set(5, new HypotheticalBlock("100만 원을 추천합니다."));
+        draft.blocks.set(
+                8,
+                new TableBlock(
+                        "확률 비교",
+                        List.of("구분", "추천합니다"),
+                        List.of(List.of(text("끝 값"), text("확률")))));
+        draft.blocks.set(
+                9,
+                new DiagramBlock(
+                        DiagramKind.LINE,
+                        "확률의 흐름",
+                        "만 원",
+                        List.of("1월", "2월"),
+                        List.of(
+                                new Series(
+                                        "추천합니다",
+                                        List.of(new BigDecimal("100"), new BigDecimal("92.5")))),
+                        "확률이 내려갔다가 돌아온다."));
+        draft.blocks.set(
+                10,
+                new InstitutionNoteBlock(
+                        text("이 제도를 추천합니다."),
+                        TODAY,
+                        new SourceRef("합성 제도 출처", "https://example.com/rule")));
+        draft.blocks.set(11, new ListBlock(false, List.of(text("시작 값"), text("오를 확률"))));
+
+        assertThat(assertOnly(draft, Check.FORBIDDEN_EXPRESSION))
+                .extracting(PublishCheckFailure::location)
+                .containsExactly(
+                        CheckLocation.block(0, "lines[1]"),
+                        CheckLocation.block(5, "content"),
+                        CheckLocation.block(8, "caption"),
+                        CheckLocation.block(8, "columns[1]"),
+                        CheckLocation.block(8, "rows[0][1]"),
+                        CheckLocation.block(9, "title"),
+                        CheckLocation.block(9, "series[0].name"),
+                        CheckLocation.block(9, "description"),
+                        CheckLocation.block(10, "content"),
+                        CheckLocation.block(11, "items[1]"));
+    }
+
+    @Test
+    @DisplayName("규칙이 예시를 요구하면(exampleRequired: true) 예시 없는 초안은 EXAMPLE_PRESENT다 (research R19)")
+    void exampleRequiredRule() {
+        PublishCheckRulesV2 required =
+                new PublishCheckRulesV2(
+                        RULES.common(), RULES.exampleMarker(), true, RULES.reading(), RULES.quiz());
+
+        assertThat(
+                        PublishCheckV2.run(
+                                        Draft.passing().build(), required, OPEN_MAP, KNOWN, TODAY)
+                                .failures())
+                .extracting(PublishCheckFailure::check, PublishCheckFailure::location)
+                .containsExactly(tuple(Check.EXAMPLE_PRESENT, CheckLocation.example()));
+    }
+
+    @Test
     @DisplayName("숫자 검사는 제목·핵심 요약·소제목·문단·목록에서 하고 전각 숫자도 잡는다")
     void resultNumbersInCheckedFields() {
         Draft draft = Draft.passing();

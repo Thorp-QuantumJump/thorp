@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -78,8 +79,12 @@ public class LearningQueryService {
      * 판은 공개된 단계가 하나도 없으면 {@code PRE_RELEASE}(지금 모습 그대로), 있으면 {@code PREVIOUS}(이전 판)다(R16). {@code
      * LEGACY} 판의 블록은 9월 판 모양 그대로다.
      *
+     * <p>판·공개 배치·읽는 순서·게시 색인을 여러 문장으로 읽으므로 한 스냅숏({@code REPEATABLE_READ})에서 읽는다. 기본 격리 수준이면 그 사이에
+     * 커밋된 게시 취소가 공개 배치를 비워 404가 아닌 500이 되거나, 다시 게시한 글의 옛 판과 새 배치가 짝지어진다.
+     *
      * @throws ArticleUnavailableException 없는 글, 게시되지 않은 글, 형식이 틀린 식별자. 셋을 가르지 않는다
      */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public LearningArticleResult getPublished(String articleId) {
         PublishedArticleView view =
                 parseArticleId(articleId)

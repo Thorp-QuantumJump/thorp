@@ -167,6 +167,26 @@ class QuizIdentityTest {
     }
 
     @Test
+    @DisplayName("보기가 빠져도 새 문제이고 새 식별자를 받는다 (data-model §6-3)")
+    void removedChoiceIsRenamed() {
+        List<QuizQuestion> latest =
+                List.of(
+                        question(
+                                "q1",
+                                choice("c2", false),
+                                choice("c3", true),
+                                choice("c4", false)));
+        List<QuizQuestion> draft = List.of(question("q1", choice("c2", false), choice("c3", true)));
+
+        QuizIdentity.Reconciled reconciled = QuizIdentity.reconcile(draft, latest, 4);
+
+        assertThat(reconciled.renamed())
+                .containsExactly(
+                        new QuizIdentity.Renamed(new QuestionId("q1"), new QuestionId("q5")));
+        assertThat(reconciled.quizSeq()).isEqualTo(5);
+    }
+
+    @Test
     @DisplayName("가장 최근 판에 없는 문제는 새 문제이며 아직 어느 판에도 없던 식별자를 그대로 쓴다")
     void questionMissingFromLatestKeepsFreshId() {
         List<QuizQuestion> draft = List.of(question("q5", choice("c6", true), choice("c7", false)));

@@ -393,6 +393,16 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                                 "{\"term\":\"max-drawdown\",\"text\":\"가장 크게 줄었던 폭\"}"));
         assertThat(saved.at("/draft/blocks/9/asOf").isNull()).isTrue();
         assertThat(adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200)).isEqualTo(saved);
+        // 키 구성 대조는 배열의 첫 원소만 본다. 블록 열 종류 전부의 초안 모양은 저장한 요청과 값으로 맞춘다.
+        ObjectNode echoed = (ObjectNode) saved.get("draft").deepCopy();
+        echoed.get("terms").forEach(term -> ((ObjectNode) term).remove("transferFrom"));
+        for (JsonNode question : echoed.get("quiz")) {
+            ((ObjectNode) question).putNull("questionId");
+            question.get("choices").forEach(choice -> ((ObjectNode) choice).putNull("choiceId"));
+        }
+        ObjectNode request = fixtureDraft(0);
+        request.remove("expectedDraftVersion");
+        assertThat(echoed).isEqualTo(request);
     }
 
     @Test
@@ -454,7 +464,8 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
                 .addObject()
                 .put("term", "max-drawdown")
                 .put("text", "가장 크게 줄었던 폭");
-        ArrayNode leadingSource = (ArrayNode) body.at("/blocks/4/content");
+        // 출처 조각을 받는 문단에 넣어야 조각 종류가 아니라 첫 조각 위치 규칙에 걸린다.
+        ArrayNode leadingSource = (ArrayNode) body.at("/blocks/2/content");
         leadingSource
                 .insertObject(0)
                 .putObject("source")
@@ -465,7 +476,7 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
 
         assertThat(fieldsOf(error))
                 .containsExactlyInAnyOrder(
-                        "blocks[0].lines[0]", "blocks[4].content", "blocks[6].items[0]");
+                        "blocks[0].lines[0]", "blocks[2].content", "blocks[6].items[0]");
     }
 
     @Test
@@ -502,6 +513,68 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         JsonNode error = adminError(save(V2_ARTICLE, v1Body), 409);
 
         assertThat(error.get("code").asText()).isEqualTo("LEARNING_FORMAT_OUTDATED");
+    }
+
+    @Test
+    @DisplayName("설명 문장이 채워진 V1 글을 V2로 다시 쓰고, LEGACY 판이 있으니 V1로 되돌릴 수 있다 (quickstart 6-2)")
+    void rewritesFilledV1ArticleAndRevertsIt() throws Exception {
+        // 운영의 1판 용어는 설명 문장이 채워져 있다. 마이그레이션 시드는 빈 문장이라 V2 모양에도 맞아 이 경우를 가린다.
+        jdbcTemplate.update(
+                "UPDATE learning_term SET sentence = '고점에서 가장 크게 줄었던 폭이다.'"
+                        + " WHERE term_key IN ('max-drawdown', 'net-total-return')");
+        seeds.publishMinimal("returns-and-losses", "수익과 손실", "q", 8);
+        ObjectNode v2Body = objectMapper.createObjectNode();
+        v2Body.put("expectedDraftVersion", 0);
+        v2Body.put("title", "수익과 손실");
+        v2Body.put("question", "q");
+        v2Body.put("readingOrder", 201);
+        v2Body.put("format", "V2");
+        text(paragraph(v2Body.putArray("blocks")), "문단");
+        v2Body.putNull("example");
+        v2Body.putArray("sources");
+        v2Body.putArray("terms")
+                .addObject()
+                .put("termId", "max-drawdown")
+                .put("label", "가장 크게 줄었던 폭")
+                .put("meaning", "고점에서 가장 크게 줄었던 폭이다.")
+                .put("reading", "")
+                .put("caveat", "")
+                .putArray("aliases");
+        v2Body.putArray("quiz");
+
+        JsonNode rewritten = adminData(save("returns-and-losses", v2Body), 200);
+
+        assertThat(rewritten.at("/draft/format").asText()).isEqualTo("V2");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT term_key || ':' || sentence || ':' || meaning FROM learning_term"
+                                        + " WHERE term_key IN ('max-drawdown', 'net-total-return')",
+                                String.class))
+                .containsExactly("max-drawdown::고점에서 가장 크게 줄었던 폭이다.");
+
+        ObjectNode v1Body = objectMapper.createObjectNode();
+        v1Body.put("expectedDraftVersion", rewritten.get("draftVersion").asInt());
+        v1Body.put("title", "수익과 손실");
+        v1Body.put("question", "q");
+        v1Body.put("readingOrder", 8);
+        v1Body.put("format", "V1");
+        v1Body.putArray("blocks").addObject().put("type", "paragraph").put("text", "문단");
+        v1Body.putArray("sources");
+        v1Body.putArray("terms")
+                .addObject()
+                .put("termId", "max-drawdown")
+                .put("label", "가장 크게 줄었던 폭")
+                .put("sentence", "고점에서 가장 크게 줄었던 폭이다.");
+
+        JsonNode reverted = adminData(save("returns-and-losses", v1Body), 200);
+
+        assertThat(reverted.at("/draft/format").asText()).isEqualTo("V1");
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "SELECT term_key || ':' || sentence || ':' || meaning FROM learning_term"
+                                        + " WHERE term_key = 'max-drawdown'",
+                                String.class))
+                .containsExactly("max-drawdown:고점에서 가장 크게 줄었던 폭이다.:");
     }
 
     @Test
@@ -551,9 +624,10 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         assertThat(published.get("renamedQuestions")).isEmpty();
         assertThat(published.get("transferredTerms")).isEmpty();
         assertThat(
-                        jdbcTemplate.queryForObject(
-                                "SELECT r.edition FROM learning_article_revision r", String.class))
-                .isEqualTo("CURRENT");
+                        jdbcTemplate.queryForMap(
+                                "SELECT r.edition, r.sector_map_version FROM learning_article_revision r"))
+                .containsEntry("edition", "CURRENT")
+                .containsEntry("sector_map_version", "NOT_CHECKED");
 
         JsonNode article = publicData("/learning/articles/" + V2_ARTICLE);
         assertThat(article.get("edition").asText()).isEqualTo("CURRENT");
@@ -577,21 +651,34 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
         freeVolatilityTerm();
         seeds.markStageReleased("returns-and-risk");
         seedFullSectorMap();
-        ObjectNode draft = passingDraft(0, null, null, 0);
+        ObjectNode lone = passingDraft(0, null, null, 0);
+        lone.putObject("example")
+                .putArray("sectors")
+                .addObject()
+                .put("code", "ENERGY")
+                .put("weightTenths", 450);
+        adminData(save(V2_ARTICLE, lone), 200);
+
+        assertThat(adminError(publish(V2_ARTICLE, 1), 422).at("/details/failures"))
+                .extracting(failure -> failure.get("check").asText())
+                .containsExactly(
+                        "EXAMPLE_SECTOR_COUNT", "EXAMPLE_SECTOR_IN_MAP", "EXAMPLE_WEIGHT_SUM");
+
+        ObjectNode draft = passingDraft(1, null, null, 0);
         ArrayNode sectors = draft.putObject("example").putArray("sectors");
         sectors.addObject().put("code", "SEMICONDUCTOR").put("weightTenths", 500);
         sectors.addObject().put("code", "BATTERY").put("weightTenths", 450);
         adminData(save(V2_ARTICLE, draft), 200);
 
-        JsonNode failed = adminError(publish(V2_ARTICLE, 1), 422);
+        JsonNode failed = adminError(publish(V2_ARTICLE, 2), 422);
         assertThat(failed.at("/details/failures"))
                 .extracting(failure -> failure.get("check").asText())
                 .containsExactly("EXAMPLE_WEIGHT_SUM");
 
         ((ObjectNode) sectors.get(1)).put("weightTenths", 500);
-        draft.put("expectedDraftVersion", 1);
+        draft.put("expectedDraftVersion", 2);
         adminData(save(V2_ARTICLE, draft), 200);
-        JsonNode published = adminData(publish(V2_ARTICLE, 2), 200);
+        JsonNode published = adminData(publish(V2_ARTICLE, 3), 200);
 
         assertThat(published.get("sectorMapVersion").asText()).isEqualTo(LearningSeeds.MAP_VERSION);
         assertThat(
@@ -675,9 +762,130 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     // --- §2 확인 필요 ---
 
     @Test
+    @DisplayName("초안 배치를 옮겨도 공개 글은 그대로이고, 다시 게시하면 공개 배치가 새 배치로 바뀐다")
+    void republishMovesPublishedPlacement() throws Exception {
+        freeVolatilityTerm();
+        seeds.markStageReleased("etf-market-basics");
+        seeds.markStageReleased("returns-and-risk");
+        adminData(save(V2_ARTICLE, passingDraft(0, null, null, 0)), 200);
+        adminData(publish(V2_ARTICLE, 1), 200);
+        ObjectNode moved = passingDraft(1, List.of("q1", "q4"), List.of("c2", "c3", "c5", "c6"), 0);
+        moved.put("stageKey", "etf-market-basics");
+        moved.put("stagePosition", 7);
+
+        adminData(save(V2_ARTICLE, moved), 200);
+
+        JsonNode beforeRepublish = publicData("/learning/articles/" + V2_ARTICLE);
+        assertThat(beforeRepublish.at("/stage/stageKey").asText()).isEqualTo("returns-and-risk");
+        assertThat(beforeRepublish.get("number").asText()).isEqualTo("2-1");
+
+        adminData(publish(V2_ARTICLE, 2), 200);
+
+        JsonNode afterRepublish = publicData("/learning/articles/" + V2_ARTICLE);
+        assertThat(afterRepublish.at("/stage/stageKey").asText()).isEqualTo("etf-market-basics");
+        assertThat(afterRepublish.get("number").asText()).isEqualTo("1-1");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT published_stage_position FROM learning_article"
+                                        + " WHERE article_key = ?",
+                                Integer.class,
+                                V2_ARTICLE))
+                .isEqualTo(7);
+    }
+
+    @Test
+    @DisplayName("넘겨받기(B08) 전에는 transferFrom이 있는 용어 저장을 그 자리로 400 한다")
+    void transferFromIsNotAcceptedYet() throws Exception {
+        freeVolatilityTerm();
+        ObjectNode body = fixtureDraft(0);
+        ((ObjectNode) body.at("/terms/0")).put("transferFrom", "inverse-volatility");
+
+        assertThat(fieldsOf(adminError(save(V2_ARTICLE, body), 400)))
+                .containsExactly("terms[0].transferFrom");
+        assertThat(
+                        adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200)
+                                .get("draftVersion")
+                                .asInt())
+                .isZero();
+    }
+
+    @Test
+    @DisplayName(
+            "검사를 통과하지 못한 V2 초안도 미리 보기로 그린다 — 정의 없는 용어 블록은 빈 문장, 정답이 하나가 아닌 문제는 correctChoiceId null (learning-admin-api §8)")
+    void previewShowsUnfinishedV2Draft() throws Exception {
+        ObjectNode body = v2Base(0);
+        ArrayNode blocks = body.putArray("blocks");
+        text(paragraph(blocks), "문단");
+        blocks.addObject().put("type", "term").put("termId", "undefined-term");
+        body.putArray("terms");
+        ObjectNode question = question(body.putArray("quiz"), "정답이 없는 문제", "풀이");
+        choice(question, null, "가", false);
+        choice(question, null, "나", false);
+        adminData(save(V2_ARTICLE, body), 200);
+
+        JsonNode preview =
+                adminData(get("/admin/learning/articles/" + V2_ARTICLE + "/preview"), 200);
+
+        assertThat(preview.get("edition").asText()).isEqualTo("CURRENT");
+        assertThat(preview.get("preview").asBoolean()).isTrue();
+        assertThat(preview.get("minDwellSeconds").asInt()).isEqualTo(30);
+        assertThat(preview.at("/blocks/1/termId").asText()).isEqualTo("undefined-term");
+        assertThat(preview.at("/blocks/1/meaning").asText()).isEmpty();
+        assertThat(preview.at("/quiz/0/correctChoiceId").isNull()).isTrue();
+        assertThat(count("learning_article_revision")).isZero();
+    }
+
+    @Test
+    @DisplayName(
+            "V1 초안의 미리 보기는 9월 판 블록 모양이고, edition은 첫 단계 공개 전 PRE_RELEASE·뒤 PREVIOUS다 (learning-admin-api §8)")
+    void previewOfV1Draft() throws Exception {
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("expectedDraftVersion", 0);
+        body.put("title", "수익과 손실");
+        body.put("question", "q");
+        body.put("readingOrder", 8);
+        ArrayNode blocks = body.putArray("blocks");
+        blocks.addObject().put("type", "paragraph").put("text", "문단");
+        blocks.addObject().put("type", "term").put("termId", "max-drawdown");
+        body.putNull("example");
+        body.putArray("sources");
+        body.putArray("terms")
+                .addObject()
+                .put("termId", "max-drawdown")
+                .put("label", "가장 크게 줄었던 폭")
+                .put("sentence", "고점에서 가장 크게 줄었던 폭이다.");
+        adminData(save(V1_ARTICLE, body), 200);
+        String url = "/admin/learning/articles/" + V1_ARTICLE + "/preview";
+
+        JsonNode beforeRelease = adminData(get(url), 200);
+
+        assertThat(beforeRelease.get("edition").asText()).isEqualTo("PRE_RELEASE");
+        assertThat(beforeRelease.get("minDwellSeconds").isNull()).isTrue();
+        assertThat(beforeRelease.get("example").isNull()).isTrue();
+        assertThat(beforeRelease.at("/blocks/0"))
+                .isEqualTo(objectMapper.readTree("{\"type\":\"paragraph\",\"text\":\"문단\"}"));
+        assertThat(beforeRelease.at("/blocks/1/sentence").asText())
+                .isEqualTo("고점에서 가장 크게 줄었던 폭이다.");
+
+        seeds.markStageReleased("etf-market-basics");
+
+        assertThat(adminData(get(url), 200).get("edition").asText()).isEqualTo("PREVIOUS");
+    }
+
+    @Test
+    @DisplayName("없는 글의 미리 보기는 404 LEARNING_ARTICLE_NOT_FOUND다")
+    void previewOfMissingArticle() throws Exception {
+        JsonNode error = adminError(get("/admin/learning/articles/no-such-article/preview"), 404);
+
+        assertThat(error.get("code").asText()).isEqualTo("LEARNING_ARTICLE_NOT_FOUND");
+    }
+
+    @Test
     @DisplayName("공개 판의 제도 안내 기준 시점이 180일 넘게 지났으면 needsReview가 true다 (quickstart 7-6)")
     void needsReviewFollowsInstitutionNoteAge() throws Exception {
         seeds.markStageReleased("returns-and-risk");
+        // 고정 시계로 경계(179·180·181일)를 보는 것은 InstitutionNoteReviewPeriodTest다. 여기서는 연결만 본다. 실행 중 자정을
+        // 넘겨도 179·181일이 180·182일이 될 뿐이라 결과(false·true)가 같다.
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         ObjectNode overdue = (ObjectNode) example("article-current.json").deepCopy();
         setAsOf(overdue, today.minusDays(181));

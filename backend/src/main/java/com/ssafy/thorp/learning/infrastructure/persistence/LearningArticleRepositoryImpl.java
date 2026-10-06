@@ -86,7 +86,10 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                 .map(ArticleRevisionMapper::toDomain);
     }
 
-    /** 판과 공개 배치를 같은 글 행에서 읽는다. 공개 배치가 비어 있으면 테이블 CHECK가 막는 상태라 실패시킨다. */
+    /**
+     * 판과 공개 배치를 두 문장으로 읽는다. 둘이 같은 순간의 값이려면 호출하는 트랜잭션이 한 스냅숏이어야 한다({@code
+     * LearningQueryService.getPublished}). 공개 배치가 비어 있으면 테이블 CHECK가 막는 상태라 실패시킨다.
+     */
     @Override
     public Optional<PublishedArticleView> findPublished(ArticleId articleId) {
         return revisionJpaRepository

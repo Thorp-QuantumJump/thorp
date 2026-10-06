@@ -188,6 +188,100 @@ class ArticleBlockV2Test {
     }
 
     @Test
+    @DisplayName("표 제목은 100자 이하, 열은 5개 이하다")
+    void tableCaptionAndColumnLimits() {
+        List<List<RichText>> twoCells = List.of(List.of(text(1), text(1)));
+        assertThat(new TableBlock("가".repeat(100), List.of("가", "나"), twoCells).caption())
+                .hasSize(100);
+        assertThatThrownBy(() -> new TableBlock("가".repeat(101), List.of("가", "나"), twoCells))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(
+                        new TableBlock(
+                                        "",
+                                        List.of("가", "나", "다", "라", "마"),
+                                        List.of(Collections.nCopies(5, text(1))))
+                                .columns())
+                .hasSize(5);
+        assertThatThrownBy(
+                        () ->
+                                new TableBlock(
+                                        "",
+                                        List.of("가", "나", "다", "라", "마", "바"),
+                                        List.of(Collections.nCopies(6, text(1)))))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("도식 제목 60자·단위 10자·설명 300자·칸 이름 1~12자·칸 12개·계열 이름 1~20자가 상한이다")
+    void diagramTextLimits() {
+        List<String> categories = List.of("가", "나");
+        Series two = new Series("계열", List.of(BigDecimal.ONE, BigDecimal.TEN));
+
+        assertThat(
+                        new DiagramBlock(
+                                        DiagramKind.BAR,
+                                        "가".repeat(60),
+                                        "가".repeat(10),
+                                        categories,
+                                        List.of(two),
+                                        "가".repeat(300))
+                                .title())
+                .hasSize(60);
+        assertThatThrownBy(
+                        () ->
+                                new DiagramBlock(
+                                        DiagramKind.BAR,
+                                        "가".repeat(61),
+                                        "",
+                                        categories,
+                                        List.of(two),
+                                        ""))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                        () ->
+                                new DiagramBlock(
+                                        DiagramKind.BAR,
+                                        "",
+                                        "가".repeat(11),
+                                        categories,
+                                        List.of(two),
+                                        ""))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                        () ->
+                                new DiagramBlock(
+                                        DiagramKind.BAR,
+                                        "",
+                                        "",
+                                        categories,
+                                        List.of(two),
+                                        "가".repeat(301)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(diagram(List.of("가".repeat(12), "나"), List.of(two)).categories()).hasSize(2);
+        assertThatThrownBy(() -> diagram(List.of("가".repeat(13), "나"), List.of(two)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> diagram(List.of("", "나"), List.of(two)))
+                .isInstanceOf(IllegalArgumentException.class);
+        List<String> twelve = Collections.nCopies(12, "가");
+        Series twelveValues = new Series("계열", Collections.nCopies(12, BigDecimal.ONE));
+        assertThat(diagram(twelve, List.of(twelveValues)).categories()).hasSize(12);
+        assertThatThrownBy(
+                        () ->
+                                diagram(
+                                        Collections.nCopies(13, "가"),
+                                        List.of(
+                                                new Series(
+                                                        "계열",
+                                                        Collections.nCopies(13, BigDecimal.ONE)))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(new Series("가".repeat(20), List.of(BigDecimal.ONE)).name()).hasSize(20);
+        assertThatThrownBy(() -> new Series("가".repeat(21), List.of(BigDecimal.ONE)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Series("", List.of(BigDecimal.ONE)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("제도 안내는 1~600자이고 기준 시점·출처는 초안에서 비어 있어도 된다")
     void institutionNoteLimits() {
         assertThat(new InstitutionNoteBlock(text(600), null, null).asOf()).isNull();
