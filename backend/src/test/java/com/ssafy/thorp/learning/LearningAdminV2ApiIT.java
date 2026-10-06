@@ -445,6 +445,30 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("글자 조각 필드의 글자 수·허용 조각 종류·출처 위치 위반은 그 필드 자리로 400이다")
+    void richTextFieldViolationsAreLocated() throws Exception {
+        freeVolatilityTerm();
+        ObjectNode body = fixtureDraft(0);
+        ((ObjectNode) body.at("/blocks/0/lines/0/0")).put("text", "가".repeat(121));
+        ((ArrayNode) body.at("/blocks/6/items/0"))
+                .addObject()
+                .put("term", "max-drawdown")
+                .put("text", "가장 크게 줄었던 폭");
+        ArrayNode leadingSource = (ArrayNode) body.at("/blocks/4/content");
+        leadingSource
+                .insertObject(0)
+                .putObject("source")
+                .put("label", "출처")
+                .put("url", "https://example.com");
+
+        JsonNode error = adminError(save(V2_ARTICLE, body), 400);
+
+        assertThat(fieldsOf(error))
+                .containsExactlyInAnyOrder(
+                        "blocks[0].lines[0]", "blocks[4].content", "blocks[6].items[0]");
+    }
+
+    @Test
     @DisplayName("글자 조각의 모르는 키와 조각 하나에 키 둘은 400이다")
     void unknownRunKeysAreRejected() throws Exception {
         freeVolatilityTerm();

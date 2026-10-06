@@ -5,12 +5,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;
+import com.ssafy.thorp.learning.application.result.CurrentArticleEntry;
 import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramBlock.Series;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramKind;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HypotheticalBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.InstitutionNoteBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.KeySummaryBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.ListBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.MisconceptionBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleBlock.TableBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.TermBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleFormat;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
@@ -23,14 +32,27 @@ import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.model.Placement;
 import com.ssafy.thorp.learning.domain.model.PublicationEvent;
 import com.ssafy.thorp.learning.domain.model.PublicationEvent.PublicationAction;
+import com.ssafy.thorp.learning.domain.model.QuizChoice;
+import com.ssafy.thorp.learning.domain.model.QuizQuestion;
+import com.ssafy.thorp.learning.domain.model.ReadingEstimate;
+import com.ssafy.thorp.learning.domain.model.RichText;
+import com.ssafy.thorp.learning.domain.model.RichText.SourceRun;
+import com.ssafy.thorp.learning.domain.model.RichText.TermMentionRun;
+import com.ssafy.thorp.learning.domain.model.RichText.TextRun;
+import com.ssafy.thorp.learning.domain.model.SourceRef;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import com.ssafy.thorp.learning.domain.vo.ChoiceId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation.SectorWeight;
+import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import com.ssafy.thorp.support.RepositoryTestSupport;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -270,15 +292,23 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                         "SELECT id FROM learning_article WHERE article_key = ?",
                         Long.class,
                         ARTICLE.value());
+        // V2 판(format 키가 V2)은 CURRENT, 그 밖은 LEGACY다. 판 번호는 그 글의 다음 번호다.
         long revisionId =
                 jdbcTemplate.queryForObject(
                         "INSERT INTO learning_article_revision (article_id, revision_no, snapshot,"
                                 + " check_version, sector_map_version, published_by_user_id,"
-                                + " published_at) VALUES (?, 1, CAST(? AS JSONB), 'v', 'm', 1, now())"
+                                + " published_at, edition)"
+                                + " SELECT ?, COALESCE(max(revision_no), 0) + 1, CAST(? AS JSONB),"
+                                + " 'v', 'm', 1, now(),"
+                                + " CASE WHEN CAST(? AS JSONB) ->> 'format' = 'V2' THEN 'CURRENT'"
+                                + " ELSE 'LEGACY' END"
+                                + " FROM learning_article_revision WHERE article_id = ?"
                                 + " RETURNING id",
                         Long.class,
                         articleId,
-                        snapshotJson);
+                        snapshotJson,
+                        snapshotJson,
+                        articleId);
         jdbcTemplate.update(
                 "UPDATE learning_article SET status = 'PUBLISHED', published_revision_id = ?,"
                         + " published_stage_id = stage_id, published_stage_position = stage_position"
@@ -429,5 +459,268 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("example")
                 .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    // --- 2판: V2 초안·판의 JSON 왕복 ---
+
+    private static final ArticleId V2_ARTICLE = new ArticleId("volatility-is-not-loss");
+    private static final TermId SWING = new TermId("price-swing");
+
+    private static final List<ArticleBlock> V2_BLOCKS =
+            List.of(
+                    new KeySummaryBlock(List.of(RichText.text("첫 줄"), RichText.text("둘째 줄"))),
+                    new HeadingBlock("소제목"),
+                    new ParagraphBlock(
+                            new RichText(
+                                    List.of(
+                                            new TextRun("글자 "),
+                                            new TermMentionRun(MAX_DRAWDOWN, "가장 크게 줄었던 폭"),
+                                            new SourceRun(
+                                                    new SourceRef("출처", "https://example.com"))))),
+                    new TermBlock(SWING),
+                    new HypotheticalBlock(
+                            new RichText(
+                                    List.of(
+                                            new TextRun("100만 원이 "),
+                                            new TermMentionRun(SWING, "흔들림")))),
+                    new MisconceptionBlock(RichText.text("틀린 생각"), RichText.text("바로잡기")),
+                    new ListBlock(true, List.of(RichText.text("하나"), RichText.text("둘"))),
+                    new TableBlock(
+                            "",
+                            List.of("가", "나"),
+                            List.of(List.of(RichText.text("칸"), new RichText(List.of())))),
+                    new DiagramBlock(
+                            DiagramKind.LINE,
+                            "제목",
+                            "만 원",
+                            List.of("1월", "2월"),
+                            List.of(
+                                    new Series(
+                                            "가",
+                                            List.of(
+                                                    new BigDecimal("100"),
+                                                    new BigDecimal("92.5")))),
+                            "설명"),
+                    new InstitutionNoteBlock(RichText.text("제도"), null, null),
+                    new InstitutionNoteBlock(
+                            RichText.text("제도"),
+                            LocalDate.of(2026, 7, 1),
+                            new SourceRef("제도 출처", "https://example.com/rule")));
+
+    private static final List<LearningTerm> V2_TERMS =
+            List.of(LearningTerm.v2(SWING, "흔들림", List.of("swing", "흔들림 폭"), "뜻", "읽는 법", "한계"));
+
+    private static final List<QuizQuestion> V2_QUIZ =
+            List.of(
+                    new QuizQuestion(
+                            new QuestionId("q1"),
+                            "질문",
+                            List.of(
+                                    new QuizChoice(new ChoiceId("c2"), "가", false),
+                                    new QuizChoice(new ChoiceId("c3"), "나", true)),
+                            "풀이"));
+
+    @Test
+    @DisplayName("V2 초안의 블록 열 종류·글자 조각·용어 v2·확인 문제가 왕복하고 V2 모양으로 저장된다")
+    void v2DraftRoundTrips() {
+        LearningArticle draft = articleRepository.findByArticleKey(V2_ARTICLE).orElseThrow();
+        LearningArticle saved =
+                draft.saveDraft(
+                        0,
+                        new DraftContent(
+                                "변동성은 손실일까?",
+                                "질문",
+                                204,
+                                ArticleFormat.V2,
+                                draft.placement(),
+                                V2_BLOCKS,
+                                null,
+                                List.of(),
+                                V2_TERMS,
+                                List.of(
+                                        new QuizQuestion(
+                                                null,
+                                                "질문",
+                                                List.of(
+                                                        new QuizChoice(null, "가", false),
+                                                        new QuizChoice(null, "나", true)),
+                                                "풀이"))),
+                        false);
+        articleRepository.save(saved);
+        termRepository.replaceForArticle(V2_ARTICLE, V2_TERMS);
+        flushAndClear();
+
+        LearningArticle reloaded = articleRepository.findByArticleKey(V2_ARTICLE).orElseThrow();
+
+        assertThat(reloaded.format()).isEqualTo(ArticleFormat.V2);
+        assertThat(reloaded.blocks()).isEqualTo(V2_BLOCKS);
+        assertThat(reloaded.terms()).isEqualTo(V2_TERMS);
+        assertThat(reloaded.quiz()).isEqualTo(V2_QUIZ);
+        assertThat(reloaded.quizSeq()).isEqualTo(3);
+        assertThat(reloaded.placement())
+                .isEqualTo(new Placement(new StageKey("returns-and-risk"), 4));
+        Map<String, Object> stored =
+                jdbcTemplate.queryForMap(
+                        "SELECT jsonb_exists(body_blocks -> 2, 'content') AS paragraph_content,"
+                                + " jsonb_exists(body_blocks -> 2, 'text') AS paragraph_text,"
+                                + " quiz -> 0 -> 'choices' -> 1 ->> 'correct' AS correct"
+                                + " FROM learning_article WHERE article_key = ?",
+                        V2_ARTICLE.value());
+        assertThat(stored.get("paragraph_content")).isEqualTo(true);
+        assertThat(stored.get("paragraph_text")).isEqualTo(false);
+        assertThat(stored.get("correct")).isEqualTo("true");
+    }
+
+    @Test
+    @DisplayName("V2 판은 format·확인 문제(정답 식별자)·읽기 값과 함께 왕복하고 판 모양으로 저장된다")
+    void v2SnapshotRoundTrips() {
+        ArticleSnapshot snapshot =
+                new ArticleSnapshot(
+                        ArticleFormat.V2,
+                        V2_ARTICLE,
+                        "변동성은 손실일까?",
+                        "질문",
+                        204,
+                        V2_BLOCKS,
+                        null,
+                        List.of(),
+                        V2_TERMS,
+                        7,
+                        V2_QUIZ,
+                        new ReadingEstimate(2480, 5, 100));
+
+        ArticleRevision saved =
+                revisionRepository.save(
+                        new ArticleRevision(
+                                null,
+                                1,
+                                Edition.CURRENT,
+                                snapshot,
+                                "learning-publish-checks-v2",
+                                ArticleRevision.NOT_CHECKED,
+                                7L,
+                                Instant.parse("2026-11-19T01:00:00Z")));
+        flushAndClear();
+
+        assertThat(revisionRepository.findById(saved.id())).contains(saved);
+        Map<String, Object> stored =
+                jdbcTemplate.queryForMap(
+                        "SELECT snapshot ->> 'format' AS format, edition,"
+                                + " snapshot -> 'quiz' -> 0 ->> 'correctChoiceId' AS correct,"
+                                + " jsonb_exists(snapshot -> 'quiz' -> 0 -> 'choices' -> 0, 'correct') AS has_flag,"
+                                + " jsonb_exists(snapshot -> 'terms' -> 0, 'sentence') AS has_sentence"
+                                + " FROM learning_article_revision WHERE id = ?",
+                        saved.id());
+        assertThat(stored.get("format")).isEqualTo("V2");
+        assertThat(stored.get("edition")).isEqualTo("CURRENT");
+        assertThat(stored.get("correct")).isEqualTo("c3");
+        assertThat(stored.get("has_flag")).isEqualTo(false);
+        assertThat(stored.get("has_sentence")).isEqualTo(false);
+    }
+
+    /** 온전한 V2 판 JSON. 테스트마다 필수 키 하나를 빼고 넣는다. */
+    private static final String COMPLETE_V2_SNAPSHOT =
+            """
+            {"format":"V2","articleId":"returns-and-losses","title":"수익과 손실","question":"질문",
+             "readingOrder":8,"bodyBlocks":[{"type":"paragraph","content":[{"text":"문단"}]}],
+             "sources":[],"terms":[],"draftVersion":3,
+             "quiz":[{"questionId":"q1","prompt":"p","choices":[{"choiceId":"c2","text":"t"}],"correctChoiceId":"c2","explanation":"e"}],
+             "reading":{"bodyChars":2000,"readingMinutes":4,"minDwellSeconds":80}}
+            """;
+
+    private static final String V2_READING =
+            ",\n \"reading\":{\"bodyChars\":2000,\"readingMinutes\":4,\"minDwellSeconds\":80}";
+
+    private static final String V2_QUIZ_JSON =
+            "\"quiz\":[{\"questionId\":\"q1\",\"prompt\":\"p\",\"choices\":[{\"choiceId\":\"c2\",\"text\":\"t\"}],"
+                    + "\"correctChoiceId\":\"c2\",\"explanation\":\"e\"}]";
+
+    @Test
+    @DisplayName("온전한 V2 판 JSON은 읽힌다 (아래 실패 테스트의 대조군)")
+    void completeV2SnapshotIsReadable() {
+        long id = insertPublishedRevision(COMPLETE_V2_SNAPSHOT);
+
+        ArticleSnapshot snapshot = revisionRepository.findById(id).orElseThrow().snapshot();
+
+        assertThat(snapshot.format()).isEqualTo(ArticleFormat.V2);
+        assertThat(snapshot.reading()).isEqualTo(new ReadingEstimate(2000, 4, 80));
+        assertThat(snapshot.quiz()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("V2 판 JSON에 reading이 없으면 빈 값으로 채우지 않고 실패한다 (원칙 VI)")
+    void missingV2ReadingFails() {
+        assertThat(COMPLETE_V2_SNAPSHOT).contains(V2_READING);
+        long id = insertPublishedRevision(COMPLETE_V2_SNAPSHOT.replace(V2_READING, ""));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("reading");
+    }
+
+    @Test
+    @DisplayName("V2 판 JSON에 확인 문제 목록이 없으면 빈 목록으로 채우지 않고 실패한다")
+    void missingV2QuizFails() {
+        assertThat(COMPLETE_V2_SNAPSHOT).contains(V2_QUIZ_JSON);
+        long id = insertPublishedRevision(COMPLETE_V2_SNAPSHOT.replace(V2_QUIZ_JSON + ",", ""));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("quiz");
+    }
+
+    @Test
+    @DisplayName("V2 판의 문단이 9월 판 모양(text)이면 실패한다")
+    void v2SnapshotWithV1ParagraphFails() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_V2_SNAPSHOT.replace(
+                                "{\"type\":\"paragraph\",\"content\":[{\"text\":\"문단\"}]}",
+                                "{\"type\":\"paragraph\",\"text\":\"문단\"}"));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("content");
+    }
+
+    @Test
+    @DisplayName("format이 없는(V1) 판에 V2 블록이 있으면 실패한다")
+    void v1SnapshotWithV2BlockFails() {
+        long id =
+                insertPublishedRevision(
+                        COMPLETE_SNAPSHOT.replace(
+                                "{\"type\":\"paragraph\",\"text\":\"문단\"}",
+                                "{\"type\":\"keySummary\",\"lines\":[]}"));
+
+        assertThatThrownBy(() -> revisionRepository.findById(id))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("V2 판의 색인은 뜻 문장과 다른 이름을 쓰고, 여러 용어의 다른 이름을 한 번에 읽는다")
+    void v2PublishedTermIndex() {
+        long revisionId = insertPublishedRevision(COMPLETE_V2_SNAPSHOT);
+        publishedTermRepository.replaceForArticle(ARTICLE, revisionId, V2_TERMS, ArticleFormat.V2);
+        flushAndClear();
+
+        assertThat(publishedTermRepository.findPublished(SWING))
+                .hasValueSatisfying(term -> assertThat(term.sentence()).isEqualTo("뜻"));
+        assertThat(publishedTermRepository.findPublishedAliases(List.of(SWING, MAX_DRAWDOWN)))
+                .containsExactly(Map.entry(SWING, List.of("swing", "흔들림 폭")));
+        assertThat(publishedTermRepository.findAllTermIds()).containsExactly(SWING);
+        assertThat(termRepository.findAllTermIds()).hasSize(14);
+    }
+
+    @Test
+    @DisplayName("CURRENT 판이 게시 중인 글만 공개 배치의 읽는 순서로 읽는다")
+    void currentArticlesInReadingOrder() {
+        insertPublishedRevision(COMPLETE_SNAPSHOT);
+        assertThat(articleRepository.findCurrentInReadingOrder()).as("LEGACY 판은 세지 않는다").isEmpty();
+        insertPublishedRevision(COMPLETE_V2_SNAPSHOT);
+
+        assertThat(articleRepository.findCurrentInReadingOrder())
+                .containsExactly(
+                        new CurrentArticleEntry(
+                                "returns-and-losses", "수익과 손실", "returns-and-risk", 2, 1));
     }
 }
