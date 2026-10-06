@@ -1,6 +1,7 @@
 package com.ssafy.thorp.learning.domain.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HypotheticalBlock;
@@ -10,6 +11,7 @@ import com.ssafy.thorp.learning.domain.model.PublishCheckFailure.Check;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation.SectorWeight;
+import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import com.ssafy.thorp.learning.infrastructure.rules.YamlPublishCheckRulesLoader;
 import java.util.ArrayList;
@@ -25,9 +27,11 @@ import org.junit.jupiter.api.Test;
  */
 class PublishCheckTest {
 
-    private static final PublishCheckRules RULES = new YamlPublishCheckRulesLoader().current();
+    private static final PublishCheckRules RULES = new YamlPublishCheckRulesLoader().v1();
     private static final Optional<Set<String>> OPEN_MAP =
             Optional.of(Set.of("SEMICONDUCTOR", "BATTERY"));
+
+    private static final Placement PLACEMENT = new Placement(new StageKey("returns-and-risk"), 1);
 
     private static final TermId MAX_DRAWDOWN = new TermId("max-drawdown");
     private static final TermId NET_TOTAL_RETURN = new TermId("net-total-return");
@@ -71,13 +75,18 @@ class PublishCheckTest {
                 title,
                 "가장 크게 줄었던 폭은 왜 시작 금액 대비 손실과 다른가?",
                 8,
+                ArticleFormat.V1,
+                PLACEMENT,
+                null,
                 blocks,
                 example,
                 List.of(),
                 ArticleStatus.DRAFT,
                 null,
                 3,
-                terms);
+                terms,
+                List.of(),
+                0);
     }
 
     private static LearningArticle passingDraft() {
@@ -298,13 +307,18 @@ class PublishCheckTest {
                         "",
                         "",
                         8,
+                        ArticleFormat.V1,
+                        PLACEMENT,
+                        null,
                         List.of(),
                         null,
                         List.of(),
                         ArticleStatus.DRAFT,
                         null,
                         0,
-                        List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "")));
+                        List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "")),
+                        List.of(),
+                        0);
 
         assertThat(PublishCheck.run(empty, RULES, OPEN_MAP).failures())
                 .extracting(PublishCheckFailure::check)
@@ -399,5 +413,16 @@ class PublishCheckTest {
 
         assertOnly(
                 draft("수익과 손실", blocks, example(500, 500), passingTerms()), Check.REQUIRED_FIELDS);
+    }
+
+    @Test
+    @DisplayName("v1 검사는 V2 초안을 받지 않는다. 건너뛰어 통과로 세지 않고 예외다")
+    void rejectsV2Draft() {
+        LearningArticle v2 =
+                LearningArticle.newDraft(
+                        new ArticleId("volatility-is-not-loss"), "t", 204, PLACEMENT);
+
+        assertThatThrownBy(() -> PublishCheck.run(v2, RULES, OPEN_MAP))
+                .isInstanceOf(IllegalStateException.class);
     }
 }

@@ -8,7 +8,13 @@
       "draftVersion": 0,
       "hasUnpublishedChanges": false,
       "needsUpdate": false,
-      "lastPublication": null
+      "lastPublication": null,
+      "format": "V1",
+      "stage": { "stageKey": "etf-market-basics", "number": 1, "released": false },
+      "stagePosition": 1,
+      "publishedEdition": null,
+      "needsReview": null,
+      "pendingTransfers": 0
     },
     {
       "articleId": "returns-and-losses",
@@ -23,7 +29,13 @@
         "revisionNo": 3,
         "actorUserId": 12,
         "occurredAt": "2026-09-20T01:00:00Z"
-      }
+      },
+      "format": "V1",
+      "stage": { "stageKey": "returns-and-risk", "number": 2, "released": false },
+      "stagePosition": 1,
+      "publishedEdition": "LEGACY",
+      "needsReview": null,
+      "pendingTransfers": 0
     }
   ]
 }

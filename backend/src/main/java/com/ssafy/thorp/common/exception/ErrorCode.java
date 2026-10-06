@@ -75,6 +75,12 @@ public enum ErrorCode {
     LEARNING_DRAFT_CHANGED(HttpStatus.CONFLICT, "다른 곳에서 초안이 바뀌었습니다. 새로 불러온 뒤 다시 고쳐 주세요."),
     LEARNING_PUBLISH_CHECK_FAILED(
             HttpStatus.UNPROCESSABLE_ENTITY, "게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다."),
+    // 2판(B07): 단계와 글 형식. 게시 방식은 초안 형식과 초안 단계의 공개 여부로 정한다(research R16).
+    LEARNING_STAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "없는 단계입니다."),
+    LEARNING_STAGE_NOT_RELEASED(HttpStatus.CONFLICT, "공개 전 단계의 새 기준 글은 '단계 공개'로만 게시합니다."),
+    LEARNING_FORMAT_OUTDATED(
+            HttpStatus.CONFLICT,
+            "이전 형식(V1) 초안은 공개 전 단계에서 이전 판 고치기로만 게시하고, 이전 판이 없는 글은 V1로 되돌릴 수 없습니다."),
 
     // spec 006 내 기록. 계약은 specs/006-my-records/contracts/my-records-api.md "오류".
     // 저장 자리 한도(409)와 실행 자원 한도(EXECUTION_LIMIT, 429)를 다른 코드로 나눈다 — 사용자가

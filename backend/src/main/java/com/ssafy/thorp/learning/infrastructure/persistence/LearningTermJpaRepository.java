@@ -13,6 +13,9 @@ public interface LearningTermJpaRepository extends JpaRepository<LearningTermJpa
 
     Optional<LearningTermJpaEntity> findByTermKey(String termKey);
 
+    @Query("select t.termKey from LearningTermJpaEntity t")
+    List<String> findAllTermKeys();
+
     /**
      * 벌크 삭제로 즉시 지운다. {@code deleteAll}(엔티티 삭제)을 쓰면 Hibernate가 flush 때 INSERT를 DELETE보다 먼저 보내 같은
      * {@code term_key}를 다시 넣는 순간 UNIQUE 제약에 걸린다.

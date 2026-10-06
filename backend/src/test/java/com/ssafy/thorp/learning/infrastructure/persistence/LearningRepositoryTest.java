@@ -12,16 +12,21 @@ import com.ssafy.thorp.learning.domain.model.ArticleBlock.HeadingBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.HypotheticalBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.ParagraphBlock;
 import com.ssafy.thorp.learning.domain.model.ArticleBlock.TermBlock;
+import com.ssafy.thorp.learning.domain.model.ArticleFormat;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
 import com.ssafy.thorp.learning.domain.model.ArticleSnapshot;
 import com.ssafy.thorp.learning.domain.model.ArticleSource;
+import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
+import com.ssafy.thorp.learning.domain.model.LearningArticle.DraftContent;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
+import com.ssafy.thorp.learning.domain.model.Placement;
 import com.ssafy.thorp.learning.domain.model.PublicationEvent;
 import com.ssafy.thorp.learning.domain.model.PublicationEvent.PublicationAction;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;
 import com.ssafy.thorp.learning.domain.vo.ExampleAllocation.SectorWeight;
+import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.domain.vo.TermId;
 import com.ssafy.thorp.support.RepositoryTestSupport;
 import java.time.Instant;
@@ -89,13 +94,18 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                 articleRepository.save(
                         draft.saveDraft(
                                 draft.draftVersion(),
-                                "수익과 손실",
-                                "질문",
-                                8,
-                                BLOCKS,
-                                EXAMPLE,
-                                SOURCES,
-                                draft.terms()));
+                                new DraftContent(
+                                        "수익과 손실",
+                                        "질문",
+                                        8,
+                                        ArticleFormat.V1,
+                                        draft.placement(),
+                                        BLOCKS,
+                                        EXAMPLE,
+                                        SOURCES,
+                                        draft.terms(),
+                                        List.of()),
+                                false));
         flushAndClear();
         return saved;
     }
@@ -159,7 +169,7 @@ class LearningRepositoryTest extends RepositoryTestSupport {
         LearningArticle draft = saveDraftWithContent();
         List<LearningTerm> terms = List.of(new LearningTerm(MAX_DRAWDOWN, "가장 크게 줄었던 폭", "판의 문장"));
         ArticleSnapshot snapshot =
-                new ArticleSnapshot(
+                ArticleSnapshot.legacy(
                         ARTICLE,
                         "수익과 손실",
                         "질문",
@@ -176,13 +186,14 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                         new ArticleRevision(
                                 null,
                                 1,
+                                Edition.LEGACY,
                                 snapshot,
                                 "learning-publish-checks-v1",
                                 "SEM-1",
                                 7L,
                                 publishedAt));
         articleRepository.save(load().publish(draft.draftVersion(), saved.id()));
-        publishedTermRepository.replaceForArticle(ARTICLE, saved.id(), terms);
+        publishedTermRepository.replaceForArticle(ARTICLE, saved.id(), terms, ArticleFormat.V1);
         eventRepository.append(
                 new PublicationEvent(
                         null, ARTICLE, PublicationAction.PUBLISH, saved.id(), 7L, publishedAt));
@@ -191,6 +202,14 @@ class LearningRepositoryTest extends RepositoryTestSupport {
         assertThat(revisionRepository.findById(saved.id())).contains(saved);
         assertThat(revisionRepository.findByArticleId(ARTICLE)).containsExactly(saved);
         assertThat(articleRepository.findPublishedRevision(ARTICLE)).contains(saved);
+        assertThat(load().publishedPlacement()).isEqualTo(load().placement());
+        assertThat(articleRepository.findPublished(ARTICLE))
+                .hasValueSatisfying(
+                        view -> {
+                            assertThat(view.revision()).isEqualTo(saved);
+                            assertThat(view.placement())
+                                    .isEqualTo(new Placement(new StageKey("returns-and-risk"), 1));
+                        });
         assertThat(articleRepository.findPublishedOrdered())
                 .containsExactly(
                         new LearningArticleSummaryResult("returns-and-losses", "수익과 손실", "질문", 8));
@@ -211,7 +230,7 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                         });
 
         // 같은 판으로 색인을 다시 써도 같은 term_key가 UNIQUE에 걸리지 않고, 지우면 공개에서 빠진다.
-        publishedTermRepository.replaceForArticle(ARTICLE, saved.id(), terms);
+        publishedTermRepository.replaceForArticle(ARTICLE, saved.id(), terms, ArticleFormat.V1);
         flushAndClear();
         assertThat(publishedTermRepository.findPublished(MAX_DRAWDOWN)).isPresent();
         publishedTermRepository.deleteForArticle(ARTICLE);
@@ -223,10 +242,10 @@ class LearningRepositoryTest extends RepositoryTestSupport {
     @DisplayName("이미 저장된 판은 다시 저장할 수 없다")
     void revisionsAreAppendOnly() {
         ArticleSnapshot snapshot =
-                new ArticleSnapshot(
+                ArticleSnapshot.legacy(
                         ARTICLE, "t", "q", 1, List.of(), EXAMPLE, List.of(), List.of(), 0);
         ArticleRevision existing =
-                new ArticleRevision(99L, 1, snapshot, "v", "m", 1L, Instant.EPOCH);
+                new ArticleRevision(99L, 1, Edition.LEGACY, snapshot, "v", "m", 1L, Instant.EPOCH);
 
         assertThatThrownBy(() -> revisionRepository.save(existing))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -241,7 +260,10 @@ class LearningRepositoryTest extends RepositoryTestSupport {
              "sources":[],"terms":[],"draftVersion":3}
             """;
 
-    /** 판 JSON을 SQL로 직접 넣고 글을 그 판으로 게시한다. 저장 경로는 필수 키를 늘 쓰므로 빠진 판은 이렇게만 만들 수 있다. */
+    /**
+     * 판 JSON을 SQL로 직접 넣고 글을 그 판으로 게시한다. 저장 경로는 필수 키를 늘 쓰므로 빠진 판은 이렇게만 만들 수 있다. 공개 배치는 공개 판과 함께 있어야
+     * 하므로(테이블 CHECK) 초안 배치로 함께 채운다.
+     */
     private long insertPublishedRevision(String snapshotJson) {
         long articleId =
                 jdbcTemplate.queryForObject(
@@ -258,7 +280,8 @@ class LearningRepositoryTest extends RepositoryTestSupport {
                         articleId,
                         snapshotJson);
         jdbcTemplate.update(
-                "UPDATE learning_article SET status = 'PUBLISHED', published_revision_id = ?"
+                "UPDATE learning_article SET status = 'PUBLISHED', published_revision_id = ?,"
+                        + " published_stage_id = stage_id, published_stage_position = stage_position"
                         + " WHERE id = ?",
                 revisionId,
                 articleId);
