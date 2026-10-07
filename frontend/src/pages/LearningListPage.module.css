@@ -168,6 +168,21 @@
   flex: none;
 }
 
+/* 읽는 순서 그림의 색. 조약돌은 면 색과 흐린 글자색 토큰이고, 곡선은 지도의 길과 같은 회색이다. */
+.orderPath {
+  fill: none;
+  stroke: #6e716f;
+}
+
+.orderStop {
+  fill: var(--thorp-surface);
+  stroke: var(--thorp-muted);
+}
+
+.orderStopFilled {
+  fill: var(--thorp-muted);
+}
+
 @media (max-width: 719px) {
   .viewRow {
     flex-direction: column;

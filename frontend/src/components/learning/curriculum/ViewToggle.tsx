@@ -5,8 +5,8 @@ import styles from './ViewToggle.module.css'
 interface ViewToggleProps {
   view: LearningView
   onChange: (view: LearningView) => void
-  /** 단추 묶음. 공개 안내를 닫은 뒤 눌린 단추로 초점을 옮길 때 쓴다(목업의 닫기 동작) */
-  groupRef?: Ref<HTMLDivElement>
+  /** 지금 눌린 단추. 공개 안내를 닫은 뒤 초점을 이 단추로 옮긴다(목업의 닫기 동작) */
+  pressedRef?: Ref<HTMLButtonElement>
 }
 
 const OPTIONS: { view: LearningView; label: string }[] = [
@@ -19,12 +19,13 @@ const OPTIONS: { view: LearningView; label: string }[] = [
  *
  * <p>고른 보기는 그 탭 동안 기억한다(`viewStorage`). 학습 기록이 아니라 화면 상태라 서버에 보내지 않는다.
  */
-export function ViewToggle({ view, onChange, groupRef }: ViewToggleProps) {
+export function ViewToggle({ view, onChange, pressedRef }: ViewToggleProps) {
   return (
-    <div ref={groupRef} className={styles.toggle} role="group" aria-label="보기">
+    <div className={styles.toggle} role="group" aria-label="보기">
       {OPTIONS.map((option) => (
         <button
           key={option.view}
+          ref={option.view === view ? pressedRef : undefined}
           type="button"
           className={styles.button}
           aria-pressed={view === option.view}

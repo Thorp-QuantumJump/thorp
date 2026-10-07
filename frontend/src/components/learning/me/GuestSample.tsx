@@ -81,18 +81,18 @@ function SampleArt() {
       <svg viewBox="0 0 360 124" focusable="false">
         <defs>
           <linearGradient id={`${id}-road`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#03C75A" stopOpacity="0.05" />
-            <stop offset="0.3" stopColor="#03C75A" stopOpacity="0.18" />
-            <stop offset="1" stopColor="#2FDC7A" stopOpacity="0.18" />
+            <stop className={styles.stopAccent} offset="0" stopOpacity="0.05" />
+            <stop className={styles.stopAccent} offset="0.3" stopOpacity="0.18" />
+            <stop className={styles.stopAccentSoft} offset="1" stopOpacity="0.18" />
           </linearGradient>
           <linearGradient id={`${id}-object`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="rgb(126 240 176)" stopOpacity="0.36" />
-            <stop offset="1" stopColor="rgb(3 199 90)" stopOpacity="0.1" />
+            <stop className={styles.stopAccent} offset="1" stopOpacity="0.1" />
           </linearGradient>
           <radialGradient id={`${id}-glow`}>
-            <stop offset="0" stopColor="#2FDC7A" stopOpacity="0.9" />
-            <stop offset="0.35" stopColor="#2FDC7A" stopOpacity="0.35" />
-            <stop offset="1" stopColor="#2FDC7A" stopOpacity="0" />
+            <stop className={styles.stopAccentSoft} offset="0" stopOpacity="0.9" />
+            <stop className={styles.stopAccentSoft} offset="0.35" stopOpacity="0.35" />
+            <stop className={styles.stopAccentSoft} offset="1" stopOpacity="0" />
           </radialGradient>
         </defs>
         <path d={road} fill="none" stroke="rgb(255 255 255 / 0.035)" strokeWidth="18" strokeLinecap="round" />

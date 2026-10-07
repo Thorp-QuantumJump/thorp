@@ -552,14 +552,18 @@ function readReleaseLogEntry(value: unknown): ReleaseLogEntry | null {
 /**
  * 커리큘럼을 읽는다(계약 §1).
  *
- * <p><b>`preReleaseArticles`는 공개한 단계 수와 맞아야 한다.</b> 공개 전(`releasedStageCount = 0`)에만
- * 배열이고 공개한 뒤에는 null이다. 둘이 어긋나면 화면이 1판 목록과 여정 지도 가운데 무엇을 그릴지 정할 수
- * 없으므로 읽지 못한 응답으로 둔다.
+ * <p><b>공개 상태를 나타내는 값들이 서로 맞아야 한다.</b> `releasedStageCount`는 공개된 단계(글이 0편인 공개
+ * 단계 포함, 곧 `PREPARING`이 아닌 단계)의 수이고, `allStagesReleased`는 모든 단계가 공개됐는지이며,
+ * `preReleaseArticles`는 공개 전(`releasedStageCount = 0`)에만 배열이다. 하나라도 어긋나면 화면이 9월 판 목록과
+ * 여정 지도 가운데 무엇을 그릴지 정할 수 없고, 어긋난 응답을 빈 목록으로 그리면 실패를 정상 화면으로 꾸미게 된다
+ * (원칙 VI). 그래서 읽지 못한 응답으로 둔다.
  */
 function readCurriculum(value: unknown): Curriculum | null {
   if (
     !isRecord(value) ||
     !isNumber(value.releasedStageCount) ||
+    !Number.isInteger(value.releasedStageCount) ||
+    value.releasedStageCount < 0 ||
     typeof value.allStagesReleased !== 'boolean'
   ) {
     return null
@@ -567,7 +571,12 @@ function readCurriculum(value: unknown): Curriculum | null {
   const stages = readAll(value.stages, readStageView)
   const notices = readAll(value.notices, readReleaseLogEntry)
   const changeLog = readAll(value.changeLog, readReleaseLogEntry)
-  if (!stages || !notices || !changeLog) return null
+  // 계약은 여섯 단계를 늘 모두 보낸다. 단계가 하나도 없으면 공개 여부를 가를 수 없다.
+  if (!stages || !notices || !changeLog || stages.length === 0) return null
+
+  const releasedCount = stages.filter((stage) => stage.status !== 'PREPARING').length
+  if (value.releasedStageCount !== releasedCount) return null
+  if (value.allStagesReleased !== (releasedCount === stages.length)) return null
 
   const preReleaseArticles =
     value.preReleaseArticles === null ? null : readAll(value.preReleaseArticles, readSummary)
