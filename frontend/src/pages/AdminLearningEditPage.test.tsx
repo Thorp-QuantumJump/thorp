@@ -3,14 +3,23 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { adminDraftKey } from '@/components/learning/admin/adminDraftStorage'
-import { adminDraftArticle, adminTideArticle, publishCheckFailures } from '@/test/learningFixtures'
+import {
+  adminDraftArticle,
+  adminStages,
+  adminTideArticle,
+  adminV2Article,
+  publishCheckFailures,
+} from '@/test/learningFixtures'
+import type { AdminLearningArticle, AdminLearningDraftV2 } from '@/types/learningAdmin'
 import { AdminLearningEditPage } from './AdminLearningEditPage'
 
-/** 013 T071. quickstart 3-2·3-6·3-7·3-8, research R12. */
+/** 013 T071·T174. quickstart 3-2·3-6·3-7·3-8·7-1·7-4·7-5, research R12·R26. */
 
 const apiMocks = vi.hoisted(() => ({
   checkAdminAccess: vi.fn(),
   fetchAdminArticle: vi.fn(),
+  fetchAdminStages: vi.fn(),
+  fetchArticlePreview: vi.fn(),
   saveDraft: vi.fn(),
   publishArticle: vi.fn(),
   unpublishArticle: vi.fn(),
@@ -42,6 +51,11 @@ describe('AdminLearningEditPage', () => {
       status: 'loaded',
       article: adminTideArticle,
     })
+    apiMocks.fetchAdminStages.mockReset().mockResolvedValue({
+      status: 'loaded',
+      stages: adminStages,
+    })
+    apiMocks.fetchArticlePreview.mockReset()
     apiMocks.saveDraft.mockReset()
     apiMocks.publishArticle.mockReset()
     apiMocks.unpublishArticle.mockReset()
@@ -115,7 +129,7 @@ describe('AdminLearningEditPage', () => {
     window.sessionStorage.setItem(
       adminDraftKey('tide-reading'),
       JSON.stringify({
-        version: 1,
+        version: 2,
         savedAt: '2026-09-21T02:00:00Z',
         draftVersion: 5,
         draft: { ...adminTideArticle.draft, title: '보관한 제목' },
@@ -138,7 +152,7 @@ describe('AdminLearningEditPage', () => {
     window.sessionStorage.setItem(
       adminDraftKey('tide-reading'),
       JSON.stringify({
-        version: 1,
+        version: 2,
         savedAt: '2026-09-21T02:00:00Z',
         draftVersion: 5,
         draft: { ...adminTideArticle.draft, title: '보관한 제목' },
@@ -174,7 +188,7 @@ describe('AdminLearningEditPage', () => {
     window.sessionStorage.setItem(
       adminDraftKey('tide-reading'),
       JSON.stringify({
-        version: 1,
+        version: 2,
         savedAt: '2026-09-21T02:00:00Z',
         draftVersion: 5,
         draft: { ...adminTideArticle.draft, title: '보관한 제목' },
@@ -281,5 +295,341 @@ describe('AdminLearningEditPage', () => {
     expect(apiMocks.unpublishArticle).toHaveBeenCalledTimes(1)
     // 취소한 뒤에는 그 버튼이 사라진다. 상태가 DRAFT로 바뀌었다.
     expect(screen.queryByRole('button', { name: '게시 취소' })).toBeNull()
+  })
+
+  it('(2판) 버전 1 보관본은 복원하지 않고 버렸다고 알린다', async () => {
+    window.sessionStorage.setItem(
+      adminDraftKey('tide-reading'),
+      JSON.stringify({
+        version: 1,
+        savedAt: '2026-09-21T02:00:00Z',
+        draftVersion: 5,
+        draft: { title: '옛 보관 제목' },
+      }),
+    )
+    renderEdit()
+
+    expect(await screen.findByText(/복원하지 않고 버렸습니다/)).not.toBeNull()
+    expect(screen.queryByRole('heading', { name: '저장하지 못한 편집 내용이 있습니다' })).toBeNull()
+    expect(screen.getByLabelText('제목')).toHaveProperty('value', adminTideArticle.draft.title)
+    expect(window.sessionStorage.getItem(adminDraftKey('tide-reading'))).toBeNull()
+  })
+
+  it('(2판) 편집 문법이 틀린 칸이 있으면 저장 요청을 보내지 않고 위치를 보인다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    const paragraph = await screen.findByLabelText(/^2번째 블록 내용/)
+    // userEvent는 `{`를 특수 키로 읽으므로 `{{`로 한 글자를 친다.
+    await user.type(paragraph, ' {{{{용어:닫지 않음')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(
+      await screen.findByText(
+        '편집 문법이 틀린 칸이 있어 저장하지 않았습니다. 아래 위치를 고쳐 주세요.',
+      ),
+    ).not.toBeNull()
+    expect(screen.getByText(/본문 2번째 블록\(문단\) · 내용 1줄 \d+칸/)).not.toBeNull()
+    expect(apiMocks.saveDraft).not.toHaveBeenCalled()
+  })
+
+  it('(2판) 저장 요청은 편집 문법을 서버 초안과 같은 조각으로 되돌려 보낸다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValue({ status: 'saved', article: adminV2Article })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.type(await screen.findByLabelText('제목'), ' 고침')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(apiMocks.saveDraft).toHaveBeenCalledWith('channel-depth', {
+      ...adminV2Article.draft,
+      title: `${adminV2Article.draft.title} 고침`,
+      expectedDraftVersion: 4,
+    })
+  })
+
+  it('(2판) 게시 성공 뒤 초안을 다시 읽고, 바로 한 저장이 같은 번호와 새 식별자, 비운 transferFrom을 싣는다', async () => {
+    const v2Draft = adminV2Article.draft as AdminLearningDraftV2
+    const afterPublish: AdminLearningArticle = {
+      ...adminV2Article,
+      publishedRevisionNo: 3,
+      draft: {
+        ...v2Draft,
+        terms: v2Draft.terms.map((term) => ({ ...term, transferFrom: null })),
+        quiz: v2Draft.quiz.map((question) =>
+          question.questionId === 'q4' ? { ...question, questionId: 'q7' } : question,
+        ),
+      },
+    }
+    apiMocks.fetchAdminArticle
+      .mockResolvedValueOnce({ status: 'loaded', article: adminV2Article })
+      .mockResolvedValueOnce({ status: 'loaded', article: afterPublish })
+    apiMocks.publishArticle.mockResolvedValue({
+      status: 'published',
+      result: {
+        articleId: 'channel-depth',
+        status: 'PUBLISHED',
+        revisionNo: 3,
+        checkVersion: 'learning-publish-checks-v2',
+        sectorMapVersion: 'NOT_CHECKED',
+        publishedAt: '2026-11-20T01:00:00Z',
+        edition: 'CURRENT',
+        renamedQuestions: [{ from: 'q4', to: 'q7' }],
+        transferredTerms: [
+          { termId: 'keel-room', fromArticleId: 'harbor-notes', toArticleId: 'channel-depth' },
+        ],
+      },
+    })
+    apiMocks.saveDraft.mockResolvedValue({ status: 'saved', article: afterPublish })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '게시' }))
+
+    expect(
+      await screen.findByText(/이미 답한 사용자에게도 새 문제로 보입니다: q4 → q7/),
+    ).not.toBeNull()
+    expect(apiMocks.fetchAdminArticle).toHaveBeenCalledTimes(2)
+    expect(await screen.findByText('2번째 문제 (q7)')).not.toBeNull()
+
+    await user.type(screen.getByLabelText(/^1번째 문제 질문/), ' 고침')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(apiMocks.saveDraft).toHaveBeenCalledTimes(1)
+    const request = apiMocks.saveDraft.mock.calls[0][1]
+    expect(request.expectedDraftVersion).toBe(4)
+    expect(request.quiz.map((question: { questionId: string }) => question.questionId)).toEqual([
+      'q1',
+      'q7',
+    ])
+    expect(request.quiz[0].prompt).toBe('합성 질문 하나 고침')
+    expect(request.terms[0].transferFrom).toBeNull()
+  })
+
+  it('(2판) 게시 뒤 초안을 다시 읽지 못하면 게시 안내를 남기고 새로 불러오기를 보인다', async () => {
+    apiMocks.fetchAdminArticle
+      .mockResolvedValueOnce({ status: 'loaded', article: adminV2Article })
+      .mockResolvedValueOnce({
+        status: 'failed',
+        kind: 'network',
+        code: null,
+        message: '연결하지 못했습니다.',
+      })
+    apiMocks.publishArticle.mockResolvedValue({
+      status: 'published',
+      result: {
+        articleId: 'channel-depth',
+        status: 'PUBLISHED',
+        revisionNo: 3,
+        checkVersion: 'learning-publish-checks-v2',
+        sectorMapVersion: 'NOT_CHECKED',
+        publishedAt: '2026-11-20T01:00:00Z',
+        edition: 'CURRENT',
+        renamedQuestions: [],
+        transferredTerms: [],
+      },
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '게시' }))
+
+    expect(await screen.findByText(/게시한 뒤 초안을 다시 읽지 못했습니다/)).not.toBeNull()
+    expect(screen.getByText(/3판\(CURRENT\)으로 게시했습니다/)).not.toBeNull()
+    expect(screen.getByRole('button', { name: '새로 불러오기' })).not.toBeNull()
+  })
+
+  it('(2판) 다른 글이 쓰는 용어면 이 글로 넘겨받기를 제안하고, 고르면 다음 저장에 transferFrom이 실린다', async () => {
+    const v2Draft = adminV2Article.draft as AdminLearningDraftV2
+    const withoutTransfer: AdminLearningArticle = {
+      ...adminV2Article,
+      draft: { ...v2Draft, terms: v2Draft.terms.map((term) => ({ ...term, transferFrom: null })) },
+    }
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: withoutTransfer })
+    apiMocks.saveDraft.mockResolvedValueOnce({
+      status: 'termIdTaken',
+      message: '다른 글이 쓰는 용어입니다.',
+      termId: 'keel-room',
+      ownerArticleId: 'harbor-notes',
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+    await user.click(await screen.findByRole('button', { name: '이 글로 넘겨받기' }))
+
+    expect(screen.getByText(/넘겨받는 중:/)).not.toBeNull()
+    apiMocks.saveDraft.mockResolvedValueOnce({ status: 'saved', article: adminV2Article })
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(apiMocks.saveDraft).toHaveBeenCalledTimes(2)
+    expect(apiMocks.saveDraft.mock.calls[1][1].terms[0].transferFrom).toBe('harbor-notes')
+  })
+
+  it('(2판) 공개 전 단계의 V2 게시 거절은 단계 공개로 안내한다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminDraftArticle })
+    apiMocks.publishArticle.mockResolvedValue({
+      status: 'stageNotReleased',
+      message: '공개 전 단계의 글은 단계 공개로만 게시합니다.',
+    })
+    const user = userEvent.setup()
+    renderEdit('moor-lines')
+
+    await user.click(await screen.findByRole('button', { name: '게시' }))
+
+    expect(await screen.findByText('공개 전 단계의 글은 단계 공개로만 게시합니다.')).not.toBeNull()
+    expect(screen.getByText(/관리 목록의 .단계 공개.로 함께 게시됩니다/)).not.toBeNull()
+  })
+
+  it('(2판) 미리 보기는 저장된 초안을 독자 화면 부품으로 그리고 확인 문제를 기록 없이 보인다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.fetchArticlePreview.mockResolvedValue({
+      status: 'loaded',
+      preview: {
+        incompleteQuestions: [],
+        article: {
+          articleId: 'channel-depth',
+          edition: 'CURRENT',
+          title: '미리 보는 제목',
+          question: '미리 보는 질문',
+          readingOrder: 102,
+          stage: { stageKey: 'shore-basics', number: 1, name: '물가 기초' },
+          number: null,
+          readingMinutes: 5,
+          minDwellSeconds: 150,
+          blocks: [{ type: 'heading', text: '미리 보는 소제목' }],
+          quiz: [
+            {
+              questionId: 'q1',
+              prompt: '미리 보는 문제',
+              choices: [
+                { choiceId: 'c2', text: '가' },
+                { choiceId: 'c3', text: '나' },
+              ],
+              correctChoiceId: 'c3',
+              explanation: '미리 보는 풀이',
+            },
+          ],
+          example: null,
+          sources: [],
+          next: null,
+          stageArticleCount: null,
+          hasUnreleasedStages: true,
+        },
+      },
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '미리 보기 열기' }))
+
+    const preview = await screen.findByRole('article', { name: '미리 보는 제목 미리 보기' })
+    expect(within(preview).getByRole('heading', { name: '미리 보는 소제목' })).not.toBeNull()
+    expect(within(preview).getByText('미리 보는 문제')).not.toBeNull()
+    expect(within(preview).getByText(/새 기준 글로 보입니다/)).not.toBeNull()
+    expect(apiMocks.fetchArticlePreview).toHaveBeenCalledWith('channel-depth', expect.anything())
+  })
+
+  it('(converge) 422 항목을 하나도 읽지 못해도 서버 문장으로 거절을 알린다', async () => {
+    apiMocks.publishArticle.mockResolvedValue({
+      status: 'checkFailed',
+      message: '게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.',
+      checkVersion: 'learning-publish-checks-v2',
+      failures: [],
+    })
+    const user = userEvent.setup()
+    renderEdit()
+
+    await user.click(await screen.findByRole('button', { name: '게시' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      '게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.',
+    )
+  })
+
+  it('(converge) 넘겨받기가 이미 끝나 소유 글이 이 글이면 비우기를 제안하고 같은 409를 부르는 제안은 하지 않는다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValueOnce({
+      status: 'termTransferInvalid',
+      message: '넘겨받을 수 없는 용어입니다.',
+      termId: 'keel-room',
+      ownerArticleId: 'channel-depth',
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText(/이미 이 글로 넘어왔습니다/)).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /에서 넘겨받기로 고치기$/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '넘겨받기 비우기' }))
+    expect(screen.queryByText(/넘겨받는 중:/)).toBeNull()
+  })
+
+  it('(converge) 넘겨받기에 적은 글이 지금 소유 글과 같으면 같은 값을 다시 넣으라고 제안하지 않는다', async () => {
+    // adminV2Article의 keel-room은 harbor-notes에서 넘겨받는 중이다.
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValueOnce({
+      status: 'termTransferInvalid',
+      message: '넘겨받을 수 없는 용어입니다.',
+      termId: 'keel-room',
+      ownerArticleId: 'harbor-notes',
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText(/다른 글이 같은 용어를\s*넘겨받는 중인지/)).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'harbor-notes에서 넘겨받기로 고치기' })).toBeNull()
+  })
+
+  it('(converge) LEARNING_FORMAT_OUTDATED에 할 일을 안내한다', async () => {
+    apiMocks.saveDraft.mockResolvedValue({
+      status: 'formatOutdated',
+      message: 'V1로 되돌릴 수 없는 글입니다.',
+    })
+    const user = userEvent.setup()
+    renderEdit()
+
+    await user.type(await screen.findByLabelText('제목'), ' 고침')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('V1로 되돌릴 수 없는 글입니다.')).not.toBeNull()
+    expect(screen.getByText(/V2 원고를 가져와 저장한 뒤 게시하세요/)).not.toBeNull()
+  })
+
+  it('(converge) 저장 400의 위치를 1부터 센 사람이 읽는 이름과 원래 경로로 보인다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValue({
+      status: 'invalid',
+      message: '입력값이 올바르지 않습니다.',
+      fields: [
+        { field: 'blocks[1].content', message: '첫 조각일 수 없습니다' },
+        { field: 'quiz[0].choices[1].choiceId', message: '지금 초안에 없는 보기 식별자입니다' },
+      ],
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+
+    expect(
+      await screen.findByText('본문 2번째 블록 · 내용 (blocks[1].content): 첫 조각일 수 없습니다'),
+    ).not.toBeNull()
+    expect(
+      screen.getByText(
+        '1번째 확인 문제 · 2번째 보기 · 식별자 (quiz[0].choices[1].choiceId): 지금 초안에 없는 보기 식별자입니다',
+      ),
+    ).not.toBeNull()
+  })
+
+  it('(converge) V2 초안의 예시는 선택이라고 알린다(FR-003)', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    renderEdit('channel-depth')
+
+    expect(await screen.findByText(/예시는 넣지 않아도 되며/)).not.toBeNull()
   })
 })

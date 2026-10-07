@@ -10,6 +10,8 @@ import type {
   AdminLearningArticle,
   AdminLearningArticleSummary,
   PublishCheckFailure,
+  StageAdminView,
+  StageReadiness,
 } from '@/types/learningAdmin'
 
 /**
@@ -383,6 +385,12 @@ export const adminArticleSummaries: AdminLearningArticleSummary[] = [
       actorUserId: 7,
       occurredAt: '2026-09-20T01:00:00Z',
     },
+    format: 'V1',
+    stage: { stageKey: 'shore-basics', number: 1, released: false },
+    stagePosition: 2,
+    publishedEdition: 'LEGACY',
+    needsReview: null,
+    pendingTransfers: 0,
   },
   {
     articleId: 'harbor-notes',
@@ -398,6 +406,12 @@ export const adminArticleSummaries: AdminLearningArticleSummary[] = [
       actorUserId: 7,
       occurredAt: '2026-09-21T01:00:00Z',
     },
+    format: 'V1',
+    stage: { stageKey: 'shore-basics', number: 1, released: false },
+    stagePosition: 5,
+    publishedEdition: 'LEGACY',
+    needsReview: true,
+    pendingTransfers: 0,
   },
   {
     articleId: 'moor-lines',
@@ -408,6 +422,12 @@ export const adminArticleSummaries: AdminLearningArticleSummary[] = [
     hasUnpublishedChanges: false,
     needsUpdate: true,
     lastPublication: null,
+    format: 'V2',
+    stage: { stageKey: 'open-water', number: 2, released: false },
+    stagePosition: 1,
+    publishedEdition: null,
+    needsReview: false,
+    pendingTransfers: 1,
   },
 ]
 
@@ -433,14 +453,17 @@ export const adminTideArticle: AdminLearningArticle = {
       ],
     },
     sources: [{ label: '합성 출처 하나', url: 'https://example.com/tide' }],
-    terms: [
-      { termId: 'ebb-gap', label: '썰물 간격', sentence: '합성 용어 문장이다.' },
-    ],
+    terms: [{ termId: 'ebb-gap', label: '썰물 간격', sentence: '합성 용어 문장이다.' }],
+    format: 'V1',
+    stageKey: 'shore-basics',
+    stagePosition: 2,
+    quiz: [],
   },
   publishedRevisionNo: 3,
+  publishedEdition: 'LEGACY',
 }
 
-/** 아직 한 번도 게시하지 않은 초안. 게시 취소 버튼이 없어야 하는 쪽이다. */
+/** 아직 한 번도 게시하지 않은 V2 초안. 게시 취소 버튼이 없어야 하는 쪽이다. */
 export const adminDraftArticle: AdminLearningArticle = {
   articleId: 'moor-lines',
   status: 'DRAFT',
@@ -448,13 +471,156 @@ export const adminDraftArticle: AdminLearningArticle = {
   draft: {
     title: '계류줄 묶기',
     question: '같은 매듭이 왜 배마다 다르게 풀리는가?',
-    readingOrder: 9,
+    readingOrder: 201,
     blocks: [],
     example: null,
     sources: [],
     terms: [],
+    format: 'V2',
+    stageKey: 'open-water',
+    stagePosition: 1,
+    quiz: [],
   },
   publishedRevisionNo: null,
+  publishedEdition: null,
+}
+
+/**
+ * 공개된 단계의 V2 초안(2판). 글자 조각 세 종류, 넘겨받는 중인 용어, 식별자를 받은 확인 문제 둘을 담는다.
+ * 편집기가 조각을 편집 문법 문자열로 바꾸고 저장할 때 되돌리는지, 게시가 바꾼 식별자를 받는지 이 한 벌로 본다.
+ */
+export const adminV2Article: AdminLearningArticle = {
+  articleId: 'channel-depth',
+  status: 'PUBLISHED',
+  draftVersion: 4,
+  draft: {
+    title: '물길 깊이 재기',
+    question: '같은 물길인데 배마다 지나갈 수 있는 때가 다른 까닭은?',
+    readingOrder: 102,
+    format: 'V2',
+    stageKey: 'shore-basics',
+    stagePosition: 3,
+    blocks: [
+      {
+        type: 'keySummary',
+        lines: [[{ text: '첫 줄' }], [{ text: '둘째 줄' }], [{ text: '셋째 줄' }]],
+      },
+      {
+        type: 'paragraph',
+        content: [
+          { text: '합성 문단의 ' },
+          { term: 'ebb-gap', text: '썰물 간격' },
+          { text: '과 {{괄호' },
+          { source: { label: '합성 출처', url: 'https://example.com/depth' } },
+        ],
+      },
+      { type: 'term', termId: 'keel-room' },
+    ],
+    example: null,
+    sources: [],
+    terms: [
+      {
+        termId: 'keel-room',
+        label: '용골 여유',
+        aliases: ['keel clearance'],
+        meaning: '합성 뜻 문장이다.',
+        reading: '합성 읽는 법 문장이다.',
+        caveat: '합성 한계 문장이다.',
+        transferFrom: 'harbor-notes',
+      },
+    ],
+    quiz: [
+      {
+        questionId: 'q1',
+        prompt: '합성 질문 하나',
+        choices: [
+          { choiceId: 'c2', text: '틀린 보기', correct: false },
+          { choiceId: 'c3', text: '정답 보기', correct: true },
+        ],
+        explanation: '합성 풀이 하나',
+      },
+      {
+        questionId: 'q4',
+        prompt: '합성 질문 둘',
+        choices: [
+          { choiceId: 'c5', text: '정답 보기', correct: true },
+          { choiceId: 'c6', text: '틀린 보기', correct: false },
+        ],
+        explanation: '합성 풀이 둘',
+      },
+    ],
+  },
+  publishedRevisionNo: 2,
+  publishedEdition: 'CURRENT',
+}
+
+/** 단계 둘(2판). 1단계는 공개할 수 있고 2단계는 앞 단계를 기다린다. 2단계에는 공개 배치만 남은 글이 있다. */
+export const adminStages: StageAdminView[] = [
+  {
+    stageKey: 'shore-basics',
+    number: 1,
+    name: '물가 기초',
+    levelLabel: '입문',
+    summary: '합성 단계 요약이다.',
+    releasedAt: null,
+    releasedByUserId: null,
+    releasable: true,
+    articles: [
+      {
+        articleId: 'tide-reading',
+        title: '물때 읽기',
+        format: 'V2',
+        status: 'PUBLISHED',
+        publishedEdition: 'LEGACY',
+        draftVersion: 5,
+        stagePosition: 2,
+      },
+      {
+        articleId: 'channel-depth',
+        title: '물길 깊이 재기',
+        format: 'V2',
+        status: 'DRAFT',
+        publishedEdition: null,
+        draftVersion: 4,
+        stagePosition: 3,
+      },
+    ],
+    placementOnlyArticles: [],
+  },
+  {
+    stageKey: 'open-water',
+    number: 2,
+    name: '먼바다',
+    levelLabel: '기초',
+    summary: '합성 단계 요약이다.',
+    releasedAt: null,
+    releasedByUserId: null,
+    releasable: false,
+    articles: [],
+    placementOnlyArticles: [
+      {
+        articleId: 'harbor-notes',
+        title: '항구 기록',
+        format: 'V1',
+        status: 'PUBLISHED',
+        publishedEdition: 'LEGACY',
+        draftVersion: 2,
+        stagePosition: 5,
+      },
+    ],
+  },
+]
+
+/** 1단계 미리 검사가 통과한 결과. 단계 공개 요청은 이 목록과 초안 번호를 그대로 싣는다. */
+export const adminReadyReadiness: StageReadiness = {
+  stageKey: 'shore-basics',
+  ready: true,
+  blockers: [],
+  articles: [
+    { articleId: 'tide-reading', draftVersion: 5, failures: [] },
+    { articleId: 'channel-depth', draftVersion: 4, failures: [] },
+  ],
+  checkVersion: 'learning-publish-checks-v2',
 }
 
 /**
