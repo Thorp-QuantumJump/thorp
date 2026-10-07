@@ -1,11 +1,21 @@
 import { ArrowLeft, ArrowUpRight } from 'lucide-react'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchLearningArticle, type LearningArticleResult } from '@/api/learning'
+import { useAuth } from '@/auth/auth-context'
 import { ArticleBody } from '@/components/learning/article/ArticleBody'
-import { ArticleEnd } from '@/components/learning/article/ArticleEnd'
+import { ArticleEnd, type ArticleEndMode } from '@/components/learning/article/ArticleEnd'
 import { EditionNotice } from '@/components/learning/article/EditionNotice'
-import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
+import { ResumeLine } from '@/components/learning/article/ResumeLine'
+import { useArticleCompletion } from '@/components/learning/article/useArticleCompletion'
+import { useLearnerArticle } from '@/components/learning/article/useLearnerArticle'
+import {
+  focusReadPosition,
+  scrollToReadPercent,
+  useReadingPosition,
+} from '@/components/learning/article/useReadingPosition'
+import { useRestoreFocusAfterConceal } from '@/components/learning/article/useRestoreFocusAfterConceal'
+import { useSettledAuth, type SettledAuth } from '@/components/learning/article/useSettledAuth'
 import { ExampleEntry } from '@/components/learning/ExampleEntry'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { ReturnLink } from '@/components/learning/ReturnLink'
@@ -16,6 +26,24 @@ import heading from '@/components/common/PageHeading.module.css'
 import styles from './LearningArticlePage.module.css'
 
 type ArticleState = { status: 'loading' } | LearningArticleResult
+
+/**
+ * '이어서 읽기'로 열었는가(navigation state `learningResume: true`, data-model §15). 위치는 실려 오지 않는다. 글
+ * 화면이 받은 글 기록의 `percent`로 옮긴다. `true` 밖의 값은 받지 않는다.
+ */
+function resumeRequested(state: unknown): boolean {
+  return (
+    typeof state === 'object' &&
+    state !== null &&
+    'learningResume' in state &&
+    state.learningResume === true
+  )
+}
+
+/** 센 시간·읽은 비율·받은 기록을 처음부터 할 단위. 확인 중과 `error`는 여기 오지 않는다(research R33). */
+function sessionKeyOf(settled: SettledAuth): string {
+  return settled.kind === 'authenticated' ? `authenticated:${settled.userId}` : settled.kind
+}
 
 /**
  * 배우기 글 하나(`/learn/:articleId`, 013 US1·US2·US6).
@@ -31,6 +59,10 @@ type ArticleState = { status: 'loading' } | LearningArticleResult
  * <p><b>볼 수 없는 글은 오류가 아니다.</b> 없는 글과 게시되지 않은 글을 서버가 가르지 않으므로 화면도
  * 한 문장과 목록 연결만 보인다(spec Edge Cases). 받지 못한 것만 다시 시도를 준다.
  *
+ * <p><b>로그인 사용자의 새 기준 글은 기록한다</b>(FR-020~FR-022). 글 기록을 받아 완료 카드와 확인 문제를 그리고,
+ * 본문 끝과 머문 시간으로 완료를 보내며, 떠날 때 읽은 위치를 보낸다. 확인 중(`checking`)과 `error` 동안에는 기록
+ * 자리를 숨기기만 하고 받은 것을 버리지 않는다. 로그인 상태나 사용자가 바뀌면 버리고 처음부터 한다(research R33).
+ *
  * <p>학습 기록을 브라우저 저장소에 쓰지 않는다(013 FR-020). 비로그인 확인 문제도 화면 안에서만 푼다.
  */
 export function LearningArticlePage() {
@@ -40,6 +72,12 @@ export function LearningArticlePage() {
   const learningReturn = carriedLearningReturn(location.state)
   const [state, setState] = useState<ArticleState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  /** 화면을 둔 채 글을 다시 받은 횟수. 확인 문제를 새 글로 다시 그리고 완료 판정을 처음부터 한다 */
+  const [revision, setRevision] = useState(0)
+  const articleIdRef = useRef(articleId)
+  useLayoutEffect(() => {
+    articleIdRef.current = articleId
+  })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -55,6 +93,24 @@ export function LearningArticlePage() {
   }, [articleId, attempt])
 
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
+
+  /**
+   * 화면을 둔 채 글을 다시 받는다. 다른 곳에서 확인 문제나 글이 바뀌었을 때 쓴다(계약 §5). 글 화면을 내리지 않으므로
+   * 이번에 받은 경험치와 스크롤 위치를 잃지 않는다. 볼 수 없는 글이 되었으면 그 문장으로 바꾸고, 받지 못하면 지금
+   * 글을 그대로 두어 다시 누를 수 있게 한다.
+   */
+  const refresh = useCallback(() => {
+    const requested = articleId
+    void fetchLearningArticle(requested).then((result) => {
+      if (articleIdRef.current !== requested) return
+      if (result.status === 'loaded') {
+        setState(result)
+        setRevision((count) => count + 1)
+      } else if (result.status === 'unavailable') {
+        setState(result)
+      }
+    })
+  }, [articleId])
 
   // 도움말에서 온 돌아갈 자리(term-help-ui §3)를 목록으로 옮겨 가도 잃지 않게 받은 state를 넘긴다.
   // 목록으로 돌아가는 길. 전략 선택 화면의 되돌아가기와 같은 모양(화살표 + 글자)이다. 첫 단계 공개 전 글이면
@@ -86,9 +142,12 @@ export function LearningArticlePage() {
           <ArticleView
             article={state.article}
             listLink={listLink}
-            guest={settled.kind === 'anonymous'}
+            settled={settled}
             concealed={concealed}
             learningReturn={learningReturn}
+            resumeRequested={resumeRequested(location.state)}
+            revision={revision}
+            onRefresh={refresh}
           />
         ) : null}
 
@@ -117,16 +176,122 @@ export function LearningArticlePage() {
 interface ArticleViewProps {
   article: LearningArticle
   listLink: ReactNode
-  guest: boolean
-  /** 로그인 상태를 다시 확인하는 중이라 글 끝의 기록 자리를 숨기기만 하는가(research R33) */
+  /** 마지막으로 확인된 로그인 상태(`useSettledAuth`) */
+  settled: SettledAuth
+  /** 로그인 상태를 다시 확인하는 중이라 기록 자리를 숨기기만 하는가(research R33) */
   concealed: boolean
   learningReturn?: LearningReturnState
+  /** '이어서 읽기'로 열었는가. 받은 글 기록의 위치로 한 번 옮긴다 */
+  resumeRequested: boolean
+  /** 화면을 둔 채 글을 다시 받은 횟수 */
+  revision: number
+  /** 화면을 둔 채 글을 다시 받는다(확인 문제나 글이 바뀌었을 때) */
+  onRefresh: () => void
 }
 
-function ArticleView({ article, listLink, guest, concealed, learningReturn }: ArticleViewProps) {
+function ArticleView({
+  article,
+  listLink,
+  settled,
+  concealed,
+  learningReturn,
+  resumeRequested,
+  revision,
+  onRefresh,
+}: ArticleViewProps) {
+  const articleRef = useRef<HTMLElement>(null)
+  const resumeRef = useRef<HTMLDivElement>(null)
+  const resumedRef = useRef(false)
+  const { recheck } = useAuth()
+  const sessionKey = sessionKeyOf(settled)
+  // 기록 요청이 로그인 만료로 거부되었는가. 만료 동안에만 '기록되지 않았습니다'를 보이는 근거다(spec Edge Cases).
+  const [rejected, setRejected] = useState(false)
+  // 기록은 공개된 단계의 새 기준 글에서만 한다. 이전 판·첫 단계 공개 전 글은 기록하지 않는다(FR-031).
+  const recording = article.edition === 'CURRENT' && settled.kind === 'authenticated'
+  const learner = useLearnerArticle(article.articleId, recording, sessionKey, {
+    onUnauthenticated: () => setRejected(true),
+  })
+  const record = learner.load.status === 'loaded' ? learner.load.record : null
+  useRestoreFocusAfterConceal(resumeRef, concealed)
+
+  // 만료 뒤 다시 로그인했거나 비로그인으로 확인되면 앞선 거부를 잊는다. 거부 직후에 상태가 만료로 바뀌므로
+  // 만료로 바뀔 때는 지우지 않는다.
+  useEffect(() => {
+    if (sessionKey !== 'expired') setRejected(false)
+  }, [sessionKey])
+
+  useArticleCompletion({
+    root: articleRef,
+    active:
+      recording &&
+      record !== null &&
+      record.state !== 'COMPLETED' &&
+      learner.completion.status === 'idle',
+    minDwellSeconds: article.edition === 'CURRENT' ? article.minDwellSeconds : 0,
+    // 글을 다시 받으면 처음부터 센다. 다른 곳에서 글이 바뀐 뒤의 완료는 바뀐 글로 판정한다.
+    sessionKey: `${article.articleId}|${sessionKey}|${revision}`,
+    held: concealed,
+    onReady: learner.complete,
+  })
+  const furthest = useReadingPosition({
+    root: articleRef,
+    articleId: article.articleId,
+    active: recording,
+    sessionKey,
+  })
+
+  // '이어서 읽기'로 열었으면 글 기록을 받은 뒤 한 번 그 위치로 옮긴다(FR-020, data-model §15). 다시 받은 기록으로
+  // 다시 옮기지 않는다. 완료한 글은 맨 위에서 연다.
+  useEffect(() => {
+    if (!resumeRequested || resumedRef.current || record === null) return
+    resumedRef.current = true
+    if (record.state === 'READING' && record.percent > 0) {
+      scrollToReadPercent(articleRef.current, record.percent)
+    }
+  }, [resumeRequested, record])
+
+  const reloadArticle = () => {
+    onRefresh()
+    learner.reloadRecord()
+  }
+  const endMode: ArticleEndMode =
+    settled.kind === 'anonymous'
+      ? { kind: 'guest' }
+      : settled.kind === 'authenticated'
+        ? {
+            kind: 'record',
+            learner: { ...learner, reloadArticle, articleRevision: revision },
+          }
+        : settled.kind === 'expired'
+          ? { kind: 'expired', rejected, onRetry: () => void recheck() }
+          : { kind: 'none' }
+
+  // '읽은 정도' 막대(목업 '글 끝'의 `rbar`). 받은 기록과 이 화면에서 잰 가장 큰 비율 가운데 큰 쪽이고, 완료한 글은
+  // 다 찬다. 기록을 받지 못했으면 그리지 않는다. 그림이라 화면 낭독기는 읽지 않는다(design-notes §6).
+  const completed = record?.state === 'COMPLETED' || learner.completion.status === 'done'
+  const readPercent =
+    recording && record !== null ? (completed ? 100 : Math.max(record.percent, furthest)) : null
+
+  // 읽는 중 글을 목록·도움말·주소로 열면 맨 위에서 열고 이 줄을 보인다. 완료한 글에는 없다(FR-020).
+  const resumeAt =
+    recording &&
+    record?.state === 'READING' &&
+    record.percent > 0 &&
+    learner.completion.status !== 'done'
+      ? record.percent
+      : null
+
   return (
-    <article className={styles.article} aria-labelledby="learning-article-title">
+    <article ref={articleRef} className={styles.article} aria-labelledby="learning-article-title">
       <header className={styles.header}>
+        {readPercent !== null ? (
+          <div
+            className={concealed ? `${styles.readBar} ${styles.concealed}` : styles.readBar}
+            aria-hidden="true"
+          >
+            <span className={styles.readBarFill} style={{ width: `${readPercent}%` }} />
+          </div>
+        ) : null}
         <ArticleHeadLine article={article} learningReturn={learningReturn} />
         <h1 id="learning-article-title" className={styles.title}>
           {article.title}
@@ -135,6 +300,17 @@ function ArticleView({ article, listLink, guest, concealed, learningReturn }: Ar
           <p className={styles.meta}>약 {article.readingMinutes}분</p>
         ) : null}
         <p className={styles.question}>{article.question}</p>
+        {resumeAt !== null ? (
+          <div ref={resumeRef} className={concealed ? styles.concealed : undefined}>
+            <ResumeLine
+              percent={resumeAt}
+              onResume={() => {
+                scrollToReadPercent(articleRef.current, resumeAt)
+                focusReadPosition(articleRef.current, resumeAt)
+              }}
+            />
+          </div>
+        ) : null}
       </header>
 
       <ArticleBody article={article} learningReturn={learningReturn} />
@@ -147,7 +323,7 @@ function ArticleView({ article, listLink, guest, concealed, learningReturn }: Ar
       {article.edition === 'CURRENT' ? (
         <ArticleEnd
           article={article}
-          guest={guest}
+          mode={endMode}
           concealed={concealed}
           learningReturn={learningReturn}
         />

@@ -79,6 +79,36 @@
   font-size: var(--thorp-text-body, 0.9rem);
 }
 
+/* 기록되지 않았습니다·불러오지 못했습니다 줄과 그 '다시 시도'(FR-020, FR-021). */
+.lineText {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.inlineButton {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--thorp-accent-soft);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.inlineButton:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
 /* 로그인 상태를 다시 확인하는 동안. 자리를 둔 채 화면과 보조 기술에서 모두 뺀다(research R33). */
 .concealed {
   visibility: hidden;
