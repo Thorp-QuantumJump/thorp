@@ -1,6 +1,11 @@
-/* 여정 지도(design-notes §3.1, 목업 .map). --map-col은 길이 지나는 세로 기둥의 가로 위치다. */
+/*
+  여정 지도(design-notes §3.1, 목업 .map). --map-col은 길이 지나는 세로 기둥의 가로 위치다. 길의 두 회색은 의미 토큰에
+  같은 값이 없는 지도 전용 색이라 여기서 한 번만 정한다(목업 --path-todo와 중립 길).
+*/
 .map {
   --map-col: 52px;
+  --road-unread: #6e716f;
+  --road-neutral: #2c3230;
   position: relative;
   margin-top: 16px;
 }
@@ -25,38 +30,46 @@
   stroke-width: 14;
 }
 
-/* 읽은 구간은 초록 실선, 아직 읽지 않은 구간은 회색 실선, 상태를 모르면 짙은 중립 길이다. */
-.roadRead {
-  stroke: #2fdc7a;
+/*
+  길 구간의 모양은 data-kind가 정한다(articleProgress의 RoadKind). 읽은 구간은 초록 실선, 아직 읽지 않은 구간은 회색
+  실선, 상태를 모르면 짙은 중립 길이다.
+*/
+.segment[data-kind='read'] {
+  stroke: var(--thorp-accent-soft);
   stroke-width: 4;
 }
 
-.roadTodo {
-  stroke: #6e716f;
+.segment[data-kind='unread'] {
+  stroke: var(--road-unread);
   stroke-width: 3;
 }
 
-.roadNeutral {
-  stroke: #2c3230;
+.segment[data-kind='neutral'] {
+  stroke: var(--road-neutral);
   stroke-width: 6;
 }
 
 /* 준비 중 단계로 가는 길만 점선이다. 점선은 장식에 쓰지 않는다(design-notes §4). */
-.road .roadPreparing {
-  stroke: #6e716f;
+.road .segment[data-kind='preparing'] {
+  stroke: var(--road-unread);
   stroke-width: 3;
   stroke-dasharray: 6 6;
   stroke-linecap: butt;
 }
 
+/* 공개 경계 앞에서 길이 끝나는 점. 끝나는 길과 같은 색이다. */
 .roadEnd {
-  fill: #6e716f;
+  fill: var(--road-unread);
   stroke: var(--thorp-background);
   stroke-width: 2;
 }
 
-.roadEndNeutral {
-  fill: #2c3230;
+.roadEnd[data-kind='neutral'] {
+  fill: var(--road-neutral);
+}
+
+.roadEnd[data-kind='read'] {
+  fill: var(--thorp-accent-soft);
 }
 
 .region {

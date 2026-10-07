@@ -1,11 +1,12 @@
 import type { ReleaseLogEntry, StageStatus, StageView } from '@/types/learning'
+import { isReleased } from './stages'
 
 /**
  * 커리큘럼 화면의 문장 틀(013 design-notes §7, FR-031).
  *
  * <p>단계 이름·편수·제목 같은 값은 모두 커리큘럼 응답에서 오고, 여기서는 그 값을 정해진 문장에 끼운다. 단계를
  * 공개하지 않았거나 앞으로 공개한다는 뜻의 잠금·예고 어휘('잠김'·'해금'·'열립니다'·'공개 예정'·'곧')는 쓰지 않는다
- * (FR-031 표시 규칙).
+ * (FR-031 표시 규칙). 주소는 `learningPaths`, 단계에 대한 사실은 `stages`가 맡는다.
  */
 
 /** 공개되지 않은 단계의 사유. */
@@ -13,6 +14,9 @@ export const PREPARING_REASON = '이 단계의 글을 모두 준비하면 한 �
 
 /** 공개했지만 게시된 글이 0편인 단계의 사유. 위 사유를 붙이지 않는다(FR-031). */
 export const REPREPARING_REASON = '이 단계의 글을 다시 준비하고 있습니다. 글이 게시되면 이 자리에 보입니다.'
+
+/** 공개되지 않은 단계의 화면 낭독 문장. 점선 모양만으로 알리지 않는다(FR-019). */
+export const UNRELEASED_STAGE_NOTE = '아직 공개되지 않은 단계입니다.'
 
 /** 공개 안내에 로그인 사용자만 덧붙이는 문장. 변경 기록에는 붙이지 않는다. */
 export const RECORDS_KEPT_SENTENCE = '지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.'
@@ -29,17 +33,6 @@ export function preparingReason(status: StageStatus): string | null {
   return null
 }
 
-/** 공개 경계 한 줄과 공개 안내 '○단계 보기'가 가리키는 단계 자리의 주소 조각이다. */
-export function stageHash(stageNumber: number): string {
-  return `#stage-${stageNumber}`
-}
-
-/** `#stage-3`에서 단계 번호를 읽는다. 다른 모양이면 null이다. */
-export function stageNumberFromHash(hash: string): number | null {
-  const match = /^#stage-(\d{1,3})$/.exec(hash)
-  return match ? Number(match[1]) : null
-}
-
 /**
  * 단계 번호 묶음을 읽는 꼴로 쓴다. 하나면 '1단계', 둘이면 '1·2단계', 셋 이상 이어지면 '3~6단계'다. 이어지지 않는
  * 번호는 가운뎃점으로 잇는다.
@@ -49,11 +42,6 @@ export function stageRange(numbers: readonly number[]): string {
   const consecutive = sorted.every((n, i) => i === 0 || n === sorted[i - 1] + 1)
   if (sorted.length >= 3 && consecutive) return `${sorted[0]}~${sorted[sorted.length - 1]}단계`
   return `${sorted.join('·')}단계`
-}
-
-/** 공개 경계로 세는 단계. `REPREPARING`도 공개된 단계다(계약 §1). */
-export function isReleased(stage: Pick<StageView, 'status'>): boolean {
-  return stage.status !== 'PREPARING'
 }
 
 /**
@@ -139,11 +127,28 @@ export function noticeLine(notices: readonly ReleaseLogEntry[], signedIn: boolea
   }
 }
 
+const KST_DATE = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/** ISO 시각을 한국 날짜 `YYYY-MM-DD`로 쓴다. 읽을 수 없으면 받은 값 그대로다. */
+function kstDate(isoInstant: string): string {
+  const at = new Date(isoInstant)
+  return Number.isNaN(at.getTime()) ? isoInstant : KST_DATE.format(at)
+}
+
 /**
- * 변경 기록 한 줄의 본문(날짜 뒤, 예: "2단계 공개 · 새 글 3편, 다시 쓴 글 1편('수익과 손실')"). 기록이 그대로라는
- * 문장은 넣지 않는다(FR-031).
+ * 변경 기록 한 줄(예: 날짜 '2026-11-19'와 "2단계 공개 · 새 글 3편, 다시 쓴 글 1편('수익과 손실')"). 날짜는 한국
+ * 날짜다. 기록이 그대로라는 문장은 넣지 않는다(FR-031).
  */
-export function changeLogText(entry: ReleaseLogEntry): string {
+export function changeLogLine(entry: ReleaseLogEntry): { date: string; text: string } {
+  return { date: kstDate(entry.occurredAt), text: changeLogText(entry) }
+}
+
+function changeLogText(entry: ReleaseLogEntry): string {
   if (entry.kind === 'ARTICLE_ADDED') {
     const title = entry.articleTitle ? `('${entry.articleTitle}')` : ''
     return `${entry.stageNumber}단계에 글 추가 · 새 글 ${entry.newCount}편${title}`
@@ -159,22 +164,4 @@ export function changeLogText(entry: ReleaseLogEntry): string {
   return parts.length === 0
     ? `${entry.stageNumber}단계 공개`
     : `${entry.stageNumber}단계 공개 · ${parts.join(', ')}`
-}
-
-const KST_DATE = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Asia/Seoul',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-})
-
-/** ISO 시각을 한국 날짜 `YYYY-MM-DD`로 쓴다. 읽을 수 없으면 받은 값 그대로다. */
-export function kstDate(isoInstant: string): string {
-  const at = new Date(isoInstant)
-  return Number.isNaN(at.getTime()) ? isoInstant : KST_DATE.format(at)
-}
-
-/** 단계의 공개된 글을 모두 읽는 데 드는 예상 시간(분). */
-export function stageMinutes(stage: Pick<StageView, 'articles'>): number {
-  return stage.articles.reduce((sum, article) => sum + article.readingMinutes, 0)
 }

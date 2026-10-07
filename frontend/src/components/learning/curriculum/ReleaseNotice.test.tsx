@@ -19,7 +19,8 @@ describe('ReleaseNotice', () => {
       />,
     )
 
-    expect(screen.getByRole('link', { name: '2단계 보기' }).getAttribute('href')).toBe('/#stage-2')
+    // 어느 화면에서 그려도 배우기 목록의 그 단계 자리를 가리킨다.
+    expect(screen.getByRole('link', { name: '2단계 보기' }).getAttribute('href')).toBe('/learn#stage-2')
     expect(screen.getByRole('link', { name: '변경 기록' })).not.toBeNull()
     expect(screen.getByRole('button', { name: '공개 안내 닫기' }).textContent).toBe('닫기')
     expect(screen.queryByRole('status')).toBeNull()

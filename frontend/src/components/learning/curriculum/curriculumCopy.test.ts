@@ -9,11 +9,9 @@ import type { ReleaseLogEntry, StageView } from '@/types/learning'
 import {
   RECORDS_KEPT_SENTENCE,
   boundarySentence,
-  changeLogText,
-  kstDate,
+  changeLogLine,
   noticeLine,
   objectParticle,
-  stageNumberFromHash,
   stageRange,
 } from './curriculumCopy'
 
@@ -94,28 +92,21 @@ describe('noticeLine', () => {
   })
 })
 
-describe('changeLogText', () => {
+describe('changeLogLine', () => {
   it('단계 공개는 편수와 다시 쓴 글의 그때 제목, 글 추가는 그 글의 제목이다', () => {
-    expect(changeLogText(stageTwoReleased)).toBe("2단계 공개 · 새 글 3편, 다시 쓴 글 1편('물때 읽기')")
-    expect(changeLogText(stageOneArticleAdded)).toBe("1단계에 글 추가 · 새 글 1편('부두 이용료는 어디로 갈까?')")
-    expect(changeLogText({ ...stageTwoReleased, rewrittenCount: 2, rewrittenTitles: ['가', '나'] })).toBe(
-      "2단계 공개 · 새 글 3편, 다시 쓴 글 2편('가', '나')",
+    expect(changeLogLine(stageTwoReleased).text).toBe("2단계 공개 · 새 글 3편, 다시 쓴 글 1편('물때 읽기')")
+    expect(changeLogLine(stageOneArticleAdded).text).toBe("1단계에 글 추가 · 새 글 1편('부두 이용료는 어디로 갈까?')")
+    expect(
+      changeLogLine({ ...stageTwoReleased, rewrittenCount: 2, rewrittenTitles: ['가', '나'] }).text,
+    ).toBe("2단계 공개 · 새 글 3편, 다시 쓴 글 2편('가', '나')")
+    expect(changeLogLine({ ...stageTwoReleased, newCount: 0, rewrittenCount: 0, rewrittenTitles: [] }).text).toBe(
+      '2단계 공개',
     )
   })
-})
 
-describe('kstDate', () => {
-  it('한국 날짜로 쓴다', () => {
-    expect(kstDate('2026-11-18T16:00:00Z')).toBe('2026-11-19')
-    expect(kstDate('2026-11-18T14:59:59Z')).toBe('2026-11-18')
-  })
-})
-
-describe('stageNumberFromHash', () => {
-  it('#stage-n 모양만 읽는다', () => {
-    expect(stageNumberFromHash('#stage-3')).toBe(3)
-    expect(stageNumberFromHash('#stage-')).toBeNull()
-    expect(stageNumberFromHash('#learning-change-log')).toBeNull()
-    expect(stageNumberFromHash('')).toBeNull()
+  it('날짜는 한국 날짜이고 읽을 수 없으면 받은 값 그대로다', () => {
+    expect(changeLogLine({ ...stageTwoReleased, occurredAt: '2026-11-18T16:00:00Z' }).date).toBe('2026-11-19')
+    expect(changeLogLine({ ...stageTwoReleased, occurredAt: '2026-11-18T14:59:59Z' }).date).toBe('2026-11-18')
+    expect(changeLogLine({ ...stageTwoReleased, occurredAt: 'not-a-date' }).date).toBe('not-a-date')
   })
 })
