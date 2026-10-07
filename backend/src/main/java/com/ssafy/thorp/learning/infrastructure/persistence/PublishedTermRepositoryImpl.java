@@ -2,6 +2,7 @@ package com.ssafy.thorp.learning.infrastructure.persistence;
 
 import com.ssafy.thorp.learning.application.repository.PublishedTermRepository;
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
+import com.ssafy.thorp.learning.application.result.PublishedTermEntry;
 import com.ssafy.thorp.learning.domain.model.ArticleFormat;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
@@ -129,5 +130,17 @@ public class PublishedTermRepositoryImpl implements PublishedTermRepository {
             counts.put(new ArticleId(row.getArticleId()), Math.toIntExact(row.getTermCount()));
         }
         return counts;
+    }
+
+    @Override
+    public List<PublishedTermEntry> findPublishedEntries() {
+        return publishedTermJpaRepository.findPublishedEntries().stream()
+                .map(
+                        row ->
+                                new PublishedTermEntry(
+                                        new TermId(row.getTermKey()),
+                                        row.getLabel(),
+                                        new ArticleId(row.getArticleKey())))
+                .toList();
     }
 }

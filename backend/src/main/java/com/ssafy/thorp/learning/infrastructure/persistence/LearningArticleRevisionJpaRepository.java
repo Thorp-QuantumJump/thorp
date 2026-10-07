@@ -101,6 +101,41 @@ public interface LearningArticleRevisionJpaRepository
             nativeQuery = true)
     List<CurrentArticleRow> findCurrentInReadingOrder();
 
+    /** 새 기준 판이 게시 중인 글의 문제 하나. native alias는 따옴표로 감싼다. */
+    interface CurrentQuestionRow {
+        String getArticleId();
+
+        String getQuestionId();
+    }
+
+    /**
+     * {@code CURRENT} 판이 게시 중인 글마다 공개 판의 문제 식별자. 글, 판 안 순서다. 판 JSON에서 문제 식별자만 꺼내고 본문은 읽지 않는다. 나의
+     * 학습이 공개된 문제 수와 첫 답 정답 수를 셀 때 쓴다(data-model §12-1).
+     */
+    @Query(
+            value =
+                    """
+                    SELECT a.article_key AS "articleId",
+                           q.value ->> 'questionId' AS "questionId"
+                    FROM learning_article a
+                    JOIN learning_article_revision r ON r.id = a.published_revision_id
+                    CROSS JOIN LATERAL jsonb_array_elements(
+                        COALESCE(r.snapshot -> 'quiz', CAST('[]' AS JSONB)))
+                        WITH ORDINALITY AS q(value, ordinality)
+                    WHERE a.status = 'PUBLISHED' AND r.edition = 'CURRENT'
+                    ORDER BY a.article_key, q.ordinality
+                    """,
+            nativeQuery = true)
+    List<CurrentQuestionRow> findCurrentQuestionIds();
+
+    /** 이 글의 공개 중인 판의 종류. 판 JSON을 읽지 않는다. */
+    @Query(
+            "select r.edition from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"
+                    + " where a.publishedRevisionId = r.id"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED"
+                    + " and a.articleKey = :articleKey")
+    Optional<Edition> findPublishedEdition(@Param("articleKey") String articleKey);
+
     /** 이 글의 공개 중인 판. */
     @Query(
             "select r from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a"

@@ -90,6 +90,25 @@ public interface LearningPublishedTermJpaRepository
                     + " group by a.articleKey")
     List<TermCountRow> countPublishedByArticle();
 
+    /** 공개 용어 한 줄과 그 글. */
+    interface TermEntryRow {
+        String getTermKey();
+
+        String getLabel();
+
+        String getArticleKey();
+    }
+
+    /** 공개 용어 전부. {@link #findPublishedIn}과 같은 규칙으로 고른다. 글, {@code term_key} 순서다. */
+    @Query(
+            "select t.termKey as termKey, t.label as label, a.articleKey as articleKey"
+                    + " from LearningPublishedTermJpaEntity t, LearningArticleJpaEntity a"
+                    + " where a.id = t.articleId"
+                    + " and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED"
+                    + " and a.publishedRevisionId = t.revisionId"
+                    + " order by a.articleKey, t.termKey")
+    List<TermEntryRow> findPublishedEntries();
+
     /** 벌크 삭제로 즉시 지운다. 넘겨받는 글의 색인 행을 곧바로 넣으므로 flush 순서에 맡기지 않는다. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
