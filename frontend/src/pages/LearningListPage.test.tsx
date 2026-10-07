@@ -195,6 +195,7 @@ describe('LearningListPage — 첫 단계 공개 뒤', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('기본은 커리큘럼 보기이고 공개된 단계의 글을 읽는 순서대로 잇는다', async () => {
@@ -326,6 +327,58 @@ describe('LearningListPage — 첫 단계 공개 뒤', () => {
     expect(await screen.findByText(/공개했습니다/)).not.toBeNull()
   })
 
+  it('[닫기]를 누르면 안내와 함께 사라진 단추 대신 눌린 보기 단추로 초점을 옮긴다(목업의 닫기 동작)', async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    renderList()
+    await user.click(await screen.findByRole('button', { name: '공개 안내 닫기' }))
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '커리큘럼' }))
+  })
+
+  it('합친 안내 가운데 닫은 줄은 그 탭에서 다시 보이지 않고, 닫지 않은 줄만 안내로 보인다(research R27)', async () => {
+    // 2단계 공개 안내를 닫은 뒤 1단계에 글이 더해진 경우다. 닫은 줄은 다시 보이지 않는다(FR-031).
+    window.sessionStorage.setItem(
+      'thorp.learning.dismissedNotices',
+      JSON.stringify({ version: 1, entryKeys: ['stage:swell-and-risk'] }),
+    )
+    loaded(releasedCurriculum)
+
+    renderList('/learn', signedInAuth)
+
+    const notice = (await screen.findByText(/더했습니다/)).closest('p')!
+    expect(notice.textContent).toContain('1단계에 새 글 1편을 더했습니다.')
+    expect(notice.textContent).not.toContain('공개했습니다')
+    // 남은 줄이 글 추가뿐이라 로그인 사용자에게도 기록 문장을 붙이지 않는다.
+    expect(notice.textContent).not.toContain('지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.')
+    expect(within(notice).getByRole('link', { name: '1단계 보기' })).not.toBeNull()
+  })
+
+  it('Tab만으로 로그인·단계 보기·변경 기록·[닫기]·보기 전환에 닿는다(FR-019, quickstart 13)', async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    renderList()
+    await screen.findByRole('group', { name: '보기' })
+    const targets = [
+      screen.getByRole('link', { name: '로그인' }),
+      screen.getByRole('link', { name: '2단계 보기' }),
+      screen.getByRole('link', { name: '변경 기록' }),
+      screen.getByRole('button', { name: '공개 안내 닫기' }),
+      screen.getByRole('button', { name: '커리큘럼' }),
+      screen.getByRole('button', { name: '목록' }),
+    ]
+    const reached = new Set<Element>()
+    for (let i = 0; i < 12 && reached.size < targets.length; i += 1) {
+      await user.tab()
+      if (document.activeElement && targets.includes(document.activeElement as HTMLElement)) {
+        reached.add(document.activeElement)
+      }
+    }
+    expect(reached.size).toBe(targets.length)
+  })
+
   it('목록 보기를 고르면 그 탭 동안 기억하고, 새 탭은 커리큘럼 보기로 시작한다(quickstart 11-1)', async () => {
     const user = userEvent.setup()
     loaded(releasedCurriculum)
@@ -360,6 +413,9 @@ describe('LearningListPage — 첫 단계 공개 뒤', () => {
     expect(new Set(setItem.mock.calls.map(([key]) => key))).toEqual(
       new Set(['thorp.learning.view', 'thorp.learning.dismissedNotices']),
     )
+    // 두 키는 탭 단위다. 감시는 Storage.prototype에 걸었으므로 누가 불렀는지(this)로 저장소를 가른다.
+    for (const context of setItem.mock.contexts) expect(context).toBe(window.sessionStorage)
+    expect(window.localStorage.getItem('thorp.learning.view')).toBeNull()
 
     await user.click(screen.getByRole('link', { name: '로그인' }))
     expect(await screen.findByText(/다른 화면 \/login/)).not.toBeNull()
@@ -375,6 +431,80 @@ describe('LearningListPage — 첫 단계 공개 뒤', () => {
 
     const heading = await screen.findByRole('heading', { level: 3, name: /물때표 읽기/ })
     expect(document.activeElement).toBe(heading)
+  })
+
+  it('로그인 상태를 확인하는 동안에는 단계 자리로 옮기지 않고, 확인이 끝난 뒤 한 번만 옮긴다', async () => {
+    loaded(releasedCurriculum)
+    const checking: AuthContextValue = { ...anonymousAuthContext, status: 'checking', user: null }
+
+    const view = renderList('/learn#stage-3', checking)
+    const heading = await screen.findByRole('heading', { level: 3, name: /물때표 읽기/ })
+    // 확인이 끝나 비로그인 견본이 위에 들어오면 먼저 옮긴 자리가 밀리므로 기다린다.
+    expect(document.activeElement).not.toBe(heading)
+
+    view.rerender(
+      <AuthContext.Provider value={anonymousAuthContext}>
+        <MemoryRouter initialEntries={['/learn#stage-3']}>
+          <Routes>
+            <Route path="/learn" element={<LearningListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: /물때표 읽기/ }))
+
+    // 탭이 다시 보여 014가 다시 확인해도 같은 이동에서 또 옮기지 않는다.
+    screen.getByRole('button', { name: '목록' }).focus()
+    view.rerender(
+      <AuthContext.Provider value={checking}>
+        <MemoryRouter initialEntries={['/learn#stage-3']}>
+          <Routes>
+            <Route path="/learn" element={<LearningListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    view.rerender(
+      <AuthContext.Provider value={anonymousAuthContext}>
+        <MemoryRouter initialEntries={['/learn#stage-3']}>
+          <Routes>
+            <Route path="/learn" element={<LearningListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '목록' }))
+  })
+
+  it('움직임 줄이기 설정이 아니면 옮겨 온 공개 단계의 띠를 잠시 단계 색으로 짚는다', async () => {
+    const user = userEvent.setup()
+    // jsdom에는 matchMedia가 없다. 움직임 설정만 답하는 대역을 둔다.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: no-preference)',
+      media: query,
+    }))
+    loaded(releasedCurriculum)
+
+    renderList()
+    await user.click(await screen.findByRole('link', { name: '2단계 보기' }))
+
+    const band = screen.getByRole('heading', { level: 3, name: /너울과 위험/ }).closest('[data-stage-band]')!
+    expect(band.hasAttribute('data-flash')).toBe(true)
+  })
+
+  it('움직임 줄이기 설정이면 띠를 짚지 않는다', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+    }))
+    loaded(releasedCurriculum)
+
+    renderList()
+    await user.click(await screen.findByRole('link', { name: '2단계 보기' }))
+
+    const band = screen.getByRole('heading', { level: 3, name: /너울과 위험/ }).closest('[data-stage-band]')!
+    expect(band.hasAttribute('data-flash')).toBe(false)
   })
 
   it("공개 안내의 '2단계 보기'는 2단계 자리로, '변경 기록'은 펼친 변경 기록으로 초점을 옮긴다", async () => {

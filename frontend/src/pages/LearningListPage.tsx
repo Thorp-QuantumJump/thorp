@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { fetchCurriculum, type CurriculumResult } from '@/api/learning'
+import { useAuth } from '@/auth/auth-context'
 import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
 import { ChangeLog, CHANGE_LOG_ID } from '@/components/learning/curriculum/ChangeLog'
 import { READING_ORDER_NOTE, stageNumberFromHash } from '@/components/learning/curriculum/curriculumCopy'
@@ -36,6 +37,7 @@ type ListState = { status: 'loading' } | CurriculumResult
  */
 export function LearningListPage() {
   const location = useLocation()
+  const { status: authStatus } = useAuth()
   const { settled } = useSettledAuth()
   const [state, setState] = useState<ListState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -59,14 +61,21 @@ export function LearningListPage() {
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
 
   // 공개 안내의 '○단계 보기'와 글 머리의 단계 연결(`/learn#stage-n`)이 가리키는 단계 자리로 옮기고 그 제목에 초점을
-  // 둔다. 같은 주소를 다시 눌러도 옮기도록 이동마다(`location.key`) 한다.
+  // 둔다. 같은 주소를 다시 눌러도 옮기도록 이동마다(`location.key`) 한 번 한다.
+  //
+  // 로그인 상태를 확인하는 동안에는 기다린다. 확인이 끝나 비로그인 견본이 목록 위에 들어오면 먼저 옮긴 자리가 그만큼
+  // 아래로 밀리기 때문이다. 014는 탭이 다시 보일 때마다 상태를 `checking`으로 두므로, 같은 이동에서 두 번 옮기지 않게
+  // 옮긴 이동을 기억한다.
   const loaded = state.status === 'loaded'
+  const authChecking = authStatus === 'checking'
+  const movedFor = useRef<string | null>(null)
   useEffect(() => {
-    if (!loaded) return
+    if (!loaded || authChecking || movedFor.current === location.key) return
+    movedFor.current = location.key
     const stageNumber = stageNumberFromHash(location.hash)
     if (stageNumber === null) return
     moveToStage(stageNumber)
-  }, [loaded, location.hash, location.key])
+  }, [loaded, authChecking, location.hash, location.key])
 
   const openChangeLog = useCallback(() => {
     setChangeLogOpen(true)
@@ -93,17 +102,14 @@ export function LearningListPage() {
               <em className={heading.emphasis}>배우기</em>
             </h1>
           </div>
-          {released ? (
-            <p className={heading.lead}>
-              <span>투자 개념과 지표 읽는 법을 단계별로 익힙니다.</span>
-              <span>글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.</span>
-            </p>
-          ) : (
-            <p className={heading.lead}>
-              <span>투자 개념과 지표 읽는 법을 짧은 글로 익힙니다.</span>
-              <span>글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.</span>
-            </p>
-          )}
+          {/*
+            첫 단계 공개 전과 뒤에 같은 문장이다. 응답을 받기 전에는 공개 여부를 모르므로, 문장이 갈리면 불러오는 동안
+            보인 문장이 받은 뒤 바뀐다.
+          */}
+          <p className={heading.lead}>
+            <span>투자 개념과 지표 읽는 법을 짧은 글로 익힙니다.</span>
+            <span>글에 나온 예시는 그대로 전략 진단으로 이어 볼 수 있습니다.</span>
+          </p>
         </header>
 
         {state.status === 'loading' ? (
@@ -143,13 +149,27 @@ export function LearningListPage() {
   )
 }
 
-/** 단계 자리로 옮긴다. 보기마다 같은 단계 자리가 있고, 좁은 화면에서는 보이는 쪽(표 또는 목록)을 고른다. */
+/** 띠를 짚는 시간(ms). 목업의 `.band.flash`와 같다. */
+const STAGE_FLASH_MS = 600
+
+/**
+ * 단계 자리로 옮긴다. 보기마다 같은 단계 자리가 있고, 좁은 화면에서는 보이는 쪽(표 또는 목록)을 고른다. 움직임 줄이기
+ * 설정이 아니면 커리큘럼 보기의 그 띠를 600ms 동안 단계 색으로 짚는다(목업 `flash`). 준비 중 띠에는 움직임을 두지
+ * 않으므로(design-notes §5) 공개된 띠만 짚는다.
+ */
 function moveToStage(stageNumber: number) {
   const candidates = Array.from(document.querySelectorAll<HTMLElement>(`[data-stage-anchor="${stageNumber}"]`))
   const target = candidates.find((el) => el.getClientRects().length > 0) ?? candidates[0]
   if (!target) return
+  // 긴 화면을 부드럽게 굴리면 움직임 상한(1초)을 넘기므로 바로 옮긴다(design-notes §5).
   target.scrollIntoView?.({ block: 'start' })
+  const motion = window.matchMedia?.('(prefers-reduced-motion: no-preference)').matches ?? false
   target.querySelector<HTMLElement>('h3, th[scope="rowgroup"]')?.focus({ preventScroll: true })
+  const band = target.querySelector<HTMLElement>('[data-stage-band]')
+  if (band && motion) {
+    band.setAttribute('data-flash', '')
+    window.setTimeout(() => band.removeAttribute('data-flash'), STAGE_FLASH_MS)
+  }
 }
 
 /**
@@ -206,6 +226,13 @@ function ReleasedCurriculum({
   linkState,
 }: ReleasedCurriculumProps) {
   const notices = curriculum.notices.filter((entry) => !dismissed.includes(entry.entryKey))
+  const toggleRef = useRef<HTMLDivElement>(null)
+  // [닫기]를 누르면 안내와 함께 그 단추가 사라진다. 초점이 문서 처음으로 떨어지지 않게 눌린 보기 단추로 옮긴다
+  // (목업의 닫기 동작).
+  const dismiss = (entryKeys: string[]) => {
+    toggleRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus()
+    onDismiss(entryKeys)
+  }
   return (
     <>
       {guest ? <GuestSample place="list" /> : null}
@@ -213,13 +240,13 @@ function ReleasedCurriculum({
       <ReleaseNotice
         notices={notices}
         signedIn={signedIn}
-        onDismiss={onDismiss}
+        onDismiss={dismiss}
         onOpenChangeLog={onOpenChangeLog}
         linkState={linkState}
       />
 
       <div className={styles.viewRow}>
-        <ViewToggle view={view} onChange={onViewChange} />
+        <ViewToggle view={view} onChange={onViewChange} groupRef={toggleRef} />
         <p className={styles.order}>
           <ReadingOrderIcon />
           <span>{READING_ORDER_NOTE}</span>

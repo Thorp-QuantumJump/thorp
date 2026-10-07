@@ -39,7 +39,6 @@ export function JourneyMap({ stages, progress, currentArticleId, renderStageProg
 
   const released = stages.filter(isReleased)
   const preparing = stages.filter((stage) => !isReleased(stage))
-  const firstOpen = released.find((stage) => stage.status === 'OPEN')
 
   const region = (stage: StageView) => {
     const headingId = `${idPrefix}-stage-${stage.number}`
@@ -70,7 +69,9 @@ export function JourneyMap({ stages, progress, currentArticleId, renderStageProg
         <StageBand
           stage={stage}
           headingId={headingId}
-          first={stage === firstOpen}
+          // 길은 지도의 첫 구역에서 출발한다. 첫 공개 단계가 글이 0편인 단계라 점선 표식이 먼저 오면, 이 띠는 그 표식에서
+          // 들어오는 구간의 도착점이므로 출발점으로 두지 않는다.
+          first={stage === released[0]}
           markerState={markerState}
           road={bandRoad}
           progress={renderStageProgress?.(stage)}

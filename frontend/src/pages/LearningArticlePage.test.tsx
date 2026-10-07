@@ -381,10 +381,22 @@ describe('LearningArticlePage', () => {
     expect(screen.queryByText('다음 단계는 준비 중입니다.')).toBeNull()
   })
 
-  it('로그인 연결은 안내 문장과 떨어진 44px 단추 모양이라 색만으로 가르지 않는다', () => {
-    const declarations = cssDeclarations('components/learning/me/GuestSample.module.css', '.login')
-    expect(declarations).toMatch(/background:/)
-    expect(declarations).toMatch(/height:\s*44px/)
+  it('글 끝의 로그인은 단추가 아닌 글자 연결이라 예시 진입 버튼과 겨루지 않는다(constitution II)', async () => {
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading')
+
+    const sample = await screen.findByRole('region', { name: '로그인하면 학습 기록이 남습니다.' })
+    const login = within(sample).getByRole('link', { name: '로그인' })
+    // 글 화면의 행동 버튼은 '이 예시로 전략 진단하기' 하나다(plan Constitution Check II). 글 끝 견본은 단추 모양 대신
+    // 글자 연결 모양을 쓴다. 이름만 보면 규칙이 지워져도 통과하므로 그 규칙의 선언도 함께 본다.
+    expect(login.className).toMatch(/loginLink/)
+    const declarations = cssDeclarations('components/learning/me/GuestSample.module.css', '.loginLink')
+    expect(declarations).not.toMatch(/background/)
+    // 둘레 글자와 색만으로 가르지 않게 밑줄과 굵기를 두고, 누르는 높이는 44px이다(WCAG 1.4.1, design-notes §6).
+    expect(declarations).toMatch(/text-decoration:\s*underline/)
+    expect(declarations).toMatch(/font-weight:\s*650/)
+    expect(declarations).toMatch(/min-height:\s*44px/)
   })
 
   it('로그인 연결은 지금 글 주소만 014 키에 적고 로그인 화면으로 간다', async () => {

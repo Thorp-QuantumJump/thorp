@@ -6,6 +6,7 @@ import { LEARNING_VIEW_STORAGE_KEY, readStoredView, writeStoredView } from './vi
 describe('viewStorage', () => {
   beforeEach(() => {
     window.sessionStorage.clear()
+    window.localStorage.clear()
   })
 
   afterEach(() => {
@@ -17,16 +18,20 @@ describe('viewStorage', () => {
   })
 
   it('고른 보기를 내용 버전과 함께 sessionStorage에만 적고 다시 읽는다', () => {
-    const local = vi.spyOn(window.localStorage, 'setItem')
+    // jsdom의 저장소 메서드는 Storage.prototype에 있다. 인스턴스에 감시를 걸면 그 이름의 저장 항목이 생길 뿐 호출을 잡지
+    // 못하므로, prototype에 걸고 누가 불렀는지(this)를 본다.
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
 
     writeStoredView('list')
 
+    expect(setItem).toHaveBeenCalledTimes(1)
+    expect(setItem.mock.contexts[0]).toBe(window.sessionStorage)
+    expect(window.localStorage.getItem(LEARNING_VIEW_STORAGE_KEY)).toBeNull()
     expect(JSON.parse(window.sessionStorage.getItem(LEARNING_VIEW_STORAGE_KEY)!)).toEqual({
       version: 1,
       view: 'list',
     })
     expect(readStoredView()).toBe('list')
-    expect(local).not.toHaveBeenCalled()
   })
 
   it('읽을 수 없거나 모르는 판·모르는 보기는 커리큘럼 보기로 시작한다', () => {

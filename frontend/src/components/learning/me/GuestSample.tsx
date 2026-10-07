@@ -19,6 +19,10 @@ interface GuestSampleProps {
  * 견본은 흐린 길 위의 도장 원판과 메달 실루엣이고 보조 기술에 읽히지 않는다(`aria-hidden`). 실선 회색 윤곽은
  * '아직 안 함'으로, 점선은 '준비 중'으로 읽히므로 견본에 쓰지 않는다.
  *
+ * <p><b>글 끝에서는 로그인을 단추가 아니라 글자 연결로 둔다.</b> 글 화면의 행동 버튼은 '이 예시로 전략 진단하기'
+ * 하나다(constitution II, plan Constitution Check II). 배우기 목록과 '나의 학습' 화면에는 다른 행동 버튼이 없어
+ * 목업대로 초록 단추 모양이다.
+ *
  * <p>로그인 연결은 014의 `useLoginReturn`으로 지금 화면 주소를 적어 두고 떠난다(research R34). 013이 따로 저장
  * 키를 만들지 않는다.
  */
@@ -36,7 +40,7 @@ export function GuestSample({ place }: GuestSampleProps) {
         <h2 id={headingId} className={styles.title}>
           로그인하면 학습 기록이 남습니다.
         </h2>
-        <Link className={styles.login} to="/login" onClick={rememberReturn}>
+        <Link className={place === 'end' ? styles.loginLink : styles.login} to="/login" onClick={rememberReturn}>
           로그인
         </Link>
       </div>

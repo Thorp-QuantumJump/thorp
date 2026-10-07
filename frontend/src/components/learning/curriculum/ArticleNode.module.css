@@ -103,6 +103,18 @@
   line-height: 1.5;
 }
 
+/* 지금 이어 읽을 글의 '이어서 읽기 →'. 꼬리표 줄의 오른쪽 끝에 둔다(목업 .go-hint). */
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--thorp-accent-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 @media (min-width: 1024px) {
   .card {
     display: grid;
@@ -122,6 +134,12 @@
 
   .chipsGuest {
     grid-template-columns: 56px 70px;
+  }
+
+  .hint {
+    grid-column: 1 / -1;
+    justify-self: end;
+    margin: 0;
   }
 }
 

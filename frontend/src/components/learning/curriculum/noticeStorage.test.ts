@@ -6,6 +6,7 @@ import { DISMISSED_NOTICES_STORAGE_KEY, dismissNotices, readDismissedNotices } f
 describe('noticeStorage', () => {
   beforeEach(() => {
     window.sessionStorage.clear()
+    window.localStorage.clear()
   })
 
   afterEach(() => {
@@ -17,7 +18,8 @@ describe('noticeStorage', () => {
   })
 
   it('닫은 entryKey를 앞서 닫은 줄과 합쳐 sessionStorage에만 적는다', () => {
-    const local = vi.spyOn(window.localStorage, 'setItem')
+    // 인스턴스가 아니라 Storage.prototype에 감시를 건다(viewStorage.test.ts와 같은 까닭).
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
 
     dismissNotices(['stage:harbor-basics'])
     const next = dismissNotices(['stage:swell-and-risk', 'stage:harbor-basics'])
@@ -28,7 +30,9 @@ describe('noticeStorage', () => {
       version: 1,
       entryKeys: next,
     })
-    expect(local).not.toHaveBeenCalled()
+    expect(setItem).toHaveBeenCalledTimes(2)
+    for (const context of setItem.mock.contexts) expect(context).toBe(window.sessionStorage)
+    expect(window.localStorage.getItem(DISMISSED_NOTICES_STORAGE_KEY)).toBeNull()
   })
 
   it('읽을 수 없거나 모르는 판이면 닫은 줄이 없는 것으로 본다', () => {
