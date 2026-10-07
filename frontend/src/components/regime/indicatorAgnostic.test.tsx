@@ -14,7 +14,7 @@ const sources = walk('src').filter((path) =>
   !/\.test\.tsx?$|^src\/test\//.test(path) &&
   (/^src\/components\/regime\//.test(path) || /^(src\/(api|types)\/regime\.ts|src\/hooks\/useRegimeSearch\.ts|src\/pages\/RegimeSearchPage\.tsx)$/.test(path) ||
     // 시장 흐름 분야 상세 안에서 010 결과를 보이는 자리(009 FR-019)도 같은 경계를 따른다.
-    /^(src\/components\/marketflow\/(FieldPastCompare|CompositePast)\.tsx|src\/hooks\/usePastCases\.ts)$/.test(path)),
+    /^(src\/components\/marketflow\/(FieldPastCompare|CompositePast|PastCaseExplorer)\.tsx|src\/hooks\/usePastCases\.ts)$/.test(path)),
 )
 
 // 008 등록표의 분야·지표 ID와 이름(data/src/data_pipeline/macro/registry.py·display.py)과 종합 비교 묶음 이름
@@ -47,6 +47,7 @@ describe('010 화면의 등록표 경계', () => {
     expect(sources).toContain('src/api/regime.ts')
     expect(sources).toContain('src/components/marketflow/FieldPastCompare.tsx')
     expect(sources).toContain('src/components/marketflow/CompositePast.tsx')
+    expect(sources).toContain('src/components/marketflow/PastCaseExplorer.tsx')
     expect(sources.length).toBeGreaterThan(10)
   })
 

@@ -17,12 +17,10 @@ interface CaseListProps {
    * 없으면 010이 내려 준 문구를 그대로 그린다. 사례마다 다른 것을 넣어야 해서 값이 아니라 함수다.
    */
   postPeriodSlot?: (summary: RegimeCaseSummary) => ReactNode
-  /** 기준 충족 사례가 없는 종합 결과에서 분야별 탐색으로 잇는다(spec US3 시나리오 4). */
-  onBrowseFields?: () => void
 }
 
 /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */
-export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot, onBrowseFields }: CaseListProps) {
+export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot }: CaseListProps) {
   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)
   const [showReferences, setShowReferences] = useState(false)
   const [expandedCases, setExpandedCases] = useState<Set<string>>(() => new Set())
@@ -134,11 +132,6 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p
       {result.thresholdNote && (
         <Disclosure label="유사성 기준" context={context} tone="warning">
           <p>{result.thresholdNote}</p>
-          {onBrowseFields && (
-            <button type="button" className={styles.detailButton} onClick={onBrowseFields}>
-              분야별로 살펴보기
-            </button>
-          )}
         </Disclosure>
       )}
       {references.length > 0 && (

@@ -49,13 +49,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* '모두 보기'는 같은 상자 바닥의 '가까운 과거 사례' 구역으로 옮기는 버튼이다. 글자 링크 모양을 유지한다. */
 .allLink {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 0;
+  border: 0;
   border-bottom: 1px solid var(--thorp-line-strong);
+  border-radius: 0;
+  background: none;
   color: var(--thorp-copy);
+  font: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .allLink:hover {
@@ -367,10 +374,10 @@
   color: var(--thorp-warning);
 }
 
-/* 종합 비교. 분야 하나의 지표가 없으므로 예전 사례 목록 모양으로 보인다. */
+/* 종합 비교. 분야 하나의 지표가 없으므로 제목 아래 '가까운 과거 사례' 구역이 바로 선다(그 구역이 윗선을 긋는다). */
 .composite {
   display: grid;
-  gap: 16px;
+  gap: 0;
 }
 
 .compositeHead {
@@ -379,8 +386,6 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 6px 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--thorp-line);
 }
 
 .compositeHead h2 {

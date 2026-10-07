@@ -1,4 +1,4 @@
-import { ArrowUpRight, History } from 'lucide-react'
+import { ArrowDown, History } from 'lucide-react'
 import { useId, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { InlineHelp } from '@/components/common/InlineHelp'
@@ -7,15 +7,13 @@ import { Disclosure } from '@/components/regime/Disclosure'
 import * as copy from '@/components/regime/fixedCopy'
 import { NewerReleases } from '@/components/regime/NewerReleases'
 import type { CaseDetailState, PastSearchState } from '@/hooks/usePastCases'
-import { buildCaseId, buildRegimeLinkStartPath, buildRegimeSearchPath, buildSimilarPeriodHandoff } from '@/marketflow/handoff'
-import type { MarketFlowFieldId } from '@/types/marketFlow'
+import { buildCaseId, buildRegimeLinkStartPath } from '@/marketflow/handoff'
 import type { RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'
 import { observationRange, shortRange } from './pastFormat'
 import type { PastVerdict } from './pastOverlay'
 import styles from './PastCompare.module.css'
 
 interface FieldPastCompareProps {
-  fieldId: MarketFlowFieldId
   fieldName: string
   /** 분야 상세의 대상월. 010의 비교 기준월과 다르면 그 사실을 밝힌다(009 FR-009). */
   referenceMonth: string | null
@@ -37,17 +35,10 @@ interface FieldPastCompareProps {
   onToggleBand: (show: boolean) => void
   /** 어느 지표 칸에도 붙지 못한 비슷한 점·다른 점 문장. */
   unplaced: readonly PastVerdict[]
-}
-
-/**
- * 010 검색 화면으로 이어 가는 주소. 분야와 **010이 계산한 기준월**을 싣는다(009 FR-009).
- *
- * `?searchId=`로 열면 010 화면은 그것을 내 기록의 '다시 보기'로 다뤄, 시장 흐름에서 온 검색이 기록되지 않고 분야
- * 선택도 비어 있다(010 FR-032, 006 R17). 그래서 저장된 판이 아니라 분야·기준월로 연다. 결과를 아직 받지 못했으면
- * 분야 상세의 대상월로 연다 — 010 화면이 그 달을 그 분야의 최신 계산월과 견줘 물러난다(010 FR-031).
- */
-function regimeEntryPath(fieldId: MarketFlowFieldId, month: string | null): string | null {
-  return buildRegimeSearchPath(buildSimilarPeriodHandoff({ fieldId, referenceMonth: month }))
+  /** '모두 보기'. 아래 '가까운 과거 사례' 구역으로 옮긴다(2026-10-07, 다른 화면으로 넘기지 않는다). */
+  onShowAll: () => void
+  /** '자세히'. 고른 사례의 상세를 아래 구역에서 펼친다. */
+  onShowDetail: (endMonth: string) => void
 }
 
 /**
@@ -55,19 +46,19 @@ function regimeEntryPath(fieldId: MarketFlowFieldId, month: string | null): stri
  *
  * 010 분야 검색의 가까운 사례 세 개와 '지금만'을 라디오로 고르면, 고른 사례의 같은 지표 경로가 아래 지표
  * 그래프에 점선으로 겹친다. 사례 칸에는 관측 구간만 적는다 — 무엇이 비슷하고 다른지는 그 지표 칸에 붙는다.
- * 행동(이 기간으로 백테스트·자세히)은 고른 사례에 딸린 것이라 같은 줄 오른쪽에 둔다.
+ * 행동(이 기간으로 백테스트·자세히)은 고른 사례에 딸린 것이라 같은 줄 오른쪽에 둔다. '자세히'와 '모두 보기'는
+ * 같은 상자 바닥의 '가까운 과거 사례' 구역으로 옮긴다 — 010 검색 화면으로 넘기지 않는다(2026-10-07).
  *
  * 010의 신뢰 범위 표시는 숨기지 않는다(010 FR-037·FR-038·FR-031). 검색 상태와 사례 구분만 i 표시 뒤로 내리고
  * (보조기기에는 늘 읽힌다), 예시 자료·빠진 비교 시점·더 최신 발표·자료 기준 시점은 문구로 늘 보인다. 문장은
  * 응답이나 010의 fixedCopy에서만 온다(010 FR-022 ②).
  */
 export function FieldPastCompare(props: FieldPastCompareProps) {
-  const { fieldId, fieldName, referenceMonth, nowMonths, search, onRetrySearch } = props
+  const { fieldName, referenceMonth, nowMonths, search, onRetrySearch, onShowAll } = props
   const titleId = useId()
   const groupName = useId()
   const result = search.status === 'ready' ? search.result : null
   const context = result ? `${fieldName} ${result.baselineMonth} 검색 결과` : ''
-  const entryPath = regimeEntryPath(fieldId, result?.baselineMonth ?? referenceMonth)
   const hasCases = result !== null && result.status !== 'NOT_COMPUTABLE' && result.cases.length > 0
 
   return (
@@ -88,10 +79,10 @@ export function FieldPastCompare(props: FieldPastCompareProps) {
         </div>
         <p className={styles.compareMeta}>
           {result ? <span>비교 기준월 {result.baselineMonth} · 가까운 순</span> : null}
-          {entryPath ? (
-            <Link className={styles.allLink} to={entryPath}>
-              모두 보기 <ArrowUpRight size={13} aria-hidden="true" />
-            </Link>
+          {result ? (
+            <button type="button" className={styles.allLink} onClick={onShowAll}>
+              모두 보기 <ArrowDown size={13} aria-hidden="true" />
+            </button>
           ) : null}
         </p>
       </div>
@@ -116,7 +107,7 @@ export function FieldPastCompare(props: FieldPastCompareProps) {
             {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}
           </p>
           {hasCases ? (
-            <CaseChooser {...props} groupName={groupName} cases={result.cases} searchId={result.searchId} entryPath={entryPath} />
+            <CaseChooser {...props} groupName={groupName} cases={result.cases} searchId={result.searchId} />
           ) : result.status !== 'NOT_COMPUTABLE' && result.thresholdNote ? (
             <Disclosure label="유사성 기준" context={context} tone="warning">
               <p>{result.thresholdNote}</p>
@@ -160,11 +151,10 @@ function TrustNotes({ result, context }: { result: RegimeSearchResult; context: 
   )
 }
 
-function CaseChooser({ cases, searchId, entryPath, groupName, selected, onSelect, unplaced }: FieldPastCompareProps & {
+function CaseChooser({ cases, searchId, groupName, selected, onSelect, onShowDetail, unplaced }: FieldPastCompareProps & {
   groupName: string
   cases: RegimeCaseSummary[]
   searchId: string
-  entryPath: string | null
 }) {
   const chosen = cases.find((item) => item.endMonth === selected) ?? null
   const caseId = chosen ? buildCaseId(searchId, chosen.endMonth) : null
@@ -205,11 +195,9 @@ function CaseChooser({ cases, searchId, entryPath, groupName, selected, onSelect
               <small>{chosen ? observationRange(chosen) : '과거 구간을 고르세요'}</small>
             </button>
           )}
-          {chosen && entryPath ? (
-            <Link className={styles.secondary} to={entryPath}>자세히</Link>
-          ) : (
-            <button type="button" className={styles.secondary} disabled>자세히</button>
-          )}
+          <button type="button" className={styles.secondary} disabled={chosen === null} onClick={() => chosen && onShowDetail(chosen.endMonth)}>
+            자세히
+          </button>
         </div>
       </div>
       {unplaced.length > 0 ? (

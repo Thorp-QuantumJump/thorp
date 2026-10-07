@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
 import { fetchMarketIndicatorsFor } from '@/api/market'
 import { fetchMarketNewsDigests, fetchNewsSectors } from '@/api/marketNews'
-import { getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'
+import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'
 import { fetchSectorCatalog } from '@/api/sectors'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import type { FieldDetailResult, FieldSummary } from '@/types/marketFlow'
-import type { RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'
+import type { RegimeBaselineMonths, RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'
 import { MarketFlowPage } from './MarketFlowPage'
 
 vi.mock('@/api/marketFlow', () => ({ fetchMarketFlowFields: vi.fn(), fetchMarketFlowField: vi.fn() }))
@@ -15,7 +15,7 @@ vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>T
 vi.mock('@/api/sectors', () => ({ fetchSectorCatalog: vi.fn() }))
 vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))
 vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn(), fetchNewsSectors: vi.fn() }))
-vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))
+vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn(), getRegimeBaselineMonths: vi.fn() }))
 
 const fieldNames = ['생산', '소비·투자', '대외거래', '노동', '물가·원자재', '금융·주택', '해외 경기']
 const fields: FieldSummary[] = fieldNames.map((displayName, index) => ({
@@ -44,10 +44,12 @@ const productionDetail: FieldDetailResult = {
 }
 
 const fieldSearch = {
-  searchId: 'S-1', mode: 'FIELD', field: { id: 'production', name: '생산' }, baselineMonth: '2026-07',
+  searchId: 'S-1', mode: 'FIELD', field: { id: 'production', name: '생산' }, baselineMonth: '2026-07', baselineOrigin: 'T_G',
   status: 'NEAREST_ONLY', statusNote: '가까운 순서만 제공합니다.', caseLabel: '최근접 참고 사례',
   // api/regime.ts의 응답 검사가 요구하는 칸이다. 실제 응답은 늘 이 칸을 싣는다.
   versions: { data: 'macro-1', registry: 'calc-1', model: 'REGIME-V1.1', revision: 1, sampleData: false, sampleRegistry: false },
+  basis: { kind: 'HISTORICAL_REVISION', note: '최신 개정자료를 이용한 역사 비교입니다.' },
+  counts: { evaluated: 300, eligible: 12, stored: 2, displayed: 2 },
   comparisonMonths: [],
   dataAsOf: { indicators: [], note: '생산 지표는 2026년 7월분까지 반영되어 있습니다.', revisions: [], newerReleases: [] },
   cases: [
@@ -67,7 +69,19 @@ function caseDetail(endMonth: string, caseMonths: string[], raw: [string[], stri
   } as unknown as RegimeCaseDetail
 }
 
+const baselines: RegimeBaselineMonths = {
+  byField: fields.map((field) => ({ id: field.fieldId, name: field.displayName, baselineMonth: '2026-07' })),
+  composite: '2026-07',
+  range: { earliest: '1962-01', latest: '2026-08' },
+  note: '전체 분야를 맞추기 위해 비교 기준월이 바뀝니다.',
+}
+
+/** 분야 상세 안 '지금과 비슷했던 과거' 줄. 바닥의 사례 구역에도 같은 사례가 서므로 줄 안에서만 찾는다. */
+const compareRow = () => screen.getByRole('region', { name: '지금과 비슷했던 과거' })
+const indicatorCard = (name: string) => screen.getByRole('heading', { level: 3, name }).closest('article') as HTMLElement
+
 function mockFields() {
+  vi.mocked(getRegimeBaselineMonths).mockResolvedValue(baselines)
   vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '최신 개정자료를 이용한 역사 비교입니다.', fields })
   vi.mocked(fetchMarketFlowField).mockImplementation(async (fieldId) => (
     fieldId === 'production' ? productionDetail : { ...fields.find((item) => item.fieldId === fieldId)!, multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] }
@@ -127,16 +141,16 @@ describe('MarketFlowPage', () => {
       const service = within(detail).getByRole('heading', { level: 3, name: '서비스업생산' }).closest('article') as HTMLElement
       expect(within(allIndustry).getByText('비슷한 점')).toBeTruthy()
       expect(within(service).getByText('다른 점')).toBeTruthy()
-      expect(screen.getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe('/regime-link/start?case=S-1%7E2001-03')
+      expect(within(compareRow()).getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe('/regime-link/start?case=S-1%7E2001-03')
     })
 
     it('지금만을 고르면 겹친 경로와 문장을 걷고, 다른 사례를 고르면 그 사례의 상세를 받는다', async () => {
       mockFields()
       renderWithRouter(<MarketFlowPage />)
-      await screen.findByText('비슷한 점')
+      await screen.findAllByText('비슷한 점')
 
       fireEvent.click(screen.getByRole('radio', { name: '지금만' }))
-      expect(screen.queryByText('비슷한 점')).toBeNull()
+      expect(within(indicatorCard('전산업생산')).queryByText('비슷한 점')).toBeNull()
       expect(screen.getByRole('list', { name: '전산업생산 3개월 경로' }).textContent).not.toContain('당시')
       expect(screen.getByRole('button', { name: /이 기간으로 백테스트/ })).toHaveProperty('disabled', true)
 
@@ -144,11 +158,11 @@ describe('MarketFlowPage', () => {
       await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2011-10', { searchId: 'S-1' }, expect.any(AbortSignal)))
       await waitFor(() => expect(screen.getByRole('list', { name: '전산업생산 3개월 경로' }).textContent).toContain('당시 2011-10 3.5 %'))
       // 이 사례에는 문장이 없어 지금 값과 당시 값만 적는다.
-      expect(screen.queryByText('비슷한 점')).toBeNull()
+      expect(within(indicatorCard('전산업생산')).queryByText('비슷한 점')).toBeNull()
       expect(screen.getByText(/지금 3\.1% · 당시/).textContent).toBe('지금 3.1% · 당시 3.5%')
     })
 
-    it('사례를 골라도 라디오의 초점이 그대로이고, 010 검색은 분야와 010 기준월로 연다', async () => {
+    it('사례를 골라도 라디오의 초점이 그대로이고, 010 검색 화면으로 넘기는 링크는 없다', async () => {
       mockFields()
       renderWithRouter(<MarketFlowPage />)
       const second = await screen.findByRole('radio', { name: '2011-08 ~ 2011-10' })
@@ -158,13 +172,36 @@ describe('MarketFlowPage', () => {
       await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2011-10', { searchId: 'S-1' }, expect.any(AbortSignal)))
       // 다시 그려도 라디오를 새로 만들지 않는다. 새로 만들면 키보드 사용자의 초점이 문서 처음으로 떨어진다.
       expect(document.activeElement).toBe(second)
-      expect(screen.getByRole('link', { name: /모두 보기/ }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')
+      expect(document.querySelector('a[href^="/regime-search"]')).toBeNull()
+    })
+
+    it('분야 상세 바닥에 가까운 과거 사례 구역이 서고, 자세히는 그 구역에서 고른 사례의 상세를 펼친다 (2026-10-07)', async () => {
+      mockFields()
+      renderWithRouter(<MarketFlowPage />)
+      await screen.findByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })
+
+      const detail = document.getElementById('market-flow-detail') as HTMLElement
+      const explorer = within(detail).getByRole('region', { name: '가까운 과거 사례' })
+      // 지표 칸 아래에 선다.
+      expect(indicatorCard('서비스업생산').compareDocumentPosition(explorer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(within(explorer).getAllByRole('listitem')).toHaveLength(2)
+      expect(within(explorer).getByLabelText('기준월 지정')).toBeTruthy()
+      expect(within(explorer).getByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태' })).toBeTruthy()
+      expect(within(explorer).queryByRole('button', { name: '상세 닫기' })).toBeNull()
+
+      fireEvent.click(within(compareRow()).getByRole('button', { name: '자세히' }))
+      const toggle = await within(explorer).findByRole('button', { name: '상세 닫기' })
+      expect(toggle.closest('li')?.textContent).toContain('2001-01 ~ 2001-03')
+      await waitFor(() => expect(document.activeElement).toBe(toggle))
+
+      fireEvent.click(within(compareRow()).getByRole('button', { name: /모두 보기/ }))
+      await waitFor(() => expect(document.activeElement).toBe(explorer))
     })
 
     it('보통 범위를 켜면 지표마다 띠를 그리고, 지금만이어도 켜 둘 수 있다', async () => {
       mockFields()
       const { container } = renderWithRouter(<MarketFlowPage />)
-      await screen.findByText('비슷한 점')
+      await screen.findAllByText('비슷한 점')
 
       fireEvent.click(await screen.findByRole('checkbox', { name: /지난 10년 보통 범위/ }))
       expect(container.querySelectorAll('rect[data-band]')).toHaveLength(2)
@@ -196,9 +233,10 @@ describe('MarketFlowPage', () => {
       vi.mocked(getRegimeSearch).mockRejectedValueOnce(new Error('offline'))
       renderWithRouter(<MarketFlowPage />)
 
-      expect(await screen.findByText(/과거 사례를 불러오지 못했습니다/)).toBeTruthy()
+      // 줄과 바닥 구역이 같은 문장으로 알린다. 분야 지표는 그대로다.
+      expect(await screen.findAllByText(/과거 사례를 불러오지 못했습니다/)).toHaveLength(2)
       expect(screen.getByRole('heading', { level: 3, name: '전산업생산' })).toBeTruthy()
-      fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+      fireEvent.click(within(compareRow()).getByRole('button', { name: '다시 시도' }))
       expect(await screen.findByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })).toBeTruthy()
     })
 
