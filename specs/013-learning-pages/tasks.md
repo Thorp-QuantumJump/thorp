@@ -892,3 +892,9 @@ Task: "T188 QuizPanel 로그인 모드" → "T189 글 화면 연결" → "T190 �
 
 - [ ] T202 [US6] (FE) `frontend/src/components/learning/article/ArticleEnd.tsx`의 비로그인 글 끝에 있는 '로그인하면 학습 기록이 남습니다.' 한 줄과 로그인 연결을 T140이 만드는 `frontend/src/components/learning/me/GuestSample.tsx`(견본 그림·한 줄·로그인 연결)로 바꾼다. 확인 문제 → 다음 글 → 견본 순서와, 로그인 상태를 다시 확인하는 동안 부품을 내리지 않고 숨기기만 하는 처리(`concealed`, research R33)를 그대로 둔다. `frontend/src/pages/LearningArticlePage.test.tsx`에 비로그인 글 끝의 견본(그림은 `aria-hidden`, 숫자·상태 모양 없음)을 더한다 per design-notes §3.5, 목업 '글 끝'의 `guestSample('end')`, FR-031 (missing) ‹B11›
 - [ ] T203 [US1] (FE) `frontend/src/pages/LearningArticlePage.tsx` 글 머리 경로의 단계 연결('n단계 · 이름', B10에서는 `/learn`으로 간다)을 커리큘럼 보기의 그 단계 자리로 잇고, 받은 `learningReturn`을 그대로 싣는다. 단계 자리를 가리키는 방식은 T139의 '○단계 보기' 연결과 같게 한다 per 목업 '글 끝'의 경로(`data-to="stage-n"`), FR-031 (partial) ‹B11›
+
+## Phase 28: Convergence
+
+**Purpose**: B09 converge(2026-10-07)에서 찾은 빈자리 가운데 다른 묶음에 속하는 것. B09 MR에 있어야 했던 빈자리는 B09 브랜치(`feat(be)/learning-records`)에서 바로 채웠다. 아래 태스크는 B13 묶음에 담는다.
+
+- [ ] T204 [US6] (FE) 완료 카드의 그림 장면(T193의 레벨 표장·레벨 길·다음 배지 메달)이 쓸 값을 어디서 받을지 정하고 그대로 잇는다. 완료 응답([learning-me-api](contracts/learning-me-api.md) §4)에는 `gained.levelBefore`·`levelAfter`와 단계 진행만 있고, 경험치 합계·레벨 문턱(`milestones`)·보이는 가장 높은 레벨·다음 배지의 진행은 `GET /learning/me`(§1)에만 있다. 완료 응답을 받은 뒤 `GET /learning/me`를 한 번 더 불러 그리는 방법과, §4 응답에 레벨과 다음 배지 조각을 더하는 방법 가운데 하나를 고른다. 뒤쪽이면 서버 응답·`docs/specs/learning-api/examples/me-completion.json`·`LearnerApiIT`를 같은 MR에서 고친다. 앞쪽이면 그 요청이 실패해도 T187의 글자 정보는 그대로 두고 그림 자리만 비운다. 고른 방법을 계약 §4와 T187·T193에 적는다 per FR-030, T193 (missing) ‹B13›
