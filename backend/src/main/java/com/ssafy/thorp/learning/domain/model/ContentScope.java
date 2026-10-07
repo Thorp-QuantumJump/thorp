@@ -91,10 +91,6 @@ public record ContentScope(
         return stages.stream().filter(StageScope::nonEmpty).toList();
     }
 
-    public boolean anyReleased() {
-        return stages.stream().anyMatch(StageScope::released);
-    }
-
     public boolean allStagesReleased() {
         return stages.stream().allMatch(StageScope::released);
     }

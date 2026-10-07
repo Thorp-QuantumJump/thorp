@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -31,6 +32,9 @@ public class LearnerProgressRepositoryImpl implements LearnerProgressRepository 
               JOIN learning_article a ON a.id = p.article_id
             """;
 
+    /** 사용자 잠금 식별자의 접두어. 테스트가 같은 잠금을 잡을 때도 이 값을 쓴다. */
+    public static final String LOCK_PREFIX = "learning-learner:";
+
     private static final String ARTICLE_ID =
             "(SELECT id FROM learning_article WHERE article_key = ?)";
 
@@ -38,6 +42,19 @@ public class LearnerProgressRepositoryImpl implements LearnerProgressRepository 
 
     public LearnerProgressRepositoryImpl(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    /**
+     * {@code pg_advisory_xact_lock(bigint)}. 잠금 식별자는 {@code learning-learner:{userId}} 문자열의 64비트
+     * 해시다(PostgreSQL {@code hashtextextended}, {@code EmailVerificationRepositoryImpl}과 같은 방식).
+     * 접두어가 다른 기능의 잠금과 식별자를 가른다.
+     */
+    @Override
+    public void lockLearner(long userId) {
+        jdbc.query(
+                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
+                (RowCallbackHandler) row -> {},
+                LOCK_PREFIX + userId);
     }
 
     @Override

@@ -14,6 +14,15 @@ import java.util.Optional;
  */
 public interface LearnerProgressRepository {
 
+    /**
+     * 그 사용자의 나의 학습 쓰기를 줄 세우는 트랜잭션 잠금. 트랜잭션이 끝나면 풀린다.
+     *
+     * <p>나의 학습을 쓰는 요청(정산하는 조회·위치·완료·첫 답·다시 풀기·학습 초기화)은 모두 첫 문장에서 이 잠금을 잡는다. 행 잠금만으로는 학습 초기화가 지우는 사이
+     * 다른 요청이 넣은 답·장부·배지 행이 초기화 뒤에 남는다(SC-015). 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못해 단계 완주나 {@code gained}를
+     * 놓치는 일도 막는다.
+     */
+    void lockLearner(long userId);
+
     /** 그 사용자의 모든 글 기록. 게시 취소된 글의 기록도 담는다. */
     List<LearnerProgress> findAll(long userId);
 

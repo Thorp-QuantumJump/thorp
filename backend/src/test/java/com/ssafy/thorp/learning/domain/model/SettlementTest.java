@@ -135,6 +135,24 @@ class SettlementTest {
     }
 
     @Test
+    @DisplayName("여섯 단계 27편을 모두 읽으면 '읽은 글 27편'과 '탐험'을 받는다")
+    void readAllAfterAllStages() {
+        ContentScope scope = LearnerScopes.allStages();
+        Map<ArticleId, LearnerProgress> all = new HashMap<>();
+        for (ArticleId article : scope.articles()) {
+            all.put(article, new LearnerProgress(article, 100, AT, AT, null, null, null));
+        }
+
+        Outcome outcome = settle(scope, facts(all, ExpLedger.empty(), Map.of()));
+
+        assertThat(outcome.badges())
+                .extracting(BadgeKey::value)
+                .contains("read-20", "read-27", "exploration")
+                .doesNotContain("terms-all");
+        assertThat(outcome.stageEntries()).hasSize(6);
+    }
+
+    @Test
     @DisplayName("준비 중 사유는 다섯 가지이고, 같은 갈래에서는 문구가 같은 것끼리만 묶인다")
     void preparingReasons() {
         ContentScope partial = LearnerScopes.firstTwoStages();
