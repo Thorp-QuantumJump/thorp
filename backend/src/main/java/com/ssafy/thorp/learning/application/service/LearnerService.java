@@ -87,11 +87,11 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><b>나의 학습을 쓰는 요청은 사용자 단위로 줄을 선다.</b> 정산하는 조회·위치·완료·첫 답·다시 풀기·학습 초기화가 모두 첫 문장에서 {@link
  * LearnerProgressRepository#lockLearner}를 잡는다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지 행이 초기화 뒤에
- * 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 잠금 순서는 사용자 잠금 → 진행 행이다. 관리 경로(단계 행 → 글)는 이 잠금과 진행 행을
- * 잡지 않으므로 서로 기다리지 않는다.
+ * 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 나의 학습이 잡는 잠금은 이것 하나다. 관리 경로(단계 행 → 글)는 이 잠금을 잡지 않으므로
+ * 서로 기다리지 않는다. 같은 사용자의 사실은 이 서비스만 바꾸므로, 요청 안에서 저장한 변경은 다시 읽지 않고 메모리의 사실에 더해 쓴다.
  *
  * <p>격리 수준은 기본(READ COMMITTED)이다. {@code REPEATABLE_READ}에서는 다른 요청이 먼저 넣은 행과 충돌하는 {@code ON
- * CONFLICT DO NOTHING}이 직렬화 오류로 실패한다. 같은 글의 답 처리는 진행 행도 잠근다(research R29).
+ * CONFLICT DO NOTHING}이 직렬화 오류로 실패한다.
  */
 @Service
 @Transactional
@@ -141,9 +141,8 @@ public class LearnerService {
         Instant now = LearningTime.now(clock);
         Content content = content();
         LearnerFacts before = facts(userId);
-        Gains gains = new Gains(Settlement.level(content.scope(), before).current());
-        settle(userId, content, before, now, gains);
-        LearnerFacts facts = facts(userId);
+        Gains gains = new Gains(Level.levelFor(before.ledger().total()));
+        LearnerFacts facts = settle(userId, content, before, now, gains);
         ContentScope scope = content.scope();
         Level level = Settlement.level(scope, facts);
 
@@ -203,8 +202,8 @@ public class LearnerService {
     /** 글 하나의 기록(§2). 정산하지 않는다. */
     @Transactional(readOnly = true)
     public LearnerArticleResult article(long userId, String rawArticleId) {
-        ArticleId articleId = requireRecordable(rawArticleId);
-        Content content = requirePublishedIn(content(), articleId);
+        Content content = content();
+        ArticleId articleId = requireRecordableIn(content, rawArticleId);
         LearnerFacts facts = facts(userId);
         LearnerProgress progress = facts.progressOf(articleId);
         List<QuestionId> questions = content.scope().questionsOf(articleId);
@@ -249,35 +248,41 @@ public class LearnerService {
      */
     public CompletionResult complete(long userId, String rawArticleId) {
         progressRepository.lockLearner(userId);
-        ArticleId articleId = requireRecordable(rawArticleId);
+        Content content = content();
+        ArticleId articleId = requireRecordableIn(content, rawArticleId);
         Instant now = LearningTime.now(clock);
-        Content content = requirePublishedIn(content(), articleId);
         LearnerFacts before = facts(userId);
-        int levelBefore = Settlement.level(content.scope(), before).current();
+        int levelBefore = Level.levelFor(before.ledger().total());
         // 사용자 잠금 안에서 읽었으므로 그사이 다른 요청이 이 글을 완료할 수 없다.
         boolean alreadyCompleted = before.completed(articleId);
         Instant completedAt = progressRepository.recordCompletion(userId, articleId, now);
-        Gains gains = new Gains(levelBefore);
-        if (!alreadyCompleted) {
-            gains.add(ledgerRepository, userId, ExpEntry.articleCompleted(articleId, now));
-            settle(userId, content, facts(userId), now, gains);
+        if (alreadyCompleted) {
+            // 바뀐 것은 마지막으로 연 시각뿐이다. 완료한 글은 '이어서 읽기'에 들지 않으므로 읽어 둔 사실 그대로 답한다.
+            return new CompletionResult(
+                    completedAt,
+                    true,
+                    stageProgress(content.scope(), before, articleId),
+                    continueReading(content, before),
+                    Gained.none(levelBefore));
         }
-        LearnerFacts facts = facts(userId);
-        int levelAfter = Settlement.level(content.scope(), facts).current();
+        Gains gains = new Gains(levelBefore);
+        gains.add(ledgerRepository, userId, ExpEntry.articleCompleted(articleId, now));
+        LearnerFacts facts = settle(userId, content, facts(userId), now, gains);
         return new CompletionResult(
                 completedAt,
-                alreadyCompleted,
+                false,
                 stageProgress(content.scope(), facts, articleId),
                 continueReading(content, facts),
-                alreadyCompleted
-                        ? Gained.none(levelAfter)
-                        : gains.result(levelAfter, BadgeCatalog.of(content.scope().stages())));
+                gains.result(
+                        Level.levelFor(facts.ledger().total()),
+                        BadgeCatalog.of(content.scope().stages())));
     }
 
     /**
      * 첫 답(§5). 공개 판으로 판정하고 저장한 뒤 돌려준다. 이미 답한 문제면 저장된 답을 바꾸지 않고 돌려준다.
      *
-     * <p>그 글의 진행 행을 잠근다. 같은 글의 두 답이 동시에 와도 정답 몫 상한과 '처음 모든 문제에 답한 순간'의 판정이 겹치지 않는다(R29).
+     * <p>사용자 잠금 안에서 처리하므로 같은 글의 두 답이 동시에 와도 정답 몫 상한과 '처음 모든 문제에 답한 순간'의 판정이 겹치지 않는다(R29). '모두 답함'과
+     * '모두 맞힘'은 정산이 판정한다. 운영자가 남은 문제를 지워 모두 답한 상태가 된 경우와 같은 규칙이다.
      */
     public AnswerResult answer(
             long userId, String rawArticleId, String rawQuestionId, String rawChoiceId) {
@@ -286,7 +291,7 @@ public class LearnerService {
         List<QuizQuestion> quiz = currentQuiz(articleId);
         LearnerProgress progress =
                 progressRepository
-                        .findForUpdate(userId, articleId)
+                        .find(userId, articleId)
                         .filter(LearnerProgress::completed)
                         .orElseThrow(CompletionRequiredException::new);
         QuizQuestion question = question(quiz, rawQuestionId);
@@ -323,19 +328,8 @@ public class LearnerService {
                 progressRepository.markMastered(userId, articleId, MasteredVia.FIRST_ANSWER, now);
             }
         }
-        if (!progress.allAnswered()) {
-            Map<QuestionId, FirstAnswer> answers =
-                    byQuestion(answerRepository.findByArticle(userId, articleId), questionIds);
-            if (answers.size() == questionIds.size()) {
-                progressRepository.markAllAnswered(userId, articleId, now);
-                if (answers.values().stream().allMatch(FirstAnswer::correct)) {
-                    gains.add(ledgerRepository, userId, ExpEntry.allCorrect(articleId, now));
-                }
-            }
-        }
         Content content = content();
-        settle(userId, content, facts(userId), now, gains);
-        LearnerFacts facts = facts(userId);
+        LearnerFacts facts = settle(userId, content, facts(userId), now, gains);
         return answerResult(
                 stored.answer(),
                 question,
@@ -345,7 +339,7 @@ public class LearnerService {
                         facts.answersFor(articleId, questionIds),
                         quiz.size()),
                 gains.result(
-                        Settlement.level(content.scope(), facts).current(),
+                        Level.levelFor(facts.ledger().total()),
                         BadgeCatalog.of(content.scope().stages())));
     }
 
@@ -359,43 +353,65 @@ public class LearnerService {
         ArticleId articleId = parseArticleId(rawArticleId);
         List<QuizQuestion> quiz = currentQuiz(articleId);
         List<QuestionId> questionIds = quiz.stream().map(QuizQuestion::questionId).toList();
-        LearnerProgress progress =
-                progressRepository
-                        .findForUpdate(userId, articleId)
-                        .orElseThrow(RetryNotAvailableException::new);
-        Map<QuestionId, FirstAnswer> answers =
-                byQuestion(answerRepository.findByArticle(userId, articleId), questionIds);
+        LearnerFacts before = facts(userId);
+        LearnerProgress progress = before.progressOf(articleId);
+        if (progress == null) {
+            throw new RetryNotAvailableException();
+        }
+        Map<QuestionId, FirstAnswer> answers = before.answersFor(articleId, questionIds);
         if (!quiz(progress, answers, quiz.size()).retryAvailable()) {
             throw new RetryNotAvailableException();
         }
         QuizQuestion question = question(quiz, rawQuestionId);
         ChoiceId choice = choice(question, rawChoiceId);
         boolean correct = question.correctChoiceIds().contains(choice);
+        int levelBefore = Level.levelFor(before.ledger().total());
+        if (!correct) {
+            // 틀린 다시 풀기는 아무것도 저장하지 않는다.
+            return retryResult(
+                    question,
+                    choice,
+                    false,
+                    quiz(progress, answers, quiz.size()),
+                    Gained.none(levelBefore));
+        }
 
         Instant now = LearningTime.now(clock);
+        progressRepository.markMastered(userId, articleId, MasteredVia.RETRY, now);
         Content content = content();
-        LearnerFacts before = facts(userId);
-        Gains gains = new Gains(Settlement.level(content.scope(), before).current());
-        if (correct) {
-            progressRepository.markMastered(userId, articleId, MasteredVia.RETRY, now);
-            settle(userId, content, facts(userId), now, gains);
-        }
-        LearnerFacts facts = facts(userId);
-        String correctChoice = onlyCorrectChoice(question).value();
+        Gains gains = new Gains(levelBefore);
+        LearnerFacts facts =
+                settle(
+                        userId,
+                        content,
+                        before.withProgress(progress.withMastered(MasteredVia.RETRY, now)),
+                        now,
+                        gains);
+        return retryResult(
+                question,
+                choice,
+                true,
+                quiz(facts.progressOf(articleId), answers, quiz.size()),
+                gains.result(
+                        Level.levelFor(facts.ledger().total()),
+                        BadgeCatalog.of(content.scope().stages())));
+    }
+
+    private static AnswerResult retryResult(
+            QuizQuestion question,
+            ChoiceId choice,
+            boolean correct,
+            QuizSummary quiz,
+            Gained gained) {
         return new AnswerResult(
                 question.questionId().value(),
                 choice.value(),
                 correct,
-                correctChoice,
+                onlyCorrectChoice(question).value(),
                 question.explanation(),
                 null,
-                quiz(
-                        facts.progressOf(articleId),
-                        facts.answersFor(articleId, questionIds),
-                        quiz.size()),
-                gains.result(
-                        Settlement.level(content.scope(), facts).current(),
-                        BadgeCatalog.of(content.scope().stages())));
+                quiz,
+                gained);
     }
 
     /** 학습 초기화(§7). 네 테이블의 그 사용자 행을 한 트랜잭션에서 지운다. 기록이 없어도 성공이다(FR-025). */
@@ -409,12 +425,21 @@ public class LearnerService {
 
     // ── 정산 ────────────────────────────────────────────────────────────────
 
-    /** 정산 결과를 넣고, 이번 요청이 실제로 넣은 것만 {@code gains}에 담는다. */
-    private void settle(
+    /**
+     * 정산 결과를 넣고, 이번 요청이 실제로 넣은 것만 {@code gains}에 담는다.
+     *
+     * @return 정산을 반영한 사실. 사용자 잠금 안이라 다시 읽은 것과 같다
+     */
+    private LearnerFacts settle(
             long userId, Content content, LearnerFacts facts, Instant now, Gains gains) {
         BadgeCatalog catalog = BadgeCatalog.of(content.scope().stages());
         Outcome outcome = Settlement.settle(content.scope(), facts, catalog, now);
-        for (ExpEntry entry : outcome.stageEntries()) {
+        LearnerFacts settled = facts;
+        for (ArticleId article : outcome.allAnswered()) {
+            progressRepository.markAllAnswered(userId, article, now);
+            settled = settled.withProgress(settled.progressOf(article).withAllAnswered(now));
+        }
+        for (ExpEntry entry : outcome.entries()) {
             gains.add(ledgerRepository, userId, entry);
         }
         for (BadgeKey badge : outcome.badges()) {
@@ -422,6 +447,8 @@ public class LearnerService {
                 gains.badges.add(badge);
             }
         }
+        return settled.withLedger(settled.ledger().plus(outcome.entries()))
+                .withBadges(outcome.badges(), now);
     }
 
     private LearnerFacts facts(long userId) {
@@ -663,16 +690,24 @@ public class LearnerService {
     }
 
     /**
-     * 공개 범위를 읽은 뒤 그 글이 여전히 공개된 글인지 본다. 기록 가능 확인과 공개 범위 조회는 다른 문장이라, 그사이 게시 취소가 커밋되면 글이 범위에서 빠진다.
-     * 그때는 확인 전에 취소된 것과 같이 404로 답한다(learning-me-api §0).
+     * 공개 범위 하나로 기록할 수 있는 글인지 정한다. 범위에 있으면 기록할 수 있다. 없으면 왜 없는지만 따로 읽어 이전 판·첫 단계 공개 전 글은 409, 그 밖은
+     * 404로 답한다. 같은 사실을 두 번 읽어 판정하면 그사이 게시 취소가 커밋될 때 두 판정이 어긋난다(learning-me-api §0).
      *
-     * @throws ArticleUnavailableException 범위에 없다
+     * @throws ArticleUnavailableException 없거나 게시되지 않은 글, 형식이 틀린 식별자. 범위를 읽은 뒤에 게시된 글도 이번에는 없는 글로 본다
+     * @throws NotRecordableException 이전 판·첫 단계 공개 전 글
      */
-    private static Content requirePublishedIn(Content content, ArticleId articleId) {
-        if (!content.scope().isPublished(articleId)) {
-            throw new ArticleUnavailableException();
+    private ArticleId requireRecordableIn(Content content, String rawArticleId) {
+        ArticleId articleId = parseArticleId(rawArticleId);
+        if (content.scope().isPublished(articleId)) {
+            return articleId;
         }
-        return content;
+        if (articleRepository
+                .findPublishedEdition(articleId)
+                .filter(edition -> edition != Edition.CURRENT)
+                .isPresent()) {
+            throw new NotRecordableException();
+        }
+        throw new ArticleUnavailableException();
     }
 
     /** 기록할 수 있는 글의 공개 판 문제. 답을 판정하려면 정답과 풀이가 있는 판을 읽어야 한다. */
@@ -731,11 +766,7 @@ public class LearnerService {
     }
 
     private static ArticleId parseArticleId(String raw) {
-        try {
-            return new ArticleId(raw);
-        } catch (IllegalArgumentException | NullPointerException invalid) {
-            throw new ArticleUnavailableException();
-        }
+        return ArticleId.parse(raw).orElseThrow(ArticleUnavailableException::new);
     }
 
     /**

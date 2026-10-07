@@ -212,7 +212,14 @@ class LearnerApiIT extends IntegrationTestSupport {
     void rejectsInvalidPercent() throws Exception {
         seedTwoStages();
 
-        for (String body : List.of("{}", "{\"percent\":-1}", "{\"percent\":101}")) {
+        for (String body :
+                List.of(
+                        "{}",
+                        "{\"percent\":-1}",
+                        "{\"percent\":101}",
+                        "{\"percent\":62.5}",
+                        "{\"percent\":\"62\"}",
+                        "{\"percent\":true}")) {
             assertThat(
                             error(
                                             put("/learning/me/articles/etf-fees/position")
@@ -662,6 +669,43 @@ class LearnerApiIT extends IntegrationTestSupport {
         noContent(delete("/learning/me"), LEARNER_A);
         assertThat(data(completion("etf-fees"), LEARNER_A, 200).at("/gained/expTotal").asInt())
                 .isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("운영자가 남은 문제를 지워 모두 답한 상태가 되면 다음 GET에서 모두 맞힘 20과 배지를 준다")
+    void allCorrectAfterRemainingQuestionRemoved() throws Exception {
+        seedTwoStages();
+        complete("recovery-period", LEARNER_A);
+        data(answer("recovery-period", "q1", "c1"), LEARNER_A, 200);
+        data(answer("recovery-period", "q2", "c3"), LEARNER_A, 200);
+
+        // 남은 q3을 지우고 다시 게시했다.
+        Map<String, List<String>> remaining = new LinkedHashMap<>();
+        remaining.put("q1", List.of("c1", "c2"));
+        remaining.put("q2", List.of("c3", "c4"));
+        seeds.publishCurrentWithQuiz(
+                "recovery-period", "떨어진 뒤 얼마나 걸려 돌아왔을까?", List.of("recovery-period"), remaining);
+
+        JsonNode me = overview(LEARNER_A);
+
+        assertThat(me.at("/gained/exp"))
+                .anySatisfy(
+                        exp -> {
+                            assertThat(exp.get("kind").asText()).isEqualTo("ALL_CORRECT");
+                            assertThat(exp.get("points").asInt()).isEqualTo(20);
+                        });
+        assertThat(me.at("/gained/badges"))
+                .extracting(badge -> badge.get("badgeKey").asText())
+                .contains("perfect-1");
+        assertThat(exp(LEARNER_A)).isEqualTo(80);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT all_answered_at IS NOT NULL FROM learning_progress"
+                                        + " WHERE user_id = ?",
+                                Boolean.class,
+                                LEARNER_A))
+                .isTrue();
+        assertThat(overview(LEARNER_A).at("/gained/exp")).isEmpty();
     }
 
     // ── 문제가 바뀐 뒤의 정답 몫 상한(quickstart 10-5 넷째 줄) ──────────────

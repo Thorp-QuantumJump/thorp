@@ -403,11 +403,7 @@ public class LearningQueryService {
     }
 
     private static Optional<ArticleId> parseArticleId(String raw) {
-        try {
-            return Optional.of(new ArticleId(raw));
-        } catch (IllegalArgumentException | NullPointerException invalid) {
-            return Optional.empty();
-        }
+        return ArticleId.parse(raw);
     }
 
     private static Optional<TermId> parseTermId(String raw) {
