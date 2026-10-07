@@ -6,6 +6,11 @@
   background: var(--thorp-surface);
 }
 
+/* 로그인 완료 카드 안의 확인 문제(목업 doneCard의 .qhead). 카드가 틀을 가지므로 틀을 두 겹으로 그리지 않는다. */
+.embedded:not(:first-child) {
+  margin-top: 22px;
+}
+
 .head {
   display: flex;
   flex-wrap: wrap;
@@ -199,4 +204,78 @@
   .panel {
     padding: 18px 16px;
   }
+}
+
+/* 로그인 사용자의 첫 답 자리 표시(목업 '글 끝'의 .fa). 옅은 1px 선의 둥근 알약이다. */
+.firstAnswer {
+  padding: 0 8px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--thorp-line-strong);
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-caption, 0.75rem);
+  font-weight: 700;
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+/* 기록 중·기록되지 않음·문제가 바뀜. 정답과 풀이 대신 놓이는 한 줄이다(FR-022). */
+.pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.9rem);
+}
+
+.inlineButton,
+.retryButton {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--thorp-accent-soft);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.retryButton {
+  margin-top: 8px;
+  padding: 0 16px;
+  border-radius: var(--thorp-radius-inset, 10px);
+  box-shadow: inset 0 0 0 1.5px var(--thorp-line-control);
+  color: var(--thorp-foreground);
+  text-decoration: none;
+}
+
+.pendingMessage:focus-visible,
+.retryTitle:focus-visible,
+.inlineButton:focus-visible,
+.retryButton:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.retry {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.retryTitle {
+  margin: 0;
+  font-size: var(--thorp-text-body, 0.95rem);
+  font-weight: 700;
+}
+
+/* 다른 화면에서 먼저 답한 첫 답을 보인다는 안내(계약 §5 alreadyAnswered, 원칙 VI). */
+.note {
+  margin: 8px 0 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.8rem);
 }

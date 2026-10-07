@@ -1,6 +1,7 @@
 import type { AuthApiErrorCode, AuthFieldError } from './auth'
 import type { LearningApiErrorCode } from './learning'
 import type { LearningAdminApiErrorCode } from './learningAdmin'
+import type { LearningMeApiErrorCode } from './learningMe'
 import type { MyRecordApiErrorCode } from './myRecords'
 import type { SectorApiErrorCode } from './sector'
 
@@ -34,6 +35,7 @@ export type ServiceApiErrorCode =
   | SectorApiErrorCode
   | LearningApiErrorCode
   | LearningAdminApiErrorCode
+  | LearningMeApiErrorCode
   | MyRecordApiErrorCode
 
 /**
