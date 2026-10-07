@@ -1,6 +1,7 @@
 package com.ssafy.thorp.learning.domain.vo;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -25,6 +26,21 @@ public record ArticleId(String value) {
                 || value.length() > MAX_LENGTH
                 || !PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("invalid articleId format: " + value);
+        }
+    }
+
+    /**
+     * 경로 변수처럼 밖에서 온 문자열을 읽는다. 형식이 틀렸거나 null이면 비어 있다. 형식 오류를 어떤 응답으로 바꿀지(볼 수 없는 글 404, 관리할 글 없음
+     * 404)는 호출자가 정한다.
+     */
+    public static Optional<ArticleId> parse(String raw) {
+        if (raw == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new ArticleId(raw));
+        } catch (IllegalArgumentException invalid) {
+            return Optional.empty();
         }
     }
 
