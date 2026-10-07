@@ -204,6 +204,12 @@ public final class LearningSeeds {
      * 대응표도 닫는다.
      */
     public void reset() {
+        // 나의 학습 기록을 맨 먼저 비운다. 남으면 다음 테스트의 경험치·배지 계산에 섞이고, learning_article을 가리키는
+        // 외래키 때문에 관리 API가 만든 글을 지우는 아래 문장이 막힌다.
+        jdbc.update("DELETE FROM learning_badge_award");
+        jdbc.update("DELETE FROM learning_exp_entry");
+        jdbc.update("DELETE FROM learning_answer");
+        jdbc.update("DELETE FROM learning_progress");
         // 변경 기록은 단계·글을 가리키므로 글을 지우기 전에 비운다.
         jdbc.update("DELETE FROM learning_release_log");
         jdbc.update("DELETE FROM learning_published_term");
@@ -524,6 +530,45 @@ public final class LearningSeeds {
             int readingMinutes,
             Map<String, List<String>> terms,
             boolean withExample) {
+        return publishCurrent(
+                articleId, title, question, readingMinutes, terms, withExample, Map.of());
+    }
+
+    /**
+     * 확인 문제가 있는 CURRENT 판을 심는다. 나의 학습 테스트가 쓴다. 같은 글에 다시 부르면 다음 판 번호로 다시 게시한다(운영자가 문제를 바꿔 게시한 경우).
+     *
+     * @param termIds 이 판이 소유하는 용어. 다른 이름은 없다
+     * @param quiz 문제 식별자 → 보기 식별자 목록. 첫 보기가 정답이다. 순서대로 판에 넣는다
+     * @return 심은 판의 대리키
+     */
+    public long publishCurrentWithQuiz(
+            String articleId, String title, List<String> termIds, Map<String, List<String>> quiz) {
+        Map<String, List<String>> terms = new LinkedHashMap<>();
+        termIds.forEach(termId -> terms.put(termId, List.of()));
+        return publishCurrent(articleId, title, "합성 질문", 4, terms, false, quiz);
+    }
+
+    /** 게시 취소. 판·기록은 남기고 글을 초안으로 돌리며 그 글의 게시 용어 색인을 지운다(data-model §10-1). */
+    public void unpublish(String articleId) {
+        jdbc.update(
+                "DELETE FROM learning_published_term WHERE article_id ="
+                        + " (SELECT id FROM learning_article WHERE article_key = ?)",
+                articleId);
+        jdbc.update(
+                "UPDATE learning_article SET status = 'DRAFT', published_revision_id = NULL,"
+                        + " published_stage_id = NULL, published_stage_position = NULL"
+                        + " WHERE article_key = ?",
+                articleId);
+    }
+
+    private long publishCurrent(
+            String articleId,
+            String title,
+            String question,
+            int readingMinutes,
+            Map<String, List<String>> terms,
+            boolean withExample,
+            Map<String, List<String>> quizSpec) {
         ObjectNode snapshot = objectMapper.createObjectNode();
         snapshot.put("format", "V2");
         snapshot.put("articleId", articleId);
@@ -560,7 +605,22 @@ public final class LearningSeeds {
         }
         snapshot.putArray("sources");
         snapshot.put("draftVersion", 0);
-        snapshot.putArray("quiz");
+        ArrayNode quiz = snapshot.putArray("quiz");
+        quizSpec.forEach(
+                (questionId, choiceIds) -> {
+                    ObjectNode node =
+                            quiz.addObject()
+                                    .put("questionId", questionId)
+                                    .put("prompt", "합성 문제 " + questionId);
+                    ArrayNode choices = node.putArray("choices");
+                    choiceIds.forEach(
+                            choiceId ->
+                                    choices.addObject()
+                                            .put("choiceId", choiceId)
+                                            .put("text", "합성 보기 " + choiceId));
+                    node.put("correctChoiceId", choiceIds.get(0))
+                            .put("explanation", "합성 풀이 " + questionId);
+                });
         snapshot.putObject("reading")
                 .put("bodyChars", readingMinutes * 500)
                 .put("readingMinutes", readingMinutes)

@@ -152,6 +152,23 @@ class ArchitectureTest {
                     .resideInAPackage(ROOT + ".learning..");
 
     /**
+     * 규칙 13: {@code learning}(013)은 {@code backtest}(004)를 참조하지 않는다.
+     *
+     * <p>나의 학습의 로그인 주체는 {@code LearnerAccess}·{@code LearningAdminAccess}가 공통 {@code SessionUser}로
+     * 읽는다. 004의 {@code CurrentRequester}를 가져다 쓰면 배우기 기록이 백테스트 요청자 규칙에 묶인다. 경험치와 배지는 배우기 안의 행동으로만
+     * 생기고 진단·백테스트 행동을 받지 않는다(FR-028). 근거: specs/013-learning-pages/research.md R33, plan.md "게이트
+     * 재확인".
+     */
+    @ArchTest
+    static final ArchRule learning은_backtest를_참조하지_않는다 =
+            noClasses()
+                    .that()
+                    .resideInAPackage(ROOT + ".learning..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage(ROOT + ".backtest..");
+
+    /**
      * 규칙 11: {@code paramsearch}(007)는 {@code myrecord}(006)를 참조하지 않는다.
      *
      * <p>006의 등록기가 007의 접수 이벤트를 듣고, 저장 상한은 007이 소유한 포트({@code SaveSlotGuard})를 006이 구현해 건넨다. 방향은

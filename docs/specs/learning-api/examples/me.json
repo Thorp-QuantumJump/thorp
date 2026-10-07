@@ -1,0 +1,592 @@
+{
+  "level": {
+    "current": 2,
+    "exp": 250,
+    "currentThreshold": 100,
+    "nextThreshold": 300,
+    "remainingToNext": 50,
+    "reachedAt": "2026-11-20T03:03:00Z",
+    "isNew": true,
+    "visibleMax": 4,
+    "unreachableFrom": 5,
+    "unreachableReason": "MORE_STAGES",
+    "milestones": [
+      {
+        "level": 1,
+        "threshold": 0
+      },
+      {
+        "level": 2,
+        "threshold": 100
+      },
+      {
+        "level": 3,
+        "threshold": 300
+      },
+      {
+        "level": 4,
+        "threshold": 600
+      },
+      {
+        "level": 5,
+        "threshold": 1000
+      }
+    ]
+  },
+  "counts": {
+    "completedArticles": 5,
+    "masteredTerms": 4,
+    "badges": 8,
+    "publishedArticles": 8,
+    "publishedTerms": 10
+  },
+  "continueReading": {
+    "kind": "RESUME",
+    "articleId": "recovery-period",
+    "number": "2-3",
+    "title": "떨어진 뒤 얼마나 걸려 돌아왔을까?",
+    "percent": 62,
+    "moreStagesPreparing": true
+  },
+  "articles": [
+    {
+      "articleId": "sectors-and-etf",
+      "state": "COMPLETED",
+      "percent": 100,
+      "completedAt": "2026-11-20T03:01:00Z",
+      "termCount": 2,
+      "masteredTermCount": 2
+    },
+    {
+      "articleId": "etf-tracking-difference",
+      "state": "COMPLETED",
+      "percent": 100,
+      "completedAt": "2026-11-20T03:04:00Z",
+      "termCount": 1,
+      "masteredTermCount": 1
+    },
+    {
+      "articleId": "etf-distributions",
+      "state": "COMPLETED",
+      "percent": 100,
+      "completedAt": "2026-11-20T03:08:00Z",
+      "termCount": 1,
+      "masteredTermCount": 1
+    },
+    {
+      "articleId": "etf-fees",
+      "state": "COMPLETED",
+      "percent": 100,
+      "completedAt": "2026-11-20T03:10:00Z",
+      "termCount": 1,
+      "masteredTermCount": 0
+    },
+    {
+      "articleId": "returns-and-losses",
+      "state": "COMPLETED",
+      "percent": 100,
+      "completedAt": "2026-11-20T03:00:00Z",
+      "termCount": 2,
+      "masteredTermCount": 0
+    },
+    {
+      "articleId": "same-return-different-feel",
+      "state": "UNREAD",
+      "percent": 0,
+      "completedAt": null,
+      "termCount": 1,
+      "masteredTermCount": 0
+    },
+    {
+      "articleId": "recovery-period",
+      "state": "READING",
+      "percent": 62,
+      "completedAt": null,
+      "termCount": 1,
+      "masteredTermCount": 0
+    },
+    {
+      "articleId": "volatility-is-not-loss",
+      "state": "UNREAD",
+      "percent": 0,
+      "completedAt": null,
+      "termCount": 1,
+      "masteredTermCount": 0
+    }
+  ],
+  "stages": [
+    {
+      "stageKey": "etf-market-basics",
+      "number": 1,
+      "status": "OPEN",
+      "completedCount": 4,
+      "publishedCount": 4,
+      "completed": true
+    },
+    {
+      "stageKey": "returns-and-risk",
+      "number": 2,
+      "status": "OPEN",
+      "completedCount": 1,
+      "publishedCount": 4,
+      "completed": false
+    },
+    {
+      "stageKey": "allocation-rules",
+      "number": 3,
+      "status": "PREPARING",
+      "completedCount": null,
+      "publishedCount": null,
+      "completed": false
+    },
+    {
+      "stageKey": "backtest-and-costs",
+      "number": 4,
+      "status": "PREPARING",
+      "completedCount": null,
+      "publishedCount": null,
+      "completed": false
+    },
+    {
+      "stageKey": "pitfalls-and-validation",
+      "number": 5,
+      "status": "PREPARING",
+      "completedCount": null,
+      "publishedCount": null,
+      "completed": false
+    },
+    {
+      "stageKey": "economy-and-regimes",
+      "number": 6,
+      "status": "PREPARING",
+      "completedCount": null,
+      "publishedCount": null,
+      "completed": false
+    }
+  ],
+  "masteredTerms": [
+    {
+      "termId": "representative-etf",
+      "label": "합성 용어 representative-etf",
+      "articleId": "sectors-and-etf",
+      "articleNumber": "1-1"
+    },
+    {
+      "termId": "sector",
+      "label": "합성 용어 sector",
+      "articleId": "sectors-and-etf",
+      "articleNumber": "1-1"
+    },
+    {
+      "termId": "tracking-difference",
+      "label": "합성 용어 tracking-difference",
+      "articleId": "etf-tracking-difference",
+      "articleNumber": "1-2"
+    },
+    {
+      "termId": "distribution",
+      "label": "합성 용어 distribution",
+      "articleId": "etf-distributions",
+      "articleNumber": "1-3"
+    }
+  ],
+  "badges": [
+    {
+      "badgeKey": "level-2",
+      "family": "LEVEL",
+      "name": "레벨 2",
+      "criterion": "경험치 100에 닿습니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:03:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "level-3",
+      "family": "LEVEL",
+      "name": "레벨 3",
+      "criterion": "경험치 300에 닿습니다",
+      "status": "NOT_YET",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": {
+        "current": 250,
+        "target": 300
+      },
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "level-4",
+      "family": "LEVEL",
+      "name": "레벨 4",
+      "criterion": "경험치 600에 닿습니다",
+      "status": "NOT_YET",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": {
+        "current": 250,
+        "target": 600
+      },
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "level-5",
+      "family": "LEVEL",
+      "name": "레벨 5",
+      "criterion": "경험치 1,000에 닿습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "level-6",
+      "family": "LEVEL",
+      "name": "레벨 6",
+      "criterion": "경험치 1,500에 닿습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "level-7",
+      "family": "LEVEL",
+      "name": "레벨 7",
+      "criterion": "경험치 2,100에 닿습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "level-8",
+      "family": "LEVEL",
+      "name": "레벨 8",
+      "criterion": "경험치 2,800에 닿습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "read-1",
+      "family": "READ",
+      "name": "읽은 글 1편",
+      "criterion": "글 1편을 끝까지 읽습니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:00:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "read-5",
+      "family": "READ",
+      "name": "읽은 글 5편",
+      "criterion": "글 5편을 끝까지 읽습니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:10:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "read-10",
+      "family": "READ",
+      "name": "읽은 글 10편",
+      "criterion": "글 10편을 끝까지 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "read-20",
+      "family": "READ",
+      "name": "읽은 글 20편",
+      "criterion": "글 20편을 끝까지 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "read-27",
+      "family": "READ",
+      "name": "읽은 글 27편",
+      "criterion": "글 27편을 끝까지 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "ALL_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "correct-1",
+      "family": "CORRECT",
+      "name": "첫 답 정답 1개",
+      "criterion": "확인 문제를 첫 답에서 1개 맞힙니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:02:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "correct-10",
+      "family": "CORRECT",
+      "name": "첫 답 정답 10개",
+      "criterion": "확인 문제를 첫 답에서 10개 맞힙니다",
+      "status": "NOT_YET",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": {
+        "current": 3,
+        "target": 10
+      },
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "correct-25",
+      "family": "CORRECT",
+      "name": "첫 답 정답 25개",
+      "criterion": "확인 문제를 첫 답에서 25개 맞힙니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "correct-50",
+      "family": "CORRECT",
+      "name": "첫 답 정답 50개",
+      "criterion": "확인 문제를 첫 답에서 50개 맞힙니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "perfect-1",
+      "family": "PERFECT",
+      "name": "모두 맞힘 1편",
+      "criterion": "한 글의 확인 문제를 첫 답에서 모두 맞힌 글이 1편이 됩니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:03:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "perfect-5",
+      "family": "PERFECT",
+      "name": "모두 맞힘 5편",
+      "criterion": "한 글의 확인 문제를 첫 답에서 모두 맞힌 글이 5편이 됩니다",
+      "status": "NOT_YET",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": {
+        "current": 1,
+        "target": 5
+      },
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "perfect-15",
+      "family": "PERFECT",
+      "name": "모두 맞힘 15편",
+      "criterion": "한 글의 확인 문제를 첫 답에서 모두 맞힌 글이 15편이 됩니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "stage-etf-market-basics",
+      "family": "STAGE",
+      "name": "1단계 완주",
+      "criterion": "1단계의 글을 모두 읽습니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:10:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": 1
+    },
+    {
+      "badgeKey": "stage-returns-and-risk",
+      "family": "STAGE",
+      "name": "2단계 완주",
+      "criterion": "2단계의 글을 모두 읽습니다",
+      "status": "NOT_YET",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": {
+        "current": 1,
+        "target": 4
+      },
+      "preparingReason": null,
+      "stageNumber": 2
+    },
+    {
+      "badgeKey": "stage-allocation-rules",
+      "family": "STAGE",
+      "name": "3단계 완주",
+      "criterion": "3단계의 글을 모두 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "STAGE_NOT_RELEASED",
+      "stageNumber": 3
+    },
+    {
+      "badgeKey": "stage-backtest-and-costs",
+      "family": "STAGE",
+      "name": "4단계 완주",
+      "criterion": "4단계의 글을 모두 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "STAGE_NOT_RELEASED",
+      "stageNumber": 4
+    },
+    {
+      "badgeKey": "stage-pitfalls-and-validation",
+      "family": "STAGE",
+      "name": "5단계 완주",
+      "criterion": "5단계의 글을 모두 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "STAGE_NOT_RELEASED",
+      "stageNumber": 5
+    },
+    {
+      "badgeKey": "stage-economy-and-regimes",
+      "family": "STAGE",
+      "name": "6단계 완주",
+      "criterion": "6단계의 글을 모두 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "STAGE_NOT_RELEASED",
+      "stageNumber": 6
+    },
+    {
+      "badgeKey": "terms-1",
+      "family": "TERMS",
+      "name": "익힌 용어 1개",
+      "criterion": "익힌 용어가 1개가 됩니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:02:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "terms-10",
+      "family": "TERMS",
+      "name": "익힌 용어 10개",
+      "criterion": "익힌 용어가 10개가 됩니다",
+      "status": "NOT_YET",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": {
+        "current": 4,
+        "target": 10
+      },
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "terms-25",
+      "family": "TERMS",
+      "name": "익힌 용어 25개",
+      "criterion": "익힌 용어가 25개가 됩니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "MORE_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "terms-all",
+      "family": "TERMS",
+      "name": "그때 게시된 용어 전체",
+      "criterion": "그때 게시된 용어를 모두 익힙니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "ALL_STAGES",
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "persistence",
+      "family": "SPECIAL",
+      "name": "끈기",
+      "criterion": "첫 답에서 하나도 맞히지 못한 글을 다시 풀어 익힘으로 바꿉니다",
+      "status": "EARNED",
+      "earnedAt": "2026-11-20T03:09:00Z",
+      "isNew": true,
+      "progress": null,
+      "preparingReason": null,
+      "stageNumber": null
+    },
+    {
+      "badgeKey": "exploration",
+      "family": "SPECIAL",
+      "name": "탐험",
+      "criterion": "모든 단계에서 한 편 이상 읽습니다",
+      "status": "PREPARING",
+      "earnedAt": null,
+      "isNew": false,
+      "progress": null,
+      "preparingReason": "ALL_STAGES",
+      "stageNumber": null
+    }
+  ],
+  "gained": {
+    "exp": [],
+    "expTotal": 0,
+    "badges": [],
+    "levelBefore": 2,
+    "levelAfter": 2
+  }
+}

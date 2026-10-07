@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import com.ssafy.thorp.support.PostgresTestSupport;
 import com.ssafy.thorp.support.RepositoryTestSupport;
+import com.ssafy.thorp.support.TestUsers;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -133,6 +134,9 @@ class LearningMigrationTest extends RepositoryTestSupport {
                     "transaction-cost", 7,
                     "returns-and-losses", 8,
                     "past-is-not-future", 9);
+
+    /** 나의 학습 행을 넣을 사용자. */
+    private static final long LEARNER = 9101;
 
     @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -439,6 +443,172 @@ class LearningMigrationTest extends RepositoryTestSupport {
         assertRejectedBy(
                 "uq_learning_release_log_entry_key",
                 () -> insertReleaseLog("stage:etf-market-basics", "STAGE_RELEASED", "NULL"));
+    }
+
+    // ── 나의 학습 네 테이블(B09, data-model §11) ─────────────────────────────
+    // JPA 엔티티가 없어 ddl-auto=validate가 보지 않는다. 구조는 여기서 지킨다.
+
+    @Test
+    @DisplayName("나의 학습 네 테이블은 비어 있다")
+    void learnerTablesStartEmpty() {
+        assertThat(count("learning_progress")).isZero();
+        assertThat(count("learning_answer")).isZero();
+        assertThat(count("learning_exp_entry")).isZero();
+        assertThat(count("learning_badge_award")).isZero();
+    }
+
+    @Test
+    @DisplayName("읽은 비율이 0~100 밖이면 그 CHECK로 거절된다")
+    void rejectsPercentOutOfRange() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+
+        assertRejectedBy(
+                "ck_learning_progress_percent",
+                () -> insertProgress(user, "backtest", 101, "NULL", "NULL"));
+    }
+
+    @Test
+    @DisplayName("FIRST_ANSWER·RETRY 밖의 익힘 경로는 그 CHECK로 거절된다")
+    void rejectsUnknownMasteredVia() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+
+        assertRejectedBy(
+                "ck_learning_progress_mastered_via",
+                () -> insertProgress(user, "backtest", 10, "now()", "'GUESS'"));
+    }
+
+    @Test
+    @DisplayName("익힘 시각과 익힘 경로 가운데 하나만 있으면 그 CHECK로 거절된다")
+    void rejectsHalfMastered() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+
+        assertRejectedBy(
+                "ck_learning_progress_mastered",
+                () -> insertProgress(user, "backtest", 10, "now()", "NULL"));
+    }
+
+    @Test
+    @DisplayName("네 종류 밖의 장부 줄은 그 CHECK로 거절된다")
+    void rejectsUnknownExpKind() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+
+        assertRejectedBy(
+                "ck_learning_exp_entry_kind", () -> insertExp(user, "STREAK", "streak:1", 20));
+    }
+
+    @Test
+    @DisplayName("1~100 밖의 점수는 그 CHECK로 거절된다")
+    void rejectsPointsOutOfRange() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+
+        assertRejectedBy(
+                "ck_learning_exp_entry_points",
+                () -> insertExp(user, "ARTICLE_COMPLETED", "article:backtest", 0));
+    }
+
+    @Test
+    @DisplayName("같은 (사용자, 종류, 대상 키)의 장부 줄은 그 UNIQUE로 거절된다")
+    void rejectsDuplicateExpEntry() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+        insertExp(user, "ARTICLE_COMPLETED", "article:backtest", 20);
+
+        assertRejectedBy(
+                "uq_learning_exp_entry_ref",
+                () -> insertExp(user, "ARTICLE_COMPLETED", "article:backtest", 20));
+    }
+
+    @Test
+    @DisplayName("같은 (사용자, 글, 문제)의 두 번째 첫 답은 기본키로 거절된다")
+    void rejectsSecondFirstAnswer() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+        insertAnswer(user, "c1");
+
+        assertRejectedBy("pk_learning_answer", () -> insertAnswer(user, "c2"));
+    }
+
+    @Test
+    @DisplayName("같은 (사용자, 배지)의 두 번째 배지는 기본키로 거절된다")
+    void rejectsSecondBadge() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+        insertBadge(user);
+
+        assertRejectedBy("pk_learning_badge_award", () -> insertBadge(user));
+    }
+
+    /** 사용자 행이 지워지면 기록도 함께 지워진다(research R28, FR-025). */
+    @Test
+    @DisplayName("네 테이블의 user_id 외래키는 사용자가 지워질 때 CASCADE다")
+    void learnerRowsFollowUserDeletion() {
+        assertThat(deleteRule("learning_progress", "user_id")).isEqualTo("CASCADE");
+        assertThat(deleteRule("learning_answer", "user_id")).isEqualTo("CASCADE");
+        assertThat(deleteRule("learning_exp_entry", "user_id")).isEqualTo("CASCADE");
+        assertThat(deleteRule("learning_badge_award", "user_id")).isEqualTo("CASCADE");
+    }
+
+    /**
+     * 진행 행 하나. 익힘 두 열은 SQL 조각으로 받는다.
+     *
+     * @param masteredAt 예: {@code now()}, {@code NULL}
+     * @param masteredVia 예: {@code 'RETRY'}, {@code NULL}
+     */
+    private void insertProgress(
+            long userId, String articleKey, int percent, String masteredAt, String masteredVia) {
+        jdbcTemplate.update(
+                "INSERT INTO learning_progress (user_id, article_id, furthest_percent,"
+                        + " last_opened_at, mastered_at, mastered_via, created_at, updated_at)"
+                        + " VALUES (?, ?, ?, now(), "
+                        + masteredAt
+                        + ", "
+                        + masteredVia
+                        + ", now(), now())",
+                userId,
+                articleIdOf(articleKey),
+                percent);
+    }
+
+    private void insertExp(long userId, String kind, String refKey, int points) {
+        jdbcTemplate.update(
+                "INSERT INTO learning_exp_entry (user_id, kind, ref_key, article_id, points,"
+                        + " earned_at) VALUES (?, ?, ?, ?, ?, now())",
+                userId,
+                kind,
+                refKey,
+                articleIdOf("backtest"),
+                points);
+    }
+
+    private void insertAnswer(long userId, String choiceKey) {
+        jdbcTemplate.update(
+                "INSERT INTO learning_answer (user_id, article_id, question_key, choice_key,"
+                        + " correct, answered_at) VALUES (?, ?, 'q1', ?, true, now())",
+                userId,
+                articleIdOf("backtest"),
+                choiceKey);
+    }
+
+    private void insertBadge(long userId) {
+        jdbcTemplate.update(
+                "INSERT INTO learning_badge_award (user_id, badge_key, earned_at)"
+                        + " VALUES (?, 'read-1', now())",
+                userId);
+    }
+
+    /** {@code RegimeLinkMigrationTest}와 같은 information_schema 조회. */
+    private String deleteRule(String table, String column) {
+        return jdbcTemplate.queryForObject(
+                """
+                SELECT rc.delete_rule
+                  FROM information_schema.referential_constraints rc
+                  JOIN information_schema.key_column_usage kcu
+                    ON kcu.constraint_name = rc.constraint_name
+                   AND kcu.constraint_schema = rc.constraint_schema
+                 WHERE kcu.table_schema = 'public'
+                   AND kcu.table_name = ?
+                   AND kcu.column_name = ?
+                """,
+                String.class,
+                table,
+                column);
     }
 
     /**

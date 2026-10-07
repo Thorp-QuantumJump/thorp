@@ -6,8 +6,10 @@ import com.ssafy.thorp.learning.application.result.PublishedArticleEntry;
 import com.ssafy.thorp.learning.application.result.PublishedArticleView;
 import com.ssafy.thorp.learning.application.result.StageArticleEntry;
 import com.ssafy.thorp.learning.domain.model.ArticleRevision;
+import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,15 @@ public interface LearningArticleRepository {
      * §12-2). 본문을 읽지 않는다.
      */
     List<CurrentArticleEntry> findCurrentInReadingOrder();
+
+    /**
+     * 새 기준 판({@code CURRENT})이 게시 중인 글마다 공개 판의 문제 식별자, 판 안 순서. 문제가 없는 글은 결과에 없다. 본문을 읽지 않는다(나의 학습의
+     * 공개된 문제, data-model §12-1).
+     */
+    Map<ArticleId, List<QuestionId>> findCurrentQuestionIds();
+
+    /** 이 글의 공개 중인 판의 종류. 초안이거나 없는 글이면 비어 있다. 판 본문을 읽지 않는다. */
+    Optional<Edition> findPublishedEdition(ArticleId articleId);
 
     /**
      * 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다.

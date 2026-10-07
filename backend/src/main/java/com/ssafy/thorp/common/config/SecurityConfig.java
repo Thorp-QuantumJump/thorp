@@ -68,6 +68,10 @@ public class SecurityConfig {
                                         // LearningAdminAccess가 판정한다(권한이 없으면 404).
                                         .requestMatchers("/admin/learning/**")
                                         .authenticated()
+                                        // 나의 학습(spec 013 B09). 로그인 사용자의 기록만 다룬다. 공개 조회
+                                        // /learning/**는 그대로 로그인이 필요 없다(research R33).
+                                        .requestMatchers("/learning/me", "/learning/me/**")
+                                        .authenticated()
                                         // 내 기록(spec 006). 경로 전체가 로그인 필요다 — 기록은 사용자 단위로만
                                         // 존재하고 공개 대응물이 없다(FR-020). 남의 기록은 403이 아니라 404로
                                         // 응답해 존재 자체를 알리지 않으며, 그 판정은 서비스가 한다.
