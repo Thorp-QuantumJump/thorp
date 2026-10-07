@@ -117,7 +117,8 @@ describe('MarketFlowPage', () => {
     // 첫 분야는 화면이 스스로 열어 두므로, 누른 효과는 다른 분야로 확인한다.
     fireEvent.click(buttons[3])
     await waitFor(() => expect(fetchMarketFlowField).toHaveBeenCalledWith('labor', expect.any(AbortSignal)))
-    await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'field', field: 'labor', limit: 3 }, expect.any(AbortSignal)))
+    // 표시 후보 열 개를 한 번에 받아 줄에서 가로로 넘겨 본다(2026-10-07).
+    await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'field', field: 'labor', limit: 10 }, expect.any(AbortSignal)))
   })
 
   describe('분야 상세 안의 지금과 비슷했던 과거 (009 FR-019)', () => {
@@ -144,15 +145,11 @@ describe('MarketFlowPage', () => {
       expect(within(compareRow()).getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe('/regime-link/start?case=S-1%7E2001-03')
     })
 
-    it('지금만을 고르면 겹친 경로와 문장을 걷고, 다른 사례를 고르면 그 사례의 상세를 받는다', async () => {
+    it('다른 사례를 고르면 그 사례의 상세를 받아 겹치고, 지금만은 없다', async () => {
       mockFields()
       renderWithRouter(<MarketFlowPage />)
       await screen.findAllByText('비슷한 점')
-
-      fireEvent.click(screen.getByRole('radio', { name: '지금만' }))
-      expect(within(indicatorCard('전산업생산')).queryByText('비슷한 점')).toBeNull()
-      expect(screen.getByRole('list', { name: '전산업생산 3개월 경로' }).textContent).not.toContain('당시')
-      expect(screen.getByRole('button', { name: /이 기간으로 백테스트/ })).toHaveProperty('disabled', true)
+      expect(screen.queryByRole('radio', { name: '지금만' })).toBeNull()
 
       fireEvent.click(screen.getByRole('radio', { name: '2011-08 ~ 2011-10' }))
       await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2011-10', { searchId: 'S-1' }, expect.any(AbortSignal)))
@@ -175,30 +172,21 @@ describe('MarketFlowPage', () => {
       expect(document.querySelector('a[href^="/regime-search"]')).toBeNull()
     })
 
-    it('분야 상세 바닥에 가까운 과거 사례 구역이 서고, 자세히는 그 구역에서 고른 사례의 상세를 펼친다 (2026-10-07)', async () => {
+    it('자세히는 줄 아래에 고른 사례의 상세를 펼치고, 분야 상세 바닥에 사례 구역을 따로 두지 않는다 (2026-10-07)', async () => {
       mockFields()
       renderWithRouter(<MarketFlowPage />)
       await screen.findByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })
 
       const detail = document.getElementById('market-flow-detail') as HTMLElement
-      const explorer = within(detail).getByRole('region', { name: '가까운 과거 사례' })
-      // 지표 칸 아래에 선다.
-      expect(indicatorCard('서비스업생산').compareDocumentPosition(explorer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-      expect(within(explorer).getAllByRole('listitem')).toHaveLength(2)
-      expect(within(explorer).getByLabelText('기준월 지정')).toBeTruthy()
-      expect(within(explorer).getByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태' })).toBeTruthy()
-      expect(within(explorer).queryByRole('button', { name: '상세 닫기' })).toBeNull()
+      expect(within(detail).queryByRole('region', { name: '가까운 과거 사례' })).toBeNull()
+      expect(within(detail).queryByLabelText('기준월 지정')).toBeNull()
 
       fireEvent.click(within(compareRow()).getByRole('button', { name: '자세히' }))
-      const toggle = await within(explorer).findByRole('button', { name: '상세 닫기' })
-      expect(toggle.closest('li')?.textContent).toContain('2001-01 ~ 2001-03')
-      await waitFor(() => expect(document.activeElement).toBe(toggle))
-
-      fireEvent.click(within(compareRow()).getByRole('button', { name: /모두 보기/ }))
-      await waitFor(() => expect(document.activeElement).toBe(explorer))
+      expect(await within(compareRow()).findByRole('heading', { level: 4, name: '사례 상세 · 2001-03' })).toBeTruthy()
+      expect(within(compareRow()).getByRole('button', { name: '닫기' }).getAttribute('aria-expanded')).toBe('true')
     })
 
-    it('보통 범위를 켜면 지표마다 띠를 그리고, 지금만이어도 켜 둘 수 있다', async () => {
+    it('보통 범위를 켜면 지표마다 띠를 그리고, 사례를 바꿔도 켜져 있다', async () => {
       mockFields()
       const { container } = renderWithRouter(<MarketFlowPage />)
       await screen.findAllByText('비슷한 점')
@@ -206,8 +194,8 @@ describe('MarketFlowPage', () => {
       fireEvent.click(await screen.findByRole('checkbox', { name: /지난 10년 보통 범위/ }))
       expect(container.querySelectorAll('rect[data-band]')).toHaveLength(2)
 
-      fireEvent.click(screen.getByRole('radio', { name: '지금만' }))
-      expect(container.querySelectorAll('path[data-past]')).toHaveLength(0)
+      // 공통 척도는 검색에 하나라 다른 사례의 상세를 받는 동안에도 띠가 사라지지 않는다.
+      fireEvent.click(screen.getByRole('radio', { name: '2011-08 ~ 2011-10' }))
       expect(container.querySelectorAll('rect[data-band]')).toHaveLength(2)
     })
 
@@ -233,8 +221,7 @@ describe('MarketFlowPage', () => {
       vi.mocked(getRegimeSearch).mockRejectedValueOnce(new Error('offline'))
       renderWithRouter(<MarketFlowPage />)
 
-      // 줄과 바닥 구역이 같은 문장으로 알린다. 분야 지표는 그대로다.
-      expect(await screen.findAllByText(/과거 사례를 불러오지 못했습니다/)).toHaveLength(2)
+      expect(await screen.findByText(/과거 사례를 불러오지 못했습니다/)).toBeTruthy()
       expect(screen.getByRole('heading', { level: 3, name: '전산업생산' })).toBeTruthy()
       fireEvent.click(within(compareRow()).getByRole('button', { name: '다시 시도' }))
       expect(await screen.findByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })).toBeTruthy()
@@ -243,21 +230,23 @@ describe('MarketFlowPage', () => {
     it('분야마다 고른 사례가 남고, 종합 비교를 보다 돌아와도 분야 상세를 다시 받지 않는다', async () => {
       mockFields()
       renderWithRouter(<MarketFlowPage />)
-      fireEvent.click(await screen.findByRole('radio', { name: '지금만' }))
+      fireEvent.click(await screen.findByRole('radio', { name: '2011-08 ~ 2011-10' }))
 
       fireEvent.click(screen.getAllByRole('button', { name: /분야 열기/ })[3])
       await waitFor(() => expect(fetchMarketFlowField).toHaveBeenCalledWith('labor', expect.any(AbortSignal)))
       fireEvent.click(screen.getAllByRole('button', { name: /분야 열기/ })[0])
-      // 생산에서 고른 '지금만'이 그대로다. 노동을 지나왔다고 가장 가까운 사례로 돌아가지 않는다.
-      expect(((await screen.findByRole('radio', { name: '지금만' })) as HTMLInputElement).checked).toBe(true)
+      // 생산에서 고른 둘째 사례가 그대로다. 노동을 지나왔다고 가장 가까운 사례로 돌아가지 않는다.
+      expect(((await screen.findByRole('radio', { name: '2011-08 ~ 2011-10' })) as HTMLInputElement).checked).toBe(true)
 
       const productionCalls = () => vi.mocked(fetchMarketFlowField).mock.calls.filter(([id]) => id === 'production').length
       const before = productionCalls()
       fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))
       await screen.findByRole('heading', { level: 2, name: 'Thorp 종합 비교' })
+      // 종합 비교가 일곱 분야의 지표를 제 몫으로 한 번 받는다. 돌아온 뒤 분야 상세가 다시 받지는 않는다.
+      await waitFor(() => expect(productionCalls()).toBe(before + 1))
       fireEvent.click(screen.getAllByRole('button', { name: /분야 열기/ })[0])
       expect(await screen.findByRole('heading', { level: 3, name: '전산업생산' })).toBeTruthy()
-      expect(productionCalls()).toBe(before)
+      expect(productionCalls()).toBe(before + 1)
     })
 
     it("분야 메뉴 끝의 'Thorp 종합 비교'를 누를 때만 종합 검색을 열고 상자에 그 목록을 보인다", async () => {
@@ -267,9 +256,11 @@ describe('MarketFlowPage', () => {
       expect(vi.mocked(getRegimeSearch).mock.calls.some(([query]) => query.mode === 'composite')).toBe(false)
 
       fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))
-      await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'composite', limit: 3 }, expect.any(AbortSignal)))
+      await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'composite', limit: 10 }, expect.any(AbortSignal)))
       expect(await screen.findByRole('heading', { level: 2, name: 'Thorp 종합 비교' })).toBeTruthy()
+      // 분야 상세는 닫히고, 같은 지표는 종합 비교의 분야 묶음(h3) 아래 h4로 선다.
       expect(screen.queryByRole('heading', { level: 3, name: '전산업생산' })).toBeNull()
+      expect(await screen.findByRole('heading', { level: 4, name: '전산업생산' })).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Thorp 종합 비교' }).getAttribute('aria-pressed')).toBe('true')
     })
   })
