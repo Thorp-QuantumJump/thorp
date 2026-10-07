@@ -1,9 +1,12 @@
 import { fireEvent, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getRegimeCaseDetail } from '@/api/regime'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import type { RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'
 import { FieldPastCompare } from './FieldPastCompare'
+
+vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))
 
 function searchResult(overrides: Partial<RegimeSearchResult> = {}): RegimeSearchResult {
   return {
@@ -45,44 +48,53 @@ function renderCompare(overrides: Partial<Props> = {}) {
     showBand: false,
     onToggleBand: vi.fn(),
     unplaced: [],
-    onShowAll: vi.fn(),
-    onShowDetail: vi.fn(),
     ...overrides,
   }
   return { props, ...renderWithRouter(<FieldPastCompare {...props} />) }
 }
 
 describe('FieldPastCompare (009 FR-019)', () => {
-  it('지금만과 가까운 사례를 라디오로 고르고, 사례 칸에는 관측 구간만 적는다', () => {
+  beforeEach(() => {
+    vi.mocked(getRegimeCaseDetail).mockReset()
+    vi.mocked(getRegimeCaseDetail).mockImplementation(async (endMonth) => ({
+      searchId: 'FIELD:production:2026-07-01:macro-1:calc-1:REGIME-V1.1', endMonth, observationMonths: ['2001-01', '2001-02', '2001-03'],
+      distance: '0.37', byField: {}, indicators: [], eraPosition: null, postPeriod: { endMonth, available: false, note: '사후 구간은 전략 연결에서 봅니다.' },
+    } as unknown as RegimeCaseDetail))
+  })
+
+  it('가까운 사례를 라디오로 고르고 사례 칸에는 관측 구간만 적으며, 지금만은 없다', () => {
     const { props } = renderCompare()
 
     const nearest = screen.getByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })
     expect((nearest as HTMLInputElement).checked).toBe(true)
-    expect(screen.getByRole('radio', { name: '지금만' })).toBeTruthy()
+    // '지금만'은 두지 않는다(2026-10-07). 처음부터 가장 가까운 사례가 겹친다.
+    expect(screen.queryByRole('radio', { name: '지금만' })).toBeNull()
     // 비슷한 점·다른 점은 지표 칸에 붙으므로 고르는 칸에는 적지 않는다(2026-10-02 사용자 결정).
     expect(screen.getByRole('group', { name: '그래프에 겹쳐 볼 과거 구간' }).textContent).not.toContain('비슷')
 
     fireEvent.click(screen.getByRole('radio', { name: '2011-08 ~ 2011-10' }))
     expect(props.onSelect).toHaveBeenLastCalledWith('2011-10')
-    fireEvent.click(screen.getByRole('radio', { name: '지금만' }))
-    expect(props.onSelect).toHaveBeenLastCalledWith(null)
   })
 
-  it('백테스트는 011 진입 계약으로 열고, 자세히·모두 보기는 같은 상자 바닥의 사례 구역으로 옮긴다', () => {
-    const { props } = renderCompare({ referenceMonth: '2026-08' })
+  it('백테스트는 011 진입 계약으로 열고, 자세히는 고른 사례의 상세를 줄 아래에 펼친다', async () => {
+    renderCompare({ referenceMonth: '2026-08' })
 
     expect(screen.getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe(
       '/regime-link/start?case=FIELD%3Aproduction%3A2026-07-01%3Amacro-1%3Acalc-1%3AREGIME-V1.1%7E2001-03',
     )
-    // 010 검색 화면으로 넘기지 않는다(2026-10-07). 고른 사례의 상세는 아래 구역에서 펼친다.
-    fireEvent.click(screen.getByRole('button', { name: '자세히' }))
-    expect(props.onShowDetail).toHaveBeenCalledWith('2001-03')
-    fireEvent.click(screen.getByRole('button', { name: /모두 보기/ }))
-    expect(props.onShowAll).toHaveBeenCalled()
+    // 010 검색 화면으로 넘기지 않는다(2026-10-07). 상세는 같은 자리에서 펼친다.
     expect(document.querySelector('a[href^="/regime-search"]')).toBeNull()
+    expect(screen.queryByRole('button', { name: /모두 보기/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '자세히' }))
+    expect(getRegimeCaseDetail).toHaveBeenCalledWith('2001-03', { searchId: 'FIELD:production:2026-07-01:macro-1:calc-1:REGIME-V1.1' }, expect.any(AbortSignal))
+    expect(await screen.findByRole('heading', { level: 4, name: '사례 상세 · 2001-03' })).toBeTruthy()
+    const close = screen.getByRole('button', { name: '닫기' })
+    expect(close.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(close)
+    expect(screen.queryByRole('heading', { level: 4, name: '사례 상세 · 2001-03' })).toBeNull()
   })
 
-  it('지금만을 고르면 두 행동을 누를 수 없지만 보통 범위는 켤 수 있다', () => {
+  it('고른 사례가 없으면 두 행동을 누를 수 없지만 보통 범위는 켤 수 있다', () => {
     const { props } = renderCompare({ selected: null })
 
     expect(screen.getByRole('button', { name: /이 기간으로 백테스트/ })).toHaveProperty('disabled', true)
@@ -118,14 +130,13 @@ describe('FieldPastCompare (009 FR-019)', () => {
     expect(screen.getByText('이 사례는 지표별 당시 경로를 볼 수 없습니다.')).toBeTruthy()
   })
 
-  it('검색을 받지 못해도 경고로 막지 않고, 보낼 결과가 없으므로 모두 보기를 두지 않는다', () => {
+  it('검색을 받지 못해도 경고로 막지 않고 그 줄에서 다시 시도한다', () => {
     const { props } = renderCompare({ search: { status: 'failed', message: null } })
 
     expect(screen.getByText('과거 사례를 불러오지 못했습니다. 분야 지표는 그대로 볼 수 있습니다.')).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
     expect(props.onRetrySearch).toHaveBeenCalled()
-    expect(screen.queryByRole('button', { name: /모두 보기/ })).toBeNull()
   })
 
   it('검색 상태는 i 표시 뒤로 내리고 보조기기에는 늘 읽히며, 분야만의 유사성임을 밝힌다 (010 FR-037)', async () => {
