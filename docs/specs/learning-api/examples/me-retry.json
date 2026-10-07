@@ -1,0 +1,29 @@
+{
+  "questionId": "q1",
+  "choiceId": "c1",
+  "correct": true,
+  "correctChoiceId": "c1",
+  "explanation": "합성 풀이 q1",
+  "quiz": {
+    "total": 2,
+    "answered": 2,
+    "correct": 0,
+    "allAnswered": true,
+    "mastered": true,
+    "masteredVia": "RETRY",
+    "retryAvailable": false
+  },
+  "gained": {
+    "exp": [],
+    "expTotal": 0,
+    "badges": [
+      {
+        "badgeKey": "persistence",
+        "family": "SPECIAL",
+        "name": "끈기"
+      }
+    ],
+    "levelBefore": 2,
+    "levelAfter": 2
+  }
+}

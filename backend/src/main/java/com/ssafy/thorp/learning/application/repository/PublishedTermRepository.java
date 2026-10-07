@@ -1,6 +1,7 @@
 package com.ssafy.thorp.learning.application.repository;
 
 import com.ssafy.thorp.learning.application.result.LearningTermResult;
+import com.ssafy.thorp.learning.application.result.PublishedTermEntry;
 import com.ssafy.thorp.learning.domain.model.ArticleFormat;
 import com.ssafy.thorp.learning.domain.model.LearningTerm;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
@@ -66,4 +67,10 @@ public interface PublishedTermRepository {
      * 용어가 없는 글은 결과에 없다.
      */
     Map<ArticleId, Integer> countPublishedByArticle();
+
+    /**
+     * 공개 용어 전부. {@link #findPublished}처럼 글의 공개 판과 색인 행의 판이 같은 행만 읽는다. 글, {@code termId} 순서다. 문장은 읽지
+     * 않는다.
+     */
+    List<PublishedTermEntry> findPublishedEntries();
 }

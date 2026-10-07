@@ -5,12 +5,14 @@
 
 - 공개 조회: [learning-public-api.md](../../../specs/013-learning-pages/contracts/learning-public-api.md)
 - 관리: [learning-admin-api.md](../../../specs/013-learning-pages/contracts/learning-admin-api.md)
+- 나의 학습: [learning-me-api.md](../../../specs/013-learning-pages/contracts/learning-me-api.md)
 - 화면 부품(도움말·돌아가기·002 예시 진입): [term-help-ui.md](../../../specs/013-learning-pages/contracts/term-help-ui.md)
 
-**예시 파일이 계약의 기준이다.** 백엔드 통합 테스트(`LearningPublicApiIT`, `LearningCurriculumIT`, `LearningAdminApiIT`, `LearningStageReleaseIT` 등)가 이 파일을
+**예시 파일이 계약의 기준이다.** 백엔드 통합 테스트(`LearningPublicApiIT`, `LearningCurriculumIT`, `LearningAdminApiIT`, `LearningStageReleaseIT`, `LearnerApiIT` 등)가 이 파일을
 읽어 실제 응답과 대조하므로, 계약과 구현이 어긋나면 빌드가 실패한다. 대조 방식은 파일마다 다르고 아래 표에 적는다.
 **JSON 동치**는 응답 전체가 파일과 같아야 한다. **키 구성**은 시각·대응표 버전처럼 실행마다 달라지는 값이 있어
-객체의 키 집합(배열은 첫 원소)만 비교하고, 값은 테스트가 따로 단언한다. 9월 판 글 응답 `article.json`은 2판에서
+객체의 키 집합(배열은 첫 원소)만 비교하고, 값은 테스트가 따로 단언한다. **시각 자리 대조**는 값이 ISO 시각인 문자열만
+같은 자리표시로 바꾼 뒤 JSON 동치로 비교한다. 시각 필드는 키가 있고 값이 시각인지만 보고, 나머지 값은 모두 같아야 한다. 9월 판 글 응답 `article.json`은 2판에서
 필드가 더해졌으므로 **응답 가운데 이 파일에 있는 키만** 골라 JSON 동치로 비교한다(배포 순서 호환: 9월 판 필드의 모양과
 값이 그대로인지 본다). 값은 계약 형식을 보이는 합성 값이며 원고나 추천 예시가 아니다. **계약 문서의 예시는 발췌일 수
 있다**(값을 `...`로 줄이거나 배열 일부만 보인다). 픽스처는 줄인 자리를 모두 채운 전체 응답이다. 예시 파일만 고쳐도
@@ -60,3 +62,22 @@
 | [`stage-readiness.json`](examples/stage-readiness.json) | §10 `GET …/stages/{stageKey}/readiness` 200 `data`. 1단계가 공개된 뒤 2단계를 미리 검사한다 | JSON 동치 |
 | [`stage-release.json`](examples/stage-release.json) | §11 `POST …/stages/{stageKey}/release` 200 `data` | `releasedAt` 밖의 키는 JSON 동치. `releasedAt`은 실행마다 다르므로 단계의 공개일·판의 게시 시각·변경 기록의 시각과 같은지 따로 본다 |
 | [`stage-check-failed.json`](examples/stage-check-failed.json) | §11 422 — **`error` 전체**다. 걸린 글만 싣는다 | JSON 동치 |
+
+## 나의 학습 (로그인 사용자만)
+
+다섯 파일은 `LearnerApiIT`가 한 시나리오로 만든 상태다. 1·2단계가 공개됐고 그 여덟 글이 CURRENT 판이다(공개 용어 열 개, 3~6단계는 공개 전).
+사용자는 2-1을 완료한 뒤 1단계 네 글을 차례로 완료하며 문제에 답하고(1-1 모두 맞힘, 1-2 하나만 맞힘, 1-3 모두 틀린 뒤 다시 풀기로 익힘, 1-4 답하지 않음),
+마지막으로 2-3을 62%까지 읽는다. 문제·보기·풀이 문장은 계약 형식을 보이는 합성 값이다.
+
+| 파일 | 원본 절 | `LearnerApiIT` 대조 방식 |
+|---|---|---|
+| [`me.json`](examples/me.json) | §1 `GET /learning/me` 200 `data`. 여섯 단계, 배지 31개, 공개된 글 여덟 편의 `articles`, `masteredTerms` 전부 | 시각 자리 대조(`reachedAt`·`completedAt`·`earnedAt`은 실행마다 다르다) |
+| [`me-article.json`](examples/me-article.json) | §2 `GET /learning/me/articles/{articleId}` 200 `data`(1-2 글) | 시각 자리 대조(`completedAt`·`answeredAt`) |
+| [`me-completion.json`](examples/me-completion.json) | §4 `POST …/completion` 200 `data`. 1단계 마지막 글의 완료로 단계 완주 50과 배지 둘이 생긴다 | 시각 자리 대조(`completedAt`) |
+| [`me-answer.json`](examples/me-answer.json) | §5 `POST …/answers` 200 `data`. 1-2의 두 번째 문제를 틀린 첫 답 | JSON 동치 |
+| [`me-retry.json`](examples/me-retry.json) | §6 `POST …/retry-answers` 200 `data`. 다시 풀기로 익혀 '끈기'를 받는다 | JSON 동치 |
+
+- 실패 응답은 다른 API와 같은 `error` 모양이다. `401 AUTHENTICATION_REQUIRED`, `403 CSRF_TOKEN_INVALID`, `404 LEARNING_ARTICLE_UNAVAILABLE`·`LEARNING_QUESTION_NOT_FOUND`, `409 LEARNING_NOT_RECORDABLE`·`LEARNING_COMPLETION_REQUIRED`·`LEARNING_RETRY_NOT_AVAILABLE`, `400 INVALID_INPUT`(위치 `percent`, 첫 답·다시 풀기의 빈 `questionId`·`choiceId`)이다. 형식이 틀린 `questionId`·`choiceId`는 공개 판에 없는 값과 같이 `404 LEARNING_QUESTION_NOT_FOUND`다.
+- `PUT …/position`과 `DELETE /learning/me`는 본문 없는 204다.
+- 값이 없는 필드는 명시적 `null`이다. 예외는 `gained.exp[].stageNumber` 하나로, 단계 완주(`STAGE_COMPLETED`)가 아니면 키를 싣지 않는다.
+- `badges[].progress`는 `NOT_YET`일 때만 있다. 레벨 배지는 경험치/그 레벨의 문턱, 단계 완주는 완료한 편수/공개된 편수, 그 밖은 지금의 수/기준 수다([data-model](../../../specs/013-learning-pages/data-model.md) §12-4). 진행이 없는 기준(`persistence`)은 `NOT_YET`이어도 `null`이다.

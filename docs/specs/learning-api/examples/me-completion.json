@@ -1,0 +1,46 @@
+{
+  "completedAt": "2026-11-20T03:10:00Z",
+  "alreadyCompleted": false,
+  "stageProgress": {
+    "stageNumber": 1,
+    "completedCount": 4,
+    "publishedCount": 4,
+    "stageCompleted": true
+  },
+  "continueReading": {
+    "kind": "START",
+    "articleId": "same-return-different-feel",
+    "number": "2-2",
+    "title": "같은 수익률인데 왜 느낌이 다를까?",
+    "percent": null,
+    "moreStagesPreparing": true
+  },
+  "gained": {
+    "exp": [
+      {
+        "kind": "ARTICLE_COMPLETED",
+        "points": 20
+      },
+      {
+        "kind": "STAGE_COMPLETED",
+        "points": 50,
+        "stageNumber": 1
+      }
+    ],
+    "expTotal": 70,
+    "badges": [
+      {
+        "badgeKey": "read-5",
+        "family": "READ",
+        "name": "읽은 글 5편"
+      },
+      {
+        "badgeKey": "stage-etf-market-basics",
+        "family": "STAGE",
+        "name": "1단계 완주"
+      }
+    ],
+    "levelBefore": 2,
+    "levelAfter": 2
+  }
+}

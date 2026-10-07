@@ -1,0 +1,24 @@
+{
+  "questionId": "q2",
+  "choiceId": "c4",
+  "correct": false,
+  "correctChoiceId": "c3",
+  "explanation": "합성 풀이 q2",
+  "alreadyAnswered": false,
+  "quiz": {
+    "total": 3,
+    "answered": 2,
+    "correct": 1,
+    "allAnswered": false,
+    "mastered": true,
+    "masteredVia": "FIRST_ANSWER",
+    "retryAvailable": false
+  },
+  "gained": {
+    "exp": [],
+    "expTotal": 0,
+    "badges": [],
+    "levelBefore": 2,
+    "levelAfter": 2
+  }
+}
