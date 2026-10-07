@@ -1,0 +1,111 @@
+/* 비로그인 견본(design-notes §3.5, 목업 .sample). 왼쪽은 한 줄과 로그인, 오른쪽은 견본 그림이다. */
+.sample {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  gap: 24px;
+  align-items: center;
+  overflow: hidden;
+  padding: 22px 24px;
+  border: 1.5px solid var(--thorp-line-strong);
+  border-radius: 16px;
+  background: linear-gradient(120deg, rgb(3 199 90 / 4%), transparent 55%), var(--thorp-surface);
+}
+
+.tall {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
+  min-height: 230px;
+  padding: 28px;
+  background:
+    radial-gradient(80% 120% at 90% 10%, rgb(3 199 90 / 6%), transparent 60%),
+    linear-gradient(120deg, rgb(3 199 90 / 4%), transparent 55%),
+    var(--thorp-surface);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.title {
+  margin: 0;
+  color: var(--thorp-foreground);
+  font-size: 1.06rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.tall .title {
+  font-size: 1.25rem;
+}
+
+/* 초록 단추 모양의 로그인 연결. 누르는 곳은 44px 이상이다(design-notes §6). */
+.login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #14d468, var(--thorp-accent));
+  box-shadow: 0 3px 0 #02813b, inset 0 1px 0 rgb(255 255 255 / 30%);
+  color: var(--thorp-action-foreground);
+  font-size: 0.94rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.login:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: 3px;
+}
+
+/*
+  글 끝의 로그인 연결. 글 화면의 행동 버튼('이 예시로 전략 진단하기')과 겨루지 않도록 단추가 아닌 글자 연결이다.
+  둘레 글자와 색만으로 가르지 않게 밑줄과 굵기를 두고(WCAG 1.4.1), 누르는 높이는 44px이다.
+*/
+.loginLink {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-body, 0.9rem);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.loginLink:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: 2px;
+}
+
+.art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 719px) {
+  .sample,
+  .tall {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    min-height: 0;
+    padding: 18px 16px;
+  }
+
+  .tall .title {
+    font-size: 1.06rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .sample {
+    border-color: CanvasText;
+  }
+}
