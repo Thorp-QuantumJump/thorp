@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { useLoginReturn } from '@/auth/useLoginReturn'
 import type { CurrentLearningArticle, LearningReturnState } from '@/types/learning'
+import { GuestSample } from '../me/GuestSample'
 import { QuizPanel } from './QuizPanel'
 import { useRestoreFocusAfterConceal } from './useRestoreFocusAfterConceal'
 import styles from './ArticleEnd.module.css'
@@ -25,14 +25,14 @@ interface ArticleEndProps {
 /**
  * 새 기준 글의 글 끝 자리(013 FR-021, design-notes §3.4·§3.5).
  *
- * <p>위에서부터 확인 문제, 다음 글 연결, 로그인 안내다. 다음 글이 없으면 '배우기 목록으로'를 두고, 공개되지
+ * <p>위에서부터 확인 문제, 다음 글 연결, 비로그인 견본이다. 다음 글이 없으면 '배우기 목록으로'를 두고, 공개되지
  * 않은 단계가 있으면 '다음 단계는 준비 중입니다'를 덧붙인다.
  *
- * <p>로그인 연결은 014의 `useLoginReturn`으로 지금 글 주소를 적어 두고 떠난다(research R34). 013이 따로
- * 저장 키를 만들지 않는다.
+ * <p>비로그인 견본(`GuestSample`)은 배우기 목록의 기록 자리와 같은 부품이다. '로그인하면 학습 기록이 남습니다.' 한
+ * 줄과 로그인 연결, 숫자·상태 모양이 없는 견본 그림이다(design-notes §3.5). 로그인 연결은 014의 `useLoginReturn`으로
+ * 지금 글 주소를 적어 두고 떠난다(research R34).
  */
 export function ArticleEnd({ article, guest, concealed, learningReturn }: ArticleEndProps) {
-  const rememberReturn = useLoginReturn()
   const carried = learningReturn ? { learningReturn } : undefined
   const endRef = useRef<HTMLDivElement>(null)
   useRestoreFocusAfterConceal(endRef, concealed)
@@ -72,12 +72,9 @@ export function ArticleEnd({ article, guest, concealed, learningReturn }: Articl
       </nav>
 
       {guest ? (
-        <p className={concealed ? `${styles.guest} ${styles.concealed}` : styles.guest}>
-          <span>로그인하면 학습 기록이 남습니다.</span>
-          <Link className={styles.loginLink} to="/login" onClick={rememberReturn}>
-            로그인
-          </Link>
-        </p>
+        <div className={concealed ? styles.concealed : undefined}>
+          <GuestSample place="end" />
+        </div>
       ) : null}
     </div>
   )

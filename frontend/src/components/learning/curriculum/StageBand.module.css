@@ -1,0 +1,244 @@
+/*
+  단계 지역 띠(design-notes §3.1, 목업 .band). --map-col은 길이 지나는 세로 기둥의 가로 위치이고 JourneyMap이
+  정한다. 공개된 띠의 표식 가운데가 그 기둥 위에 온다.
+*/
+.band {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 160px;
+  column-gap: 20px;
+  align-items: center;
+  min-height: 112px;
+  overflow: hidden;
+  padding: 14px 24px 14px 30px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--stage) 8%, transparent), transparent 60%),
+    var(--thorp-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+
+.marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  width: 44px;
+  height: 44px;
+  margin-top: 4px;
+  color: var(--thorp-copy);
+  font-family: var(--thorp-font-display, inherit);
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.marker svg {
+  position: absolute;
+  inset: 0;
+}
+
+.markerNumber {
+  position: relative;
+}
+
+.narrow {
+  display: none !important;
+}
+
+.art {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  width: 160px;
+  height: 110px;
+}
+
+.art svg {
+  width: 100%;
+  height: 100%;
+}
+
+.text {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.heading {
+  margin: 0;
+  font-weight: 750;
+}
+
+.heading:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.kick {
+  display: block;
+  color: var(--stage);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.name {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.summary {
+  margin: 6px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.94rem;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+.progress {
+  margin: 8px 0 0;
+  color: var(--thorp-foreground);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+/* 길이 지나는 점. 표식 가운데 높이다. */
+.anchor {
+  position: absolute;
+  top: 50%;
+  left: var(--map-col, 52px);
+  width: 0;
+  height: 0;
+}
+
+.centerAnchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+/* 준비 중 띠: 점선 테두리의 '설계 도면'. 빛과 바탕 채움이 없다. */
+.pending {
+  grid-template-columns: minmax(0, 1fr) 160px;
+  overflow: visible;
+  padding-left: 26px;
+  border: 1.5px dashed var(--thorp-muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.pending .text {
+  grid-column: 1;
+}
+
+.pending .art {
+  grid-column: 2;
+}
+
+.pending .kick {
+  color: color-mix(in srgb, var(--stage) 45%, #8b928e);
+}
+
+/* 준비 중 표식은 띠 밖, 길이 지나는 기둥 위에 놓인다. 위치의 기준은 JourneyMap의 단계 구역이다. */
+.pendingMarker {
+  position: absolute;
+  top: 22px;
+  left: calc(var(--map-col, 52px) - 22px);
+  margin: 0;
+  color: var(--thorp-muted);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 2px;
+}
+
+.tagRow .name {
+  margin-top: 0;
+}
+
+.reason {
+  margin: 4px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+  text-wrap: balance;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 719px) {
+  .band {
+    display: block;
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .band > .marker {
+    float: left;
+    width: 36px;
+    height: 36px;
+    margin: 0 12px 6px 0;
+    font-size: 0.875rem;
+  }
+
+  .pendingMarker {
+    top: 16px;
+    left: calc(var(--map-col, 22px) - 18px);
+    width: 36px;
+    height: 36px;
+    font-size: 0.875rem;
+  }
+
+  .wide {
+    display: none !important;
+  }
+
+  .narrow {
+    display: block !important;
+  }
+
+  .art {
+    float: right;
+    width: 72px;
+    height: 50px;
+    margin: 0 0 6px 10px;
+  }
+
+  .name {
+    font-size: 1.25rem;
+  }
+
+  .summary {
+    clear: left;
+    font-size: 0.875rem;
+    text-wrap: pretty;
+  }
+
+  .pending {
+    padding-left: 16px;
+  }
+}
+
+@media (forced-colors: active) {
+  .pending {
+    border-color: CanvasText;
+  }
+}

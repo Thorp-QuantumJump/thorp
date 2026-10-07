@@ -1,0 +1,90 @@
+/* 단계 풍경. 선 색은 currentColor 하나이고 면은 같은 색을 옅게 채운다(design-notes §4 '2색 선화'). */
+.land {
+  --lw: 1.75px;
+  display: block;
+  overflow: visible;
+}
+
+.mini {
+  --lw: 1.3px;
+}
+
+.line,
+.area,
+.area2,
+.highlight {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--lw);
+}
+
+.area,
+.area2 {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: var(--lw);
+}
+
+.area {
+  fill-opacity: 0.18;
+}
+
+.mini .area {
+  fill-opacity: 0.22;
+}
+
+.area2 {
+  fill-opacity: 0.1;
+}
+
+.beam {
+  fill: currentColor;
+  fill-opacity: 0.09;
+  stroke: none;
+}
+
+.faint {
+  opacity: 0.7;
+}
+
+.thick {
+  stroke-width: calc(var(--lw) * 1.7);
+}
+
+/* 빛은 왼쪽 위에서 온다. 흰 하이라이트 한 줄이다. */
+.highlight {
+  fill: none;
+  stroke: #fff;
+  stroke-opacity: 0.28;
+  stroke-width: 1.5;
+}
+
+/* 준비 중: 점선 '설계 도면'. 면 채움·빛줄기·하이라이트를 모두 뺀다. 점선은 '준비 중'에만 쓴다(§4). */
+.preparing .line,
+.preparing .area,
+.preparing .area2 {
+  fill-opacity: 0;
+  stroke-dasharray: 4 4;
+}
+
+.preparing.mini .line,
+.preparing.mini .area,
+.preparing.mini .area2 {
+  stroke-dasharray: 3 2;
+}
+
+.preparing .beam,
+.preparing .highlight {
+  display: none;
+}
+
+@media (forced-colors: active) {
+  .land {
+    color: CanvasText;
+  }
+}
