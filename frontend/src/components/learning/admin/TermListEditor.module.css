@@ -96,3 +96,17 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.transfer {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}

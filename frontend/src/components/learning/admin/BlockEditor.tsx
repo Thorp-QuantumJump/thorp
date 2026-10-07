@@ -1,8 +1,15 @@
-import type { AdminDraftBlock, AdminDraftTerm } from '@/types/learningAdmin'
+import type { ReactNode } from 'react'
+import type { AdminDraftBlockV1, AdminDraftBlockV2 } from '@/types/learningAdmin'
+import { BLOCK_LABELS } from './draftLabels'
+import { TermSelect, V2BlockFields, type TermOption } from './V2BlockFields'
 import styles from './BlockEditor.module.css'
 
 /**
- * 본문 블록 목록을 편집한다(013 data-model §4, T062).
+ * 본문 블록 목록을 편집한다(013 data-model §5, T062·T169).
+ *
+ * <p><b>(2판) 형식에 따라 블록 종류가 다르다.</b> V1 초안은 9월 판 네 종류(소제목·문단·용어·가상의 계산 예)만
+ * 두고, V2 초안은 열 종류를 둔다(research R16). V1 초안에 V2 블록을 넣으면 저장이 400이므로 추가 단추부터
+ * 만들지 않는다.
  *
  * <p><b>판정은 서버가 한다. 화면은 안내만 하고 저장을 막지 않는다.</b> 초안은 쓰다 만 값을 담을 수
  * 있어야 하고, 길이·개수 위반은 저장 요청이 400으로 알려 준다(계약 §5). 화면이 먼저 막으면
@@ -13,36 +20,103 @@ import styles from './BlockEditor.module.css'
  * 저장된 값이 목록에 없을 수는 있으므로 그 경우에도 선택지를 만들어 값을 잃지 않게 한다.
  */
 
-interface BlockEditorProps {
-  blocks: AdminDraftBlock[]
-  /** 이 글이 소유한 용어. `term` 블록의 선택지가 된다 */
-  terms: AdminDraftTerm[]
-  onChange: (blocks: AdminDraftBlock[]) => void
-}
+type BlockEditorProps =
+  | {
+      format: 'V1'
+      blocks: AdminDraftBlockV1[]
+      /** 이 글이 소유한 용어. `term` 블록의 선택지가 된다 */
+      terms: readonly TermOption[]
+      onChange: (blocks: AdminDraftBlockV1[]) => void
+    }
+  | {
+      format: 'V2'
+      /** 글자 조각 필드가 편집 문법 문자열인 블록(research R26) */
+      blocks: AdminDraftBlockV2<string>[]
+      terms: readonly TermOption[]
+      onChange: (blocks: AdminDraftBlockV2<string>[]) => void
+    }
 
-/** data-model §4의 상한이다. 안내 문장에만 쓰고 입력을 자르지 않는다. */
-const TEXT_LIMITS: Record<string, number> = {
-  heading: 100,
-  paragraph: 2000,
-  hypothetical: 1000,
-}
+/** data-model §5-1의 상한이다. 안내 문장에만 쓰고 입력을 자르지 않는다. */
+const V1_TEXT_LIMITS: Record<string, number> = { heading: 100, paragraph: 2000, hypothetical: 1000 }
 
-const BLOCK_LABELS: Record<AdminDraftBlock['type'], string> = {
-  heading: '소제목',
-  paragraph: '문단',
-  term: '용어',
-  hypothetical: '가상의 계산 예',
-}
+const V1_TYPES: AdminDraftBlockV1['type'][] = ['heading', 'paragraph', 'term', 'hypothetical']
 
-const MAX_BLOCKS = 60
+const V2_TYPES: AdminDraftBlockV2['type'][] = [
+  'keySummary',
+  'heading',
+  'paragraph',
+  'term',
+  'hypothetical',
+  'misconception',
+  'list',
+  'table',
+  'diagram',
+  'institutionNote',
+]
 
-function emptyBlock(type: AdminDraftBlock['type'], terms: AdminDraftTerm[]): AdminDraftBlock {
+const MAX_BLOCKS = { V1: 60, V2: 80 } as const
+
+function emptyV1(type: AdminDraftBlockV1['type'], terms: readonly TermOption[]): AdminDraftBlockV1 {
   if (type === 'term') return { type: 'term', termId: terms[0]?.termId ?? '' }
   return { type, text: '' }
 }
 
-export function BlockEditor({ blocks, terms, onChange }: BlockEditorProps) {
-  const replaceAt = (index: number, next: AdminDraftBlock) => {
+/** 새 V2 블록. 표·도식은 저장 하한(열 2개, 칸 2개, 계열 1개)을 채운 빈 모양으로 시작한다. */
+function emptyV2(
+  type: AdminDraftBlockV2['type'],
+  terms: readonly TermOption[],
+): AdminDraftBlockV2<string> {
+  switch (type) {
+    case 'keySummary':
+      return { type, lines: ['', '', ''] }
+    case 'heading':
+      return { type, text: '' }
+    case 'paragraph':
+    case 'hypothetical':
+      return { type, content: '' }
+    case 'term':
+      return { type, termId: terms[0]?.termId ?? '' }
+    case 'misconception':
+      return { type, wrong: '', correction: '' }
+    case 'list':
+      return { type, ordered: false, items: [''] }
+    case 'table':
+      return { type, caption: '', columns: ['', ''], rows: [['', '']] }
+    case 'diagram':
+      return {
+        type,
+        kind: 'bar',
+        title: '',
+        unit: '',
+        categories: ['', ''],
+        series: [{ name: '', values: [0, 0] }],
+        description: '',
+      }
+    case 'institutionNote':
+      return { type, content: '', asOf: null, source: null }
+  }
+}
+
+interface BlockListProps<B extends { type: keyof typeof BLOCK_LABELS }> {
+  blocks: B[]
+  types: readonly B['type'][]
+  maxBlocks: number
+  guide: ReactNode
+  create: (type: B['type']) => B
+  renderFields: (block: B, index: number, replace: (next: B) => void) => ReactNode
+  onChange: (blocks: B[]) => void
+}
+
+function BlockList<B extends { type: keyof typeof BLOCK_LABELS }>({
+  blocks,
+  types,
+  maxBlocks,
+  guide,
+  create,
+  renderFields,
+  onChange,
+}: BlockListProps<B>) {
+  const replaceAt = (index: number, next: B) => {
     onChange(blocks.map((block, position) => (position === index ? next : block)))
   }
 
@@ -58,10 +132,7 @@ export function BlockEditor({ blocks, terms, onChange }: BlockEditorProps) {
   return (
     <section className={styles.editor} aria-labelledby="block-editor-title">
       <h3 id="block-editor-title">본문</h3>
-      <p className={styles.guide}>
-        블록은 최대 {MAX_BLOCKS}개입니다. 실제 결과로 읽히는 숫자는 &lsquo;가상의 계산 예&rsquo;
-        블록에만 쓸 수 있습니다.
-      </p>
+      <p className={styles.guide}>{guide}</p>
 
       <ol className={styles.list}>
         {blocks.map((block, index) => (
@@ -97,39 +168,7 @@ export function BlockEditor({ blocks, terms, onChange }: BlockEditorProps) {
                 </button>
               </div>
             </div>
-
-            {block.type === 'term' ? (
-              <label className={styles.field}>
-                <span>용어</span>
-                <select
-                  value={block.termId}
-                  onChange={(event) => replaceAt(index, { type: 'term', termId: event.target.value })}
-                >
-                  {/* 저장된 값이 용어 목록에 없어도 그대로 보관한다. 지우는 것은 운영자가 정한다. */}
-                  {terms.every((term) => term.termId !== block.termId) ? (
-                    <option value={block.termId}>{block.termId || '(고르지 않음)'}</option>
-                  ) : null}
-                  {terms.map((term) => (
-                    <option key={term.termId} value={term.termId}>
-                      {term.label ? `${term.label} (${term.termId})` : term.termId}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <label className={styles.field}>
-                <span>
-                  내용 (최대 {TEXT_LIMITS[block.type]}자, 지금 {block.text.length}자)
-                </span>
-                <textarea
-                  value={block.text}
-                  rows={block.type === 'heading' ? 1 : 4}
-                  onChange={(event) =>
-                    replaceAt(index, { type: block.type, text: event.target.value })
-                  }
-                />
-              </label>
-            )}
+            {renderFields(block, index, (next) => replaceAt(index, next))}
           </li>
         ))}
       </ol>
@@ -137,16 +176,79 @@ export function BlockEditor({ blocks, terms, onChange }: BlockEditorProps) {
       {blocks.length === 0 ? <p className={styles.empty}>블록이 없습니다.</p> : null}
 
       <div className={styles.add}>
-        {(Object.keys(BLOCK_LABELS) as AdminDraftBlock['type'][]).map((type) => (
+        {types.map((type) => (
           <button
             key={type}
             type="button"
-            onClick={() => onChange([...blocks, emptyBlock(type, terms)])}
+            onClick={() => onChange([...blocks, create(type)])}
+            disabled={blocks.length >= maxBlocks}
           >
             {BLOCK_LABELS[type]} 추가
           </button>
         ))}
       </div>
     </section>
+  )
+}
+
+export function BlockEditor(props: BlockEditorProps) {
+  if (props.format === 'V2') {
+    const { terms } = props
+    return (
+      <BlockList
+        blocks={props.blocks}
+        types={V2_TYPES}
+        maxBlocks={MAX_BLOCKS.V2}
+        guide={
+          <>
+            블록은 최대 {MAX_BLOCKS.V2}개입니다. 글자 칸에는 {'{{용어:식별자|글자}}'}와{' '}
+            {'{{출처:이름|주소}}'}를 쓸 수 있고, 글자 {'{{'}는 {'\\{{'}로 씁니다.
+          </>
+        }
+        create={(type) => emptyV2(type, terms)}
+        renderFields={(block, index, replace) => (
+          <V2BlockFields block={block} number={index + 1} terms={terms} onChange={replace} />
+        )}
+        onChange={props.onChange}
+      />
+    )
+  }
+
+  const { terms } = props
+  return (
+    <BlockList
+      blocks={props.blocks}
+      types={V1_TYPES}
+      maxBlocks={MAX_BLOCKS.V1}
+      guide={
+        <>
+          블록은 최대 {MAX_BLOCKS.V1}개입니다. 실제 결과로 읽히는 숫자는 &lsquo;가상의 계산
+          예&rsquo; 블록에만 쓸 수 있습니다.
+        </>
+      }
+      create={(type) => emptyV1(type, terms)}
+      renderFields={(block, _index, replace) =>
+        block.type === 'term' ? (
+          <TermSelect
+            label="용어"
+            value={block.termId}
+            terms={terms}
+            onChange={(termId) => replace({ type: 'term', termId })}
+          />
+        ) : (
+          <label className={styles.field}>
+            <span>
+              내용 (최대 {V1_TEXT_LIMITS[block.type]}자, 지금 {block.text.length}자)
+            </span>
+            <textarea
+              value={block.text}
+              rows={block.type === 'heading' ? 1 : 4}
+              onChange={(event) => replace({ type: block.type, text: event.target.value })}
+            />
+          </label>
+        )
+      }
+      onChange={props.onChange}
+    />
   )
 }

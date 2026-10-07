@@ -38,6 +38,10 @@ npm run lint && npm run build && npm test
   가입 성공 시 지운다.
 - `sessionStorage` 키 `thorp.auth.loginEmail`은 로그인 화면에 쳐 둔 이메일을 보관한다.
   **비밀번호는 넣지 않는다.** 로그인 성공 시 지운다.
+- 배우기 관리 화면 보관본(`thorp.learning.adminDraft.{articleId}`)은 내용 버전 2다. V2 글자 조각 필드를 편집 문법
+  문자열(`{{용어:…}}`·`{{출처:…}}`, 013 research R26)로 담고, 버전 1 보관본은 복원하지 않고 버린다는 안내와 함께
+  지운다. 게시·단계 공개가 성공하면 그 글 보관본의 문제 식별자와 `transferFrom`을 응답대로 고친다
+  (`components/learning/admin/adminDraftStorage.ts`의 `applyPublishToUnsentDraft`).
 - `localStorage` 키 `thorp.design`은 디자인 개편 전후 전환값(`classic`·`new`)이다. `index.html`이 `?design=`에서 받아
   저장하고, `classic`이면 `<html data-design="classic">`을 붙인다. 새 색·모서리 토큰은 `index.css`의 기본 `:root`에,
   예전 값은 `[data-design='classic']`에 둔다. 개편 뒤 새로 생긴 토큰은 각 자리에서 `var(--토큰, 예전 값)`으로 쓰고
