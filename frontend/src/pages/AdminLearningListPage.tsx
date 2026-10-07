@@ -4,10 +4,14 @@ import {
   checkAdminAccess,
   createArticle,
   fetchAdminArticles,
+  fetchAdminStages,
   type AdminAccessResult,
   type AdminArticleListResult,
+  type StageListResult,
 } from '@/api/learningAdmin'
+import { StageReleasePanel } from '@/components/learning/admin/StageReleasePanel'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
+import type { AdminLearningArticleSummary } from '@/types/learningAdmin'
 import styles from './AdminLearningListPage.module.css'
 
 /**
@@ -17,8 +21,13 @@ import styles from './AdminLearningListPage.module.css'
  * 200을 주지 않는다(계약 §1). 권한이 없는 계정에는 목록도 편집 링크도 만들기 폼도 보이지 않는다
  * (US5 시나리오 1). 편집 수단을 숨기는 것이 아니라 아예 만들지 않는다.
  *
- * <p><b>`needsUpdate`의 `null`을 `false`로 접지 않는다.</b> 대응표를 확인할 수 없어 판정하지 못한 것과
- * 판정해서 괜찮은 것은 다른 사실이다(원칙 VI).
+ * <p><b>`needsUpdate`의 `null`을 `false`로 접지 않는다.</b> 판정하지 못한 것과 판정해서 괜찮은 것은 다른
+ * 사실이다(원칙 VI). (2판) 예시가 선택이 되어 `null`은 '공개 판에 예시가 없음'과 '대응표를 확인할 수 없음' 두
+ * 뜻이다(계약 §2). 응답만으로 둘을 가를 수 없어 두 뜻을 함께 적는다.
+ *
+ * <p><b>(2판) 형식·단계·판·'확인 필요'·넘겨받는 중을 함께 보인다.</b> '확인 필요'(`needsReview`)의 `null`도
+ * `needsUpdate`처럼 `false`로 접지 않는다. 단계 공개는 `StageReleasePanel`이 한다. 새 글은 단계와 단계 안
+ * 순서로 만든다(계약 §3).
  *
  * <p><b>`AppHeader`에 관리 메뉴를 더하지 않는다.</b> 운영자는 주소로 들어온다. 일반 사용자 화면
  * 어디에도 관리 화면의 존재가 드러나지 않아야 한다.
@@ -26,14 +35,32 @@ import styles from './AdminLearningListPage.module.css'
 
 type AccessState = { status: 'checking' } | AdminAccessResult
 type ListState = { status: 'loading' } | AdminArticleListResult
+type StagesState = { status: 'loading' } | StageListResult
 
 type CreateFormState = {
   articleId: string
   title: string
-  readingOrder: string
+  stageKey: string
+  stagePosition: string
 }
 
-const EMPTY_FORM: CreateFormState = { articleId: '', title: '', readingOrder: '' }
+const EMPTY_FORM: CreateFormState = {
+  articleId: '',
+  title: '',
+  stageKey: '',
+  stagePosition: '',
+}
+
+/** 판정하지 못한 `null`과 판정한 `false`를 다른 글자로 보인다(원칙 VI). */
+function describeReview(value: boolean | null): string {
+  if (value === null) return '해당 없음'
+  return value ? '확인 필요' : '없음'
+}
+
+function describeStage(article: AdminLearningArticleSummary): string {
+  const released = article.stage.released ? ' (공개됨)' : ''
+  return `${article.stage.number}단계 ${article.stagePosition}번째${released}`
+}
 
 function formatOccurredAt(value: string): string {
   const parsed = new Date(value)
@@ -44,7 +71,13 @@ export function AdminLearningListPage() {
   const navigate = useNavigate()
   const [access, setAccess] = useState<AccessState>({ status: 'checking' })
   const [list, setList] = useState<ListState>({ status: 'loading' })
+  const [stages, setStages] = useState<StagesState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  /**
+   * 단계를 공개한 뒤 목록과 단계만 다시 읽는다. `attempt`와 따로 둔다 — `attempt`는 권한 확인부터 다시 해 화면
+   * 전체가 '확인 중'으로 바뀌므로, 단계 패널이 내려가 공개 결과와 새 식별자 안내(계약 §6·§11)가 사라진다.
+   */
+  const [dataVersion, setDataVersion] = useState(0)
   const [form, setForm] = useState<CreateFormState>(EMPTY_FORM)
   const [createNotice, setCreateNotice] = useState<string | null>(null)
 
@@ -65,7 +98,8 @@ export function AdminLearningListPage() {
     if (access.status !== 'admin') return
     const controller = new AbortController()
     let active = true
-    setList({ status: 'loading' })
+    // 다시 읽는 동안 이미 보이던 목록을 내리지 않는다. 처음 읽을 때만 '불러오는 중'이다.
+    setList((current) => (current.status === 'loaded' ? current : { status: 'loading' }))
     void fetchAdminArticles(controller.signal).then((result) => {
       if (!active) return
       // 로그인이 풀린 것은 권한 없음과 다른 사실이다. 재로그인 안내로 보낸다(014 FR-012).
@@ -79,23 +113,49 @@ export function AdminLearningListPage() {
       active = false
       controller.abort()
     }
-  }, [access.status, attempt])
+  }, [access.status, attempt, dataVersion])
+
+  useEffect(() => {
+    if (access.status !== 'admin') return
+    const controller = new AbortController()
+    let active = true
+    setStages((current) => (current.status === 'loaded' ? current : { status: 'loading' }))
+    void fetchAdminStages(controller.signal).then((result) => {
+      if (!active) return
+      if (result.status === 'unauthenticated') {
+        setAccess({ status: 'unauthenticated' })
+        return
+      }
+      setStages(result)
+    })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [access.status, attempt, dataVersion])
 
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
+  const reloadData = useCallback(() => setDataVersion((count) => count + 1), [])
+  const onUnauthenticated = useCallback(() => setAccess({ status: 'unauthenticated' }), [])
 
   const submitCreate = async (event: React.FormEvent) => {
     event.preventDefault()
     setCreateNotice(null)
-    const readingOrder = Number(form.readingOrder)
-    if (!Number.isInteger(readingOrder)) {
-      setCreateNotice('읽는 순서는 정수여야 합니다.')
+    const stagePosition = Number(form.stagePosition)
+    if (form.stageKey === '') {
+      setCreateNotice('단계를 골라 주세요.')
+      return
+    }
+    if (form.stagePosition.trim() === '' || !Number.isInteger(stagePosition)) {
+      setCreateNotice('단계 안 순서는 정수여야 합니다.')
       return
     }
 
     const result = await createArticle({
       articleId: form.articleId.trim(),
       title: form.title.trim(),
-      readingOrder,
+      stageKey: form.stageKey,
+      stagePosition,
     })
 
     if (result.status === 'created') {
@@ -103,7 +163,11 @@ export function AdminLearningListPage() {
       navigate(`/admin/learning/${encodeURIComponent(result.article.articleId)}`)
       return
     }
-    if (result.status === 'idTaken' || result.status === 'invalid') {
+    if (
+      result.status === 'idTaken' ||
+      result.status === 'invalid' ||
+      result.status === 'stageNotFound'
+    ) {
       setCreateNotice(result.message)
       return
     }
@@ -161,58 +225,91 @@ export function AdminLearningListPage() {
       {list.status === 'loading' ? <p role="status">글 목록을 불러오는 중입니다.</p> : null}
 
       {list.status === 'loaded' ? (
-        <table className={styles.table}>
-          <caption className={styles.caption}>글 목록</caption>
-          <thead>
-            <tr>
-              <th scope="col">순서</th>
-              <th scope="col">제목</th>
-              <th scope="col">상태</th>
-              <th scope="col">초안 번호</th>
-              <th scope="col">게시하지 않은 변경</th>
-              <th scope="col">갱신 필요</th>
-              <th scope="col">마지막 기록</th>
-              <th scope="col">편집</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.articles.map((article) => (
-              <tr key={article.articleId}>
-                <td>{article.readingOrder}</td>
-                <td>{article.title}</td>
-                <td>{article.status}</td>
-                <td>{article.draftVersion}</td>
-                <td>{article.hasUnpublishedChanges ? '게시하지 않은 변경 있음' : '없음'}</td>
-                <td>
-                  {article.needsUpdate === null
-                    ? '대응표를 확인할 수 없음'
-                    : article.needsUpdate
-                      ? '갱신 필요'
-                      : '없음'}
-                </td>
-                <td>
-                  {article.lastPublication === null
-                    ? '기록 없음'
-                    : `${article.lastPublication.action} ${
-                        article.lastPublication.revisionNo ?? '-'
-                      }판 · 사용자 ${article.lastPublication.actorUserId} · ${formatOccurredAt(
-                        article.lastPublication.occurredAt,
-                      )}`}
-                </td>
-                <td>
-                  <Link to={`/admin/learning/${encodeURIComponent(article.articleId)}`}>
-                    편집
-                  </Link>
-                </td>
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <caption className={styles.caption}>글 목록</caption>
+            <thead>
+              <tr>
+                <th scope="col">순서</th>
+                <th scope="col">제목</th>
+                <th scope="col">형식</th>
+                <th scope="col">단계</th>
+                <th scope="col">상태</th>
+                <th scope="col">공개 판</th>
+                <th scope="col">초안 번호</th>
+                <th scope="col">게시하지 않은 변경</th>
+                <th scope="col">갱신 필요</th>
+                <th scope="col">확인 필요</th>
+                <th scope="col">넘겨받는 중</th>
+                <th scope="col">마지막 기록</th>
+                <th scope="col">편집</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {list.articles.map((article) => (
+                <tr key={article.articleId}>
+                  <td>{article.readingOrder}</td>
+                  <td>{article.title}</td>
+                  <td>{article.format}</td>
+                  <td>{describeStage(article)}</td>
+                  <td>{article.status}</td>
+                  <td>{article.publishedEdition ?? '없음'}</td>
+                  <td>{article.draftVersion}</td>
+                  <td>{article.hasUnpublishedChanges ? '게시하지 않은 변경 있음' : '없음'}</td>
+                  <td>
+                    {/* 서버는 공개 판에 예시가 없을 때도, 대응표를 읽지 못했을 때도 null을 준다(계약 §2). 둘을 가를
+                        수 없으므로 두 뜻을 함께 적는다. 어느 쪽도 '없음'(판정해서 괜찮음)으로 접지 않는다. */}
+                    {article.needsUpdate === null
+                      ? '예시가 없거나 대응표를 확인할 수 없음'
+                      : article.needsUpdate
+                        ? '갱신 필요'
+                        : '없음'}
+                  </td>
+                  <td>{describeReview(article.needsReview)}</td>
+                  <td>
+                    {article.pendingTransfers === 0 ? '없음' : `용어 ${article.pendingTransfers}개`}
+                  </td>
+                  <td>
+                    {article.lastPublication === null
+                      ? '기록 없음'
+                      : `${article.lastPublication.action} ${
+                          article.lastPublication.revisionNo ?? '-'
+                        }판 · 사용자 ${article.lastPublication.actorUserId} · ${formatOccurredAt(
+                          article.lastPublication.occurredAt,
+                        )}`}
+                  </td>
+                  <td>
+                    <Link to={`/admin/learning/${encodeURIComponent(article.articleId)}`}>
+                      편집
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
 
       {list.status === 'failed' ? (
         <LearningLoadFailure
           message={list.kind === 'api' ? list.message : undefined}
+          onRetry={retry}
+        />
+      ) : null}
+
+      {stages.status === 'loading' ? <p role="status">단계 목록을 불러오는 중입니다.</p> : null}
+      {stages.status === 'loaded' ? (
+        <div className={styles.block}>
+          <StageReleasePanel
+            stages={stages.stages}
+            onReleased={reloadData}
+            onUnauthenticated={onUnauthenticated}
+          />
+        </div>
+      ) : null}
+      {stages.status === 'failed' ? (
+        <LearningLoadFailure
+          message={stages.kind === 'api' ? stages.message : undefined}
           onRetry={retry}
         />
       ) : null}
@@ -236,11 +333,25 @@ export function AdminLearningListPage() {
           />
         </label>
         <label className={styles.field}>
-          <span>읽는 순서</span>
+          <span>단계</span>
+          <select
+            value={form.stageKey}
+            onChange={(event) => setForm({ ...form, stageKey: event.target.value })}
+          >
+            <option value="">(고르지 않음)</option>
+            {(stages.status === 'loaded' ? stages.stages : []).map((stage) => (
+              <option key={stage.stageKey} value={stage.stageKey}>
+                {stage.number}단계 · {stage.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.field}>
+          <span>단계 안 순서</span>
           <input
             type="number"
-            value={form.readingOrder}
-            onChange={(event) => setForm({ ...form, readingOrder: event.target.value })}
+            value={form.stagePosition}
+            onChange={(event) => setForm({ ...form, stagePosition: event.target.value })}
           />
         </label>
         <button type="submit">만들기</button>

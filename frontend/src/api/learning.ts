@@ -4,26 +4,33 @@ import type {
   ArticleNext,
   ArticleStage,
   CurrentArticleBlock,
+  CurrentLearningArticle,
+  Curriculum,
+  CurriculumArticle,
   DiagramSeries,
   LearningArticle,
-  LearningArticleList,
   LearningArticleSummary,
   LearningExample,
   LearningExampleSector,
   LearningSource,
   LegacyArticleBlock,
+  LegacyLearningArticle,
   NoteSource,
+  PreviousEditionArticle,
   QuizChoice,
   QuizQuestion,
+  ReleaseLogEntry,
   Run,
+  StageView,
 } from '@/types/learning'
 
 /**
- * 배우기 공개 조회(013 contracts/learning-public-api.md §1·§2)의 통로다.
+ * 배우기 공개 조회(013 contracts/learning-public-api.md §1·§3)의 통로다.
  *
- * <p><b>빈 목록과 실패를 이 층에서 가른다.</b> 게시된 글이 없는 200과 목록을 받지 못한 실패는 사용자가
- * 할 수 있는 일이 다르다(013 SC-007). 화면이 배열 길이로 판정하면 실패를 빈 목록으로 그리기 쉽다 —
- * `api/sectors.ts`의 `SectorCatalogResult`가 같은 이유로 같은 구조를 쓴다.
+ * <p><b>빈 목록과 실패를 섞지 않는다.</b> 게시된 글이 없는 200과 목록을 받지 못한 실패는 사용자가
+ * 할 수 있는 일이 다르다(013 SC-007). 받지 못했거나 계약과 다른 응답은 모두 `failed`이고, 빈 목록은
+ * 받은 커리큘럼의 내용이다. 계약과 다른 모양을 빈 배열로 접지 않는다 — `api/sectors.ts`의
+ * `SectorCatalogResult`가 같은 이유로 같은 구조를 쓴다.
  *
  * <p><b>예외를 던지지 않고 재시도하지 않는다.</b> 다시 시도는 사용자가 누를 때 다시 부른다(013 FR-015).
  * 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다.
@@ -37,11 +44,11 @@ type LoadFailure = {
   message: string
 }
 
-export type LearningListResult =
-  | { status: 'loaded'; articles: LearningArticleSummary[] }
-  /** 게시된 글이 없다. 오류가 아니라 정상 화면이다 */
-  | { status: 'empty' }
-  | LoadFailure
+/**
+ * 커리큘럼 조회 결과. 게시된 글이 없는 것도 `loaded`다(계약 §1 "게시된 글이 하나도 없어도 200").
+ * 빈 목록과 실패는 화면이 `loaded`의 내용으로 가른다.
+ */
+export type CurriculumResult = { status: 'loaded'; curriculum: Curriculum } | LoadFailure
 
 export type LearningArticleResult =
   | { status: 'loaded'; article: LearningArticle }
@@ -50,6 +57,25 @@ export type LearningArticleResult =
   | LoadFailure
 
 const UNREADABLE_RESPONSE_MESSAGE = '배우기 글을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+
+/**
+ * 게시 시각을 뺀 글이다. 관리 미리 보기(관리 계약 §8)가 같은 모양에 게시 전이라 `publishedAt`이 `null`인
+ * 응답을 주므로, 해석은 같은 함수로 하고 게시 시각만 따로 읽는다.
+ *
+ * 미리 보기는 예시 없는 V1 초안을 9월 판 모양에 `example: null`로 보낸다. 그래서 이 타입의 9월 판 예시는
+ * 비어 있을 수 있다. 공개 글(`LearningArticle`)의 9월 판에는 늘 예시가 있다.
+ */
+export type LearningArticleContent =
+  | (Omit<LegacyLearningArticle, 'publishedAt' | 'example'> & { example: LearningExample | null })
+  | Omit<CurrentLearningArticle, 'publishedAt'>
+
+export type ArticleContentOptions = {
+  /**
+   * 9월 판 모양의 `example: null`을 받는다. 관리 미리 보기만 켠다. 게시된 9월 판에 예시가 없으면 서버가 잘못
+   * 보낸 것이라 공개 조회는 받지 않는다.
+   */
+  legacyExampleOptional?: boolean
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -75,17 +101,6 @@ function readSummary(value: unknown): LearningArticleSummary | null {
     question: value.question,
     readingOrder: value.readingOrder,
   }
-}
-
-function readList(value: unknown): LearningArticleList | null {
-  if (!isRecord(value) || !Array.isArray(value.articles)) return null
-  const articles: LearningArticleSummary[] = []
-  for (const item of value.articles) {
-    const summary = readSummary(item)
-    if (!summary) return null
-    articles.push(summary)
-  }
-  return { articles }
 }
 
 function isNumber(value: unknown): value is number {
@@ -368,7 +383,10 @@ function readSource(value: unknown): LearningSource | null {
  * <p><b>예시는 판마다 다르다.</b> 새 기준 글은 예시가 선택이라 `null`을 그대로 받고, 9월 판 글은 지금처럼
  * 객체여야 한다(data-model §9).
  */
-function readArticle(value: unknown): LearningArticle | null {
+export function readArticleContent(
+  value: unknown,
+  options: ArticleContentOptions = {},
+): LearningArticleContent | null {
   const summary = readSummary(value)
   if (!summary || !isRecord(value)) return null
   const edition = value.edition
@@ -383,8 +401,7 @@ function readArticle(value: unknown): LearningArticle | null {
     !(value.number === null || isString(value.number)) ||
     !isNumber(value.readingMinutes) ||
     !(value.stageArticleCount === null || isNumber(value.stageArticleCount)) ||
-    typeof value.hasUnreleasedStages !== 'boolean' ||
-    !isString(value.publishedAt)
+    typeof value.hasUnreleasedStages !== 'boolean'
   ) {
     return null
   }
@@ -397,7 +414,6 @@ function readArticle(value: unknown): LearningArticle | null {
     next,
     stageArticleCount: value.stageArticleCount,
     hasUnreleasedStages: value.hasUnreleasedStages,
-    publishedAt: value.publishedAt,
     quiz,
   }
 
@@ -410,9 +426,162 @@ function readArticle(value: unknown): LearningArticle | null {
   }
 
   const blocks = readAll(value.blocks, readLegacyBlock)
-  const example = readExample(value.example)
-  if (!blocks || !example || value.minDwellSeconds !== null) return null
+  const exampleMissing = value.example === null && options.legacyExampleOptional === true
+  const example = exampleMissing ? null : readExample(value.example)
+  if (!blocks || (!exampleMissing && !example) || value.minDwellSeconds !== null) return null
   return { ...common, edition, blocks, example, minDwellSeconds: null }
+}
+
+/** 공개 글 하나를 읽는다. 게시 시각까지 있어야 한다. */
+function readArticle(value: unknown): LearningArticle | null {
+  const content = readArticleContent(value)
+  if (!content || !isRecord(value) || !isString(value.publishedAt)) return null
+  if (content.edition === 'CURRENT') return { ...content, publishedAt: value.publishedAt }
+  // 기본 해석은 9월 판의 `example: null`을 받지 않으므로 여기서는 늘 있다. 타입을 좁히려고 한 번 더 본다.
+  return content.example
+    ? { ...content, example: content.example, publishedAt: value.publishedAt }
+    : null
+}
+
+function readCurriculumArticle(value: unknown): CurriculumArticle | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.articleId) ||
+    !isString(value.number) ||
+    !isString(value.title) ||
+    !isString(value.question) ||
+    !isNumber(value.readingMinutes) ||
+    !isNumber(value.termCount) ||
+    typeof value.hasExample !== 'boolean'
+  ) {
+    return null
+  }
+  return {
+    articleId: value.articleId,
+    number: value.number,
+    title: value.title,
+    question: value.question,
+    readingMinutes: value.readingMinutes,
+    termCount: value.termCount,
+    hasExample: value.hasExample,
+  }
+}
+
+function readPreviousEditionArticle(value: unknown): PreviousEditionArticle | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.articleId) ||
+    !isString(value.title) ||
+    !isString(value.question) ||
+    !isNumber(value.readingMinutes)
+  ) {
+    return null
+  }
+  return {
+    articleId: value.articleId,
+    title: value.title,
+    question: value.question,
+    readingMinutes: value.readingMinutes,
+  }
+}
+
+/**
+ * 단계 하나를 읽는다. 모르는 `status`는 읽지 못한 응답이다. 블록과 달리 넘기지 않는 까닭은 상태를 모르면
+ * '준비 중'으로 그릴지 글을 보일지 정할 수 없고, 잘못 고르면 공개하지 않은 단계를 공개된 것처럼 보이기
+ * 때문이다.
+ */
+function readStageView(value: unknown): StageView | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.stageKey) ||
+    !isNumber(value.number) ||
+    !isString(value.name) ||
+    !isString(value.levelLabel) ||
+    !isString(value.summary) ||
+    !(value.releasedAt === null || isString(value.releasedAt))
+  ) {
+    return null
+  }
+  const status = value.status
+  if (status !== 'OPEN' && status !== 'PREPARING' && status !== 'REPREPARING') return null
+  const articles = readAll(value.articles, readCurriculumArticle)
+  const previousEditionArticles = readAll(value.previousEditionArticles, readPreviousEditionArticle)
+  if (!articles || !previousEditionArticles) return null
+  return {
+    stageKey: value.stageKey,
+    number: value.number,
+    name: value.name,
+    levelLabel: value.levelLabel,
+    summary: value.summary,
+    status,
+    releasedAt: value.releasedAt,
+    articles,
+    previousEditionArticles,
+  }
+}
+
+function readReleaseLogEntry(value: unknown): ReleaseLogEntry | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.entryKey) ||
+    !isNumber(value.stageNumber) ||
+    !isString(value.stageName) ||
+    !isString(value.occurredAt) ||
+    !isNumber(value.newCount) ||
+    !isNumber(value.rewrittenCount) ||
+    !isStringArray(value.rewrittenTitles) ||
+    !(value.articleTitle === null || isString(value.articleTitle))
+  ) {
+    return null
+  }
+  const kind = value.kind
+  if (kind !== 'STAGE_RELEASED' && kind !== 'ARTICLE_ADDED') return null
+  return {
+    entryKey: value.entryKey,
+    kind,
+    stageNumber: value.stageNumber,
+    stageName: value.stageName,
+    occurredAt: value.occurredAt,
+    newCount: value.newCount,
+    rewrittenCount: value.rewrittenCount,
+    rewrittenTitles: value.rewrittenTitles,
+    articleTitle: value.articleTitle,
+  }
+}
+
+/**
+ * 커리큘럼을 읽는다(계약 §1).
+ *
+ * <p><b>`preReleaseArticles`는 공개한 단계 수와 맞아야 한다.</b> 공개 전(`releasedStageCount = 0`)에만
+ * 배열이고 공개한 뒤에는 null이다. 둘이 어긋나면 화면이 1판 목록과 여정 지도 가운데 무엇을 그릴지 정할 수
+ * 없으므로 읽지 못한 응답으로 둔다.
+ */
+function readCurriculum(value: unknown): Curriculum | null {
+  if (
+    !isRecord(value) ||
+    !isNumber(value.releasedStageCount) ||
+    typeof value.allStagesReleased !== 'boolean'
+  ) {
+    return null
+  }
+  const stages = readAll(value.stages, readStageView)
+  const notices = readAll(value.notices, readReleaseLogEntry)
+  const changeLog = readAll(value.changeLog, readReleaseLogEntry)
+  if (!stages || !notices || !changeLog) return null
+
+  const preReleaseArticles =
+    value.preReleaseArticles === null ? null : readAll(value.preReleaseArticles, readSummary)
+  if (value.preReleaseArticles !== null && !preReleaseArticles) return null
+  if ((value.releasedStageCount === 0) !== (preReleaseArticles !== null)) return null
+
+  return {
+    releasedStageCount: value.releasedStageCount,
+    allStagesReleased: value.allStagesReleased,
+    stages,
+    preReleaseArticles,
+    notices,
+    changeLog,
+  }
 }
 
 function unreadable(): LoadFailure {
@@ -431,17 +600,14 @@ function unwrap<T>(body: ApiEnvelope<T>): T {
   return body.data
 }
 
-/** 게시된 글 목록을 한 번 받아 온다. */
-export async function fetchLearningArticles(signal?: AbortSignal): Promise<LearningListResult> {
+/** 커리큘럼을 한 번 받아 온다(계약 §1). */
+export async function fetchCurriculum(signal?: AbortSignal): Promise<CurriculumResult> {
   try {
-    const response = await apiClient.get<ApiEnvelope<LearningArticleList>>('/learning/articles', {
+    const response = await apiClient.get<ApiEnvelope<Curriculum>>('/learning/curriculum', {
       signal,
     })
-    const list = readList(unwrap(response.data))
-    if (!list) return unreadable()
-    return list.articles.length === 0
-      ? { status: 'empty' }
-      : { status: 'loaded', articles: list.articles }
+    const curriculum = readCurriculum(unwrap(response.data))
+    return curriculum ? { status: 'loaded', curriculum } : unreadable()
   } catch (error) {
     return toFailure(normalizeApiError(error))
   }

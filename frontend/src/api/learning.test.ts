@@ -1,18 +1,24 @@
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'
-import type { LearningArticle, LearningArticleList } from '@/types/learning'
+import type { Curriculum, LearningArticle } from '@/types/learning'
 import {
   articleSummaries,
   currentArticle,
   harborArticle,
+  preReleaseCurriculum,
   previousTideArticle,
+  releasedCurriculum,
+  stageTwoReleased,
   tideArticle,
 } from '@/test/learningFixtures'
 import { apiClient } from './client'
-import { fetchLearningArticle, fetchLearningArticles } from './learning'
+import { fetchCurriculum, fetchLearningArticle } from './learning'
 
-/** 013 T026. 빈 목록·볼 수 없는 글·실패를 이 층에서 가르는지 본다(quickstart 4-2). */
+/** 013 T026·T141. 빈 목록·볼 수 없는 글·실패를 이 층에서 가르는지 본다(quickstart 4-2, 6-1). */
 
 function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {
   return {
@@ -38,27 +44,91 @@ function errorEnvelope(code: string, message: string): ApiErrorEnvelope {
   return { success: false, data: null, error: { code, message } }
 }
 
-describe('배우기 글 목록 조회', () => {
+const examplesDir = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'docs',
+  'specs',
+  'learning-api',
+  'examples',
+)
+
+function readExample(name: string): unknown {
+  return JSON.parse(readFileSync(resolve(examplesDir, name), 'utf8'))
+}
+
+describe('커리큘럼 조회', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('GET /learning/articles를 한 번 부르고 글이 있으면 받은 순서 그대로 loaded다', async () => {
+  it('GET /learning/curriculum을 한 번 부르고 받은 단계·안내·기록을 그대로 loaded로 받는다', async () => {
     const getSpy = vi
       .spyOn(apiClient, 'get')
-      .mockResolvedValue(axiosResponse(success<LearningArticleList>({ articles: articleSummaries })))
+      .mockResolvedValue(axiosResponse(success<Curriculum>(releasedCurriculum)))
 
-    const result = await fetchLearningArticles()
+    const result = await fetchCurriculum()
 
     expect(getSpy).toHaveBeenCalledTimes(1)
-    expect(getSpy.mock.calls[0][0]).toBe('/learning/articles')
-    expect(result).toEqual({ status: 'loaded', articles: articleSummaries })
+    expect(getSpy.mock.calls[0][0]).toBe('/learning/curriculum')
+    expect(result).toEqual({ status: 'loaded', curriculum: releasedCurriculum })
   })
 
-  it('빈 배열이면 실패가 아니라 empty다', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success({ articles: [] })))
+  it('계약 예시 두 파일(공개 전·1·2단계 공개)을 그대로 읽는다', async () => {
+    // 계약 예시가 바뀌었는데 읽는 쪽이 그대로면 화면 테스트는 옛 모양으로 통과한다(005 T039와 같은 이유).
+    for (const name of ['curriculum.json', 'curriculum-pre-release.json']) {
+      const body = readExample(name)
+      vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success(body)))
+      await expect(fetchCurriculum()).resolves.toEqual({ status: 'loaded', curriculum: body })
+    }
+  })
 
-    await expect(fetchLearningArticles()).resolves.toEqual({ status: 'empty' })
+  it('게시된 글이 없는 공개 전 커리큘럼도 실패가 아니라 loaded다', async () => {
+    const empty: Curriculum = { ...preReleaseCurriculum, preReleaseArticles: [] }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success(empty)))
+
+    await expect(fetchCurriculum()).resolves.toEqual({ status: 'loaded', curriculum: empty })
+  })
+
+  it('공개한 단계 수와 preReleaseArticles가 어긋나면 failed다', async () => {
+    const getSpy = vi.spyOn(apiClient, 'get')
+    getSpy.mockResolvedValueOnce(
+      axiosResponse(success({ ...releasedCurriculum, preReleaseArticles: articleSummaries })),
+    )
+    getSpy.mockResolvedValueOnce(
+      axiosResponse(success({ ...preReleaseCurriculum, preReleaseArticles: null })),
+    )
+
+    await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+    await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('모르는 단계 상태나 변경 기록 종류는 공개된 것처럼 그리지 않고 failed다', async () => {
+    const getSpy = vi.spyOn(apiClient, 'get')
+    const [first, ...rest] = releasedCurriculum.stages
+    getSpy.mockResolvedValueOnce(
+      axiosResponse(success({ ...releasedCurriculum, stages: [{ ...first, status: 'SOON' }, ...rest] })),
+    )
+    getSpy.mockResolvedValueOnce(
+      axiosResponse(
+        success({ ...releasedCurriculum, changeLog: [{ ...stageTwoReleased, kind: 'STAGE_PLANNED' }] }),
+      ),
+    )
+
+    await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+    await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+  })
+
+  it('글 항목의 필드가 빠지면 빈 단계로 접지 않고 failed다', async () => {
+    const [first, ...rest] = releasedCurriculum.stages
+    const broken = { ...first, articles: [{ ...first.articles[0], number: undefined }] }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse(success({ ...releasedCurriculum, stages: [broken, ...rest] })),
+    )
+
+    await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
   })
 
   it('5xx는 서버 코드와 문장을 그대로 담은 failed다', async () => {
@@ -66,7 +136,7 @@ describe('배우기 글 목록 조회', () => {
       axiosFailure(500, errorEnvelope('INTERNAL_ERROR', '서버 오류입니다.')),
     )
 
-    await expect(fetchLearningArticles()).resolves.toEqual({
+    await expect(fetchCurriculum()).resolves.toEqual({
       status: 'failed',
       kind: 'api',
       code: 'INTERNAL_ERROR',
@@ -77,18 +147,17 @@ describe('배우기 글 목록 조회', () => {
   it('연결 실패는 reject되지 않고 network failed다', async () => {
     vi.spyOn(apiClient, 'get').mockRejectedValue(new AxiosError('Network Error'))
 
-    const result = await fetchLearningArticles()
-
-    expect(result).toMatchObject({ status: 'failed', kind: 'network', code: null })
+    await expect(fetchCurriculum()).resolves.toMatchObject({
+      status: 'failed',
+      kind: 'network',
+      code: null,
+    })
   })
 
-  it('계약과 다른 모양은 빈 목록으로 접지 않고 failed다', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success({ items: [] })))
+  it('계약과 다른 모양은 빈 커리큘럼으로 접지 않고 failed다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success({ articles: [] })))
 
-    await expect(fetchLearningArticles()).resolves.toMatchObject({
-      status: 'failed',
-      kind: 'unexpected',
-    })
+    await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
   })
 })
 
