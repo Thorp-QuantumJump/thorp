@@ -12,21 +12,22 @@ import type { DraftRun } from '@/types/learningAdmin'
  *
  * <p><b>틀린 문법을 고쳐서 읽지 않는다.</b> 닫히지 않은 `{{`, 모르는 표시 이름, `|`가 없는 표시는 줄·열
  * 위치와 함께 오류로 돌려준다. 짐작해서 글자로 두면 운영자가 의도한 용어 언급이 글자로 게시된다(원칙 VI).
- * 길이·식별자 형식 같은 값 판정은 서버가 한다(계약 §5).
+ * 조각 모양의 규칙 가운데 칸 맨 앞의 출처 표시(FR-007)와 http·https가 아닌 출처 주소(data-model §5-2)도
+ * 여기서 위치와 함께 알린다. 길이·식별자 형식 같은 값 판정은 서버가 한다(계약 §5).
+ *
+ * <p><b>표시를 가르는 규칙.</b> 용어 표시는 첫 `|`에서(식별자에는 `|`가 없다), 출처 표시는 마지막 `|`에서
+ * 가른다(출처 이름에는 `|`가 있을 수 있고 주소에는 보통 없다). `{`가 셋 넘게 이어지면 마지막 `{{`가 표시의
+ * 시작이고 앞의 `{`는 글자다. 그래서 `{`로 끝나는 글자 바로 뒤에 표시를 둘 수 있다.
+ *
+ * <p><b>쓸 수 없는 것.</b> 표시 바로 앞의 `\`는 `\{{`로 읽힌다. 표시 안의 글자는 `}}`를 담거나 `}`로 끝날 수
+ * 없다. 이 문법으로 나타낼 수 없는 조각이다.
  */
 
 /** 오류 위치. 줄과 열은 1부터 센다. */
-export type RichTextIssue = {
-  line: number
-  column: number
-  message: string
-}
+export type RichTextIssue = { line: number; column: number; message: string }
 
 /** 이 칸이 허용하는 조각(data-model §5-3 '조각' 열). 글자 조각은 늘 허용한다. */
-export type AllowedRuns = {
-  term: boolean
-  source: boolean
-}
+export type AllowedRuns = { term: boolean; source: boolean }
 
 export type RichTextParseResult =
   { ok: true; runs: DraftRun[] } | { ok: false; issues: RichTextIssue[] }
@@ -38,6 +39,7 @@ const CLOSE = '}}'
 const ESCAPED_OPEN = '\\{{'
 const TERM_PREFIX = '용어:'
 const SOURCE_PREFIX = '출처:'
+const WEB_ADDRESS = /^https?:\/\//
 
 function positionOf(source: string, index: number): { line: number; column: number } {
   const before = source.slice(0, index)
@@ -70,7 +72,8 @@ export function parseRichText(source: string, allow: AllowedRuns = ALL_RUNS): Ri
       index += ESCAPED_OPEN.length
       continue
     }
-    if (!source.startsWith(OPEN, index)) {
+    // `{{{…`이면 앞의 `{`는 글자이고 표시는 다음 자리에서 시작한다.
+    if (!source.startsWith(OPEN, index) || source[index + OPEN.length] === '{') {
       text += source[index]
       index += 1
       continue
@@ -107,18 +110,20 @@ export function parseRichText(source: string, allow: AllowedRuns = ALL_RUNS): Ri
       }
     } else if (body.startsWith(SOURCE_PREFIX)) {
       const rest = body.slice(SOURCE_PREFIX.length)
-      const bar = rest.indexOf('|')
+      const bar = rest.lastIndexOf('|')
       if (bar < 0) {
         issue(index, "출처 표시는 '{{출처:출처 이름|https://…}}' 모양이어야 합니다.")
       } else if (rest.slice(bar + 1) === '') {
         issue(index, '출처 표시의 주소가 비어 있습니다.')
+      } else if (!WEB_ADDRESS.test(rest.slice(bar + 1))) {
+        issue(index, '출처 표시의 주소는 http:// 또는 https://로 시작해야 합니다.')
       } else if (!allow.source) {
         issue(index, '이 칸에는 출처 표시를 쓸 수 없습니다.')
+      } else if (runs.length === 0 && text === '') {
+        issue(index, '출처 표시는 인용한 글자 바로 뒤에 둡니다. 칸 맨 앞에 둘 수 없습니다.')
       } else {
         flushText()
-        runs.push({
-          source: { label: rest.slice(0, bar), url: rest.slice(bar + 1) },
-        })
+        runs.push({ source: { label: rest.slice(0, bar), url: rest.slice(bar + 1) } })
       }
     } else {
       issue(

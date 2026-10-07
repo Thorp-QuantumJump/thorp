@@ -128,9 +128,7 @@ export function TermListEditor(props: TermListEditorProps) {
                     value={props.terms[index].sentence}
                     onChange={(event) =>
                       props.onChange(
-                        replaceAt(props.terms, index, {
-                          sentence: event.target.value,
-                        }),
+                        replaceAt(props.terms, index, { sentence: event.target.value }),
                       )
                     }
                   />
@@ -221,9 +219,7 @@ function V2TermFields({
             <button
               type="button"
               onClick={() =>
-                onChange({
-                  aliases: term.aliases.filter((_, position) => position !== index),
-                })
+                onChange({ aliases: term.aliases.filter((_, position) => position !== index) })
               }
               aria-label={`용어 ${term.termId} ${index + 1}번째 다른 이름 삭제`}
             >

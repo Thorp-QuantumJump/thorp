@@ -37,11 +37,7 @@ type BlockEditorProps =
     }
 
 /** data-model §5-1의 상한이다. 안내 문장에만 쓰고 입력을 자르지 않는다. */
-const V1_TEXT_LIMITS: Record<string, number> = {
-  heading: 100,
-  paragraph: 2000,
-  hypothetical: 1000,
-}
+const V1_TEXT_LIMITS: Record<string, number> = { heading: 100, paragraph: 2000, hypothetical: 1000 }
 
 const V1_TYPES: AdminDraftBlockV1['type'][] = ['heading', 'paragraph', 'term', 'hypothetical']
 

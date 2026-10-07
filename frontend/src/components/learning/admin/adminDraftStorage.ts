@@ -151,10 +151,7 @@ export function applyPublishedChanges(
   const renamed = new Map(renamedQuestions.map((rename) => [rename.from, rename.to]))
   const quiz = draft.quiz.map((question) =>
     question.questionId !== null && renamed.has(question.questionId)
-      ? {
-          ...question,
-          questionId: renamed.get(question.questionId) ?? question.questionId,
-        }
+      ? { ...question, questionId: renamed.get(question.questionId) ?? question.questionId }
       : question,
   )
   if (draft.format === 'V1') return { ...draft, quiz }

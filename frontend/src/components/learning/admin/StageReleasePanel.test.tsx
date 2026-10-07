@@ -14,10 +14,7 @@ import { StageReleasePanel } from './StageReleasePanel'
  * - 공개에 성공하면 게시된 글의 탭 보관본이 게시 결과대로 고쳐지고 초안 번호는 그대로다
  */
 
-const apiMocks = vi.hoisted(() => ({
-  fetchStageReadiness: vi.fn(),
-  releaseStage: vi.fn(),
-}))
+const apiMocks = vi.hoisted(() => ({ fetchStageReadiness: vi.fn(), releaseStage: vi.fn() }))
 
 vi.mock('@/api/learningAdmin', () => apiMocks)
 
@@ -35,10 +32,9 @@ function renderPanel() {
 }
 
 beforeEach(() => {
-  apiMocks.fetchStageReadiness.mockReset().mockResolvedValue({
-    status: 'loaded',
-    readiness: adminReadyReadiness,
-  })
+  apiMocks.fetchStageReadiness
+    .mockReset()
+    .mockResolvedValue({ status: 'loaded', readiness: adminReadyReadiness })
   apiMocks.releaseStage.mockReset()
   window.sessionStorage.clear()
 })
@@ -186,6 +182,29 @@ describe('StageReleasePanel', () => {
     expect(lookup.unsent.draft.terms[0].transferFrom).toBeNull()
     // 보관본이 없던 글에는 새로 만들지 않는다.
     expect(window.sessionStorage.getItem(adminDraftKey('tide-reading'))).toBeNull()
+  })
+
+  it('(converge) 409 STAGE_CHANGED는 서버가 읽은 공개 집합을 보이고 다시 보내지 않는다', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    apiMocks.releaseStage.mockResolvedValue({
+      status: 'changed',
+      message: '단계의 글이 바뀌었습니다.',
+      articles: [
+        { articleId: 'tide-reading', draftVersion: 6 },
+        { articleId: 'channel-depth', draftVersion: 4 },
+      ],
+    })
+    renderPanel()
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: '1단계 미리 검사' }))
+    await screen.findByText(/미리 검사를 모두 통과했습니다/)
+    await user.click(screen.getByRole('button', { name: '1단계 공개' }))
+
+    const list = await screen.findByRole('list', { name: '서버가 읽은 공개 글' })
+    expect(within(list).getByText('물때 읽기 (tide-reading) · 초안 6번')).not.toBeNull()
+    expect(apiMocks.releaseStage).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: '1단계 공개' })).toHaveProperty('disabled', true)
   })
 
   it('공개된 단계와 공개 배치만 남은 글을 구분해 보인다', () => {

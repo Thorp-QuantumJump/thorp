@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adminV2Article } from '@/test/learningFixtures'
-import type { EditableDraft } from '@/types/learningAdmin'
+import type { EditableDraft, PublishedEdition } from '@/types/learningAdmin'
 import { toEditableDraft, toServerDraft } from './editableDraft'
 import { knownQuizIds, readManuscript, writeManuscript } from './manuscript'
 import { ManuscriptTransfer } from './ManuscriptTransfer'
@@ -23,13 +23,14 @@ function manuscriptFile(content: string, name = `${ARTICLE_ID}.json`): File {
   return new File([content], name, { type: 'application/json' })
 }
 
-function renderTransfer(dirty = false) {
+function renderTransfer(dirty = false, publishedEdition: PublishedEdition | null = null) {
   const onImport = vi.fn<(draft: EditableDraft) => void>()
   render(
     <ManuscriptTransfer
       articleId={ARTICLE_ID}
       draft={editable}
       known={known}
+      publishedEdition={publishedEdition}
       dirty={dirty}
       onImport={onImport}
     />,
@@ -50,7 +51,11 @@ describe('원고 왕복', () => {
     expect(text).toContain('과 \\\\{{괄호')
 
     const result = readManuscript(text, ARTICLE_ID, known)
-    expect(result).toEqual({ ok: true, draft: editable })
+    expect(result).toEqual({
+      ok: true,
+      draft: editable,
+      ids: { newQuestions: 0, newChoices: 0, replaced: 0 },
+    })
     if (!result.ok) return
     expect(toServerDraft(result.draft)).toEqual({ ok: true, draft: adminV2Article.draft })
   })
@@ -152,5 +157,38 @@ describe('ManuscriptTransfer', () => {
 
     expect(confirm).toHaveBeenCalledTimes(1)
     expect(onImport).not.toHaveBeenCalled()
+  })
+
+  it('(converge) 새 식별자를 받을 문제·보기 수를 알리고, 새 기준 판으로 공개 중이면 답한 사용자에게 새 문제로 보인다고 경고한다', async () => {
+    const file = JSON.parse(writeManuscript(ARTICLE_ID, editable))
+    // 식별자를 비운 원고(저장소 원고를 내보내기로 되받지 않은 경우)를 공개된 글에 다시 넣는다.
+    file.quiz[1].questionId = null
+    file.quiz[1].choices[0].choiceId = 'c98'
+    renderTransfer(false, 'CURRENT')
+    const user = userEvent.setup()
+
+    await user.upload(screen.getByLabelText('원고 가져오기'), manuscriptFile(JSON.stringify(file)))
+
+    const status = await screen.findByRole('status')
+    expect(status.textContent).toContain(
+      '새 문제 1개·새 보기 1개는 저장할 때 새 식별자를 받습니다.',
+    )
+    expect(status.textContent).toContain(
+      '원고에 적힌 식별자 1개는 지금 초안에 없어 새 식별자로 바뀝니다.',
+    )
+    expect(status.textContent).toContain('이미 답한 사용자에게도 답하지 않은 새')
+  })
+
+  it('(converge) 식별자가 모두 이어지면 새 식별자 안내를 하지 않는다', async () => {
+    renderTransfer(false, 'CURRENT')
+    const user = userEvent.setup()
+
+    await user.upload(
+      screen.getByLabelText('원고 가져오기'),
+      manuscriptFile(writeManuscript(ARTICLE_ID, editable)),
+    )
+
+    const status = await screen.findByRole('status')
+    expect(status.textContent).not.toContain('새 식별자')
   })
 })

@@ -487,34 +487,37 @@ describe('AdminLearningEditPage', () => {
     apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
     apiMocks.fetchArticlePreview.mockResolvedValue({
       status: 'loaded',
-      article: {
-        articleId: 'channel-depth',
-        edition: 'CURRENT',
-        title: '미리 보는 제목',
-        question: '미리 보는 질문',
-        readingOrder: 102,
-        stage: { stageKey: 'shore-basics', number: 1, name: '물가 기초' },
-        number: null,
-        readingMinutes: 5,
-        minDwellSeconds: 150,
-        blocks: [{ type: 'heading', text: '미리 보는 소제목' }],
-        quiz: [
-          {
-            questionId: 'q1',
-            prompt: '미리 보는 문제',
-            choices: [
-              { choiceId: 'c2', text: '가' },
-              { choiceId: 'c3', text: '나' },
-            ],
-            correctChoiceId: 'c3',
-            explanation: '미리 보는 풀이',
-          },
-        ],
-        example: null,
-        sources: [],
-        next: null,
-        stageArticleCount: null,
-        hasUnreleasedStages: true,
+      preview: {
+        incompleteQuestions: [],
+        article: {
+          articleId: 'channel-depth',
+          edition: 'CURRENT',
+          title: '미리 보는 제목',
+          question: '미리 보는 질문',
+          readingOrder: 102,
+          stage: { stageKey: 'shore-basics', number: 1, name: '물가 기초' },
+          number: null,
+          readingMinutes: 5,
+          minDwellSeconds: 150,
+          blocks: [{ type: 'heading', text: '미리 보는 소제목' }],
+          quiz: [
+            {
+              questionId: 'q1',
+              prompt: '미리 보는 문제',
+              choices: [
+                { choiceId: 'c2', text: '가' },
+                { choiceId: 'c3', text: '나' },
+              ],
+              correctChoiceId: 'c3',
+              explanation: '미리 보는 풀이',
+            },
+          ],
+          example: null,
+          sources: [],
+          next: null,
+          stageArticleCount: null,
+          hasUnreleasedStages: true,
+        },
       },
     })
     const user = userEvent.setup()
@@ -527,5 +530,106 @@ describe('AdminLearningEditPage', () => {
     expect(within(preview).getByText('미리 보는 문제')).not.toBeNull()
     expect(within(preview).getByText(/새 기준 글로 보입니다/)).not.toBeNull()
     expect(apiMocks.fetchArticlePreview).toHaveBeenCalledWith('channel-depth', expect.anything())
+  })
+
+  it('(converge) 422 항목을 하나도 읽지 못해도 서버 문장으로 거절을 알린다', async () => {
+    apiMocks.publishArticle.mockResolvedValue({
+      status: 'checkFailed',
+      message: '게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.',
+      checkVersion: 'learning-publish-checks-v2',
+      failures: [],
+    })
+    const user = userEvent.setup()
+    renderEdit()
+
+    await user.click(await screen.findByRole('button', { name: '게시' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      '게시 전 검사에 걸린 항목이 있어 게시하지 않았습니다.',
+    )
+  })
+
+  it('(converge) 넘겨받기가 이미 끝나 소유 글이 이 글이면 비우기를 제안하고 같은 409를 부르는 제안은 하지 않는다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValueOnce({
+      status: 'termTransferInvalid',
+      message: '넘겨받을 수 없는 용어입니다.',
+      termId: 'keel-room',
+      ownerArticleId: 'channel-depth',
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText(/이미 이 글로 넘어왔습니다/)).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /에서 넘겨받기로 고치기$/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '넘겨받기 비우기' }))
+    expect(screen.queryByText(/넘겨받는 중:/)).toBeNull()
+  })
+
+  it('(converge) 넘겨받기에 적은 글이 지금 소유 글과 같으면 같은 값을 다시 넣으라고 제안하지 않는다', async () => {
+    // adminV2Article의 keel-room은 harbor-notes에서 넘겨받는 중이다.
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValueOnce({
+      status: 'termTransferInvalid',
+      message: '넘겨받을 수 없는 용어입니다.',
+      termId: 'keel-room',
+      ownerArticleId: 'harbor-notes',
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText(/다른 글이 같은 용어를\s*넘겨받는 중인지/)).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'harbor-notes에서 넘겨받기로 고치기' })).toBeNull()
+  })
+
+  it('(converge) LEARNING_FORMAT_OUTDATED에 할 일을 안내한다', async () => {
+    apiMocks.saveDraft.mockResolvedValue({
+      status: 'formatOutdated',
+      message: 'V1로 되돌릴 수 없는 글입니다.',
+    })
+    const user = userEvent.setup()
+    renderEdit()
+
+    await user.type(await screen.findByLabelText('제목'), ' 고침')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('V1로 되돌릴 수 없는 글입니다.')).not.toBeNull()
+    expect(screen.getByText(/V2 원고를 가져와 저장한 뒤 게시하세요/)).not.toBeNull()
+  })
+
+  it('(converge) 저장 400의 위치를 1부터 센 사람이 읽는 이름과 원래 경로로 보인다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    apiMocks.saveDraft.mockResolvedValue({
+      status: 'invalid',
+      message: '입력값이 올바르지 않습니다.',
+      fields: [
+        { field: 'blocks[1].content', message: '첫 조각일 수 없습니다' },
+        { field: 'quiz[0].choices[1].choiceId', message: '지금 초안에 없는 보기 식별자입니다' },
+      ],
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '저장' }))
+
+    expect(
+      await screen.findByText('본문 2번째 블록 · 내용 (blocks[1].content): 첫 조각일 수 없습니다'),
+    ).not.toBeNull()
+    expect(
+      screen.getByText(
+        '1번째 확인 문제 · 2번째 보기 · 식별자 (quiz[0].choices[1].choiceId): 지금 초안에 없는 보기 식별자입니다',
+      ),
+    ).not.toBeNull()
+  })
+
+  it('(converge) V2 초안의 예시는 선택이라고 알린다(FR-003)', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    renderEdit('channel-depth')
+
+    expect(await screen.findByText(/예시는 넣지 않아도 되며/)).not.toBeNull()
   })
 })

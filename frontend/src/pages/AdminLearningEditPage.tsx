@@ -21,6 +21,7 @@ import {
 } from '@/components/learning/admin/adminDraftStorage'
 import { ArticlePreview } from '@/components/learning/admin/ArticlePreview'
 import { BlockEditor } from '@/components/learning/admin/BlockEditor'
+import { describeFieldPath } from '@/components/learning/admin/draftLabels'
 import {
   toEditableDraft,
   toServerDraft,
@@ -83,17 +84,8 @@ type ActionState =
   | { kind: 'idle' }
   | { kind: 'saved' }
   | { kind: 'syntaxErrors'; issues: DraftSyntaxIssue[] }
-  | {
-      kind: 'draftChanged'
-      message: string
-      currentDraftVersion: number | null
-    }
-  | {
-      kind: 'termIdTaken'
-      message: string
-      termId: string | null
-      ownerArticleId: string | null
-    }
+  | { kind: 'draftChanged'; message: string; currentDraftVersion: number | null }
+  | { kind: 'termIdTaken'; message: string; termId: string | null; ownerArticleId: string | null }
   | {
       kind: 'termTransferInvalid'
       message: string
@@ -103,12 +95,15 @@ type ActionState =
   | { kind: 'invalid'; message: string; fields: AdminFieldViolation[] }
   | {
       kind: 'checkFailed'
+      /** 서버 문장. 항목을 하나도 읽지 못해도 이 문장은 보인다(계약 §6) */
+      message: string
       checkVersion: string | null
       failures: PublishCheckFailure[]
     }
   | { kind: 'published'; result: PublishResult; reread: RereadState }
   | { kind: 'unpublished'; revisionNo: number | null }
   | { kind: 'stageNotReleased'; message: string }
+  | { kind: 'formatOutdated'; message: string }
   | { kind: 'notice'; message: string }
 
 export function AdminLearningEditPage() {
@@ -183,10 +178,7 @@ export function AdminLearningEditPage() {
         setAccess({ status: 'unauthenticated' })
         return
       }
-      setLoad({
-        status: 'failed',
-        message: result.kind === 'api' ? result.message : undefined,
-      })
+      setLoad({ status: 'failed', message: result.kind === 'api' ? result.message : undefined })
     })
 
     return () => {
@@ -254,6 +246,12 @@ export function AdminLearningEditPage() {
     setPendingRestore(null)
   }
 
+  /** 화면 초안에서 그 용어에 적힌 넘겨받기다. V1 초안이나 없는 용어면 `null`이다. */
+  const transferFromOf = (termId: string): string | null =>
+    draft?.format === 'V2'
+      ? (draft.terms.find((term) => term.termId === termId)?.transferFrom ?? null)
+      : null
+
   /** V2 초안의 용어 하나에 넘겨받기를 걸거나 비운다(R24). 저장은 운영자가 누른다. */
   const setTransferFrom = (termId: string, transferFrom: string | null) => {
     if (!draft || draft.format !== 'V2') return
@@ -286,11 +284,7 @@ export function AdminLearningEditPage() {
         setAction({ kind: 'saved' })
         return
       case 'invalid':
-        setAction({
-          kind: 'invalid',
-          message: result.message,
-          fields: result.fields,
-        })
+        setAction({ kind: 'invalid', message: result.message, fields: result.fields })
         return
       default:
         handleRejection(result)
@@ -330,6 +324,9 @@ export function AdminLearningEditPage() {
         return
       case 'notFound':
         setLoad({ status: 'notFound' })
+        return
+      case 'formatOutdated':
+        setAction({ kind: 'formatOutdated', message: result.message })
         return
       default:
         setAction({ kind: 'notice', message: result.message })
@@ -378,6 +375,7 @@ export function AdminLearningEditPage() {
       case 'checkFailed':
         setAction({
           kind: 'checkFailed',
+          message: result.message,
           checkVersion: result.checkVersion,
           failures: result.failures,
         })
@@ -386,11 +384,7 @@ export function AdminLearningEditPage() {
         setAction({ kind: 'stageNotReleased', message: result.message })
         break
       case 'invalid':
-        setAction({
-          kind: 'invalid',
-          message: result.message,
-          fields: result.fields,
-        })
+        setAction({ kind: 'invalid', message: result.message, fields: result.fields })
         break
       default:
         handleRejection(result)
@@ -411,10 +405,7 @@ export function AdminLearningEditPage() {
     if (result.status === 'unpublished') {
       setStatus(result.result.status)
       setPublishedRevisionNo(null)
-      setAction({
-        kind: 'unpublished',
-        revisionNo: result.result.unpublishedRevisionNo,
-      })
+      setAction({ kind: 'unpublished', revisionNo: result.result.unpublishedRevisionNo })
       return
     }
     if (result.status === 'unauthenticated') {
@@ -494,10 +485,7 @@ export function AdminLearningEditPage() {
     )
   }
 
-  const termOptions = draft.terms.map((term) => ({
-    termId: term.termId,
-    label: term.label,
-  }))
+  const termOptions = draft.terms.map((term) => ({ termId: term.termId, label: term.label }))
 
   return (
     <main className={styles.main} aria-labelledby="admin-edit-title">
@@ -580,10 +568,7 @@ export function AdminLearningEditPage() {
                 type="number"
                 value={draft.readingOrder}
                 onChange={(event) =>
-                  updateDraft({
-                    ...draft,
-                    readingOrder: Number(event.target.value) || 0,
-                  })
+                  updateDraft({ ...draft, readingOrder: Number(event.target.value) || 0 })
                 }
               />
             </label>
@@ -604,6 +589,7 @@ export function AdminLearningEditPage() {
           articleId={articleId}
           draft={draft}
           known={known}
+          publishedEdition={publishedEdition}
           dirty={hasUnsavedChanges}
           onImport={updateDraft}
         />
@@ -626,6 +612,7 @@ export function AdminLearningEditPage() {
 
         <ExampleEditor
           example={draft.example}
+          required={draft.format === 'V1'}
           onChange={(example) => updateDraft({ ...draft, example })}
         />
 
@@ -716,10 +703,7 @@ export function AdminLearningEditPage() {
               <button
                 type="button"
                 onClick={() =>
-                  updateDraft({
-                    ...draft,
-                    sources: [...draft.sources, { label: '', url: null }],
-                  })
+                  updateDraft({ ...draft, sources: [...draft.sources, { label: '', url: null }] })
                 }
               >
                 출처 추가
@@ -829,7 +813,29 @@ export function AdminLearningEditPage() {
               </button>
             </>
           ) : null}
-          {action.termId !== null && action.ownerArticleId !== null ? (
+          {action.termId !== null && action.ownerArticleId === articleId ? (
+            <>
+              <p className={styles.detail}>
+                이 용어는 이미 이 글로 넘어왔습니다. 넘겨받기를 비우고 다시 저장하세요.
+              </p>
+              <button type="button" onClick={() => setTransferFrom(action.termId ?? '', null)}>
+                넘겨받기 비우기
+              </button>
+            </>
+          ) : null}
+          {action.termId !== null &&
+          action.ownerArticleId !== null &&
+          action.ownerArticleId !== articleId &&
+          action.ownerArticleId === transferFromOf(action.termId) ? (
+            <p className={styles.detail}>
+              넘겨받기에 적은 글은 지금 소유 글과 같지만, 지금은 넘겨받을 수 없습니다. 다른 글이
+              같은 용어를 넘겨받는 중인지 관리 목록의 &lsquo;넘겨받는 중&rsquo;을 확인하세요.
+            </p>
+          ) : null}
+          {action.termId !== null &&
+          action.ownerArticleId !== null &&
+          action.ownerArticleId !== articleId &&
+          action.ownerArticleId !== transferFromOf(action.termId) ? (
             <>
               <p className={styles.detail}>
                 지금 이 용어를 소유한 글은 {action.ownerArticleId}입니다.
@@ -851,7 +857,7 @@ export function AdminLearningEditPage() {
           <ul>
             {action.fields.map((field) => (
               <li key={`${field.field}:${field.message}`}>
-                {field.field}: {field.message}
+                {describeFieldPath(field.field)}: {field.message}
               </li>
             ))}
           </ul>
@@ -859,7 +865,21 @@ export function AdminLearningEditPage() {
       ) : null}
 
       {action.kind === 'checkFailed' ? (
-        <PublishCheckResultList failures={action.failures} checkVersion={action.checkVersion} />
+        <section className={styles.conflict}>
+          {/* 항목을 하나도 읽지 못하면 목록이 비므로, 그때는 이 문장이 거절을 알린다(계약 §6). */}
+          <p role={action.failures.length === 0 ? 'alert' : undefined}>{action.message}</p>
+          <PublishCheckResultList failures={action.failures} checkVersion={action.checkVersion} />
+        </section>
+      ) : null}
+
+      {action.kind === 'formatOutdated' ? (
+        <section className={styles.conflict}>
+          <p role="alert">{action.message}</p>
+          <p className={styles.detail}>
+            V1로 되돌리는 저장은 9월 판(LEGACY)을 공개한 적이 있는 글에서만 됩니다. 공개된 단계의
+            글은 V1 초안으로 게시할 수 없으니 V2 원고를 가져와 저장한 뒤 게시하세요.
+          </p>
+        </section>
       ) : null}
 
       {action.kind === 'stageNotReleased' ? (
