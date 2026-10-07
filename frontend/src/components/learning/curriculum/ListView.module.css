@@ -149,6 +149,13 @@
   outline: none;
 }
 
+/* 단계 자리로 옮겨 온 구분 줄의 초점. 2px 초록 외곽선이다(design-notes §6). */
+.groupRow th:focus-visible,
+.groupHead h3:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: -2px;
+}
+
 .groupLine {
   display: flex;
   flex-wrap: wrap;
@@ -156,7 +163,8 @@
   row-gap: 4px;
 }
 
-.groupLine > span:last-child:not(.groupProgress) {
+.groupChip {
+  display: inline-flex;
   margin-left: 10px;
 }
 
@@ -178,6 +186,7 @@
   height: 100%;
 }
 
+.groupSummary,
 .groupReason {
   display: block;
   margin-top: 4px;
@@ -185,6 +194,28 @@
   color: var(--thorp-copy);
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.groupReason {
+  margin-top: 2px;
+}
+
+/* 공개 경계 한 줄(FR-031). 공개된 단계의 노선이 여기서 끝나고 아래로 점선 노선이 새로 시작한다. */
+.boundaryGroup td {
+  border-bottom: 0;
+}
+
+.boundary,
+.narrowBoundary {
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.narrowBoundary {
+  position: relative;
+  margin: 0;
+  padding: 14px 4px 14px 44px;
 }
 
 .number {
@@ -263,7 +294,8 @@
 }
 
 .groupHead .rail,
-.row .rail {
+.row .rail,
+.narrowBoundary .rail {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -356,6 +388,10 @@
   .narrowList .groupProgress {
     flex-basis: 100%;
     padding-left: 44px;
+  }
+
+  .narrowList .groupChip {
+    margin: 2px 0 0 44px;
   }
 
   .narrowList .groupProgress .separator {

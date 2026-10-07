@@ -44,7 +44,7 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
     return (
       <>
         <span className={`${styles.marker} ${styles.pendingMarker}`} aria-hidden="true">
-          <Marker state="preparing" />
+          <Marker state="preparing" stageNumber={stage.number} />
           <span className={styles.markerNumber}>{stage.number}</span>
           <i className={styles.centerAnchor} data-road="d" />
         </span>
@@ -74,9 +74,9 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
   }
 
   return (
-    <div className={styles.band} style={style}>
-      <span className={styles.marker} aria-hidden="true">
-        <Marker state={markerState} />
+    <div className={styles.band} style={style} data-stage-band="">
+      <span className={markerState === 'unread' ? `${styles.marker} ${styles.markerTracked}` : styles.marker} aria-hidden="true">
+        <Marker state={markerState} stageNumber={stage.number} />
         {markerState === 'done' ? null : <span className={styles.markerNumber}>{stage.number}</span>}
       </span>
       <div className={styles.art} aria-hidden="true">
@@ -101,13 +101,16 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
   )
 }
 
-/** 단계 표식. 글 도장과 같은 문법(중립 원판·실선 칸·점선 칸·체크)을 넓은 화면 44px, 좁은 화면 36px로 그린다. */
-function Marker({ state }: { state: ArticleStampState }) {
+/**
+ * 단계 표식. 글 도장과 같은 문법(중립 원판·실선 칸·점선 칸·체크)을 넓은 화면 44px, 좁은 화면 36px로 그린다. 실선 칸의
+ * 안쪽 고리는 옅은 단계 색이다(꾸밈, 목업 marker 'open').
+ */
+function Marker({ state, stageNumber }: { state: ArticleStampState; stageNumber: number }) {
   // 원판을 깔아 표식 아래로 지나는 길을 가린다.
   return (
     <>
-      <ArticleStamp className={styles.wide} state={state} size={44} disc checkOnly />
-      <ArticleStamp className={styles.narrow} state={state} size={36} disc checkOnly />
+      <ArticleStamp className={styles.wide} state={state} size={44} stageNumber={stageNumber} disc checkOnly />
+      <ArticleStamp className={styles.narrow} state={state} size={36} stageNumber={stageNumber} disc checkOnly />
     </>
   )
 }

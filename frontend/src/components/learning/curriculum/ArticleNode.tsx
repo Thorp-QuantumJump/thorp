@@ -12,7 +12,10 @@ interface ArticleNodeProps {
   index: number
   /** 나의 학습 상태. 없으면 상태 글자 없이 중립 모양이다(비로그인·기록 없음) */
   progress?: ArticleProgress
-  /** 지금 이어 읽을 글. 카드에 초록 빛 한 겹과 진행 호 끝의 빛 점을 준다(design-notes §2) */
+  /**
+   * 지금 이어 읽을 글. 카드에 초록 빛 한 겹과 진행 호 끝의 빛 점, '이어서 읽기 →' 글자를 준다(design-notes §2, 목업
+   * stop). 나의 학습(B13)이 정한다
+   */
   current?: boolean
   /** 글로 옮겨 가도 처음 떠난 화면을 잃지 않게 싣는 navigation state */
   linkState?: unknown
@@ -67,6 +70,11 @@ export function ArticleNode({ article, stageNumber, index, progress, current = f
             {progress ? <ProgressChip progress={progress} /> : null}
             <ReadingMinutes minutes={article.readingMinutes} />
             <TermCount termCount={article.termCount} progress={progress} />
+            {current ? (
+              <span className={styles.hint}>
+                이어서 읽기 <span aria-hidden="true">→</span>
+              </span>
+            ) : null}
           </ChipRow>
         </span>
       </Link>

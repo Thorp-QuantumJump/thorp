@@ -63,6 +63,27 @@
   outline-offset: 3px;
 }
 
+/*
+  글 끝의 로그인 연결. 글 화면의 행동 버튼('이 예시로 전략 진단하기')과 겨루지 않도록 단추가 아닌 글자 연결이다.
+  둘레 글자와 색만으로 가르지 않게 밑줄과 굵기를 두고(WCAG 1.4.1), 누르는 높이는 44px이다.
+*/
+.loginLink {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--thorp-accent-soft);
+  font-size: var(--thorp-text-body, 0.9rem);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.loginLink:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: 2px;
+}
+
 .art svg {
   display: block;
   width: 100%;

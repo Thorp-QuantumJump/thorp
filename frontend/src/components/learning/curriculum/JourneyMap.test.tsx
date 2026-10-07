@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import { releasedCurriculum } from '@/test/learningFixtures'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import type { StageView } from '@/types/learning'
@@ -109,5 +113,52 @@ describe('JourneyMap', () => {
     // 점선 길에는 그리는 움직임을 주지 않는다. 움직임은 읽는 길에만 한 번 있다.
     expect(paths.filter((name) => /roadPreparing/.test(name)).every((name) => !/draw/.test(name))).toBe(true)
     expect(road.querySelectorAll('circle')).toHaveLength(1)
+  })
+
+  it('첫 공개 단계가 글이 0편인 단계여도 그 점선 표식에서 다음 띠로 가는 구간이 선 없이 비지 않는다', () => {
+    fakeLayout()
+    const stages: StageView[] = releasedCurriculum.stages.map((stage) =>
+      stage.number === 1 ? { ...stage, status: 'REPREPARING', articles: [] } : stage,
+    )
+
+    const { container } = renderWithRouter(<JourneyMap stages={stages} />)
+
+    const road = container.querySelector('svg[data-road-layer]')!
+    const segments = Array.from(road.querySelectorAll('path')).slice(1) // 첫 경로는 바닥(bed)이다
+    expect(segments.length).toBeGreaterThan(0)
+    for (const segment of segments) {
+      expect(segment.getAttribute('class')).toMatch(/roadRead|roadTodo|roadNeutral|roadPreparing/)
+    }
+  })
+
+  it("지금 이어 읽을 글의 카드에는 '이어서 읽기 →'를 둔다", () => {
+    const progress = new Map<string, ArticleProgress>([
+      ['harbor-notes', { state: 'done', masteredTermCount: 2 }],
+      ['dock-fees', { state: 'reading', percent: 40, masteredTermCount: 0 }],
+      ['tide-reading', { state: 'unread', masteredTermCount: 0 }],
+      ['swell-reading', { state: 'unread', masteredTermCount: 0 }],
+    ])
+
+    renderWithRouter(<JourneyMap stages={releasedCurriculum.stages} progress={progress} currentArticleId="dock-fees" />)
+
+    const [first, second] = within(screen.getByRole('list', { name: '1단계 글' })).getAllByRole('link')
+    expect(second.textContent).toContain('이어서 읽기')
+    expect(second.querySelector('[data-tip]')).not.toBeNull()
+    expect(first.textContent).not.toContain('이어서 읽기')
+  })
+
+  it('준비 중 단계로 가는 길만 점선이고, 길을 그리는 700ms 움직임은 움직임 줄이기 설정이 아닐 때만 있다', () => {
+    const path = 'components/learning/curriculum/JourneyMap.module.css'
+    expect(cssDeclarations(path, '.road .roadPreparing')).toMatch(/stroke-dasharray:\s*6 6/)
+    for (const solid of ['.roadRead', '.roadTodo', '.roadNeutral']) {
+      expect(cssDeclarations(path, solid)).not.toMatch(/dasharray/)
+    }
+    expect(cssMediaDeclarations(path, '(prefers-reduced-motion: no-preference)', '.road .draw')).toMatch(
+      /animation:\s*draw-path 700ms/,
+    )
+    // 움직임 규칙이 블록 밖(기본 모습)에 새어 나오지 않는다. 기본은 최종 모습이다(design-notes §5).
+    const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'JourneyMap.module.css'), 'utf-8')
+    const outside = css.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/, '')
+    expect(outside).not.toMatch(/animation:/)
   })
 })
