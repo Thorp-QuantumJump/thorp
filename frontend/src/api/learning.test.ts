@@ -105,6 +105,32 @@ describe('커리큘럼 조회', () => {
     await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
   })
 
+  it('공개한 단계 수가 음수·소수이거나 단계 상태와 어긋나면 빈 목록으로 접지 않고 failed다', async () => {
+    // 음수 공개 수와 null preReleaseArticles가 함께 오면 예전에는 '아직 게시된 글이 없습니다'로 그려졌다(원칙 VI).
+    const broken = [
+      { ...releasedCurriculum, releasedStageCount: -1 },
+      { ...preReleaseCurriculum, releasedStageCount: -1, preReleaseArticles: null },
+      { ...releasedCurriculum, releasedStageCount: 1.5 },
+      { ...releasedCurriculum, releasedStageCount: 3 },
+      { ...releasedCurriculum, allStagesReleased: true },
+      { ...preReleaseCurriculum, stages: [] },
+    ]
+    for (const body of broken) {
+      vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success(body)))
+      await expect(fetchCurriculum()).resolves.toMatchObject({ status: 'failed', kind: 'unexpected' })
+    }
+  })
+
+  it('글이 0편인 공개 단계(REPREPARING)도 공개한 단계로 세어 맞춰 본다', async () => {
+    const stages = releasedCurriculum.stages.map((stage) =>
+      stage.number === 2 ? { ...stage, status: 'REPREPARING' as const, articles: [] } : stage,
+    )
+    const body = { ...releasedCurriculum, stages }
+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(success(body)))
+
+    await expect(fetchCurriculum()).resolves.toEqual({ status: 'loaded', curriculum: body })
+  })
+
   it('모르는 단계 상태나 변경 기록 종류는 공개된 것처럼 그리지 않고 failed다', async () => {
     const getSpy = vi.spyOn(apiClient, 'get')
     const [first, ...rest] = releasedCurriculum.stages

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { ReleaseLogEntry } from '@/types/learning'
+import { stageLocation } from '../learningPaths'
 import { CHANGE_LOG_ID } from './ChangeLog'
-import { noticeLine, stageHash } from './curriculumCopy'
+import { noticeLine } from './curriculumCopy'
 import { StageLandscape } from './StageLandscape'
 import styles from './ReleaseNotice.module.css'
 
@@ -41,7 +42,7 @@ export function ReleaseNotice({ notices, signedIn, onDismiss, onOpenChangeLog, l
         <p className={styles.text}>
           {line.text}
           <span className={styles.links}>
-            <Link to={{ hash: stageHash(line.stageNumber) }} state={linkState}>
+            <Link to={stageLocation(line.stageNumber)} state={linkState}>
               {line.stageNumber}단계 보기
             </Link>
             <a

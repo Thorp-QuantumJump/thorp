@@ -1,7 +1,8 @@
+import type { StageView } from '@/types/learning'
 import type { ArticleStampState } from '../me/ArticleStamp'
 
 /**
- * 커리큘럼 보기·목록 보기에 넘기는 글 하나의 나의 학습 상태(013 FR-020·FR-023).
+ * 커리큘럼 보기에 넘기는 글 하나의 나의 학습 상태(013 FR-020·FR-023).
  *
  * <p>값은 '나의 학습' 조회(B13 T192)가 채운다. 이 묶음(B11)의 부품은 값을 받으면 그리고, 받지 않으면 상태 글자·
  * 익힌 용어 수를 비우고 중립 모양으로 그린다. 비로그인 사용자와 기록을 불러오지 못한 때가 그 경우이며, 어느 경우도
@@ -39,12 +40,28 @@ export function stampState(progress: ArticleProgress | undefined): ArticleStampS
 }
 
 /**
- * 커리큘럼 보기 길의 구간 종류. 읽은 글로 가는 구간은 초록 실선(`g`), 아직 읽지 않은 글로 가는 구간은 회색 실선
- * (`s`), 상태를 모르면 짙은 중립 길(`n`), 준비 중 단계로 가는 구간은 점선(`d`)이다(design-notes §3.1).
+ * 길 한 구간의 모양(design-notes §3.1). 읽은 글로 가는 구간은 초록 실선(`read`), 아직 읽지 않은 글로 가는 구간은
+ * 회색 실선(`unread`), 상태를 모르면 짙은 중립 길(`neutral`), 준비 중 단계로 가는 구간은 점선(`preparing`)이다.
  */
-export type RoadKind = 'g' | 's' | 'n' | 'd'
+export type RoadKind = 'read' | 'unread' | 'neutral' | 'preparing'
+
+/** 길이 지나는 점. 구간의 모양은 도착하는 점이 정하고, 길의 출발점(`start`)은 어느 구간의 도착점도 아니다. */
+export type RoadPointKind = RoadKind | 'start'
 
 export function roadKind(progress: ArticleProgress | undefined): RoadKind {
-  if (!progress) return 'n'
-  return progress.state === 'done' ? 'g' : 's'
+  if (!progress) return 'neutral'
+  return progress.state === 'done' ? 'read' : 'unread'
+}
+
+/**
+ * 공개된 단계 하나의 표식과 그 띠로 들어오는 길. 단계의 글 상태를 모두 알 때만 상태 모양이다. 다 읽었으면 체크,
+ * 아니면 실선 칸이다. 하나라도 모르면 중립 원판과 중립 길이다.
+ */
+export function stageMarker(
+  stage: Pick<StageView, 'articles'>,
+  progress: ArticleProgressMap | undefined,
+): { marker: Extract<ArticleStampState, 'neutral' | 'unread' | 'done'>; road: RoadKind } {
+  const states = stage.articles.map((article) => progress?.get(article.articleId))
+  if (!progress || !states.every(Boolean)) return { marker: 'neutral', road: 'neutral' }
+  return { marker: states.every((state) => state?.state === 'done') ? 'done' : 'unread', road: 'unread' }
 }

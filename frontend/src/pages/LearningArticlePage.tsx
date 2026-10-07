@@ -8,7 +8,7 @@ import { EditionNotice } from '@/components/learning/article/EditionNotice'
 import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
 import { ExampleEntry } from '@/components/learning/ExampleEntry'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
-import { stageHash } from '@/components/learning/curriculum/curriculumCopy'
+import { stageLocation } from '@/components/learning/learningPaths'
 import { ReturnLink } from '@/components/learning/ReturnLink'
 import { carriedLearningReturn } from '@/components/learning/returnTargets'
 import { AppHeader } from '@/components/navigation/AppHeader'
@@ -200,7 +200,7 @@ function ArticleHeadLine({
           ›
         </span>
         {/* 배우기 목록의 그 단계 자리로 간다. 공개 안내의 '○단계 보기'와 같은 주소 조각이다(`/learn#stage-n`). */}
-        <Link to={{ pathname: '/learn', hash: stageHash(article.stage.number) }} state={carried}>
+        <Link to={stageLocation(article.stage.number)} state={carried}>
           {article.stage.number}단계 · {article.stage.name}
         </Link>
       </nav>

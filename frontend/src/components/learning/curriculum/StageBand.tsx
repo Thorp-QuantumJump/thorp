@@ -1,28 +1,29 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { StageView } from '@/types/learning'
-import { stageColor } from '../stageColors'
+import { mutedStageColor, stageColor } from '../stageColors'
 import { ArticleStamp, type ArticleStampState } from '../me/ArticleStamp'
 import type { RoadKind } from './articleProgress'
-import { preparingReason, stageMinutes } from './curriculumCopy'
+import { UNRELEASED_STAGE_NOTE, preparingReason } from './curriculumCopy'
+import { roadPointProps, stageBandProps, stageHeadingProps } from './stageAnchors'
 import { StageLandscape } from './StageLandscape'
+import { stageMinutes } from './stages'
 import { PreparingChip } from './StatusChips'
 import styles from './StageBand.module.css'
 
 interface StageBandProps {
   stage: StageView
   headingId: string
-  /** 길이 시작되는 첫 띠인가. 길은 첫 띠의 표식에서 출발한다 */
+  /** 길이 시작되는 첫 띠인가. 길은 지도 첫 구역의 표식에서 출발한다 */
   first?: boolean
   /**
-   * 단계 표식의 모양. 상태를 모르면 중립 원판이다. 나의 학습(B13)이 '읽는 중인 단계'(실선 칸)와 '완주한
-   * 단계'(체크)를 넘긴다
+   * 단계 표식의 모양. 상태를 모르면 중립 원판이다. 나의 학습 상태를 알면 실선 칸(아직 다 읽지 않음)이나 체크(완주)다
    */
   markerState?: Extract<ArticleStampState, 'neutral' | 'unread' | 'done'>
-  /** 이 띠로 들어오는 길의 종류. 상태를 모르면 중립 길이다 */
+  /** 이 띠로 들어오는 길의 모양. 상태를 모르면 중립 길이다 */
   road?: RoadKind
   /**
-   * 띠의 진행 자리. 나의 학습(B13)이 글 도장 줄과 단계 완주 메달을 넣는다. 없으면 글 수와 예상 읽기 시간을 보인다
-   * (비로그인, FR-023)
+   * 띠의 진행 자리. 나의 학습(B13 T192)이 글 도장 줄과 단계 완주 메달을 넣는다. 없으면 글 수와 예상 읽기 시간을
+   * 보인다(비로그인, FR-023)
    */
   progress?: ReactNode
 }
@@ -34,11 +35,16 @@ interface StageBandProps {
  * 공개했지만 글이 0편인 단계(`REPREPARING`)는 띠 테두리와 풍경이 모두 점선인 '설계 도면'이고, '준비 중'과 사유
  * 문장만 있다. 새 글의 제목·편수·날짜는 보이지 않는다(FR-031, SC-017). 자물쇠나 잠금·예고 어휘를 쓰지 않는다.
  *
- * <p>제목(`h3`)은 공개 안내의 '○단계 보기'와 글 머리의 단계 연결이 초점을 옮길 자리라 `tabIndex=-1`이다.
+ * <p>제목은 공개 안내의 '○단계 보기'와 글 머리의 단계 연결이 초점을 옮길 자리라 `tabIndex=-1`이고 단계 제목 표지
+ * (`stageHeadingProps`)를 단다.
  */
-export function StageBand({ stage, headingId, first = false, markerState = 'neutral', road = 'n', progress }: StageBandProps) {
+export function StageBand({ stage, headingId, first = false, markerState = 'neutral', road = 'neutral', progress }: StageBandProps) {
   const reason = preparingReason(stage.status)
-  const style = { ['--stage' as string]: stageColor(stage.number) }
+  // 단계 장식 색과 그 색을 흐린 글자색 쪽으로 낮춘 색. 준비 중 띠의 머리 글자가 낮춘 색을 쓴다.
+  const style = {
+    ['--stage' as string]: stageColor(stage.number),
+    ['--stage-muted' as string]: mutedStageColor(stage.number),
+  } as CSSProperties
 
   if (reason) {
     return (
@@ -46,14 +52,14 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
         <span className={`${styles.marker} ${styles.pendingMarker}`} aria-hidden="true">
           <Marker state="preparing" stageNumber={stage.number} />
           <span className={styles.markerNumber}>{stage.number}</span>
-          <i className={styles.centerAnchor} data-road="d" />
+          <i className={styles.centerAnchor} {...roadPointProps('preparing')} />
         </span>
         <div className={`${styles.band} ${styles.pending}`} style={style}>
           <div className={styles.art} aria-hidden="true">
             <StageLandscape stageNumber={stage.number} preparing />
           </div>
           <div className={styles.text}>
-            <h3 id={headingId} className={styles.heading} tabIndex={-1}>
+            <h3 id={headingId} className={styles.heading} tabIndex={-1} {...stageHeadingProps}>
               <span className={styles.kick}>
                 {stage.number}단계 · {stage.levelLabel}
               </span>
@@ -62,9 +68,7 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
                 <PreparingChip />
               </span>
             </h3>
-            {stage.status === 'PREPARING' ? (
-              <span className={styles.srOnly}>아직 공개되지 않은 단계입니다.</span>
-            ) : null}
+            {stage.status === 'PREPARING' ? <span className={styles.srOnly}>{UNRELEASED_STAGE_NOTE}</span> : null}
             <p className={styles.summary}>{stage.summary}</p>
             <p className={styles.reason}>{reason}</p>
           </div>
@@ -74,7 +78,7 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
   }
 
   return (
-    <div className={styles.band} style={style} data-stage-band="">
+    <div className={styles.band} style={style} {...stageBandProps}>
       <span className={markerState === 'unread' ? `${styles.marker} ${styles.markerTracked}` : styles.marker} aria-hidden="true">
         <Marker state={markerState} stageNumber={stage.number} />
         {markerState === 'done' ? null : <span className={styles.markerNumber}>{stage.number}</span>}
@@ -83,7 +87,7 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
         <StageLandscape stageNumber={stage.number} />
       </div>
       <div className={styles.text}>
-        <h3 id={headingId} className={styles.heading} tabIndex={-1}>
+        <h3 id={headingId} className={styles.heading} tabIndex={-1} {...stageHeadingProps}>
           <span className={styles.kick}>
             {stage.number}단계 · {stage.levelLabel}
           </span>
@@ -96,7 +100,7 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
           </p>
         )}
       </div>
-      <i className={styles.anchor} data-road={first ? 'start' : road} />
+      <i className={styles.anchor} {...roadPointProps(first ? 'start' : road)} />
     </div>
   )
 }

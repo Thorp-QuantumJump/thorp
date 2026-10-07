@@ -1,19 +1,18 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { StageView } from '@/types/learning'
 import { ArticleNode } from './ArticleNode'
-import type { ArticleProgressMap, RoadKind } from './articleProgress'
-import { isReleased } from './curriculumCopy'
+import { stageMarker, type ArticleProgressMap, type RoadKind } from './articleProgress'
 import { PreviousEditionCards } from './PreviousEditionCards'
 import { ReleaseBoundary } from './ReleaseBoundary'
+import { readRoadPoints, roadPointProps, stageAnchorProps } from './stageAnchors'
 import { StageBand } from './StageBand'
+import { isReleased } from './stages'
 import styles from './JourneyMap.module.css'
 
 interface JourneyMapProps {
   stages: readonly StageView[]
   /** 글별 나의 학습 상태(B13). 없으면 노드·표식·길이 모두 중립 모양이다 */
   progress?: ArticleProgressMap
-  /** 지금 이어 읽을 글(B13). 그 글 하나에 빛을 모은다 */
-  currentArticleId?: string
   /** 단계 띠의 진행 자리(B13의 글 도장 줄과 단계 완주 메달). 없으면 글 수와 예상 읽기 시간이다 */
   renderStageProgress?: (stage: StageView) => ReactNode
   /** 글로 옮겨 가도 처음 떠난 화면을 잃지 않게 싣는 navigation state */
@@ -27,12 +26,12 @@ interface JourneyMapProps {
  * 공개하지 않은 단계를 점선 '설계 도면'으로 그린다. 공개했지만 글이 0편인 단계는 공개 경계 앞 제자리에서 같은 점선
  * 모습이다. 길은 읽는 순서를 제안할 뿐이고 어느 글도 잠그지 않는다.
  *
- * <p><b>길은 노드 위치를 재서 그린다.</b> 노드·띠·경계에 붙은 `data-road` 점을 문서 순서로 이어 SVG 곡선을 만들고,
- * 크기가 바뀌면(`ResizeObserver`) 다시 잰다. 1280px에서는 노드가 가로로 비켜 놓여 완만한 S자가 되고, 720px 미만에서는
- * 노드가 한 줄로 서서 곧은 세로 길이 된다. 길을 그리는 700ms 움직임은 `prefers-reduced-motion: no-preference`에서만
- * 있다. 길은 그림이라 보조 기술에 읽히지 않는다.
+ * <p><b>길은 노드 위치를 재서 그린다.</b> 노드·띠·경계에 붙은 길 점(`stageAnchors`의 `roadPointProps`)을 문서
+ * 순서로 이어 SVG 곡선을 만들고, 크기가 바뀌면(`ResizeObserver`) 다시 잰다. 1280px에서는 노드가 가로로 비켜 놓여 완만한
+ * S자가 되고, 720px 미만에서는 노드가 한 줄로 서서 곧은 세로 길이 된다. 길을 그리는 700ms 움직임은
+ * `prefers-reduced-motion: no-preference`에서만 있다. 길은 그림이라 보조 기술에 읽히지 않는다.
  */
-export function JourneyMap({ stages, progress, currentArticleId, renderStageProgress, linkState }: JourneyMapProps) {
+export function JourneyMap({ stages, progress, renderStageProgress, linkState }: JourneyMapProps) {
   const idPrefix = useId()
   const mapRef = useRef<HTMLDivElement>(null)
   const road = useMeasuredRoad(mapRef, stages, progress)
@@ -48,31 +47,23 @@ export function JourneyMap({ stages, progress, currentArticleId, renderStageProg
           key={stage.stageKey}
           className={`${styles.region} ${styles.pendingRegion}`}
           aria-labelledby={headingId}
-          data-stage-anchor={stage.number}
+          {...stageAnchorProps(stage.number)}
         >
           <StageBand stage={stage} headingId={headingId} />
           <PreviousEditionCards articles={stage.previousEditionArticles} linkState={linkState} />
         </section>
       )
     }
-    const known = progress ? stage.articles.map((article) => progress.get(article.articleId)) : []
-    const tracked = progress !== undefined && known.every(Boolean)
-    const markerState = !tracked ? 'neutral' : known.every((p) => p?.state === 'done') ? 'done' : 'unread'
-    const bandRoad: RoadKind = tracked ? 's' : 'n'
+    const { marker, road: bandRoad } = stageMarker(stage, progress)
     return (
-      <section
-        key={stage.stageKey}
-        className={styles.region}
-        aria-labelledby={headingId}
-        data-stage-anchor={stage.number}
-      >
+      <section key={stage.stageKey} className={styles.region} aria-labelledby={headingId} {...stageAnchorProps(stage.number)}>
         <StageBand
           stage={stage}
           headingId={headingId}
           // 길은 지도의 첫 구역에서 출발한다. 첫 공개 단계가 글이 0편인 단계라 점선 표식이 먼저 오면, 이 띠는 그 표식에서
           // 들어오는 구간의 도착점이므로 출발점으로 두지 않는다.
           first={stage === released[0]}
-          markerState={markerState}
+          markerState={marker}
           road={bandRoad}
           progress={renderStageProgress?.(stage)}
         />
@@ -84,14 +75,13 @@ export function JourneyMap({ stages, progress, currentArticleId, renderStageProg
               stageNumber={stage.number}
               index={index}
               progress={progress?.get(article.articleId)}
-              current={article.articleId === currentArticleId}
               linkState={linkState}
             />
           ))}
         </ol>
         {/* 단계 끝: 길이 단계 기둥으로 돌아오는 꺾임점만 둔다. 완주 메달을 길 위에 세우면 지나야 하는 문처럼 읽힌다. */}
         <div className={styles.stageEnd} aria-hidden="true">
-          <i className={styles.anchor} data-road={bandRoad} />
+          <i className={styles.anchor} {...roadPointProps(bandRoad)} />
         </div>
       </section>
     )
@@ -108,23 +98,15 @@ export function JourneyMap({ stages, progress, currentArticleId, renderStageProg
   )
 }
 
-type RoadPoint = { x: number; y: number; kind: string; gap: boolean }
 type Road = {
   width: number
   height: number
   /** 길 아래에 까는 넓고 옅은 바닥 */
   bed: string
-  /** 같은 종류가 이어지는 구간마다 경로 하나 */
-  groups: { kind: string; d: string }[]
+  /** 같은 모양이 이어지는 구간마다 경로 하나 */
+  groups: { kind: RoadKind; d: string }[]
   /** 공개 경계 앞에서 길이 끝나는 점 */
-  ends: { kind: string; x: number; y: number }[]
-}
-
-const ROAD_CLASSES: Record<string, string | undefined> = {
-  g: styles.roadRead,
-  s: styles.roadTodo,
-  n: styles.roadNeutral,
-  d: styles.roadPreparing,
+  ends: { kind: RoadKind; x: number; y: number }[]
 }
 
 function round1(value: number): number {
@@ -132,19 +114,20 @@ function round1(value: number): number {
 }
 
 /**
- * 지도 안의 `data-road` 점을 재서 길을 만든다. 이웃한 두 점은 세로 가운데에서 꺾이는 S 곡선으로 잇고, 구간의 종류는
- * 도착하는 점이 정한다(읽은 글로 가는 구간이 초록). `data-gap`이 붙은 점(공개 경계) 앞에서는 길을 끊고 끝 표시를 둔다.
+ * 지도 안의 길 점을 재서 길을 만든다. 이웃한 두 점은 세로 가운데에서 꺾이는 S 곡선으로 잇고, 구간의 모양은 도착하는
+ * 점이 정한다(읽은 글로 가는 구간이 초록). 끊는 점(공개 경계) 앞에서는 길을 끊고 끝 표시를 둔다. 출발점은 어느 구간의
+ * 도착점도 아니므로, 끝 표시가 출발점에 놓이면 중립 길의 끝으로 그린다.
  */
 function measureRoad(map: HTMLElement): Road | null {
   const box = map.getBoundingClientRect()
   if (box.width === 0 || box.height === 0) return null
-  const points: RoadPoint[] = Array.from(map.querySelectorAll<HTMLElement>('[data-road]')).map((el) => {
-    const r = el.getBoundingClientRect()
+  const points = readRoadPoints(map).map(({ element, kind, gap }) => {
+    const r = element.getBoundingClientRect()
     return {
       x: round1(r.left + r.width / 2 - box.left),
       y: round1(r.top + r.height / 2 - box.top),
-      kind: el.dataset.road ?? 'n',
-      gap: el.hasAttribute('data-gap'),
+      kind: kind === 'start' ? ('neutral' as const) : kind,
+      gap,
     }
   })
   if (points.length < 2) return null
@@ -157,7 +140,7 @@ function measureRoad(map: HTMLElement): Road | null {
     const a = points[i - 1]
     const b = points[i]
     if (b.gap) {
-      if (a.kind !== 'd') ends.push({ kind: a.kind === 'start' ? 'n' : a.kind, x: a.x, y: a.y })
+      if (a.kind !== 'preparing') ends.push({ kind: a.kind, x: a.x, y: a.y })
       current = null
       continue
     }
@@ -168,7 +151,7 @@ function measureRoad(map: HTMLElement): Road | null {
       groups.push(current)
     }
     current.d += segment
-    if (b.kind !== 'd') bed += `M${a.x} ${a.y}${segment}`
+    if (b.kind !== 'preparing') bed += `M${a.x} ${a.y}${segment}`
   }
   return { width: round1(box.width), height: round1(box.height), bed, groups, ends }
 }
@@ -204,6 +187,10 @@ function useMeasuredRoad(
   return road
 }
 
+/**
+ * 잰 길을 그린다. 구간의 모양은 `data-kind`로 넘기고 색·굵기·점선은 `JourneyMap.module.css`가 정한다. 준비 중 단계로
+ * 가는 점선 길에는 그리는 움직임을 주지 않는다.
+ */
 function RoadLayer({ road }: { road: Road | null }) {
   if (!road) return null
   return (
@@ -221,19 +208,14 @@ function RoadLayer({ road }: { road: Road | null }) {
         <path
           // 크기가 바뀌어 다시 재도 같은 구간은 같은 요소로 두어 그리는 움직임이 되풀이되지 않게 한다.
           key={`${index}-${group.kind}`}
-          className={[ROAD_CLASSES[group.kind], group.kind === 'd' ? null : styles.draw].filter(Boolean).join(' ')}
-          pathLength={group.kind === 'd' ? undefined : 1}
+          className={group.kind === 'preparing' ? styles.segment : `${styles.segment} ${styles.draw}`}
+          data-kind={group.kind}
+          pathLength={group.kind === 'preparing' ? undefined : 1}
           d={group.d}
         />
       ))}
       {road.ends.map((end, index) => (
-        <circle
-          key={`end-${index}`}
-          className={end.kind === 'n' ? `${styles.roadEnd} ${styles.roadEndNeutral}` : styles.roadEnd}
-          cx={end.x}
-          cy={end.y}
-          r="5.5"
-        />
+        <circle key={`end-${index}`} className={styles.roadEnd} data-kind={end.kind} cx={end.x} cy={end.y} r="5.5" />
       ))}
     </svg>
   )

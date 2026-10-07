@@ -90,6 +90,15 @@
   height: auto;
 }
 
+/* 견본 그림의 초록 그라디언트. 브랜드 초록 토큰 둘에서 만든다. 투명도는 그림이 정한다. */
+.stopAccent {
+  stop-color: var(--thorp-accent);
+}
+
+.stopAccentSoft {
+  stop-color: var(--thorp-accent-soft);
+}
+
 @media (max-width: 719px) {
   .sample,
   .tall {

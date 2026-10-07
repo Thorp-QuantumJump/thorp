@@ -48,6 +48,14 @@ describe('StageBand', () => {
     expect(container.textContent).not.toContain('이 단계의 글을 모두 준비하면 한 번에 공개합니다.')
   })
 
+  it('준비 중 띠의 머리 글자는 단계 색을 낮춘 색이고, 낮추는 비율은 mutedStageColor 한 곳이 정한다', () => {
+    const { container } = render(<StageBand stage={releasedCurriculum.stages[2]} headingId="h3" />)
+
+    const band = container.querySelector('div[style]') as HTMLElement
+    expect(band.getAttribute('style')).toContain('--stage-muted: color-mix(in srgb, #D4A2EA 45%, var(--thorp-muted))')
+    expect(cssDeclarations(CSS, '.pending .kick')).toMatch(/color:\s*var\(--stage-muted\)/)
+  })
+
   it('강제 색 모드에서도 준비 중 띠와 꼬리표의 점선이 시스템 글자색으로 남는다', () => {
     expect(cssMediaDeclarations(CSS, '(forced-colors: active)', '.pending')).toMatch(/border-color:\s*CanvasText/)
     expect(
@@ -62,7 +70,8 @@ describe('StageBand', () => {
     const stamp = container.querySelector('[data-stamp]')!
     expect(stamp.getAttribute('data-stamp')).toBe('unread')
     // 안쪽 고리는 1단계 장식 색(민트)이다. 상태를 나타내지 않는 꾸밈이다(design-notes §4).
-    expect(stamp.querySelector('circle[stroke="#5FD3A6"]')).not.toBeNull()
+    expect(stamp.getAttribute('style')).toContain('--stamp-ring: #5FD3A6')
+    expect(stamp.querySelector('[data-part="ring"]')).not.toBeNull()
     expect(stamp.closest('span')?.className).toMatch(/markerTracked/)
     expect(cssDeclarations(CSS, '.markerTracked')).toMatch(/color:\s*var\(--thorp-foreground\)/)
   })
