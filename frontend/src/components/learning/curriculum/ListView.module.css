@@ -1,4 +1,16 @@
-/* 목록 보기(design-notes §3.2, 목업 .route·.rol). 넓은 화면은 표, 720px 미만은 목록이다. */
+/*
+  목록 보기(design-notes §3.2, 목업 .route·.rol). 넓은 화면은 표, 720px 미만은 목록이다. 노선과 표식의 회색 셋은 의미
+  토큰에 같은 값이 없는 노선표 전용 색이라 여기서 한 번만 정한다(커리큘럼 보기의 길과 같은 값).
+*/
+.table,
+.narrowList {
+  --rail-unread: #6e716f;
+  --rail-neutral: #2c3230;
+  --station-neutral: #3a403d;
+  /* 준비 중 단계 구분 줄의 바탕. 면 색보다 한 단계 어둡다(목업 #141716). */
+  --group-pending: #141716;
+}
+
 .table {
   width: 100%;
   margin-top: 22px;
@@ -56,25 +68,18 @@
   bottom: 0;
 }
 
-.railRead {
-  width: 4px;
-  margin-left: -2px;
-  background: #2fdc7a;
-}
-
-.railTodo {
-  background: #6e716f;
-}
-
-.railNeutral {
+/* 노선의 모양은 data-kind가 정한다. 공개된 단계는 짙은 중립 노선이다. */
+.railTop[data-kind='neutral'],
+.railBottom[data-kind='neutral'] {
   width: 5px;
   margin-left: -2.5px;
-  background: #2c3230;
+  background: var(--rail-neutral);
 }
 
 /* 준비 중 단계로 가는 노선만 점선이다. */
-.railPreparing {
-  background: repeating-linear-gradient(to bottom, #6e716f 0 6px, transparent 6px 12px);
+.railTop[data-kind='preparing'],
+.railBottom[data-kind='preparing'] {
+  background: repeating-linear-gradient(to bottom, var(--rail-unread) 0 6px, transparent 6px 12px);
 }
 
 .dot {
@@ -97,6 +102,11 @@
 .dot svg {
   width: 14px;
   height: 14px;
+}
+
+/* 상태를 모르는 정거장 점. 상태 모양(완료·읽는 중·안 읽음)은 나의 학습(B13)이 더한다. */
+.dot circle {
+  fill: var(--station-neutral);
 }
 
 .groupMark {
@@ -127,8 +137,18 @@
   position: relative;
 }
 
-.groupMarkPreparing {
+/* 단계 표식: 공개된 단계는 채운 원판, 준비 중은 바탕색 위의 점선 칸과 흐린 번호다. */
+.groupMark[data-kind='neutral'] circle {
+  fill: var(--rail-neutral);
+}
+
+.groupMark[data-kind='preparing'] {
   color: var(--thorp-muted);
+}
+
+.groupMark[data-kind='preparing'] circle {
+  fill: var(--thorp-background);
+  stroke: var(--thorp-muted);
 }
 
 .groupRow th,
@@ -141,7 +161,7 @@
 
 .pending .groupRow th,
 .pending .groupRow td {
-  background: #141716;
+  background: var(--group-pending);
 }
 
 .groupRow th:focus:not(:focus-visible),
@@ -314,7 +334,7 @@
 }
 
 .narrowList > li.pending .groupHead h3 {
-  background: #141716;
+  background: var(--group-pending);
 }
 
 .plain {

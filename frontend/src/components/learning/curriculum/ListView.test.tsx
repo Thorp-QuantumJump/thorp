@@ -3,23 +3,16 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { cssDeclarations } from '@/test/cssRule'
+import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import { releasedCurriculum } from '@/test/learningFixtures'
 import { renderWithRouter } from '@/test/renderWithRouter'
 import type { StageView } from '@/types/learning'
-import type { ArticleProgress } from './articleProgress'
 import { ListView } from './ListView'
 
 /** 013 T138·T141. 목록 보기(FR-023·FR-031, design-notes §3.2, quickstart 8-4·11-1). */
 
+const CSS = 'components/learning/curriculum/ListView.module.css'
 const BOUNDARY = '지금 공개된 단계는 1·2단계입니다. 3~6단계는 준비 중입니다.'
-
-const progress = new Map<string, ArticleProgress>([
-  ['harbor-notes', { state: 'done', masteredTermCount: 1 }],
-  ['dock-fees', { state: 'reading', percent: 62, masteredTermCount: 0 }],
-  ['tide-reading', { state: 'unread', masteredTermCount: 0 }],
-  ['swell-reading', { state: 'unread', masteredTermCount: 0 }],
-])
 
 describe('ListView', () => {
   it('넓은 화면 표는 단계마다 tbody와 rowgroup 구분 줄을 두고 읽는 순서대로 번호·제목·질문을 보인다', () => {
@@ -44,7 +37,7 @@ describe('ListView', () => {
     expect(firstRow.textContent).toContain('같은 배가 다른 항구에서 다르게 보이는 이유는?')
   })
 
-  it('상태를 모르면 상태 열 없이 그 글의 용어 개수만 보이고, 용어가 없는 글은 비운다', () => {
+  it('상태 열 없이 그 글의 용어 개수만 보이고, 용어가 없는 글은 비운다. 상태 표시는 나의 학습(B13)이 더한다', () => {
     renderWithRouter(<ListView stages={releasedCurriculum.stages} />)
 
     const table = screen.getByRole('table')
@@ -57,34 +50,7 @@ describe('ListView', () => {
     const rows = within(table).getAllByRole('link').map((link) => link.closest('tr')!)
     expect(rows[0].lastElementChild?.textContent).toBe('2개')
     expect(rows[1].lastElementChild?.textContent).toBe('')
-    expect(table.textContent).not.toMatch(/완료|읽는 중|안 읽음/)
-  })
-
-  it('상태를 받으면 상태 열과 익힌 용어 수, 단계 구분 줄에 단계별 진행을 보인다', () => {
-    renderWithRouter(<ListView stages={releasedCurriculum.stages} progress={progress} />)
-
-    const table = screen.getByRole('table')
-    const rows = within(table).getAllByRole('link').map((link) => link.closest('tr')!)
-    expect(rows[0].textContent).toContain('완료')
-    expect(rows[0].textContent).toContain('2개 중 1개 익힘')
-    expect(rows[1].textContent).toContain('62% 읽는 중')
-    expect(rows[2].textContent).toContain('안 읽음')
-    expect(within(table).getAllByRole('rowheader')[0].textContent).toContain('2편 중 1편 읽음')
-    // 완료한 글의 정거장 점은 완료 모양이다. 글자 상태는 상태 열이 원본이다.
-    expect(rows[0].querySelector('[data-dot]')?.getAttribute('data-dot')).toBe('done')
-    expect(rows[0].querySelector('[data-dot] radialGradient')).not.toBeNull()
-  })
-
-  it("다 읽은 단계의 구분 줄은 'n편 중 n편 읽음'이 아니라 '완주 · n편'이다(FR-031 '진행')", () => {
-    const allDone = new Map(progress)
-    allDone.set('dock-fees', { state: 'done', masteredTermCount: 0 })
-
-    renderWithRouter(<ListView stages={releasedCurriculum.stages} progress={allDone} />)
-
-    const [stageOne, stageTwo] = within(screen.getByRole('table')).getAllByRole('rowheader')
-    expect(stageOne.textContent).toContain('완주 · 2편')
-    expect(stageOne.textContent).not.toContain('읽음')
-    expect(stageTwo.textContent).toContain('2편 중 0편 읽음')
+    expect(table.textContent).not.toMatch(/완료|읽는 중|안 읽음|완주|편 중/)
   })
 
   it('준비 중 단계는 번호·이름·수준·한 줄 설명과 준비 중·사유, 번호 없는 이전 판 줄만 있다(FR-031)', () => {
@@ -95,6 +61,7 @@ describe('ListView', () => {
     const group = within(stageThree).getByRole('rowheader')
     expect(group.textContent).toContain('3단계·물때표 읽기·입문~초급')
     expect(group.textContent).toContain('준비 중')
+    expect(group.textContent).toContain('아직 공개되지 않은 단계입니다.')
     expect(group.textContent).toContain('합성 단계 설명 셋이다.')
     expect(group.textContent).toContain('이 단계의 글을 모두 준비하면 한 번에 공개합니다.')
     const previous = within(stageThree).getByRole('link', { name: '닻줄 길이' }).closest('tr')!
@@ -118,6 +85,7 @@ describe('ListView', () => {
     expect(stageTwo.textContent).toContain('합성 단계 설명 둘이다.')
     expect(stageTwo.textContent).toContain('이 단계의 글을 다시 준비하고 있습니다. 글이 게시되면 이 자리에 보입니다.')
     expect(stageTwo.textContent).not.toContain('이 단계의 글을 모두 준비하면 한 번에 공개합니다.')
+    expect(stageTwo.textContent).not.toContain('아직 공개되지 않은 단계입니다.')
   })
 
   it('공개된 단계가 끝나는 자리에 공개 경계 한 줄을 둔다. 표와 좁은 화면 목록 모두 같은 자리다(FR-031)', () => {
@@ -135,6 +103,23 @@ describe('ListView', () => {
     const items = Array.from(list.children)
     expect(items).toHaveLength(6)
     expect(items[2].firstElementChild?.textContent).toBe(BOUNDARY)
+  })
+
+  it('노선은 공개 경계 앞에서 끝나고 경계 줄에서 점선이 새로 시작한다', () => {
+    renderWithRouter(<ListView stages={releasedCurriculum.stages} />)
+
+    const table = screen.getByRole('table')
+    // 마지막 공개 글 줄에는 다음 줄로 가는 아래 노선이 없다.
+    const lastReleasedRow = table.querySelector('tbody[data-stage-anchor="2"]')!.lastElementChild!
+    expect(lastReleasedRow.querySelector('[class*="railTop"]')).not.toBeNull()
+    expect(lastReleasedRow.querySelector('[class*="railBottom"]')).toBeNull()
+    const boundaryRail = within(table).getByText(BOUNDARY).closest('tr')!.querySelector('td')!
+    expect(Array.from(boundaryRail.querySelectorAll('[data-kind]')).map((rail) => rail.getAttribute('data-kind'))).toEqual([
+      'preparing',
+    ])
+    expect(
+      cssDeclarations(CSS, ".railBottom[data-kind='preparing']"),
+    ).toMatch(/repeating-linear-gradient/)
   })
 
   it('여섯 단계를 모두 공개했으면 공개 경계가 없다', () => {
@@ -158,24 +143,26 @@ describe('ListView', () => {
     )
     expect(within(list).getAllByRole('heading', { level: 3 })).toHaveLength(6)
 
-    // Vitest는 CSS를 적용하지 않으므로 화면 폭 규칙이 실제로 있는지 파일에서 본다. 가로 스크롤을 두지 않는다.
+    // Vitest는 CSS를 적용하지 않으므로 화면 폭 규칙이 미디어 블록 안에 실제로 있는지 파일에서 본다.
+    expect(cssDeclarations(CSS, '.narrowList')).toMatch(/display:\s*none/)
+    expect(cssMediaDeclarations(CSS, '(max-width: 719px)', '.table')).toMatch(/display:\s*none/)
+    expect(cssMediaDeclarations(CSS, '(max-width: 719px)', '.narrowList')).toMatch(/display:\s*block/)
+    // 가로 스크롤을 두지 않는다.
     const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ListView.module.css'), 'utf-8')
-    const narrow = css.slice(css.indexOf('@media (max-width: 719px)'))
-    expect(narrow).toMatch(/\.table\s*\{\s*display:\s*none;/)
-    expect(narrow).toMatch(/\.narrowList\s*\{\s*display:\s*block;/)
     expect(css).not.toMatch(/overflow-x:\s*(auto|scroll)/)
   })
 
-  it('단계 자리로 옮겨 와 초점을 받는 구분 줄은 2px 초록 외곽선이다(design-notes §6)', () => {
+  it('단계 자리로 옮겨 와 초점을 받는 구분 줄은 단계 제목 표지와 2px 초록 외곽선을 갖는다(design-notes §6)', () => {
     renderWithRouter(<ListView stages={releasedCurriculum.stages} />)
 
     for (const cell of within(screen.getByRole('table')).getAllByRole('rowheader')) {
       expect(cell.getAttribute('tabindex')).toBe('-1')
+      expect(cell.hasAttribute('data-stage-heading')).toBe(true)
     }
     // 표의 구분 줄(th)과 좁은 화면의 h3가 한 규칙을 쓴다. 규칙의 마지막 선택자로 찾는다.
-    expect(
-      cssDeclarations('components/learning/curriculum/ListView.module.css', '.groupHead h3:focus-visible'),
-    ).toMatch(/outline:\s*var\(--thorp-focus-outline-compact\)/)
+    expect(cssDeclarations(CSS, '.groupHead h3:focus-visible')).toMatch(
+      /outline:\s*var\(--thorp-focus-outline-compact\)/,
+    )
     expect(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ListView.module.css'), 'utf-8')).toMatch(
       /\.groupRow th:focus-visible,\s*\n\.groupHead h3:focus-visible\s*\{/,
     )

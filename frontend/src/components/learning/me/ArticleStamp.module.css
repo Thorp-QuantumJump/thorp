@@ -1,3 +1,7 @@
+/*
+  글 도장의 색. 모두 index.css 의미 토큰이라 디자인 전환(classic)을 함께 따른다. 모양과 굵기는 ArticleStamp.tsx가
+  정한다. 안쪽 고리의 단계 장식 색만 --stamp-ring으로 받는다(design-notes §4).
+*/
 .stamp {
   display: block;
   overflow: visible;
@@ -7,14 +11,70 @@
   font-family: var(--thorp-font-display, inherit);
 }
 
+/* 종이 원판: 기본은 면 색, 중립은 조금 밝은 면, 준비 중은 바탕색이라 채운 원으로 보이지 않는다(목업 marker 'pend'). */
+.paper {
+  fill: var(--thorp-surface);
+}
+
+.stamp[data-stamp='neutral'] .paper {
+  fill: var(--thorp-surface-raised);
+}
+
+.stamp[data-stamp='preparing'] .paper {
+  fill: var(--thorp-background);
+}
+
+.number {
+  fill: var(--thorp-copy);
+}
+
+.stamp[data-stamp='preparing'] .number {
+  fill: var(--thorp-muted);
+}
+
+/* 실선 회색과 점선은 같은 색·같은 굵기이고 선 모양으로만 다르다(design-notes §4). */
+.outline {
+  fill: none;
+  stroke: var(--thorp-muted);
+}
+
+.innerPreparing {
+  fill: none;
+  stroke: var(--thorp-muted);
+  stroke-opacity: 0.55;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--stamp-ring, var(--thorp-muted));
+  stroke-opacity: 0.28;
+}
+
+.progress {
+  fill: none;
+  stroke: var(--thorp-accent-soft);
+}
+
+/* 찍은 도장: 초록 잉크. 속은 옅게 채우고 테두리와 체크는 진하게. */
+.ink {
+  fill: var(--thorp-accent-soft);
+  stroke: var(--thorp-accent-soft);
+}
+
+.inkRing,
+.mark {
+  fill: none;
+  stroke: var(--thorp-accent-soft);
+}
+
+.markText {
+  fill: var(--thorp-accent-soft);
+}
+
 /* 움직임은 줄이기 설정이 아닐 때만 더한다. 기본은 최종 모습이다(design-notes §5). */
 @media (prefers-reduced-motion: no-preference) {
   .progress {
     animation: arc-fill 600ms 200ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
-  }
-
-  .tip {
-    animation: fade-in 200ms 750ms both;
   }
 }
 
@@ -24,16 +84,18 @@
   }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-/* 강제 색 모드에서도 윤곽이 보이게 한다. 점선과 실선은 선 모양으로 남는다. */
+/* 강제 색 모드에서도 윤곽과 글자가 보이게 한다. 점선과 실선은 선 모양으로 남는다. */
 @media (forced-colors: active) {
   .outline,
-  .ink {
+  .innerPreparing,
+  .ink,
+  .inkRing,
+  .mark {
     stroke: CanvasText;
+  }
+
+  .number,
+  .markText {
+    fill: CanvasText;
   }
 }

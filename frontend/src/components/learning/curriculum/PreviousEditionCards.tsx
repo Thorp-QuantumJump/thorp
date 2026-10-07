@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { PreviousEditionArticle } from '@/types/learning'
+import { articlePath } from '../learningPaths'
 import { PREVIOUS_EDITION_NOTE } from './curriculumCopy'
 import { ChipRow, PreviousEditionChip, ReadingMinutes } from './StatusChips'
 import styles from './PreviousEditionCards.module.css'
@@ -27,11 +28,7 @@ export function PreviousEditionCards({ articles, linkState }: PreviousEditionCar
       <ul className={styles.notes}>
         {articles.map((article) => (
           <li key={article.articleId}>
-            <Link
-              className={styles.note}
-              to={`/learn/${encodeURIComponent(article.articleId)}`}
-              state={linkState}
-            >
+            <Link className={styles.note} to={articlePath(article.articleId)} state={linkState}>
               <span className={styles.paper}>
                 <span className={styles.title}>{article.title}</span>
                 <span className={styles.question}>{article.question}</span>

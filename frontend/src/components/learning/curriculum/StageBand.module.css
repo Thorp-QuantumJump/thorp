@@ -190,8 +190,9 @@
   grid-column: 2;
 }
 
+/* 준비 중 띠의 머리 글자는 단계 색을 흐린 글자색 쪽으로 낮춘 색이다. 비율은 stageColors.ts의 mutedStageColor 하나가 정한다. */
 .pending .kick {
-  color: color-mix(in srgb, var(--stage) 45%, #8b928e);
+  color: var(--stage-muted);
 }
 
 /* 준비 중 표식은 띠 밖, 길이 지나는 기둥 위에 놓인다. 위치의 기준은 JourneyMap의 단계 구역이다. */

@@ -1,5 +1,6 @@
 import type { StageView } from '@/types/learning'
 import { boundarySentence } from './curriculumCopy'
+import { roadPointProps } from './stageAnchors'
 import styles from './ReleaseBoundary.module.css'
 
 /**
@@ -10,14 +11,14 @@ import styles from './ReleaseBoundary.module.css'
  * 예고하지 않고 움직임도 없다.
  *
  * <p>커리큘럼 보기의 길은 이 줄 앞에서 끊기고 끝 표시를 둔다. 줄 아래에서 준비 중 단계로 가는 점선 길이 새로
- * 시작한다(`data-gap`).
+ * 시작한다(끊는 길 점).
  */
 export function ReleaseBoundary({ stages }: { stages: readonly StageView[] }) {
   const sentence = boundarySentence(stages)
   if (!sentence) return null
   return (
     <p className={styles.boundary}>
-      <i className={styles.anchor} data-road="d" data-gap="" />
+      <i className={styles.anchor} {...roadPointProps('preparing', true)} />
       {sentence}
     </p>
   )
