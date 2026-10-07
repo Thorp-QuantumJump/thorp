@@ -8,7 +8,8 @@
 docs/learning-content/
 ├── README.md                # 이 문서: 원고 형식, 편집 문법, 자리, 검토 항목
 ├── current/{articleId}.json # 지금 게시 중인 내용과 같은 원고
-└── next/{articleId}.json    # 단계 공개를 기다리는 새 기준 원고
+├── next/{articleId}.json    # 단계 공개를 기다리는 새 기준 원고
+└── term-map.md              # next/ 원고의 용어 대응표(원고를 고치면 함께 고친다)
 ```
 
 ## 1. 자리와 순서
