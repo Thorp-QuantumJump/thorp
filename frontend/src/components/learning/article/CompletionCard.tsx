@@ -13,8 +13,11 @@ import {
 import styles from './CompletionCard.module.css'
 
 interface CompletionCardProps {
-  /** 완료 시각(ISO 8601). 서울 날짜로 보인다 */
-  completedAt: string
+  /**
+   * 완료 시각(ISO 8601). 서울 날짜로 보인다. 완료로 기록됐는데 시각이 없으면 `null`이고, 빈 날짜 대신 '완료'만
+   * 보인다(원칙 VI)
+   */
+  completedAt: string | null
   stageProgress: StageProgress
   /** 읽는 순서상 다음 공개된 글이 없을 때 '이어서 읽기'와 '모두 읽었습니다'를 가른다(FR-021) */
   continueReading: ContinueReading
@@ -70,7 +73,7 @@ export function CompletionCard({
     <section className={styles.card} aria-labelledby={titleId}>
       <div className={`${styles.section} ${styles.head}`}>
         <h2 id={titleId} className={styles.date}>
-          완료 · {formatCompletedDate(completedAt)}
+          {completedAt ? `완료 · ${formatCompletedDate(completedAt)}` : '완료'}
         </h2>
         <p className={styles.progress}>
           {stageCompleted

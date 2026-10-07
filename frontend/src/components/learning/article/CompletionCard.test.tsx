@@ -68,6 +68,13 @@ describe('CompletionCard', () => {
     expect(within(card).getByText('2단계 · 4편 중 2편 읽음')).not.toBeNull()
   })
 
+  it('완료로 기록됐는데 시각이 없으면 빈 날짜 대신 완료만 보인다', () => {
+    renderCard({ completedAt: null })
+
+    const heading = screen.getByRole('heading', { level: 2 })
+    expect(heading.textContent).toBe('완료')
+  })
+
   it('단계를 다 읽었으면 완주 · n편이다', () => {
     renderCard({ stageProgress: completionResult.stageProgress })
 

@@ -2,13 +2,17 @@ import axios from 'axios'
 import type { ApiErrorCode, ServiceApiErrorCode } from '@/types/api'
 import type { AuthFieldError } from '@/types/auth'
 
+/** CSRF 토큰을 담는 쿠키와 그 값을 싣는 헤더. `apiClient`를 거치지 않는 요청(keepalive 등)도 이 이름을 쓴다. */
+export const XSRF_COOKIE_NAME = 'XSRF-TOKEN'
+export const XSRF_HEADER_NAME = 'X-XSRF-TOKEN'
+
 /** 공용 API 클라이언트. 개발 중에는 vite proxy(/api → localhost:8080)를 탄다. */
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
   timeout: 10_000,
   withCredentials: true,
-  xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN',
+  xsrfCookieName: XSRF_COOKIE_NAME,
+  xsrfHeaderName: XSRF_HEADER_NAME,
 })
 
 type AuthenticationRequiredListener = () => void

@@ -228,4 +228,24 @@ describe('useArticleCompletion', () => {
     // 앞 사용자의 70초로 다음 사용자를 완료하지 않는다.
     expect(onReady).not.toHaveBeenCalled()
   })
+
+  it('rearmKey가 바뀌면 센 시간을 이어 가면서 판정을 다시 연다', () => {
+    const { onReady, rerender } = renderCompletion()
+    setEndVisible(true)
+    advance(80)
+    expect(onReady).toHaveBeenCalledTimes(1)
+
+    // 다른 곳에서 글이 바뀌어 완료가 거절된 뒤 글을 다시 불러왔다. 머문 시간을 처음부터 세지 않는다(R33).
+    rerender({ rearmKey: 1 })
+    expect(onReady).toHaveBeenCalledTimes(2)
+  })
+
+  it('처음 그릴 때의 rearmKey로는 판정을 다시 열지 않는다', () => {
+    const { onReady } = renderCompletion({ rearmKey: 3 })
+    setEndVisible(true)
+    advance(80)
+    advance(200)
+
+    expect(onReady).toHaveBeenCalledTimes(1)
+  })
 })
