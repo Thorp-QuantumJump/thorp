@@ -1,62 +1,42 @@
-import { ArrowDown, History } from 'lucide-react'
-import { useId, type CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
+import { History } from 'lucide-react'
+import { useId } from 'react'
 import { InlineHelp } from '@/components/common/InlineHelp'
 import { ComparisonMonthsNotice } from '@/components/regime/ComparisonMonthsNotice'
 import { Disclosure } from '@/components/regime/Disclosure'
 import * as copy from '@/components/regime/fixedCopy'
 import { NewerReleases } from '@/components/regime/NewerReleases'
-import type { CaseDetailState, PastSearchState } from '@/hooks/usePastCases'
-import { buildCaseId, buildRegimeLinkStartPath } from '@/marketflow/handoff'
-import type { RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'
-import { observationRange, shortRange } from './pastFormat'
+import type { PastSearchState } from '@/hooks/usePastCases'
+import type { RegimeSearchResult } from '@/types/regime'
+import { CompareLegend, PastCaseChooser, type CompareLegendProps } from './PastCaseChooser'
 import type { PastVerdict } from './pastOverlay'
 import styles from './PastCompare.module.css'
 
-interface FieldPastCompareProps {
+interface FieldPastCompareProps extends CompareLegendProps {
   fieldName: string
   /** 분야 상세의 대상월. 010의 비교 기준월과 다르면 그 사실을 밝힌다(009 FR-009). */
   referenceMonth: string | null
-  /** 그래프에 그린 지금의 세 달. 범례에 적는다. */
-  nowMonths: readonly string[]
   search: PastSearchState
   onRetrySearch: () => void
-  /** 고른 사례의 끝 달. null이면 '지금만'이다. */
-  selected: string | null
-  onSelect: (endMonth: string | null) => void
-  caseDetail: CaseDetailState | null
-  onRetryCaseDetail: () => void
-  /** 고른 사례가 상세를 열 수 없다(detailAvailable false). 당시 경로를 받지 않는다. */
-  pastUnavailable: boolean
-  /** 고른 사례의 당시 달(그래프의 달 순서대로). 범례에 적는다. */
-  pastMonths: readonly (string | null)[] | null
-  band: { name: string; window: string } | null
-  showBand: boolean
-  onToggleBand: (show: boolean) => void
+  onSelect: (endMonth: string) => void
   /** 어느 지표 칸에도 붙지 못한 비슷한 점·다른 점 문장. */
   unplaced: readonly PastVerdict[]
-  /** '모두 보기'. 아래 '가까운 과거 사례' 구역으로 옮긴다(2026-10-07, 다른 화면으로 넘기지 않는다). */
-  onShowAll: () => void
-  /** '자세히'. 고른 사례의 상세를 아래 구역에서 펼친다. */
-  onShowDetail: (endMonth: string) => void
 }
 
 /**
  * 분야 상세 안의 '지금과 비슷했던 과거' 줄(009 FR-019).
  *
- * 010 분야 검색의 가까운 사례 세 개와 '지금만'을 라디오로 고르면, 고른 사례의 같은 지표 경로가 아래 지표
- * 그래프에 점선으로 겹친다. 사례 칸에는 관측 구간만 적는다 — 무엇이 비슷하고 다른지는 그 지표 칸에 붙는다.
- * 행동(이 기간으로 백테스트·자세히)은 고른 사례에 딸린 것이라 같은 줄 오른쪽에 둔다. '자세히'와 '모두 보기'는
- * 같은 상자 바닥의 '가까운 과거 사례' 구역으로 옮긴다 — 010 검색 화면으로 넘기지 않는다(2026-10-07).
+ * 010 분야 검색의 가까운 사례(최대 열 개)를 라디오로 고르면, 고른 사례의 같은 지표 경로가 아래 지표 그래프에
+ * 점선으로 겹친다. 처음에는 가장 가까운 사례이고 '지금만'은 없다(2026-10-07). 사례 칸에는 관측 구간만 적는다 —
+ * 무엇이 비슷하고 다른지는 그 지표 칸에 붙는다. 행동(이 기간으로 백테스트·자세히)은 고른 사례에 딸린 것이라 같은
+ * 줄 오른쪽에 둔다. '자세히'는 사례 상세를 이 줄 바로 아래에 펼친다 — 010 검색 화면으로 넘기지 않는다.
  *
  * 010의 신뢰 범위 표시는 숨기지 않는다(010 FR-037·FR-038·FR-031). 검색 상태와 사례 구분만 i 표시 뒤로 내리고
  * (보조기기에는 늘 읽힌다), 예시 자료·빠진 비교 시점·더 최신 발표·자료 기준 시점은 문구로 늘 보인다. 문장은
  * 응답이나 010의 fixedCopy에서만 온다(010 FR-022 ②).
  */
 export function FieldPastCompare(props: FieldPastCompareProps) {
-  const { fieldName, referenceMonth, nowMonths, search, onRetrySearch, onShowAll } = props
+  const { fieldName, referenceMonth, nowMonths, search, onRetrySearch, selected, onSelect, unplaced } = props
   const titleId = useId()
-  const groupName = useId()
   const result = search.status === 'ready' ? search.result : null
   const context = result ? `${fieldName} ${result.baselineMonth} 검색 결과` : ''
   const hasCases = result !== null && result.status !== 'NOT_COMPUTABLE' && result.cases.length > 0
@@ -79,11 +59,6 @@ export function FieldPastCompare(props: FieldPastCompareProps) {
         </div>
         <p className={styles.compareMeta}>
           {result ? <span>비교 기준월 {result.baselineMonth} · 가까운 순</span> : null}
-          {result ? (
-            <button type="button" className={styles.allLink} onClick={onShowAll}>
-              모두 보기 <ArrowDown size={13} aria-hidden="true" />
-            </button>
-          ) : null}
         </p>
       </div>
 
@@ -107,7 +82,7 @@ export function FieldPastCompare(props: FieldPastCompareProps) {
             {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}
           </p>
           {hasCases ? (
-            <CaseChooser {...props} groupName={groupName} cases={result.cases} searchId={result.searchId} />
+            <PastCaseChooser result={result} cases={result.cases} selected={selected} onSelect={onSelect} unplaced={unplaced} />
           ) : result.status !== 'NOT_COMPUTABLE' && result.thresholdNote ? (
             <Disclosure label="유사성 기준" context={context} tone="warning">
               <p>{result.thresholdNote}</p>
@@ -122,7 +97,6 @@ export function FieldPastCompare(props: FieldPastCompareProps) {
           <TrustNotes result={result} context={context} />
         </>
       ) : null}
-      {/* '지금만'이어도 범례는 남긴다. 보통 범위는 사례와 상관없이 켤 수 있다. */}
       {hasCases && nowMonths.length > 0 ? <CompareLegend {...props} /> : null}
     </section>
   )
@@ -146,107 +120,6 @@ function TrustNotes({ result, context }: { result: RegimeSearchResult; context: 
             <p key={`${item.indicatorId}-${item.month}`}>개정 · {item.indicator} {item.month} · {item.revisedAt}</p>
           ))}
         </div>
-      ) : null}
-    </div>
-  )
-}
-
-function CaseChooser({ cases, searchId, groupName, selected, onSelect, onShowDetail, unplaced }: FieldPastCompareProps & {
-  groupName: string
-  cases: RegimeCaseSummary[]
-  searchId: string
-}) {
-  const chosen = cases.find((item) => item.endMonth === selected) ?? null
-  const caseId = chosen ? buildCaseId(searchId, chosen.endMonth) : null
-  return (
-    <>
-      <div className={styles.chooser}>
-        <fieldset className={styles.options} style={{ '--case-count': cases.length } as CSSProperties}>
-          <legend className="sr-only">그래프에 겹쳐 볼 과거 구간</legend>
-          <label className={`${styles.option} ${styles.nowOnly}`}>
-            <input type="radio" name={groupName} checked={selected === null} onChange={() => onSelect(null)} />
-            <span className={styles.optionFace}>지금만</span>
-          </label>
-          {cases.map((item, index) => (
-            <label key={item.endMonth} className={styles.option}>
-              <input
-                type="radio"
-                name={groupName}
-                checked={selected === item.endMonth}
-                onChange={() => onSelect(item.endMonth)}
-                aria-label={`${observationRange(item)}${index === 0 ? ', 가장 가까운 사례' : ''}`}
-              />
-              <span className={styles.optionFace}>
-                <span className={styles.rank} aria-hidden="true">{index + 1}</span>
-                {observationRange(item)}
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <div className={styles.actions}>
-          {chosen && caseId ? (
-            <Link className={styles.backtest} to={buildRegimeLinkStartPath({ caseId })}>
-              이 기간으로 백테스트
-              <small>{observationRange(chosen)}</small>
-            </Link>
-          ) : (
-            <button type="button" className={styles.backtest} disabled>
-              이 기간으로 백테스트
-              <small>{chosen ? observationRange(chosen) : '과거 구간을 고르세요'}</small>
-            </button>
-          )}
-          <button type="button" className={styles.secondary} disabled={chosen === null} onClick={() => chosen && onShowDetail(chosen.endMonth)}>
-            자세히
-          </button>
-        </div>
-      </div>
-      {unplaced.length > 0 ? (
-        <div className={styles.notes}>
-          {unplaced.map((verdict) => (
-            <p key={verdict.text} className={styles.reason}>
-              <b className={verdict.kind === 'similar' ? styles.similarLabel : styles.differentLabel}>
-                {verdict.kind === 'similar' ? '비슷한 점' : '다른 점'}
-              </b>
-              <span className={verdict.kind === 'similar' ? styles.similarText : styles.differentText}>{verdict.text}</span>
-            </p>
-          ))}
-        </div>
-      ) : null}
-    </>
-  )
-}
-
-/** 실선은 지금, 점선은 당시, 옅은 띠는 보통 범위다. 당시 경로를 받는 중이거나 받지 못했으면 그 자리에 적는다. */
-function CompareLegend({ nowMonths, selected, caseDetail, onRetryCaseDetail, pastUnavailable, pastMonths, band, showBand, onToggleBand }: FieldPastCompareProps) {
-  const nowRange = shortRange(nowMonths)
-  const pastRange = pastMonths ? shortRange(pastMonths) : null
-  return (
-    <div className={styles.legend}>
-      {nowRange ? <span className={styles.key}><span className={styles.swatchNow} aria-hidden="true" />지금 {nowRange}</span> : null}
-      {selected === null ? null : pastUnavailable ? (
-        <span role="status">{copy.pastPathUnavailable}</span>
-      ) : caseDetail?.status === 'loading' ? (
-        <span role="status">{copy.loadingPastPath}</span>
-      ) : caseDetail?.status === 'failed' ? (
-        <span className={styles.key} role="status">
-          {copy.pastPathLoadFailed}
-          <button type="button" className={styles.inlineAction} onClick={onRetryCaseDetail}>다시 시도</button>
-        </span>
-      ) : caseDetail?.status === 'mismatch' ? (
-        <span role="status">{copy.detailMismatchMessage}</span>
-      ) : pastRange ? (
-        <span className={styles.key}><span className={styles.swatchPast} aria-hidden="true" />당시 {pastRange}</span>
-      ) : null}
-      {band ? (
-        <span className={styles.key}>
-          <label className={styles.bandToggle}>
-            <input type="checkbox" checked={showBand} onChange={(event) => onToggleBand(event.target.checked)} />
-            <span className={styles.swatchBand} aria-hidden="true" />
-            {band.name}
-          </label>
-          {/* 기간은 마우스 title이 아니라 도움말로 둔다. 키보드·터치·보조기기 사용자에게도 닿아야 한다. */}
-          <InlineHelp label={band.name} side="top"><p>{copy.usualRangeNote(band.window)}</p></InlineHelp>
-        </span>
       ) : null}
     </div>
   )

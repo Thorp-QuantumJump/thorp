@@ -6,8 +6,15 @@
 */
 .compare {
   display: grid;
+  /* 열이 내용 폭(열 개의 사례 칸)보다 줄어들 수 있어야 사례 칸 줄이 카드 안에서 가로로 넘긴다. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin: 0 0 18px;
+}
+
+.compare > *,
+.composite > * {
+  min-width: 0;
 }
 
 .compareHead {
@@ -75,23 +82,32 @@
   flex-wrap: wrap;
   align-items: stretch;
   gap: 8px;
+  min-width: 0;
 }
 
+/*
+  칸은 한 번에 셋이 보이고 나머지(최대 열 개)는 가로로 넘긴다(2026-10-07). 스크롤 막대를 초록으로 두어 더 있다는
+  것이 보이게 한다. 막대 자리만큼 아래 여백을 둬 칸과 겹치지 않는다.
+*/
 .options {
-  display: grid;
-  grid-template-columns: auto repeat(var(--case-count, 3), minmax(0, 1fr));
+  display: flex;
   flex: 1 1 640px;
   gap: 8px;
   min-width: 0;
   margin: 0;
-  padding: 0;
-  border: 0;
+  padding: 0 0 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--thorp-accent) var(--thorp-line);
 }
 
 .option {
   position: relative;
   display: block;
+  flex: 0 0 calc((100% - 16px) / 3);
   min-width: 0;
+  scroll-snap-align: start;
   cursor: pointer;
 }
 
@@ -153,12 +169,6 @@
 .option input:checked + .optionFace .rank {
   background: var(--thorp-copy);
   color: var(--thorp-background);
-}
-
-.nowOnly .optionFace {
-  justify-content: center;
-  padding: 8px 18px;
-  font-weight: 500;
 }
 
 .actions {
@@ -374,18 +384,244 @@
   color: var(--thorp-warning);
 }
 
-/* 종합 비교. 분야 하나의 지표가 없으므로 제목 아래 '가까운 과거 사례' 구역이 바로 선다(그 구역이 윗선을 긋는다). */
+/*
+  종합 비교. 분야 상세와 같은 차례다 — 머리, 사례 선택 줄, 범례, 지표 그래프(일곱 분야 묶음), 바닥 각주.
+  머리 오른쪽에는 비교 기준월과 '기준월 지정'이 선다(2026-10-07).
+*/
 .composite {
   display: grid;
-  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
 }
 
 .compositeHead {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 6px 20px;
+  gap: 10px 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+.compositeTools {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+/* 기준월 지정. 달 입력과 찾기 버튼이 한 줄에 서고, 지정한 동안만 '최신 기준월로'가 그 옆에 선다. */
+.monthForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.monthField {
+  display: grid;
+  gap: 5px;
+}
+
+.monthLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-caption, 0.74rem);
+}
+
+.monthField input {
+  min-height: var(--thorp-control, 42px);
+  padding: 6px 12px;
+  border: 1px solid var(--thorp-line-strong);
+  border-radius: var(--thorp-radius-control, 6px);
+  color: var(--thorp-foreground);
+  background: var(--thorp-surface-muted, transparent);
+  font: inherit;
+  font-size: var(--thorp-text-body, 0.88rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.monthField input:hover {
+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));
+}
+
+.monthField input::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+.findButton,
+.resetButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--thorp-control, 42px);
+  padding: 6px 16px;
+  border-radius: var(--thorp-radius-control, 6px);
+  font: inherit;
+  font-size: var(--thorp-control-font, 0.84rem);
+  font-weight: var(--thorp-control-weight, 650);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.findButton {
+  border: 1px solid var(--thorp-accent);
+  background: var(--thorp-accent);
+  color: var(--thorp-action-foreground);
+}
+
+.findButton:hover:not(:disabled) {
+  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+}
+
+.findButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.resetButton {
+  border: 1px solid var(--thorp-line-strong);
+  background: transparent;
+  color: var(--thorp-copy);
+}
+
+.resetButton:hover {
+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));
+  color: var(--thorp-foreground);
+}
+
+.monthField input:focus-visible,
+.findButton:focus-visible,
+.resetButton:focus-visible,
+.includeReferences input:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+/* 기준 미충족 참고 사례의 표. 글자가 함께 있어 색만으로 가르지 않는다. */
+.referenceTag {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--thorp-warning) 16%, transparent);
+  color: var(--thorp-warning);
+  font-size: var(--thorp-text-label, 0.66rem);
+  font-weight: 650;
+}
+
+.referenceLead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.55;
+}
+
+.referenceLead b {
+  color: var(--thorp-warning);
+  font-weight: 650;
+}
+
+.includeReferences {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  cursor: pointer;
+}
+
+.includeReferences input {
+  margin: 0;
+  accent-color: var(--thorp-accent);
+}
+
+/*
+  일곱 분야의 지표 묶음. 묶음 머리는 분야 이름과 대상월 한 줄이다. 칸은 분야 상세와 같은 칸이지만 격자는 늘 세 칸으로
+  고정한다 — 분야마다 지표 수(1~3)가 달라도 칸 폭이 같아야 한 화면에 선 그래프들이 같은 눈금으로 읽힌다.
+*/
+.fieldGroupIndicators {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fieldGroups {
+  display: grid;
+  gap: 26px;
+  margin-top: 8px;
+}
+
+.fieldGroup {
+  min-width: 0;
+}
+
+.fieldGroupTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--thorp-line);
+  font-size: var(--thorp-text-heading, 1.05rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.fieldGroupTitle span {
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 특이 사례의 당시 맥락. 선택 줄 아래 문장들과 한 묶음으로 선다. */
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-small, 0.78rem);
+  line-height: 1.55;
+}
+
+.contextLabel {
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: var(--thorp-line);
+  color: var(--thorp-foreground);
+  font-size: var(--thorp-text-caption, 0.72rem);
+  font-weight: 650;
+}
+
+.contextItem time {
+  color: var(--thorp-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.contextItem a {
+  color: var(--thorp-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.contextItem a:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
+
+.contextSource {
+  color: var(--thorp-muted);
 }
 
 .compositeHead h2 {
@@ -520,13 +756,15 @@
   }
 }
 
-@media (max-width: 800px) {
-  .options {
+@media (max-width: 900px) {
+  .fieldGroupIndicators {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .nowOnly {
-    grid-column: 1 / -1;
+@media (max-width: 800px) {
+  .option {
+    flex-basis: calc((100% - 8px) / 2);
   }
 
   .case {
@@ -538,20 +776,52 @@
   }
 }
 
+@media (max-width: 520px) {
+  .fieldGroupIndicators {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 420px) {
-  .options {
-    grid-template-columns: 1fr;
+  .option {
+    flex-basis: 82%;
+  }
+}
+
+/* '자세히'로 줄 아래에 펼치는 010 사례 상세. 사후 구간 자리의 백테스트 진입은 카드 안 버튼 모양이다. */
+.detailSlot {
+  min-width: 0;
+}
+
+.postPeriod {
+  margin: 14px 0 0;
+}
+
+@media (max-width: 420px) {
+  .monthForm,
+  .monthField,
+  .findButton,
+  .resetButton {
+    width: 100%;
   }
 
-  .nowOnly {
-    grid-column: auto;
+  .findButton,
+  .resetButton {
+    justify-content: center;
+  }
+
+  .compositeTools {
+    justify-items: start;
+    width: 100%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .optionFace,
   .backtest,
-  .secondary {
+  .secondary,
+  .findButton,
+  .resetButton {
     transition: none;
   }
 }
