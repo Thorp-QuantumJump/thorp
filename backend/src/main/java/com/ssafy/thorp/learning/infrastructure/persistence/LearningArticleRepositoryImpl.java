@@ -13,6 +13,7 @@ import com.ssafy.thorp.learning.domain.model.Edition;
 import com.ssafy.thorp.learning.domain.model.LearningArticle;
 import com.ssafy.thorp.learning.domain.model.Placement;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
+import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import com.ssafy.thorp.learning.domain.vo.StageKey;
 import com.ssafy.thorp.learning.infrastructure.persistence.LearningArticleJpaRepository.StageArticleRow;
 import com.ssafy.thorp.learning.infrastructure.persistence.LearningArticleRevisionJpaRepository.PublishedEntryRow;
@@ -20,6 +21,7 @@ import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -199,6 +201,26 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository 
                                         row.getStageNumber(),
                                         row.getPosition()))
                 .toList();
+    }
+
+    @Override
+    public Map<ArticleId, List<QuestionId>> findCurrentQuestionIds() {
+        Map<ArticleId, List<QuestionId>> questions = new LinkedHashMap<>();
+        for (LearningArticleRevisionJpaRepository.CurrentQuestionRow row :
+                revisionJpaRepository.findCurrentQuestionIds()) {
+            questions
+                    .computeIfAbsent(new ArticleId(row.getArticleId()), key -> new ArrayList<>())
+                    .add(
+                            new QuestionId(
+                                    LearningContentJson.required(
+                                            row.getQuestionId(), "quiz.questionId")));
+        }
+        return questions;
+    }
+
+    @Override
+    public Optional<Edition> findPublishedEdition(ArticleId articleId) {
+        return revisionJpaRepository.findPublishedEdition(articleId.value());
     }
 
     /**

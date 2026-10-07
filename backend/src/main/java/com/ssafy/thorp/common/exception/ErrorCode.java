@@ -110,6 +110,11 @@ public enum ErrorCode {
     LEARNING_STAGE_CHANGED(HttpStatus.CONFLICT, "단계의 글 목록이나 초안이 바뀌었습니다. 새로 불러온 뒤 다시 확인해 주세요."),
     LEARNING_STAGE_CHECK_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "검사에 걸린 글이 있어 단계를 공개하지 않았습니다."),
     LEARNING_TERM_TRANSFER_INVALID(HttpStatus.CONFLICT, "넘겨받으려는 용어의 지금 소유 글이 아닙니다."),
+    // 2판(B09): 나의 학습(learning-me-api). 기록하는 글은 공개된 글(CURRENT 판이 게시 중인 글)뿐이다.
+    LEARNING_NOT_RECORDABLE(HttpStatus.CONFLICT, "학습 기록을 남기지 않는 글입니다."),
+    LEARNING_COMPLETION_REQUIRED(HttpStatus.CONFLICT, "글을 끝까지 읽은 뒤 확인 문제에 답할 수 있습니다."),
+    LEARNING_RETRY_NOT_AVAILABLE(HttpStatus.CONFLICT, "다시 풀기를 할 수 없는 글입니다."),
+    LEARNING_QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "글의 확인 문제가 바뀌었습니다. 글을 다시 불러와 주세요."),
 
     // spec 006 내 기록. 계약은 specs/006-my-records/contracts/my-records-api.md "오류".
     // 저장 자리 한도(409)와 실행 자원 한도(EXECUTION_LIMIT, 429)를 다른 코드로 나눈다 — 사용자가
