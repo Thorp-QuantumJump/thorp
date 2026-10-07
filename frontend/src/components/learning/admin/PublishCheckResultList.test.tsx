@@ -48,6 +48,63 @@ describe('PublishCheckResultList', () => {
     expect(screen.getByText('본문')).not.toBeNull()
   })
 
+  it('(2판) quiz 위치는 문제·보기 식별자를, 새 문제는 순번을, field는 칸 이름을 보인다', () => {
+    render(
+      <PublishCheckResultList
+        failures={[
+          {
+            check: 'QUIZ',
+            location: { part: 'quiz', questionId: 'q2', choiceId: 'c5' },
+            message: '정답 보기가 하나가 아닙니다.',
+          },
+          {
+            check: 'FORBIDDEN_EXPRESSION',
+            location: { part: 'quiz', index: 0, field: 'explanation' },
+            message: '추천으로 읽히는 표현이 있습니다.',
+          },
+          {
+            check: 'QUIZ',
+            location: { part: 'quiz' },
+            message: '확인 문제는 2~3개여야 합니다.',
+          },
+          {
+            check: 'RESULT_NUMBER_OUTSIDE_HYPOTHETICAL',
+            location: { part: 'block', index: 4, field: 'rows[0][1]' },
+            message: '숫자 검사 문장',
+          },
+          {
+            check: 'PLACEMENT',
+            location: { part: 'article' },
+            message: '초안을 다른 단계로 옮긴 글입니다.',
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('확인 문제 q2 보기 c5')).not.toBeNull()
+    expect(screen.getByText('확인 문제 1번째(새 문제) · 풀이')).not.toBeNull()
+    expect(screen.getByText('확인 문제')).not.toBeNull()
+    expect(screen.getByText('본문 5번째 블록 · 1행 2열')).not.toBeNull()
+    expect(screen.getByText('글 전체')).not.toBeNull()
+    // 검사 이름은 서버 값 그대로다.
+    expect(screen.getAllByText('QUIZ')).toHaveLength(2)
+    expect(screen.getByText('PLACEMENT')).not.toBeNull()
+  })
+
+  it('(2판) 여러 목록을 함께 그려도 제목 id가 겹치지 않는다', () => {
+    render(
+      <>
+        <PublishCheckResultList title="글 하나" failures={publishCheckFailures} announce={false} />
+        <PublishCheckResultList title="글 둘" failures={publishCheckFailures} announce={false} />
+      </>,
+    )
+
+    const first = screen.getByRole('region', { name: '글 하나' })
+    const second = screen.getByRole('region', { name: '글 둘' })
+    expect(first.getAttribute('aria-labelledby')).not.toBe(second.getAttribute('aria-labelledby'))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('항목이 없으면 아무것도 그리지 않는다', () => {
     const { container } = render(<PublishCheckResultList failures={[]} />)
     expect(container.firstChild).toBeNull()
