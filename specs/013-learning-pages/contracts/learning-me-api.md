@@ -210,6 +210,7 @@ POST /learning/me/articles/{articleId}/answers
 
 | 응답 | 조건 |
 |---|---|
+| `400 INVALID_INPUT` | `questionId`나 `choiceId`가 없거나 비었다. 형식이 틀린 값은 공개 판에 없는 값과 같이 아래 404다 |
 | `409 LEARNING_COMPLETION_REQUIRED` | 그 글을 아직 완료하지 않았다. 로그인 사용자에게 확인 문제는 완료 뒤에 보인다(FR-022) |
 | `404 LEARNING_QUESTION_NOT_FOUND` | 공개 판에 그 문제가 없거나 그 문제에 그 보기가 없다(운영자가 문제를 바꿨다). 화면은 글을 다시 불러오라는 한 문장과 '다시 불러오기'를 보인다 |
 | §0의 404·409 | |
@@ -247,7 +248,8 @@ POST /learning/me/articles/{articleId}/retry-answers
 
 | 응답 | 조건 |
 |---|---|
-| `409 LEARNING_RETRY_NOT_AVAILABLE` | 아직 답하지 않은 문제가 있거나, 첫 답에서 하나 이상 맞혔거나, 이미 익힘이다 |
+| `400 INVALID_INPUT` | §5와 같다 |
+| `409 LEARNING_RETRY_NOT_AVAILABLE` | 아직 답하지 않은 문제가 있거나, 첫 답에서 하나 이상 맞혔거나, 이미 익힘이다. 이 판정을 문제·보기 확인(404)보다 먼저 한다 |
 | `404 LEARNING_QUESTION_NOT_FOUND` · §0의 404·409 | |
 
 ## 7. 학습 초기화

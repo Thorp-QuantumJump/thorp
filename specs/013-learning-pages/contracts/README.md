@@ -48,7 +48,7 @@
 | `LEARNING_TERM_ID_TAKEN` | 409 | 다른 글이 쓰고 있는 `termId` | 관리 |
 | `LEARNING_DRAFT_CHANGED` | 409 | 읽은 뒤 초안이 바뀌었다 | 관리 |
 | `LEARNING_PUBLISH_CHECK_FAILED` | 422 | 게시 전 검사에 걸렸다 | 관리 |
-| `LEARNING_NOT_RECORDABLE` **(2판)** | 409 | 기록하지 않는 글이다(이전 판, 첫 단계 공개 전 글) | 나의 학습 |
+| `LEARNING_NOT_RECORDABLE` **(2판)** | 409 | 기록하지 않는 글이다(이전 판, 첫 단계 공개 전 글). 첫 단계를 공개하기 전의 `GET /learning/me`도 이 코드다 | 나의 학습 |
 | `LEARNING_COMPLETION_REQUIRED` **(2판)** | 409 | 완료하지 않은 글의 확인 문제에 답했다 | 나의 학습 |
 | `LEARNING_QUESTION_NOT_FOUND` **(2판)** | 404 | 공개 판에 없는 문제나 그 문제에 없는 보기다 | 나의 학습 |
 | `LEARNING_RETRY_NOT_AVAILABLE` **(2판)** | 409 | 다시 풀기를 할 수 없는 글이다 | 나의 학습 |

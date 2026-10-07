@@ -111,7 +111,8 @@ public enum ErrorCode {
     LEARNING_STAGE_CHECK_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "검사에 걸린 글이 있어 단계를 공개하지 않았습니다."),
     LEARNING_TERM_TRANSFER_INVALID(HttpStatus.CONFLICT, "넘겨받으려는 용어의 지금 소유 글이 아닙니다."),
     // 2판(B09): 나의 학습(learning-me-api). 기록하는 글은 공개된 글(CURRENT 판이 게시 중인 글)뿐이다.
-    LEARNING_NOT_RECORDABLE(HttpStatus.CONFLICT, "학습 기록을 남기지 않는 글입니다."),
+    // 이전 판 글과 첫 단계 공개 전의 글, 그리고 첫 단계 공개 전의 나의 학습 조회가 이 코드다.
+    LEARNING_NOT_RECORDABLE(HttpStatus.CONFLICT, "지금은 학습 기록을 남기지 않습니다."),
     LEARNING_COMPLETION_REQUIRED(HttpStatus.CONFLICT, "글을 끝까지 읽은 뒤 확인 문제에 답할 수 있습니다."),
     LEARNING_RETRY_NOT_AVAILABLE(HttpStatus.CONFLICT, "다시 풀기를 할 수 없는 글입니다."),
     LEARNING_QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "글의 확인 문제가 바뀌었습니다. 글을 다시 불러와 주세요."),

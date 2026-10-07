@@ -82,10 +82,16 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><b>정산</b>은 학습 행동(완료·첫 답·다시 풀기)과 {@code GET /learning/me}가 같은 순서로 한다(data-model §12-5). 새 줄은 모두
  * {@code ON CONFLICT DO NOTHING}으로 넣고, 이번 요청이 실제로 넣은 것만 {@code gained}로 돌려준다. 같은 요청을 다시 보내도 경험치와
- * 배지가 두 번 생기지 않는다(SC-015).
+ * 배지가 두 번 생기지 않는다(SC-015). 기록을 바꾸지 않은 학습 행동(이미 완료한 글의 완료, 이미 답한 문제, 틀린 다시 풀기)은 정산하지 않는다. 운영자 변경으로
+ * 채워진 기준은 다음 {@code GET /learning/me}가 정산한다.
+ *
+ * <p><b>나의 학습을 쓰는 요청은 사용자 단위로 줄을 선다.</b> 정산하는 조회·위치·완료·첫 답·다시 풀기·학습 초기화가 모두 첫 문장에서 {@link
+ * LearnerProgressRepository#lockLearner}를 잡는다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지 행이 초기화 뒤에
+ * 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 잠금 순서는 사용자 잠금 → 진행 행이다. 관리 경로(단계 행 → 글)는 이 잠금과 진행 행을
+ * 잡지 않으므로 서로 기다리지 않는다.
  *
  * <p>격리 수준은 기본(READ COMMITTED)이다. {@code REPEATABLE_READ}에서는 다른 요청이 먼저 넣은 행과 충돌하는 {@code ON
- * CONFLICT DO NOTHING}이 직렬화 오류로 실패한다. 같은 글의 답 처리는 진행 행 잠금으로 직렬화한다(research R29).
+ * CONFLICT DO NOTHING}이 직렬화 오류로 실패한다. 같은 글의 답 처리는 진행 행도 잠근다(research R29).
  */
 @Service
 @Transactional
@@ -128,6 +134,7 @@ public class LearnerService {
      * @throws NotRecordableException 첫 단계를 공개하기 전. 나의 학습은 첫 단계를 공개할 때 켠다(FR-031)
      */
     public LearnerOverviewResult overview(long userId) {
+        progressRepository.lockLearner(userId);
         if (!stageRepository.anyReleased()) {
             throw new NotRecordableException();
         }
@@ -197,7 +204,7 @@ public class LearnerService {
     @Transactional(readOnly = true)
     public LearnerArticleResult article(long userId, String rawArticleId) {
         ArticleId articleId = requireRecordable(rawArticleId);
-        Content content = content();
+        Content content = requirePublishedIn(content(), articleId);
         LearnerFacts facts = facts(userId);
         LearnerProgress progress = facts.progressOf(articleId);
         List<QuestionId> questions = content.scope().questionsOf(articleId);
@@ -231,6 +238,7 @@ public class LearnerService {
      * @param percent 0~100. 범위는 요청 검증이 본다
      */
     public void recordPosition(long userId, String rawArticleId, int percent) {
+        progressRepository.lockLearner(userId);
         ArticleId articleId = requireRecordable(rawArticleId);
         progressRepository.recordPosition(userId, articleId, percent, LearningTime.now(clock));
     }
@@ -240,13 +248,15 @@ public class LearnerService {
      * gained}다. 완료를 되돌리는 경로는 없다(FR-021).
      */
     public CompletionResult complete(long userId, String rawArticleId) {
+        progressRepository.lockLearner(userId);
         ArticleId articleId = requireRecordable(rawArticleId);
         Instant now = LearningTime.now(clock);
-        Content content = content();
+        Content content = requirePublishedIn(content(), articleId);
         LearnerFacts before = facts(userId);
         int levelBefore = Settlement.level(content.scope(), before).current();
+        // 사용자 잠금 안에서 읽었으므로 그사이 다른 요청이 이 글을 완료할 수 없다.
+        boolean alreadyCompleted = before.completed(articleId);
         Instant completedAt = progressRepository.recordCompletion(userId, articleId, now);
-        boolean alreadyCompleted = !completedAt.equals(now);
         Gains gains = new Gains(levelBefore);
         if (!alreadyCompleted) {
             gains.add(ledgerRepository, userId, ExpEntry.articleCompleted(articleId, now));
@@ -271,6 +281,7 @@ public class LearnerService {
      */
     public AnswerResult answer(
             long userId, String rawArticleId, String rawQuestionId, String rawChoiceId) {
+        progressRepository.lockLearner(userId);
         ArticleId articleId = parseArticleId(rawArticleId);
         List<QuizQuestion> quiz = currentQuiz(articleId);
         LearnerProgress progress =
@@ -344,6 +355,7 @@ public class LearnerService {
      */
     public AnswerResult retry(
             long userId, String rawArticleId, String rawQuestionId, String rawChoiceId) {
+        progressRepository.lockLearner(userId);
         ArticleId articleId = parseArticleId(rawArticleId);
         List<QuizQuestion> quiz = currentQuiz(articleId);
         List<QuestionId> questionIds = quiz.stream().map(QuizQuestion::questionId).toList();
@@ -388,6 +400,7 @@ public class LearnerService {
 
     /** 학습 초기화(§7). 네 테이블의 그 사용자 행을 한 트랜잭션에서 지운다. 기록이 없어도 성공이다(FR-025). */
     public void reset(long userId) {
+        progressRepository.lockLearner(userId);
         badgeRepository.deleteAllForUser(userId);
         ledgerRepository.deleteAllForUser(userId);
         answerRepository.deleteAllForUser(userId);
@@ -647,6 +660,19 @@ public class LearnerService {
             throw new NotRecordableException();
         }
         return articleId;
+    }
+
+    /**
+     * 공개 범위를 읽은 뒤 그 글이 여전히 공개된 글인지 본다. 기록 가능 확인과 공개 범위 조회는 다른 문장이라, 그사이 게시 취소가 커밋되면 글이 범위에서 빠진다.
+     * 그때는 확인 전에 취소된 것과 같이 404로 답한다(learning-me-api §0).
+     *
+     * @throws ArticleUnavailableException 범위에 없다
+     */
+    private static Content requirePublishedIn(Content content, ArticleId articleId) {
+        if (!content.scope().isPublished(articleId)) {
+            throw new ArticleUnavailableException();
+        }
+        return content;
     }
 
     /** 기록할 수 있는 글의 공개 판 문제. 답을 판정하려면 정답과 풀이가 있는 판을 읽어야 한다. */

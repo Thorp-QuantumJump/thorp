@@ -488,6 +488,26 @@ class LearningMigrationTest extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("같은 (사용자, 글)의 두 번째 진행 행은 기본키로 거절된다")
+    void rejectsSecondProgressRow() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+        insertProgress(user, "backtest", 10, "NULL", "NULL");
+
+        assertRejectedBy(
+                "pk_learning_progress", () -> insertProgress(user, "backtest", 20, "NULL", "NULL"));
+    }
+
+    @Test
+    @DisplayName("단계 완주 줄이 글을 가리키면 그 CHECK로 거절된다(단계 완주는 단계만, 나머지는 글만)")
+    void rejectsStageEntryPointingToArticle() {
+        long user = TestUsers.ensure(jdbcTemplate, LEARNER);
+
+        assertRejectedBy(
+                "ck_learning_exp_entry_target",
+                () -> insertExp(user, "STAGE_COMPLETED", "stage:returns-and-risk", 50));
+    }
+
+    @Test
     @DisplayName("네 종류 밖의 장부 줄은 그 CHECK로 거절된다")
     void rejectsUnknownExpKind() {
         long user = TestUsers.ensure(jdbcTemplate, LEARNER);

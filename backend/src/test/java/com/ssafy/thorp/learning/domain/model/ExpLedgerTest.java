@@ -44,6 +44,8 @@ class ExpLedgerTest {
         ExpLedger ledger = answerCorrect(ExpLedger.empty(), "q1", 2, false);
 
         assertThat(ledger.correctShare(ARTICLE, 3, true)).isZero();
+        // 같은 장부라도 모두 답하기 전이었다면 몫이 있다. 0은 '모두 답한 뒤'라서다.
+        assertThat(ledger.correctShare(ARTICLE, 3, false)).isEqualTo(20);
     }
 
     @Test
