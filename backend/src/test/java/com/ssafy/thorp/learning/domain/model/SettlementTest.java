@@ -8,6 +8,8 @@ import com.ssafy.thorp.learning.domain.model.LearnerProgress.MasteredVia;
 import com.ssafy.thorp.learning.domain.model.Settlement.Outcome;
 import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.BadgeKey;
+import com.ssafy.thorp.learning.domain.vo.ChoiceId;
+import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -36,13 +38,62 @@ class SettlementTest {
 
         Outcome outcome = settle(scope, facts);
 
-        assertThat(outcome.stageEntries())
+        assertThat(outcome.entries())
                 .extracting(ExpEntry::stageKey)
                 .containsExactly(LearnerScopes.stageKey(2));
         assertThat(outcome.badges())
                 .extracting(BadgeKey::value)
                 .contains("stage-returns-and-risk", "read-1")
                 .doesNotContain("stage-etf-market-basics");
+    }
+
+    @Test
+    @DisplayName("공개된 문제에 모두 첫 답이 있고 모두 답한 시각이 비어 있으면 처음 모두 답한 것으로 보고, 다 맞혔으면 모두 맞힘을 준다")
+    void allAnsweredJudgedBySettlement() {
+        // 운영자가 남은 문제를 지워, 이 글의 공개된 문제(q1·q2)에 모두 첫 답이 있는 상태가 됐다.
+        ContentScope scope = LearnerScopes.scope(2, -1, -1, -1, -1, -1);
+        ArticleId perfect = LearnerScopes.article(1, 1);
+        ArticleId halfRight = LearnerScopes.article(1, 2);
+        Map<ArticleId, LearnerProgress> progress = completed(perfect, halfRight);
+        List<FirstAnswer> answers =
+                List.of(
+                        answer(perfect, "q1", true),
+                        answer(perfect, "q2", true),
+                        answer(halfRight, "q1", true),
+                        answer(halfRight, "q2", false));
+
+        Outcome outcome =
+                settle(scope, new LearnerFacts(progress, answers, ExpLedger.empty(), Map.of()));
+
+        assertThat(outcome.allAnswered()).containsExactlyInAnyOrder(perfect, halfRight);
+        assertThat(outcome.entries())
+                .filteredOn(entry -> entry.kind() == ExpEntry.Kind.ALL_CORRECT)
+                .extracting(ExpEntry::articleId)
+                .containsExactly(perfect);
+        assertThat(outcome.badges()).extracting(BadgeKey::value).contains("perfect-1");
+    }
+
+    @Test
+    @DisplayName("이미 모두 답한 글과 아직 답하지 않은 문제가 있는 글은 모두 답함을 다시 판정하지 않는다")
+    void allAnsweredOnlyOnce() {
+        ContentScope scope = LearnerScopes.scope(2, -1, -1, -1, -1, -1);
+        ArticleId done = LearnerScopes.article(1, 1);
+        ArticleId partial = LearnerScopes.article(1, 2);
+        Map<ArticleId, LearnerProgress> progress = new HashMap<>();
+        progress.put(
+                done, new LearnerProgress(done, 100, AT, AT, AT, AT, MasteredVia.FIRST_ANSWER));
+        progress.put(partial, new LearnerProgress(partial, 100, AT, AT, null, null, null));
+        List<FirstAnswer> answers =
+                List.of(
+                        answer(done, "q1", true),
+                        answer(done, "q2", true),
+                        answer(partial, "q1", true));
+
+        Outcome outcome =
+                settle(scope, new LearnerFacts(progress, answers, ExpLedger.empty(), Map.of()));
+
+        assertThat(outcome.allAnswered()).isEmpty();
+        assertThat(outcome.entries()).noneMatch(entry -> entry.kind() == ExpEntry.Kind.ALL_CORRECT);
     }
 
     @Test
@@ -58,11 +109,11 @@ class SettlementTest {
         LearnerFacts second =
                 facts(
                         completed(LearnerScopes.article(1, 1)),
-                        first.ledger().plus(outcome.stageEntries()),
+                        first.ledger().plus(outcome.entries()),
                         badges);
 
         Outcome again = settle(scope, second);
-        assertThat(again.stageEntries()).isEmpty();
+        assertThat(again.entries()).isEmpty();
         assertThat(again.badges()).isEmpty();
     }
 
@@ -75,7 +126,7 @@ class SettlementTest {
 
         Outcome outcome = settle(scope, facts);
 
-        assertThat(outcome.stageEntries())
+        assertThat(outcome.entries())
                 .extracting(ExpEntry::stageKey)
                 .containsExactly(LearnerScopes.stageKey(1));
         assertThat(status(scope, facts, "stage-returns-and-risk").reason())
@@ -149,7 +200,7 @@ class SettlementTest {
                 .extracting(BadgeKey::value)
                 .contains("read-20", "read-27", "exploration")
                 .doesNotContain("terms-all");
-        assertThat(outcome.stageEntries()).hasSize(6);
+        assertThat(outcome.entries()).hasSize(6);
     }
 
     @Test
@@ -249,6 +300,10 @@ class SettlementTest {
                         .findFirst()
                         .orElseThrow();
         return Settlement.evaluate(definition, scope, facts, Settlement.level(scope, facts));
+    }
+
+    private static FirstAnswer answer(ArticleId article, String question, boolean correct) {
+        return new FirstAnswer(article, new QuestionId(question), new ChoiceId("c1"), correct, AT);
     }
 
     private static LearnerFacts facts(
