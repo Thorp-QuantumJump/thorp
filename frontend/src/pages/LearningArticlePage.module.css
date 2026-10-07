@@ -32,6 +32,31 @@
   gap: 12px;
 }
 
+/*
+  로그인 사용자의 '읽은 정도' 막대(목업 '글 끝'의 .rbar). 그림이라 aria-hidden이고, 글자 정보는 '62%까지
+  읽었습니다' 줄과 완료 카드가 맡는다(design-notes §6).
+*/
+.readBar {
+  position: relative;
+  height: 2px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: var(--thorp-line-control);
+}
+
+.readBarFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--thorp-accent-soft);
+}
+
+/* 로그인 상태를 다시 확인하는 동안. 자리를 둔 채 화면과 보조 기술에서 모두 뺀다(research R33). */
+.concealed {
+  visibility: hidden;
+}
+
 .title {
   margin: 0;
   font-size: var(--thorp-text-title, clamp(1.9rem, 5vw, 3rem));

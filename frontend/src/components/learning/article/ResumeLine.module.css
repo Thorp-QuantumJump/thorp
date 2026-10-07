@@ -1,0 +1,34 @@
+/* 목업 '목록에서 읽는 중 글을 열었을 때'의 한 줄(.artbar). 작은 글 도장은 B13이 앞에 더한다. */
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 12px 0 0;
+  padding: 6px 14px;
+  border-radius: var(--thorp-radius-inset, 10px);
+  background: var(--thorp-surface);
+  box-shadow: inset 0 0 0 1px var(--thorp-line);
+  color: var(--thorp-copy);
+  font-size: 0.95rem;
+}
+
+/* 누르는 곳은 44×44px 이상이다(design-notes §6). 같은 줄의 글자와 밑줄·굵기로도 구분한다(WCAG 1.4.1). */
+.button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--thorp-accent-soft);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
