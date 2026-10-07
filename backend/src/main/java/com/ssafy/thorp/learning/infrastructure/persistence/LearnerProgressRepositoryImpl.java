@@ -77,19 +77,6 @@ public class LearnerProgressRepositoryImpl implements LearnerProgressRepository 
                 .findFirst();
     }
 
-    /** 진행 행만 잠근다({@code FOR UPDATE OF p}). 글 행까지 잠그면 운영자의 게시와 서로 기다린다. */
-    @Override
-    public Optional<LearnerProgress> findForUpdate(long userId, ArticleId articleId) {
-        return jdbc
-                .query(
-                        SELECT + " WHERE p.user_id = ? AND a.article_key = ? FOR UPDATE OF p",
-                        LearnerProgressRepositoryImpl::toDomain,
-                        userId,
-                        articleId.value())
-                .stream()
-                .findFirst();
-    }
-
     @Override
     public void recordPosition(long userId, ArticleId articleId, int percent, Instant at) {
         Timestamp now = Timestamp.from(at);

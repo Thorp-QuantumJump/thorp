@@ -3,16 +3,20 @@ package com.ssafy.thorp.learning.domain.model;
 import com.ssafy.thorp.learning.domain.model.BadgeStatus.Progress;
 import com.ssafy.thorp.learning.domain.model.BadgeStatus.State;
 import com.ssafy.thorp.learning.domain.model.ContentScope.StageScope;
+import com.ssafy.thorp.learning.domain.vo.ArticleId;
 import com.ssafy.thorp.learning.domain.vo.BadgeKey;
+import com.ssafy.thorp.learning.domain.vo.QuestionId;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 정산(data-model §12-5, research R30). 사용자의 사실과 지금 공개된 콘텐츠로 새로 채워진 단계 완주와 배지를 찾는 순수 함수다.
  *
- * <p>학습 행동 요청(완료·첫 답·다시 풀기)과 {@code GET /learning/me}가 같은 순서로 부른다. ① 단계 완주 → ② 장부 합계로 레벨 → ③ 배지.
- * 운영자의 게시 취소나 단계 이동으로 채워진 기준도 다음 정산에서 생긴다(FR-024). 받은 배지는 콘텐츠가 바뀌어도 지우지 않는다.
+ * <p>학습 행동 요청(완료·첫 답·다시 풀기)과 {@code GET /learning/me}가 같은 순서로 부른다. ⓪ 모두 답함과 모두 맞힘 → ① 단계 완주 → ② 장부
+ * 합계로 레벨 → ③ 배지. 운영자의 게시 취소나 단계 이동으로 채워진 기준, 운영자가 남은 문제를 지워 생긴 '모두 답함'도 다음 정산에서 생긴다(FR-024,
+ * FR-028). 받은 배지는 콘텐츠가 바뀌어도 지우지 않는다.
  */
 public final class Settlement {
 
@@ -20,18 +24,36 @@ public final class Settlement {
 
     /**
      * @param now 새 장부 줄과 배지의 시각
-     * @return 새로 생길 단계 완주 장부 줄과 배지. 저장은 호출자가 {@code ON CONFLICT DO NOTHING}으로 한다
+     * @return 처음 모두 답한 글, 새로 생길 장부 줄(모두 맞힘·단계 완주)과 배지. 저장은 호출자가 {@code ON CONFLICT DO NOTHING}으로 한다
      */
     public static Outcome settle(
             ContentScope scope, LearnerFacts facts, BadgeCatalog catalog, Instant now) {
-        List<ExpEntry> stageEntries = new ArrayList<>();
+        List<ArticleId> allAnswered = new ArrayList<>();
+        List<ExpEntry> entries = new ArrayList<>();
+        for (ArticleId article : scope.articles()) {
+            LearnerProgress progress = facts.progressOf(article);
+            List<QuestionId> questions = scope.questionsOf(article);
+            if (progress == null || progress.allAnswered() || questions.isEmpty()) {
+                continue;
+            }
+            Map<QuestionId, FirstAnswer> answers = facts.answersFor(article, questions);
+            if (answers.size() < questions.size()) {
+                continue;
+            }
+            // 처음 모든 문제에 답한 상태가 됐다. 새 첫 답 때문이든 운영자가 남은 문제를 지워서든 여기서 한 번 판정한다.
+            allAnswered.add(article);
+            if (answers.values().stream().allMatch(FirstAnswer::correct)
+                    && !facts.ledger().hasAllCorrect(article)) {
+                entries.add(ExpEntry.allCorrect(article, now));
+            }
+        }
         for (StageScope stage : scope.nonEmptyReleasedStages()) {
             if (facts.stageCompleted(stage)
                     && !facts.ledger().hasStageCompleted(stage.stageKey())) {
-                stageEntries.add(ExpEntry.stageCompleted(stage.stageKey(), now));
+                entries.add(ExpEntry.stageCompleted(stage.stageKey(), now));
             }
         }
-        LearnerFacts settled = facts.withLedger(facts.ledger().plus(stageEntries));
+        LearnerFacts settled = facts.withLedger(facts.ledger().plus(entries));
         Level level = level(scope, settled);
         List<BadgeKey> badges = new ArrayList<>();
         for (BadgeDefinition definition : catalog.definitions()) {
@@ -40,7 +62,7 @@ public final class Settlement {
                 badges.add(definition.key());
             }
         }
-        return new Outcome(stageEntries, badges);
+        return new Outcome(allAnswered, entries, badges);
     }
 
     /** 장부 합계와 지금 공개된 콘텐츠의 레벨. */
@@ -164,13 +186,16 @@ public final class Settlement {
     /**
      * 정산 결과.
      *
-     * @param stageEntries 새 단계 완주 장부 줄
+     * @param allAnswered 처음 모든 문제에 답한 상태가 된 글. 호출자가 {@code all_answered_at}을 채운다
+     * @param entries 새 장부 줄. 모두 맞힘이 단계 완주보다 앞선다
      * @param badges 새로 채워진 배지. 카탈로그 순서다
      */
-    public record Outcome(List<ExpEntry> stageEntries, List<BadgeKey> badges) {
+    public record Outcome(
+            List<ArticleId> allAnswered, List<ExpEntry> entries, List<BadgeKey> badges) {
 
         public Outcome {
-            stageEntries = List.copyOf(stageEntries);
+            allAnswered = List.copyOf(allAnswered);
+            entries = List.copyOf(entries);
             badges = List.copyOf(badges);
         }
     }

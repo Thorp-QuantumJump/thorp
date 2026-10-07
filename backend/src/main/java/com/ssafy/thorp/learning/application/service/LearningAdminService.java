@@ -659,10 +659,6 @@ public class LearningAdminService {
     }
 
     private static ArticleId parseArticleId(String raw) {
-        try {
-            return new ArticleId(raw);
-        } catch (IllegalArgumentException | NullPointerException invalid) {
-            throw new ArticleNotFoundException();
-        }
+        return ArticleId.parse(raw).orElseThrow(ArticleNotFoundException::new);
     }
 }

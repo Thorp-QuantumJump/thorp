@@ -11,6 +11,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ArticleIdTest {
 
     @Test
+    @DisplayName("parse는 형식이 맞으면 값을, 틀리거나 null이면 빈 값을 돌려준다")
+    void parseNeverThrows() {
+        assertThat(ArticleId.parse("recovery-period")).contains(new ArticleId("recovery-period"));
+        assertThat(ArticleId.parse("Bad_Id")).isEmpty();
+        assertThat(ArticleId.parse("ab")).isEmpty();
+        assertThat(ArticleId.parse(null)).isEmpty();
+    }
+
+    @Test
     @DisplayName("3자와 64자는 경계 안이다")
     void acceptsBoundaryLengths() {
         assertThat(new ArticleId("abc").value()).isEqualTo("abc");

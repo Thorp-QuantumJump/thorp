@@ -28,9 +28,6 @@ public interface LearnerProgressRepository {
 
     Optional<LearnerProgress> find(long userId, ArticleId articleId);
 
-    /** 행을 잠그고 읽는다. 같은 글의 답 처리가 겹치지 않게 한다(research R29). */
-    Optional<LearnerProgress> findForUpdate(long userId, ArticleId articleId);
-
     /** 읽은 위치. 행이 없으면 만들고(글이 '읽는 중'이 된다), 있으면 더 큰 비율만 남기고 마지막으로 연 시각은 늘 바꾼다(learning-me-api §3). */
     void recordPosition(long userId, ArticleId articleId, int percent, Instant at);
 

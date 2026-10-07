@@ -54,6 +54,20 @@ public record LearnerFacts(
         return new LearnerFacts(progress, answers, newLedger, badges);
     }
 
+    /** 글 하나의 기록을 바꾼 사실. 이 요청이 저장한 변경을 다시 읽지 않고 반영할 때 쓴다. */
+    public LearnerFacts withProgress(LearnerProgress row) {
+        Map<ArticleId, LearnerProgress> changed = new HashMap<>(progress);
+        changed.put(row.articleId(), row);
+        return new LearnerFacts(changed, answers, ledger, badges);
+    }
+
+    /** 배지를 더한 사실. 이미 받은 배지의 시각은 바꾸지 않는다. */
+    public LearnerFacts withBadges(List<BadgeKey> added, Instant at) {
+        Map<BadgeKey, Instant> merged = new HashMap<>(badges);
+        added.forEach(badge -> merged.putIfAbsent(badge, at));
+        return new LearnerFacts(progress, answers, ledger, merged);
+    }
+
     /** 이 글의 공개 판에 남은 문제의 첫 답. 키는 문제 식별자다. */
     public Map<QuestionId, FirstAnswer> answersFor(
             ArticleId articleId, List<QuestionId> questions) {

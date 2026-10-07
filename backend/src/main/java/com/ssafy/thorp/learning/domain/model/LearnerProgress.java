@@ -43,6 +43,34 @@ public record LearnerProgress(
         return completedAt != null;
     }
 
+    /** 처음 모든 문제에 답한 시각을 채운 기록. 이미 있으면 그대로다(저장소의 {@code markAllAnswered}와 같은 규칙). */
+    public LearnerProgress withAllAnswered(Instant at) {
+        return allAnswered()
+                ? this
+                : new LearnerProgress(
+                        articleId,
+                        furthestPercent,
+                        lastOpenedAt,
+                        completedAt,
+                        at,
+                        masteredAt,
+                        masteredVia);
+    }
+
+    /** 익힘을 채운 기록. 이미 익힘이면 그대로다(저장소의 {@code markMastered}와 같은 규칙). */
+    public LearnerProgress withMastered(MasteredVia via, Instant at) {
+        return mastered()
+                ? this
+                : new LearnerProgress(
+                        articleId,
+                        furthestPercent,
+                        lastOpenedAt,
+                        completedAt,
+                        allAnsweredAt,
+                        at,
+                        via);
+    }
+
     public boolean mastered() {
         return masteredAt != null;
     }
