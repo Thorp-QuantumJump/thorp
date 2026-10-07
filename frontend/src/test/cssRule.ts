@@ -23,3 +23,36 @@ export function cssDeclarations(path: string, selector: string): string {
   if (matches.length === 0) throw new Error(`${path}에 ${selector} 규칙이 없습니다.`)
   return matches.map((match) => match[1]).join('\n')
 }
+
+/**
+ * CSS 모듈 파일에서 미디어 블록 안의 선택자 하나의 선언 블록들을 꺼낸다.
+ *
+ * <p>움직임은 `prefers-reduced-motion: no-preference` 안에서만, 강제 색 모드의 윤곽은 `forced-colors: active` 안에
+ * 둔다. `cssDeclarations`는 줄 처음의 규칙만 보므로 이런 규칙이 지워지거나 블록 밖으로 나가도 알아채지 못한다.
+ *
+ * @param media `@media` 뒤의 조건 그대로(예: `(prefers-reduced-motion: no-preference)`)
+ * @param selector 블록 안에서 줄 처음(들여쓰기 뒤)에서 시작하는 선택자 그대로
+ */
+export function cssMediaDeclarations(path: string, media: string, selector: string): string {
+  const css = readFileSync(resolve(sourceRoot, path), 'utf-8')
+  const head = `@media ${media}`
+  const blocks: string[] = []
+  for (let start = css.indexOf(head); start !== -1; start = css.indexOf(head, start + head.length)) {
+    const open = css.indexOf('{', start)
+    let depth = 0
+    for (let i = open; i < css.length; i += 1) {
+      if (css[i] === '{') depth += 1
+      if (css[i] === '}') depth -= 1
+      if (depth === 0) {
+        blocks.push(css.slice(open + 1, i))
+        break
+      }
+    }
+  }
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const matches = blocks.flatMap((block) => [
+    ...block.matchAll(new RegExp(`^\\s*${escaped}\\s*\\{([^}]*)\\}`, 'gm')),
+  ])
+  if (matches.length === 0) throw new Error(`${path}의 ${head}에 ${selector} 규칙이 없습니다.`)
+  return matches.map((match) => match[1]).join('\n')
+}

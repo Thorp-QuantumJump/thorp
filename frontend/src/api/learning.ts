@@ -5,9 +5,10 @@ import type {
   ArticleStage,
   CurrentArticleBlock,
   CurrentLearningArticle,
+  Curriculum,
+  CurriculumArticle,
   DiagramSeries,
   LearningArticle,
-  LearningArticleList,
   LearningArticleSummary,
   LearningExample,
   LearningExampleSector,
@@ -15,17 +16,21 @@ import type {
   LegacyArticleBlock,
   LegacyLearningArticle,
   NoteSource,
+  PreviousEditionArticle,
   QuizChoice,
   QuizQuestion,
+  ReleaseLogEntry,
   Run,
+  StageView,
 } from '@/types/learning'
 
 /**
- * 배우기 공개 조회(013 contracts/learning-public-api.md §1·§2)의 통로다.
+ * 배우기 공개 조회(013 contracts/learning-public-api.md §1·§3)의 통로다.
  *
- * <p><b>빈 목록과 실패를 이 층에서 가른다.</b> 게시된 글이 없는 200과 목록을 받지 못한 실패는 사용자가
- * 할 수 있는 일이 다르다(013 SC-007). 화면이 배열 길이로 판정하면 실패를 빈 목록으로 그리기 쉽다 —
- * `api/sectors.ts`의 `SectorCatalogResult`가 같은 이유로 같은 구조를 쓴다.
+ * <p><b>빈 목록과 실패를 섞지 않는다.</b> 게시된 글이 없는 200과 목록을 받지 못한 실패는 사용자가
+ * 할 수 있는 일이 다르다(013 SC-007). 받지 못했거나 계약과 다른 응답은 모두 `failed`이고, 빈 목록은
+ * 받은 커리큘럼의 내용이다. 계약과 다른 모양을 빈 배열로 접지 않는다 — `api/sectors.ts`의
+ * `SectorCatalogResult`가 같은 이유로 같은 구조를 쓴다.
  *
  * <p><b>예외를 던지지 않고 재시도하지 않는다.</b> 다시 시도는 사용자가 누를 때 다시 부른다(013 FR-015).
  * 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다.
@@ -39,11 +44,11 @@ type LoadFailure = {
   message: string
 }
 
-export type LearningListResult =
-  | { status: 'loaded'; articles: LearningArticleSummary[] }
-  /** 게시된 글이 없다. 오류가 아니라 정상 화면이다 */
-  | { status: 'empty' }
-  | LoadFailure
+/**
+ * 커리큘럼 조회 결과. 게시된 글이 없는 것도 `loaded`다(계약 §1 "게시된 글이 하나도 없어도 200").
+ * 빈 목록과 실패는 화면이 `loaded`의 내용으로 가른다.
+ */
+export type CurriculumResult = { status: 'loaded'; curriculum: Curriculum } | LoadFailure
 
 export type LearningArticleResult =
   | { status: 'loaded'; article: LearningArticle }
@@ -96,17 +101,6 @@ function readSummary(value: unknown): LearningArticleSummary | null {
     question: value.question,
     readingOrder: value.readingOrder,
   }
-}
-
-function readList(value: unknown): LearningArticleList | null {
-  if (!isRecord(value) || !Array.isArray(value.articles)) return null
-  const articles: LearningArticleSummary[] = []
-  for (const item of value.articles) {
-    const summary = readSummary(item)
-    if (!summary) return null
-    articles.push(summary)
-  }
-  return { articles }
 }
 
 function isNumber(value: unknown): value is number {
@@ -449,6 +443,147 @@ function readArticle(value: unknown): LearningArticle | null {
     : null
 }
 
+function readCurriculumArticle(value: unknown): CurriculumArticle | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.articleId) ||
+    !isString(value.number) ||
+    !isString(value.title) ||
+    !isString(value.question) ||
+    !isNumber(value.readingMinutes) ||
+    !isNumber(value.termCount) ||
+    typeof value.hasExample !== 'boolean'
+  ) {
+    return null
+  }
+  return {
+    articleId: value.articleId,
+    number: value.number,
+    title: value.title,
+    question: value.question,
+    readingMinutes: value.readingMinutes,
+    termCount: value.termCount,
+    hasExample: value.hasExample,
+  }
+}
+
+function readPreviousEditionArticle(value: unknown): PreviousEditionArticle | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.articleId) ||
+    !isString(value.title) ||
+    !isString(value.question) ||
+    !isNumber(value.readingMinutes)
+  ) {
+    return null
+  }
+  return {
+    articleId: value.articleId,
+    title: value.title,
+    question: value.question,
+    readingMinutes: value.readingMinutes,
+  }
+}
+
+/**
+ * 단계 하나를 읽는다. 모르는 `status`는 읽지 못한 응답이다. 블록과 달리 넘기지 않는 까닭은 상태를 모르면
+ * '준비 중'으로 그릴지 글을 보일지 정할 수 없고, 잘못 고르면 공개하지 않은 단계를 공개된 것처럼 보이기
+ * 때문이다.
+ */
+function readStageView(value: unknown): StageView | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.stageKey) ||
+    !isNumber(value.number) ||
+    !isString(value.name) ||
+    !isString(value.levelLabel) ||
+    !isString(value.summary) ||
+    !(value.releasedAt === null || isString(value.releasedAt))
+  ) {
+    return null
+  }
+  const status = value.status
+  if (status !== 'OPEN' && status !== 'PREPARING' && status !== 'REPREPARING') return null
+  const articles = readAll(value.articles, readCurriculumArticle)
+  const previousEditionArticles = readAll(value.previousEditionArticles, readPreviousEditionArticle)
+  if (!articles || !previousEditionArticles) return null
+  return {
+    stageKey: value.stageKey,
+    number: value.number,
+    name: value.name,
+    levelLabel: value.levelLabel,
+    summary: value.summary,
+    status,
+    releasedAt: value.releasedAt,
+    articles,
+    previousEditionArticles,
+  }
+}
+
+function readReleaseLogEntry(value: unknown): ReleaseLogEntry | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.entryKey) ||
+    !isNumber(value.stageNumber) ||
+    !isString(value.stageName) ||
+    !isString(value.occurredAt) ||
+    !isNumber(value.newCount) ||
+    !isNumber(value.rewrittenCount) ||
+    !isStringArray(value.rewrittenTitles) ||
+    !(value.articleTitle === null || isString(value.articleTitle))
+  ) {
+    return null
+  }
+  const kind = value.kind
+  if (kind !== 'STAGE_RELEASED' && kind !== 'ARTICLE_ADDED') return null
+  return {
+    entryKey: value.entryKey,
+    kind,
+    stageNumber: value.stageNumber,
+    stageName: value.stageName,
+    occurredAt: value.occurredAt,
+    newCount: value.newCount,
+    rewrittenCount: value.rewrittenCount,
+    rewrittenTitles: value.rewrittenTitles,
+    articleTitle: value.articleTitle,
+  }
+}
+
+/**
+ * 커리큘럼을 읽는다(계약 §1).
+ *
+ * <p><b>`preReleaseArticles`는 공개한 단계 수와 맞아야 한다.</b> 공개 전(`releasedStageCount = 0`)에만
+ * 배열이고 공개한 뒤에는 null이다. 둘이 어긋나면 화면이 1판 목록과 여정 지도 가운데 무엇을 그릴지 정할 수
+ * 없으므로 읽지 못한 응답으로 둔다.
+ */
+function readCurriculum(value: unknown): Curriculum | null {
+  if (
+    !isRecord(value) ||
+    !isNumber(value.releasedStageCount) ||
+    typeof value.allStagesReleased !== 'boolean'
+  ) {
+    return null
+  }
+  const stages = readAll(value.stages, readStageView)
+  const notices = readAll(value.notices, readReleaseLogEntry)
+  const changeLog = readAll(value.changeLog, readReleaseLogEntry)
+  if (!stages || !notices || !changeLog) return null
+
+  const preReleaseArticles =
+    value.preReleaseArticles === null ? null : readAll(value.preReleaseArticles, readSummary)
+  if (value.preReleaseArticles !== null && !preReleaseArticles) return null
+  if ((value.releasedStageCount === 0) !== (preReleaseArticles !== null)) return null
+
+  return {
+    releasedStageCount: value.releasedStageCount,
+    allStagesReleased: value.allStagesReleased,
+    stages,
+    preReleaseArticles,
+    notices,
+    changeLog,
+  }
+}
+
 function unreadable(): LoadFailure {
   return { status: 'failed', kind: 'unexpected', code: null, message: UNREADABLE_RESPONSE_MESSAGE }
 }
@@ -465,17 +600,14 @@ function unwrap<T>(body: ApiEnvelope<T>): T {
   return body.data
 }
 
-/** 게시된 글 목록을 한 번 받아 온다. */
-export async function fetchLearningArticles(signal?: AbortSignal): Promise<LearningListResult> {
+/** 커리큘럼을 한 번 받아 온다(계약 §1). */
+export async function fetchCurriculum(signal?: AbortSignal): Promise<CurriculumResult> {
   try {
-    const response = await apiClient.get<ApiEnvelope<LearningArticleList>>('/learning/articles', {
+    const response = await apiClient.get<ApiEnvelope<Curriculum>>('/learning/curriculum', {
       signal,
     })
-    const list = readList(unwrap(response.data))
-    if (!list) return unreadable()
-    return list.articles.length === 0
-      ? { status: 'empty' }
-      : { status: 'loaded', articles: list.articles }
+    const curriculum = readCurriculum(unwrap(response.data))
+    return curriculum ? { status: 'loaded', curriculum } : unreadable()
   } catch (error) {
     return toFailure(normalizeApiError(error))
   }

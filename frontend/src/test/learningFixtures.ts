@@ -1,7 +1,10 @@
 import type {
   CurrentLearningArticle,
+  Curriculum,
   LearningArticleSummary,
   LegacyLearningArticle,
+  ReleaseLogEntry,
+  StageView,
 } from '@/types/learning'
 import type {
   AdminLearningArticle,
@@ -254,6 +257,110 @@ export const currentArticle: CurrentLearningArticle = {
   stageArticleCount: 4,
   hasUnreleasedStages: true,
   publishedAt: '2026-11-19T01:00:00Z',
+}
+
+/** 단계 여섯의 공통 필드. 이름·설명은 합성 값이고 data-model §13의 단계가 아니다. */
+const stageBase = [
+  { stageKey: 'harbor-basics', number: 1, name: '항구 기초', levelLabel: '입문', summary: '합성 단계 설명 하나다.' },
+  { stageKey: 'swell-and-risk', number: 2, name: '너울과 위험', levelLabel: '입문', summary: '합성 단계 설명 둘이다.' },
+  { stageKey: 'tide-tables', number: 3, name: '물때표 읽기', levelLabel: '입문~초급', summary: '합성 단계 설명 셋이다.' },
+  { stageKey: 'chart-and-cost', number: 4, name: '해도와 비용', levelLabel: '초급', summary: '합성 단계 설명 넷이다.' },
+  { stageKey: 'reef-checks', number: 5, name: '암초 점검', levelLabel: '초급', summary: '합성 단계 설명 다섯이다.' },
+  { stageKey: 'weather-and-seas', number: 6, name: '날씨와 바다', levelLabel: '초급', summary: '합성 단계 설명 여섯이다.' },
+] as const
+
+function preparingStage(index: number, previous: StageView['previousEditionArticles'] = []): StageView {
+  return { ...stageBase[index], status: 'PREPARING', releasedAt: null, articles: [], previousEditionArticles: previous }
+}
+
+/** 2단계 공개 줄. 새 글 3편과 다시 쓴 글 1편이다. */
+export const stageTwoReleased: ReleaseLogEntry = {
+  entryKey: 'stage:swell-and-risk',
+  kind: 'STAGE_RELEASED',
+  stageNumber: 2,
+  stageName: '너울과 위험',
+  occurredAt: '2026-11-19T01:00:00Z',
+  newCount: 3,
+  rewrittenCount: 1,
+  rewrittenTitles: ['물때 읽기'],
+  articleTitle: null,
+}
+
+/** 1단계에 글 하나를 더한 줄. */
+export const stageOneArticleAdded: ReleaseLogEntry = {
+  entryKey: 'article:dock-fees',
+  kind: 'ARTICLE_ADDED',
+  stageNumber: 1,
+  stageName: '항구 기초',
+  occurredAt: '2026-11-15T01:00:00Z',
+  newCount: 1,
+  rewrittenCount: 0,
+  rewrittenTitles: [],
+  articleTitle: '부두 이용료는 어디로 갈까?',
+}
+
+/** 1단계 공개 줄. 7일이 지나 변경 기록에만 있다. */
+export const stageOneReleased: ReleaseLogEntry = {
+  entryKey: 'stage:harbor-basics',
+  kind: 'STAGE_RELEASED',
+  stageNumber: 1,
+  stageName: '항구 기초',
+  occurredAt: '2026-11-05T01:00:00Z',
+  newCount: 1,
+  rewrittenCount: 1,
+  rewrittenTitles: ['항구 기록'],
+  articleTitle: null,
+}
+
+/**
+ * 1·2단계를 공개하고 3~6단계가 준비 중인 커리큘럼(계약 §1). 3·4단계에는 이전 판 글이 남아 있고, 1단계 둘째 글은
+ * 용어가 없다. 공개 안내는 7일 안의 두 줄이다.
+ */
+export const releasedCurriculum: Curriculum = {
+  releasedStageCount: 2,
+  allStagesReleased: false,
+  stages: [
+    {
+      ...stageBase[0],
+      status: 'OPEN',
+      releasedAt: '2026-11-05T01:00:00Z',
+      articles: [
+        { articleId: 'harbor-notes', number: '1-1', title: '항구 기록', question: '같은 배가 다른 항구에서 다르게 보이는 이유는?', readingMinutes: 5, termCount: 2, hasExample: true },
+        { articleId: 'dock-fees', number: '1-2', title: '부두 이용료는 어디로 갈까?', question: '이용료는 언제 빠져나갈까?', readingMinutes: 4, termCount: 0, hasExample: false },
+      ],
+      previousEditionArticles: [],
+    },
+    {
+      ...stageBase[1],
+      status: 'OPEN',
+      releasedAt: '2026-11-19T01:00:00Z',
+      articles: [
+        { articleId: 'tide-reading', number: '2-1', title: '물때 읽기', question: '물이 빠지는 속도는 왜 들어오는 속도와 다른가?', readingMinutes: 6, termCount: 1, hasExample: false },
+        { articleId: 'swell-reading', number: '2-2', title: '너울 읽기', question: '너울은 왜 바람이 멎은 뒤에도 남을까?', readingMinutes: 4, termCount: 2, hasExample: true },
+      ],
+      previousEditionArticles: [],
+    },
+    preparingStage(2, [
+      { articleId: 'anchor-lines', title: '닻줄 길이', question: '닻줄은 왜 물 깊이보다 길게 내릴까?', readingMinutes: 2 },
+      { articleId: 'buoy-colors', title: '부표 색', question: '부표의 색은 무엇을 알려 줄까?', readingMinutes: 1 },
+    ]),
+    preparingStage(3, [{ articleId: 'chart-symbols', title: '해도 기호', question: '해도의 작은 기호는 어떻게 읽을까?', readingMinutes: 2 }]),
+    preparingStage(4),
+    preparingStage(5),
+  ],
+  preReleaseArticles: null,
+  notices: [stageTwoReleased, stageOneArticleAdded],
+  changeLog: [stageTwoReleased, stageOneArticleAdded, stageOneReleased],
+}
+
+/** 첫 단계를 공개하기 전 커리큘럼. 9월 판 목록과 같은 글·순서다(계약 §1). */
+export const preReleaseCurriculum: Curriculum = {
+  releasedStageCount: 0,
+  allStagesReleased: false,
+  stages: stageBase.map((_, index) => preparingStage(index)),
+  preReleaseArticles: articleSummaries,
+  notices: [],
+  changeLog: [],
 }
 
 /**

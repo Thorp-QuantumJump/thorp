@@ -8,7 +8,10 @@
  * 그린다. 글의 제목·순서·용어 구성이 바뀌어도 프런트엔드 배포가 필요 없어야 한다.
  */
 
-/** `GET /learning/articles` 목록의 한 항목이자 글 하나 응답의 머리 필드. */
+/**
+ * 글 하나 응답의 머리 필드이자 커리큘럼 `preReleaseArticles`의 한 항목(계약 §1·§3). 두 자리가 같은 네
+ * 필드를 싣는다.
+ */
 export type LearningArticleSummary = {
   articleId: string
   title: string
@@ -17,9 +20,85 @@ export type LearningArticleSummary = {
   readingOrder: number
 }
 
-/** `GET /learning/articles` 응답 본문. 게시된 글이 없으면 빈 배열이다(오류가 아니다). */
-export type LearningArticleList = {
-  articles: LearningArticleSummary[]
+/**
+ * 단계의 공개 상태(계약 §1).
+ *
+ * - `OPEN`: 공개됐고 공개된 글이 한 편 이상 있다
+ * - `PREPARING`: 아직 공개하지 않았다
+ * - `REPREPARING`: 공개했지만 공개된 글이 0편이다. 공개 경계에서는 공개된 단계로 센다(FR-031)
+ */
+export type StageStatus = 'OPEN' | 'PREPARING' | 'REPREPARING'
+
+/** `OPEN` 단계의 공개된 글 하나. 서버가 읽는 순서로 보낸다. */
+export type CurriculumArticle = {
+  articleId: string
+  /** 단계 안 번호(예: `2-3`) */
+  number: string
+  title: string
+  question: string
+  readingMinutes: number
+  /** 그 글의 공개 용어 수. 0이면 화면이 용어 수를 보이지 않는다 */
+  termCount: number
+  hasExample: boolean
+}
+
+/** `PREPARING` 단계에 남은 이전 판 글. 번호·상태가 없다(FR-031). */
+export type PreviousEditionArticle = {
+  articleId: string
+  title: string
+  question: string
+  readingMinutes: number
+}
+
+/** 커리큘럼의 단계 하나. 공개되지 않은 단계의 새 글 제목·편수는 어느 필드에도 없다(SC-017). */
+export type StageView = {
+  stageKey: string
+  number: number
+  name: string
+  levelLabel: string
+  summary: string
+  status: StageStatus
+  /** ISO 8601 시각. 공개하지 않은 단계는 null이다 */
+  releasedAt: string | null
+  /** `OPEN` 단계만 채운다 */
+  articles: CurriculumArticle[]
+  /** `PREPARING` 단계만 채운다. 첫 단계 공개 전에는 비어 있다 */
+  previousEditionArticles: PreviousEditionArticle[]
+}
+
+/** 변경 기록 한 줄의 종류. 단계 공개와 공개된 단계에 처음 게시된 글이다(R27). */
+export type ReleaseLogKind = 'STAGE_RELEASED' | 'ARTICLE_ADDED'
+
+/** 공개 안내와 변경 기록의 한 줄(계약 §1). */
+export type ReleaseLogEntry = {
+  /** `stage:{stageKey}` 또는 `article:{articleId}`. 닫은 안내를 이 값으로 기억한다 */
+  entryKey: string
+  kind: ReleaseLogKind
+  stageNumber: number
+  stageName: string
+  /** ISO 8601 시각 */
+  occurredAt: string
+  newCount: number
+  rewrittenCount: number
+  /** 다시 쓴 글의 그때 제목 */
+  rewrittenTitles: string[]
+  /** `ARTICLE_ADDED`의 그때 제목. `STAGE_RELEASED`는 null이다 */
+  articleTitle: string | null
+}
+
+/** `GET /learning/curriculum` 응답 본문(계약 §1). */
+export type Curriculum = {
+  /** 공개된 단계 수. `REPREPARING`도 센다 */
+  releasedStageCount: number
+  allStagesReleased: boolean
+  /** 여섯 단계 전부, 번호 순서 */
+  stages: StageView[]
+  /** 첫 단계를 공개하기 전에만 배열이다. 공개한 뒤에는 null이다 */
+  preReleaseArticles: LearningArticleSummary[] | null
+  /** `changeLog` 가운데 지금부터 7일 안의 줄, 최신 순서 */
+  notices: ReleaseLogEntry[]
+  /** 모든 변경 기록, 최신 순서 */
+  changeLog: ReleaseLogEntry[]
 }
 
 /**
