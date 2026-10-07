@@ -133,3 +133,25 @@ describe('ExampleEditor 비중 칸', () => {
     expect(field).toHaveProperty('value', '40.0')
   })
 })
+
+describe('ExampleEditor 예시 없음 (2판)', () => {
+  beforeEach(() => {
+    sectorMocks.fetchSectorCatalog.mockReset().mockResolvedValue({
+      status: 'mapNotReady',
+      message: '준비 중',
+    })
+  })
+
+  it('V1처럼 예시가 있어야 하면 게시에 예시가 필요하다고 알린다', () => {
+    render(<ExampleEditor example={null} onChange={() => undefined} />)
+
+    expect(screen.getByText('예시가 없습니다. 게시하려면 예시가 있어야 합니다.')).not.toBeNull()
+  })
+
+  it('V2처럼 예시가 선택이면 넣지 않아도 된다고 알린다(013 FR-003)', () => {
+    render(<ExampleEditor example={null} onChange={() => undefined} required={false} />)
+
+    expect(screen.getByText(/예시는 넣지 않아도 되며/)).not.toBeNull()
+    expect(screen.queryByText(/게시하려면 예시가 있어야 합니다/)).toBeNull()
+  })
+})

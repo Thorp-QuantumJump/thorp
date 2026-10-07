@@ -1,0 +1,404 @@
+/* 목록 보기(design-notes §3.2, 목업 .route·.rol). 넓은 화면은 표, 720px 미만은 목록이다. */
+.table {
+  width: 100%;
+  margin-top: 22px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--thorp-line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table thead th {
+  padding-top: 6px;
+  padding-bottom: 8px;
+  color: var(--thorp-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.table tbody tr {
+  position: relative;
+}
+
+.table tbody {
+  scroll-margin-top: calc(var(--thorp-header-height, 64px) + 16px);
+}
+
+.table .rail {
+  position: relative;
+  width: 36px;
+  padding: 0;
+  border-bottom: 0;
+}
+
+/* 노선: 칸의 위 반(들어오는 구간)과 아래 반(나가는 구간). */
+.railTop,
+.railBottom {
+  position: absolute;
+  left: 50%;
+  width: 3px;
+  margin-left: -1.5px;
+}
+
+.railTop {
+  top: 0;
+  height: 50%;
+}
+
+.railBottom {
+  top: 50%;
+  bottom: 0;
+}
+
+.railRead {
+  width: 4px;
+  margin-left: -2px;
+  background: #2fdc7a;
+}
+
+.railTodo {
+  background: #6e716f;
+}
+
+.railNeutral {
+  width: 5px;
+  margin-left: -2.5px;
+  background: #2c3230;
+}
+
+/* 준비 중 단계로 가는 노선만 점선이다. */
+.railPreparing {
+  background: repeating-linear-gradient(to bottom, #6e716f 0 6px, transparent 6px 12px);
+}
+
+.dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+}
+
+.dot svg,
+.groupMark svg {
+  display: block;
+  overflow: visible;
+}
+
+.dot svg {
+  width: 14px;
+  height: 14px;
+}
+
+.groupMark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  color: var(--thorp-foreground);
+  font-family: var(--thorp-font-display, inherit);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.groupMark svg {
+  position: absolute;
+  inset: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.groupMark span {
+  position: relative;
+}
+
+.groupMarkPreparing {
+  color: var(--thorp-muted);
+}
+
+.groupRow th,
+.groupRow td {
+  background: color-mix(in srgb, var(--stage) 6%, var(--thorp-surface));
+  color: var(--thorp-foreground);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.pending .groupRow th,
+.pending .groupRow td {
+  background: #141716;
+}
+
+.groupRow th:focus:not(:focus-visible),
+.groupHead h3:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 단계 자리로 옮겨 온 구분 줄의 초점. 2px 초록 외곽선이다(design-notes §6). */
+.groupRow th:focus-visible,
+.groupHead h3:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: -2px;
+}
+
+.groupLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+}
+
+.groupChip {
+  display: inline-flex;
+  margin-left: 10px;
+}
+
+.separator {
+  margin: 0 6px;
+  color: var(--thorp-muted);
+}
+
+.groupIcon {
+  display: inline-block;
+  flex: none;
+  width: 34px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.groupIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.groupSummary,
+.groupReason {
+  display: block;
+  margin-top: 4px;
+  padding-left: 44px;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.groupReason {
+  margin-top: 2px;
+}
+
+/* 공개 경계 한 줄(FR-031). 공개된 단계의 노선이 여기서 끝나고 아래로 점선 노선이 새로 시작한다. */
+.boundaryGroup td {
+  border-bottom: 0;
+}
+
+.boundary,
+.narrowBoundary {
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.narrowBoundary {
+  position: relative;
+  margin: 0;
+  padding: 14px 4px 14px 44px;
+}
+
+.number {
+  width: 48px;
+  color: var(--thorp-muted);
+  font-family: var(--thorp-font-display, inherit);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.titleCell a {
+  color: inherit;
+  font-size: 0.94rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+/* 줄 전체를 누르는 곳으로 넓힌다. 링크는 제목 하나다. */
+.titleCell a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.titleCell a:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: 2px;
+}
+
+.table tbody tr:hover .titleCell a {
+  color: var(--thorp-accent-soft);
+}
+
+.titleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.question {
+  display: block;
+  margin-top: 2px;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+}
+
+.minor {
+  color: var(--thorp-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.previousRow td {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+/* 좁은 화면 목록. 넓은 화면에서는 숨긴다. */
+.narrowList {
+  display: none;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.narrowList > li {
+  position: relative;
+  scroll-margin-top: calc(var(--thorp-header-height, 64px) + 16px);
+}
+
+.groupHead {
+  position: relative;
+}
+
+.groupHead .rail,
+.row .rail,
+.narrowBoundary .rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 32px;
+}
+
+.groupHead h3 {
+  position: relative;
+  margin: 0;
+  padding: 12px 12px 12px 44px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--stage) 6%, var(--thorp-surface));
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.narrowList > li.pending .groupHead h3 {
+  background: #141716;
+}
+
+.plain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  position: relative;
+  display: block;
+  padding: 12px 4px 12px 44px;
+  border-bottom: 1px solid var(--thorp-line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.row:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: -2px;
+}
+
+.rowTitle {
+  display: block;
+  font-size: 0.94rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.rowNumber {
+  margin-right: 6px;
+  color: var(--thorp-muted);
+  font-family: var(--thorp-font-display, inherit);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.rowQuestion {
+  display: block;
+  margin-top: 2px;
+  color: var(--thorp-copy);
+  font-size: 0.8rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 719px) {
+  .table {
+    display: none;
+  }
+
+  .narrowList {
+    display: block;
+  }
+
+  .narrowList .groupLine {
+    column-gap: 0;
+  }
+
+  .narrowList .groupName {
+    flex-basis: calc(100% - 44px);
+  }
+
+  .narrowList .groupProgress {
+    flex-basis: 100%;
+    padding-left: 44px;
+  }
+
+  .narrowList .groupChip {
+    margin: 2px 0 0 44px;
+  }
+
+  .narrowList .groupProgress .separator {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}

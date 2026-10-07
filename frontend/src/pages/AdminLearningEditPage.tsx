@@ -1,30 +1,49 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   checkAdminAccess,
   fetchAdminArticle,
+  fetchAdminStages,
   publishArticle,
   saveDraft,
   unpublishArticle,
   type AdminAccessResult,
+  type DraftRejection,
+  type LoadFailure,
 } from '@/api/learningAdmin'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import {
+  applyPublishToUnsentDraft,
   clearUnsentDraft,
   loadUnsentDraft,
   saveUnsentDraft,
   type UnsentDraft,
 } from '@/components/learning/admin/adminDraftStorage'
+import { ArticlePreview } from '@/components/learning/admin/ArticlePreview'
 import { BlockEditor } from '@/components/learning/admin/BlockEditor'
+import { describeFieldPath } from '@/components/learning/admin/draftLabels'
+import {
+  toEditableDraft,
+  toServerDraft,
+  withEmptyBody,
+  type DraftSyntaxIssue,
+} from '@/components/learning/admin/editableDraft'
 import { ExampleEditor } from '@/components/learning/admin/ExampleEditor'
+import { knownQuizIds } from '@/components/learning/admin/manuscript'
+import { ManuscriptTransfer } from '@/components/learning/admin/ManuscriptTransfer'
+import { PlacementEditor } from '@/components/learning/admin/PlacementEditor'
 import { PublishCheckResultList } from '@/components/learning/admin/PublishCheckResultList'
+import { QuizEditor } from '@/components/learning/admin/QuizEditor'
 import { TermListEditor } from '@/components/learning/admin/TermListEditor'
 import type {
   AdminFieldViolation,
   AdminLearningArticle,
-  AdminLearningDraft,
+  DraftQuizQuestion,
+  EditableDraft,
   PublishCheckFailure,
+  PublishedEdition,
   PublishResult,
+  StageAdminView,
 } from '@/types/learningAdmin'
 import styles from './AdminLearningEditPage.module.css'
 
@@ -41,6 +60,11 @@ import styles from './AdminLearningEditPage.module.css'
  * <p><b>게시 전 검사 문장을 새로 짓지 않는다.</b> 걸린 항목은 서버가 준 그대로 `PublishCheckResultList`
  * 가 보인다(계약 §6).
  *
+ * <p><b>(2판) 편집기는 편집 문법 문자열을 들고 있다.</b> 저장할 때 글자 조각으로 바꾸며, 문법 오류가 있으면
+ * 요청을 보내지 않고 위치를 보인다(R26). <b>게시에 성공하면 초안을 다시 읽는다.</b> 게시가 초안 번호를 올리지
+ * 않고 문제 식별자와 `transferFrom`을 바꾸므로, 다시 읽지 않고 저장하면 400·409를 받는다(계약 §6). 이 탭에
+ * 보관한 이 글의 편집 내용도 같은 두 가지를 고친다.
+ *
  * <p>관리 화면은 FR-019 대상이 아니지만 폼 요소는 `label`을 가진다.
  */
 
@@ -52,16 +76,34 @@ type LoadState =
   | { status: 'notFound' }
   | { status: 'failed'; message?: string }
 
+/** 게시한 뒤 초안을 다시 읽는 중인가, 읽지 못했는가(계약 §6). */
+type RereadState = 'reading' | 'done' | 'failed'
+
 /** 저장·게시·게시 취소가 끝난 뒤 그 자리에 보일 것이다. 셋이 한 자리를 쓴다. */
 type ActionState =
   | { kind: 'idle' }
   | { kind: 'saved' }
+  | { kind: 'syntaxErrors'; issues: DraftSyntaxIssue[] }
   | { kind: 'draftChanged'; message: string; currentDraftVersion: number | null }
   | { kind: 'termIdTaken'; message: string; termId: string | null; ownerArticleId: string | null }
+  | {
+      kind: 'termTransferInvalid'
+      message: string
+      termId: string | null
+      ownerArticleId: string | null
+    }
   | { kind: 'invalid'; message: string; fields: AdminFieldViolation[] }
-  | { kind: 'checkFailed'; checkVersion: string | null; failures: PublishCheckFailure[] }
-  | { kind: 'published'; result: PublishResult }
+  | {
+      kind: 'checkFailed'
+      /** 서버 문장. 항목을 하나도 읽지 못해도 이 문장은 보인다(계약 §6) */
+      message: string
+      checkVersion: string | null
+      failures: PublishCheckFailure[]
+    }
+  | { kind: 'published'; result: PublishResult; reread: RereadState }
   | { kind: 'unpublished'; revisionNo: number | null }
+  | { kind: 'stageNotReleased'; message: string }
+  | { kind: 'formatOutdated'; message: string }
   | { kind: 'notice'; message: string }
 
 export function AdminLearningEditPage() {
@@ -82,14 +124,20 @@ export function AdminLearningEditPage() {
    */
   const [baseVersion, setBaseVersion] = useState(0)
   const [publishedRevisionNo, setPublishedRevisionNo] = useState<number | null>(null)
-  const [draft, setDraft] = useState<AdminLearningDraft | null>(null)
+  const [publishedEdition, setPublishedEdition] = useState<PublishedEdition | null>(null)
+  const [draft, setDraft] = useState<EditableDraft | null>(null)
   /** 마지막으로 불러오거나 저장한 초안이다. 화면의 초안과 다르면 저장하지 않은 변경이 있다 */
-  const [savedDraft, setSavedDraft] = useState<AdminLearningDraft | null>(null)
+  const [savedDraft, setSavedDraft] = useState<EditableDraft | null>(null)
+  /** 서버 초안의 확인 문제. 원고 가져오기가 아는 식별자를 여기서 고른다(R26) */
+  const [savedQuiz, setSavedQuiz] = useState<DraftQuizQuestion[]>([])
   /** 서버에 이미 저장된 용어 식별자. 이 값의 `termId`는 편집기가 잠근다(R4) */
   const [savedTermIds, setSavedTermIds] = useState<readonly string[]>([])
+  const [stages, setStages] = useState<StageAdminView[] | null>(null)
 
   const [action, setAction] = useState<ActionState>({ kind: 'idle' })
   const [pendingRestore, setPendingRestore] = useState<UnsentDraft | null>(null)
+  /** 이전 내용 버전의 보관본을 버렸다. 복원하지 않았다는 사실을 알린다 */
+  const [discardedOutdated, setDiscardedOutdated] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -117,7 +165,9 @@ export function AdminLearningEditPage() {
         applyArticle(result.article)
         setLoad({ status: 'loaded' })
         // 보관본이 있으면 먼저 묻는다. 묻지 않고 덮으면 서버 값이 소리 없이 사라진다(R12).
-        setPendingRestore(loadUnsentDraft(result.article.articleId))
+        const lookup = loadUnsentDraft(result.article.articleId)
+        setPendingRestore(lookup.status === 'found' ? lookup.unsent : null)
+        setDiscardedOutdated(lookup.status === 'discardedOutdated')
         return
       }
       if (result.status === 'notFound') {
@@ -137,13 +187,30 @@ export function AdminLearningEditPage() {
     }
   }, [access.status, articleId, attempt])
 
+  // 단계 목록은 배치 편집의 선택지다. 받지 못해도 편집은 막지 않고 지금 단계만 고르게 한다.
+  useEffect(() => {
+    if (access.status !== 'admin') return
+    const controller = new AbortController()
+    let active = true
+    void fetchAdminStages(controller.signal).then((result) => {
+      if (active) setStages(result.status === 'loaded' ? result.stages : null)
+    })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [access.status, attempt])
+
   function applyArticle(article: AdminLearningArticle) {
+    const editable = toEditableDraft(article.draft)
     setStatus(article.status)
     setDraftVersion(article.draftVersion)
     setBaseVersion(article.draftVersion)
     setPublishedRevisionNo(article.publishedRevisionNo)
-    setDraft(article.draft)
-    setSavedDraft(article.draft)
+    setPublishedEdition(article.publishedEdition)
+    setDraft(editable)
+    setSavedDraft(editable)
+    setSavedQuiz(article.draft.quiz)
     setSavedTermIds(article.draft.terms.map((term) => term.termId))
   }
 
@@ -151,6 +218,10 @@ export function AdminLearningEditPage() {
     setAction({ kind: 'idle' })
     setAttempt((count) => count + 1)
   }, [])
+
+  const onPreviewUnauthenticated = useCallback(() => setAccess({ status: 'unauthenticated' }), [])
+
+  const known = useMemo(() => knownQuizIds(savedQuiz), [savedQuiz])
 
   /**
    * 저장하지 않은 변경이 있는가.
@@ -163,7 +234,7 @@ export function AdminLearningEditPage() {
     draft !== null && savedDraft !== null && JSON.stringify(draft) !== JSON.stringify(savedDraft)
 
   /** 편집기가 바꾼 초안을 상태와 보관본에 함께 넣는다. */
-  const updateDraft = (next: AdminLearningDraft) => {
+  const updateDraft = (next: EditableDraft) => {
     setDraft(next)
     saveUnsentDraft(articleId, next, baseVersion)
   }
@@ -175,11 +246,35 @@ export function AdminLearningEditPage() {
     setPendingRestore(null)
   }
 
+  /** 화면 초안에서 그 용어에 적힌 넘겨받기다. V1 초안이나 없는 용어면 `null`이다. */
+  const transferFromOf = (termId: string): string | null =>
+    draft?.format === 'V2'
+      ? (draft.terms.find((term) => term.termId === termId)?.transferFrom ?? null)
+      : null
+
+  /** V2 초안의 용어 하나에 넘겨받기를 걸거나 비운다(R24). 저장은 운영자가 누른다. */
+  const setTransferFrom = (termId: string, transferFrom: string | null) => {
+    if (!draft || draft.format !== 'V2') return
+    updateDraft({
+      ...draft,
+      terms: draft.terms.map((term) => (term.termId === termId ? { ...term, transferFrom } : term)),
+    })
+    setAction({ kind: 'idle' })
+  }
+
   const onSave = async () => {
     if (!draft || busy) return
+    const converted = toServerDraft(draft)
+    if (!converted.ok) {
+      setAction({ kind: 'syntaxErrors', issues: converted.issues })
+      return
+    }
     setBusy(true)
     setAction({ kind: 'idle' })
-    const result = await saveDraft(articleId, { ...draft, expectedDraftVersion: baseVersion })
+    const result = await saveDraft(articleId, {
+      ...converted.draft,
+      expectedDraftVersion: baseVersion,
+    })
     setBusy(false)
 
     switch (result.status) {
@@ -188,6 +283,17 @@ export function AdminLearningEditPage() {
         clearUnsentDraft(articleId)
         setAction({ kind: 'saved' })
         return
+      case 'invalid':
+        setAction({ kind: 'invalid', message: result.message, fields: result.fields })
+        return
+      default:
+        handleRejection(result)
+    }
+  }
+
+  /** 저장과 게시가 함께 받는 거절을 화면 상태로 옮긴다. */
+  const handleRejection = (result: DraftRejection | LoadFailure) => {
+    switch (result.status) {
       case 'draftChanged':
         // 입력은 그대로 둔다. 새로 불러올지는 운영자가 정한다(quickstart 3-6).
         setAction({
@@ -204,8 +310,13 @@ export function AdminLearningEditPage() {
           ownerArticleId: result.ownerArticleId,
         })
         return
-      case 'invalid':
-        setAction({ kind: 'invalid', message: result.message, fields: result.fields })
+      case 'termTransferInvalid':
+        setAction({
+          kind: 'termTransferInvalid',
+          message: result.message,
+          termId: result.termId,
+          ownerArticleId: result.ownerArticleId,
+        })
         return
       case 'unauthenticated':
         // 보관본을 지우지 않는다. 재로그인 뒤 같은 글을 열면 복원할 수 있어야 한다(R12).
@@ -214,9 +325,31 @@ export function AdminLearningEditPage() {
       case 'notFound':
         setLoad({ status: 'notFound' })
         return
+      case 'formatOutdated':
+        setAction({ kind: 'formatOutdated', message: result.message })
+        return
       default:
         setAction({ kind: 'notice', message: result.message })
     }
+  }
+
+  /**
+   * 게시한 뒤 초안을 다시 읽는다. 게시가 바꾼 문제 식별자와 비운 `transferFrom`을 받기 위해서다(계약 §6).
+   * 게시 안내는 그대로 둔다.
+   */
+  const rereadAfterPublish = async (result: PublishResult) => {
+    setAction({ kind: 'published', result, reread: 'reading' })
+    const reread = await fetchAdminArticle(articleId)
+    if (reread.status === 'loaded') {
+      applyArticle(reread.article)
+      setAction({ kind: 'published', result, reread: 'done' })
+      return
+    }
+    if (reread.status === 'unauthenticated') {
+      setAccess({ status: 'unauthenticated' })
+      return
+    }
+    setAction({ kind: 'published', result, reread: 'failed' })
   }
 
   const onPublish = async () => {
@@ -226,45 +359,37 @@ export function AdminLearningEditPage() {
     setBusy(true)
     setAction({ kind: 'idle' })
     const result = await publishArticle(articleId, baseVersion)
-    setBusy(false)
 
     switch (result.status) {
       case 'published':
         setStatus(result.result.status)
         setPublishedRevisionNo(result.result.revisionNo)
-        setAction({ kind: 'published', result: result.result })
-        return
+        setPublishedEdition(result.result.edition)
+        applyPublishToUnsentDraft(
+          articleId,
+          result.result.renamedQuestions,
+          result.result.transferredTerms,
+        )
+        await rereadAfterPublish(result.result)
+        break
       case 'checkFailed':
         setAction({
           kind: 'checkFailed',
+          message: result.message,
           checkVersion: result.checkVersion,
           failures: result.failures,
         })
-        return
-      case 'draftChanged':
-        setAction({
-          kind: 'draftChanged',
-          message: result.message,
-          currentDraftVersion: result.currentDraftVersion,
-        })
-        return
-      case 'termIdTaken':
-        setAction({
-          kind: 'termIdTaken',
-          message: result.message,
-          termId: result.termId,
-          ownerArticleId: result.ownerArticleId,
-        })
-        return
-      case 'unauthenticated':
-        setAccess({ status: 'unauthenticated' })
-        return
-      case 'notFound':
-        setLoad({ status: 'notFound' })
-        return
+        break
+      case 'stageNotReleased':
+        setAction({ kind: 'stageNotReleased', message: result.message })
+        break
+      case 'invalid':
+        setAction({ kind: 'invalid', message: result.message, fields: result.fields })
+        break
       default:
-        setAction({ kind: 'notice', message: result.message })
+        handleRejection(result)
     }
+    setBusy(false)
   }
 
   const onUnpublish = async () => {
@@ -360,18 +485,29 @@ export function AdminLearningEditPage() {
     )
   }
 
+  const termOptions = draft.terms.map((term) => ({ termId: term.termId, label: term.label }))
+
   return (
     <main className={styles.main} aria-labelledby="admin-edit-title">
       <h1 id="admin-edit-title" className={styles.title}>
         {articleId} 편집
       </h1>
       <p className={styles.meta}>
-        상태 {status} · 초안 번호 {draftVersion} · 공개 중인 판{' '}
-        {publishedRevisionNo === null ? '없음' : `${publishedRevisionNo}판`}
+        상태 {status} · 형식 {draft.format} · 초안 번호 {draftVersion} · 공개 중인 판{' '}
+        {publishedRevisionNo === null
+          ? '없음'
+          : `${publishedRevisionNo}판${publishedEdition === null ? '' : `(${publishedEdition})`}`}
       </p>
       <p>
         <Link to="/admin/learning">관리 목록으로</Link>
       </p>
+
+      {discardedOutdated ? (
+        <p role="status" className={styles.detail}>
+          이전 편집기에서 보관한 편집 내용이 있었지만 지금 편집기의 모양과 달라 복원하지 않고
+          버렸습니다.
+        </p>
+      ) : null}
 
       {pendingRestore === null ? null : (
         <section className={styles.restore} aria-labelledby="admin-edit-restore-title">
@@ -424,95 +560,157 @@ export function AdminLearningEditPage() {
               onChange={(event) => updateDraft({ ...draft, question: event.target.value })}
             />
           </label>
-          <label className={styles.field}>
-            <span>읽는 순서</span>
-            <input
-              type="number"
-              value={draft.readingOrder}
-              onChange={(event) =>
-                updateDraft({ ...draft, readingOrder: Number(event.target.value) || 0 })
-              }
-            />
-          </label>
+          {/* V2 글은 읽는 순서 대신 단계 안 순서를 쓴다(계약 §3). V1 글만 지금처럼 고친다. */}
+          {draft.format === 'V1' ? (
+            <label className={styles.field}>
+              <span>읽는 순서</span>
+              <input
+                type="number"
+                value={draft.readingOrder}
+                onChange={(event) =>
+                  updateDraft({ ...draft, readingOrder: Number(event.target.value) || 0 })
+                }
+              />
+            </label>
+          ) : null}
         </div>
 
-        <BlockEditor
-          blocks={draft.blocks}
-          terms={draft.terms}
-          onChange={(blocks) => updateDraft({ ...draft, blocks })}
+        <PlacementEditor
+          format={draft.format}
+          stageKey={draft.stageKey}
+          stagePosition={draft.stagePosition}
+          stages={stages}
+          canRevertToV1={publishedEdition === 'LEGACY'}
+          onPlacementChange={(placement) => updateDraft({ ...draft, ...placement })}
+          onFormatChange={(format) => updateDraft(withEmptyBody(draft, format))}
         />
+
+        <ManuscriptTransfer
+          articleId={articleId}
+          draft={draft}
+          known={known}
+          publishedEdition={publishedEdition}
+          dirty={hasUnsavedChanges}
+          onImport={updateDraft}
+        />
+
+        {draft.format === 'V1' ? (
+          <BlockEditor
+            format="V1"
+            blocks={draft.blocks}
+            terms={termOptions}
+            onChange={(blocks) => updateDraft({ ...draft, blocks })}
+          />
+        ) : (
+          <BlockEditor
+            format="V2"
+            blocks={draft.blocks}
+            terms={termOptions}
+            onChange={(blocks) => updateDraft({ ...draft, blocks })}
+          />
+        )}
 
         <ExampleEditor
           example={draft.example}
+          required={draft.format === 'V1'}
           onChange={(example) => updateDraft({ ...draft, example })}
         />
 
-        <TermListEditor
-          terms={draft.terms}
-          savedTermIds={savedTermIds}
-          onChange={(terms) => updateDraft({ ...draft, terms })}
-        />
+        {draft.format === 'V1' ? (
+          <TermListEditor
+            format="V1"
+            terms={draft.terms}
+            savedTermIds={savedTermIds}
+            onChange={(terms) => updateDraft({ ...draft, terms })}
+          />
+        ) : (
+          <TermListEditor
+            format="V2"
+            terms={draft.terms}
+            savedTermIds={savedTermIds}
+            onChange={(terms) => updateDraft({ ...draft, terms })}
+          />
+        )}
 
-        <section className={styles.sources} aria-labelledby="admin-edit-sources-title">
-          <h3 id="admin-edit-sources-title">출처</h3>
-          <ul className={styles.sourceList}>
-            {draft.sources.map((source, index) => (
-              // 출처는 라벨이 겹칠 수 있어 순번으로 자리를 잡는다.
-              <li key={index} className={styles.sourceRow}>
-                <label className={styles.field}>
-                  <span>이름</span>
-                  <input
-                    type="text"
-                    value={source.label}
-                    onChange={(event) =>
+        {draft.format === 'V2' ? (
+          <QuizEditor questions={draft.quiz} onChange={(quiz) => updateDraft({ ...draft, quiz })} />
+        ) : null}
+
+        {/* V2 초안은 출처를 글자 옆 출처 표시로 둔다(계약 §5). 남아 있는 목록만 지울 수 있게 보인다. */}
+        {draft.format === 'V1' || draft.sources.length > 0 ? (
+          <section className={styles.sources} aria-labelledby="admin-edit-sources-title">
+            <h3 id="admin-edit-sources-title">출처</h3>
+            {draft.format === 'V2' ? (
+              <p className={styles.detail}>
+                V2 글에는 글 끝 출처 목록을 둘 수 없습니다. 글자 옆 출처 표시로 옮긴 뒤 지워 주세요.
+              </p>
+            ) : null}
+            <ul className={styles.sourceList}>
+              {draft.sources.map((source, index) => (
+                // 출처는 라벨이 겹칠 수 있어 순번으로 자리를 잡는다.
+                <li key={index} className={styles.sourceRow}>
+                  <label className={styles.field}>
+                    <span>이름</span>
+                    <input
+                      type="text"
+                      value={source.label}
+                      onChange={(event) =>
+                        updateDraft({
+                          ...draft,
+                          sources: draft.sources.map((item, position) =>
+                            position === index ? { ...item, label: event.target.value } : item,
+                          ),
+                        })
+                      }
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>주소</span>
+                    <input
+                      type="url"
+                      value={source.url ?? ''}
+                      onChange={(event) =>
+                        updateDraft({
+                          ...draft,
+                          sources: draft.sources.map((item, position) =>
+                            position === index
+                              ? {
+                                  ...item,
+                                  url: event.target.value === '' ? null : event.target.value,
+                                }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
                       updateDraft({
                         ...draft,
-                        sources: draft.sources.map((item, position) =>
-                          position === index ? { ...item, label: event.target.value } : item,
-                        ),
+                        sources: draft.sources.filter((_, position) => position !== index),
                       })
                     }
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span>주소</span>
-                  <input
-                    type="url"
-                    value={source.url ?? ''}
-                    onChange={(event) =>
-                      updateDraft({
-                        ...draft,
-                        sources: draft.sources.map((item, position) =>
-                          position === index
-                            ? { ...item, url: event.target.value === '' ? null : event.target.value }
-                            : item,
-                        ),
-                      })
-                    }
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateDraft({
-                      ...draft,
-                      sources: draft.sources.filter((_, position) => position !== index),
-                    })
-                  }
-                  aria-label={`${index + 1}번째 출처 삭제`}
-                >
-                  삭제
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => updateDraft({ ...draft, sources: [...draft.sources, { label: '', url: null }] })}
-          >
-            출처 추가
-          </button>
-        </section>
+                    aria-label={`${index + 1}번째 출처 삭제`}
+                  >
+                    삭제
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {draft.format === 'V1' ? (
+              <button
+                type="button"
+                onClick={() =>
+                  updateDraft({ ...draft, sources: [...draft.sources, { label: '', url: null }] })
+                }
+              >
+                출처 추가
+              </button>
+            ) : null}
+          </section>
+        ) : null}
 
         <div className={styles.actions}>
           <button type="button" onClick={() => void onSave()} disabled={busy}>
@@ -541,6 +739,21 @@ export function AdminLearningEditPage() {
 
       {action.kind === 'saved' ? <p role="status">초안을 저장했습니다.</p> : null}
 
+      {action.kind === 'syntaxErrors' ? (
+        <section className={styles.conflict}>
+          <p role="alert">
+            편집 문법이 틀린 칸이 있어 저장하지 않았습니다. 아래 위치를 고쳐 주세요.
+          </p>
+          <ul>
+            {action.issues.map((issue, index) => (
+              <li key={index}>
+                {issue.where} {issue.line}줄 {issue.column}칸: {issue.message}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {action.kind === 'draftChanged' ? (
         <section className={styles.conflict}>
           <p role="alert">다른 곳에서 초안이 바뀌었습니다. 새로 불러온 뒤 다시 고쳐 주세요.</p>
@@ -557,12 +770,85 @@ export function AdminLearningEditPage() {
       ) : null}
 
       {action.kind === 'termIdTaken' ? (
-        <p role="alert">
-          {action.message}
-          {action.termId === null ? '' : ` (용어 ${action.termId}`}
-          {action.ownerArticleId === null ? '' : `, 쓰는 글 ${action.ownerArticleId}`}
-          {action.termId === null ? '' : ')'}
-        </p>
+        <section className={styles.conflict}>
+          <p role="alert">
+            {action.message}
+            {action.termId === null ? '' : ` (용어 ${action.termId}`}
+            {action.ownerArticleId === null ? '' : `, 쓰는 글 ${action.ownerArticleId}`}
+            {action.termId === null ? '' : ')'}
+          </p>
+          {draft.format === 'V2' &&
+          action.termId !== null &&
+          action.ownerArticleId !== null &&
+          draft.terms.some((term) => term.termId === action.termId) ? (
+            <>
+              <p className={styles.detail}>
+                이 용어를 이 글로 옮기려면 넘겨받기를 걸고 다시 저장하세요. 이 글이 게시될 때{' '}
+                {action.ownerArticleId} 글에서 이 글로 넘어옵니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => setTransferFrom(action.termId ?? '', action.ownerArticleId)}
+              >
+                이 글로 넘겨받기
+              </button>
+            </>
+          ) : null}
+        </section>
+      ) : null}
+
+      {action.kind === 'termTransferInvalid' ? (
+        <section className={styles.conflict}>
+          <p role="alert">
+            {action.message}
+            {action.termId === null ? '' : ` (용어 ${action.termId})`}
+          </p>
+          {action.termId !== null && action.ownerArticleId === null ? (
+            <>
+              <p className={styles.detail}>
+                지금 이 용어를 소유한 글이 없습니다. 넘겨받기를 비우고 다시 저장하세요.
+              </p>
+              <button type="button" onClick={() => setTransferFrom(action.termId ?? '', null)}>
+                넘겨받기 비우기
+              </button>
+            </>
+          ) : null}
+          {action.termId !== null && action.ownerArticleId === articleId ? (
+            <>
+              <p className={styles.detail}>
+                이 용어는 이미 이 글로 넘어왔습니다. 넘겨받기를 비우고 다시 저장하세요.
+              </p>
+              <button type="button" onClick={() => setTransferFrom(action.termId ?? '', null)}>
+                넘겨받기 비우기
+              </button>
+            </>
+          ) : null}
+          {action.termId !== null &&
+          action.ownerArticleId !== null &&
+          action.ownerArticleId !== articleId &&
+          action.ownerArticleId === transferFromOf(action.termId) ? (
+            <p className={styles.detail}>
+              넘겨받기에 적은 글은 지금 소유 글과 같지만, 지금은 넘겨받을 수 없습니다. 다른 글이
+              같은 용어를 넘겨받는 중인지 관리 목록의 &lsquo;넘겨받는 중&rsquo;을 확인하세요.
+            </p>
+          ) : null}
+          {action.termId !== null &&
+          action.ownerArticleId !== null &&
+          action.ownerArticleId !== articleId &&
+          action.ownerArticleId !== transferFromOf(action.termId) ? (
+            <>
+              <p className={styles.detail}>
+                지금 이 용어를 소유한 글은 {action.ownerArticleId}입니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => setTransferFrom(action.termId ?? '', action.ownerArticleId)}
+              >
+                {action.ownerArticleId}에서 넘겨받기로 고치기
+              </button>
+            </>
+          ) : null}
+        </section>
       ) : null}
 
       {action.kind === 'invalid' ? (
@@ -571,7 +857,7 @@ export function AdminLearningEditPage() {
           <ul>
             {action.fields.map((field) => (
               <li key={`${field.field}:${field.message}`}>
-                {field.field}: {field.message}
+                {describeFieldPath(field.field)}: {field.message}
               </li>
             ))}
           </ul>
@@ -579,14 +865,70 @@ export function AdminLearningEditPage() {
       ) : null}
 
       {action.kind === 'checkFailed' ? (
-        <PublishCheckResultList failures={action.failures} checkVersion={action.checkVersion} />
+        <section className={styles.conflict}>
+          {/* 항목을 하나도 읽지 못하면 목록이 비므로, 그때는 이 문장이 거절을 알린다(계약 §6). */}
+          <p role={action.failures.length === 0 ? 'alert' : undefined}>{action.message}</p>
+          <PublishCheckResultList failures={action.failures} checkVersion={action.checkVersion} />
+        </section>
+      ) : null}
+
+      {action.kind === 'formatOutdated' ? (
+        <section className={styles.conflict}>
+          <p role="alert">{action.message}</p>
+          <p className={styles.detail}>
+            V1로 되돌리는 저장은 9월 판(LEGACY)을 공개한 적이 있는 글에서만 됩니다. 공개된 단계의
+            글은 V1 초안으로 게시할 수 없으니 V2 원고를 가져와 저장한 뒤 게시하세요.
+          </p>
+        </section>
+      ) : null}
+
+      {action.kind === 'stageNotReleased' ? (
+        <section className={styles.conflict}>
+          <p role="alert">{action.message}</p>
+          <p className={styles.detail}>
+            공개 전 단계의 새 기준 글은 관리 목록의 &lsquo;단계 공개&rsquo;로 함께 게시됩니다.
+          </p>
+        </section>
       ) : null}
 
       {action.kind === 'published' ? (
-        <p role="status">
-          {action.result.revisionNo}판으로 게시했습니다. 검사 규칙 {action.result.checkVersion} ·
-          대응표 {action.result.sectorMapVersion} · {action.result.publishedAt}
-        </p>
+        <section className={styles.conflict}>
+          <p role="status">
+            {action.result.revisionNo}판({action.result.edition})으로 게시했습니다. 검사 규칙{' '}
+            {action.result.checkVersion} · 대응표 {action.result.sectorMapVersion} ·{' '}
+            {action.result.publishedAt}
+          </p>
+          {action.result.renamedQuestions.length > 0 ? (
+            <p className={styles.detail}>
+              이 문제는 이미 답한 사용자에게도 새 문제로 보입니다:{' '}
+              {action.result.renamedQuestions
+                .map((rename) => `${rename.from} → ${rename.to}`)
+                .join(', ')}
+            </p>
+          ) : null}
+          {action.result.transferredTerms.length > 0 ? (
+            <p className={styles.detail}>
+              넘겨받은 용어:{' '}
+              {action.result.transferredTerms
+                .map((term) => `${term.termId}(${term.fromArticleId}에서)`)
+                .join(', ')}
+            </p>
+          ) : null}
+          {action.reread === 'reading' ? (
+            <p role="status">게시한 초안을 다시 읽는 중입니다.</p>
+          ) : null}
+          {action.reread === 'failed' ? (
+            <>
+              <p role="alert">
+                게시한 뒤 초안을 다시 읽지 못했습니다. 게시가 바꾼 문제 식별자를 받아야 다음 저장이
+                거절되지 않습니다.
+              </p>
+              <button type="button" onClick={reload}>
+                새로 불러오기
+              </button>
+            </>
+          ) : null}
+        </section>
       ) : null}
 
       {action.kind === 'unpublished' ? (
@@ -598,6 +940,12 @@ export function AdminLearningEditPage() {
       ) : null}
 
       {action.kind === 'notice' ? <p role="alert">{action.message}</p> : null}
+
+      <ArticlePreview
+        articleId={articleId}
+        dirty={hasUnsavedChanges}
+        onUnauthenticated={onPreviewUnauthenticated}
+      />
     </main>
   )
 }

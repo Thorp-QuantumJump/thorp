@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLoginReturn } from '@/auth/useLoginReturn'
 import type { CurrentLearningArticle, LearningReturnState } from '@/types/learning'
+import { GuestSample } from '../me/GuestSample'
 import { CompletionCard } from './CompletionCard'
 import { QuizPanel } from './QuizPanel'
 import type { Announcement, useLearnerArticle } from './useLearnerArticle'
@@ -48,15 +49,17 @@ interface ArticleEndProps {
 /**
  * 새 기준 글의 글 끝 자리(013 FR-021, design-notes §3.4·§3.5).
  *
- * <p><b>비로그인</b>은 위에서부터 확인 문제, 다음 글 연결, 로그인 안내다. <b>로그인</b>은 완료하면 완료 카드(완료
- * 날짜·단계 진행·받은 것·익힐 용어·확인 문제·다음 글)가 놓이고, 완료 전에는 다음 글 연결만 있다. 기록을 받지
- * 못했거나 완료가 기록되지 않았으면 그 자리에 실패 한 줄과 '다시 시도'를 둔다. 글 읽기와 다음 글은 막지 않는다.
+ * <p><b>비로그인</b>은 위에서부터 확인 문제, 다음 글 연결, 비로그인 견본(`GuestSample`)이다. 견본은 배우기 목록의
+ * 기록 자리와 같은 부품으로 '로그인하면 학습 기록이 남습니다.' 한 줄과 로그인 연결, 숫자·상태 모양이 없는 견본
+ * 그림이다(design-notes §3.5). <b>로그인</b>은 완료하면 완료 카드(완료 날짜·단계 진행·받은 것·익힐 용어·확인 문제·
+ * 다음 글)가 놓이고, 완료 전에는 다음 글 연결만 있다. 기록을 받지 못했거나 완료가 기록되지 않았으면 그 자리에 실패
+ * 한 줄과 '다시 시도'를 둔다. 글 읽기와 다음 글은 막지 않는다.
  *
  * <p>실패 줄은 `role="alert"`라 화면 낭독기가 바로 읽는다. 완료는 사용자가 누르지 않아도 나가므로 알리지 않으면
  * 실패를 알 길이 없다(FR-019, R13).
  *
  * <p>다음 글이 없으면 '배우기 목록으로'를 두고, 공개되지 않은 단계가 있으면 '다음 단계는 준비 중입니다'를
- * 덧붙인다. 로그인 연결은 014의 `useLoginReturn`으로 지금 글 주소를 적어 두고 떠난다(research R34).
+ * 덧붙인다. 로그인 연결(견본과 만료 안내)은 014의 `useLoginReturn`으로 지금 글 주소를 적어 두고 떠난다(research R34).
  */
 export function ArticleEnd({ article, mode, concealed, learningReturn }: ArticleEndProps) {
   const rememberReturn = useLoginReturn()
@@ -127,18 +130,15 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
       )}
 
       {mode.kind === 'guest' ? (
-        <p className={concealed ? `${styles.guest} ${styles.concealed}` : styles.guest}>
-          <span>로그인하면 학습 기록이 남습니다.</span>
-          <Link className={styles.loginLink} to="/login" onClick={rememberReturn}>
-            로그인
-          </Link>
-        </p>
+        <div className={concealable}>
+          <GuestSample place="end" />
+        </div>
       ) : null}
 
       {mode.kind === 'expired' ? (
-        <p className={concealed ? `${styles.guest} ${styles.concealed}` : styles.guest}>
+        <p className={concealed ? `${styles.relogin} ${styles.concealed}` : styles.relogin}>
           <span>로그인이 만료되었습니다. 다시 로그인하면 이 글로 돌아옵니다.</span>
-          <Link className={styles.loginLink} to="/login" onClick={rememberReturn}>
+          <Link className={styles.reloginLink} to="/login" onClick={rememberReturn}>
             다시 로그인
           </Link>
         </p>
