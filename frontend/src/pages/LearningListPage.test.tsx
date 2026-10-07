@@ -1,48 +1,81 @@
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { LearningListResult } from '@/api/learning'
-import { articleSummaries } from '@/test/learningFixtures'
-import { AuthContext } from '@/auth/auth-context'
-import { anonymousAuthContext } from '@/test/authFixtures'
-import { renderWithRouter } from '@/test/renderWithRouter'
+import type { CurriculumResult } from '@/api/learning'
+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
+import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'
+import {
+  preReleaseCurriculum,
+  releasedCurriculum,
+  stageOneReleased,
+} from '@/test/learningFixtures'
+import type { Curriculum } from '@/types/learning'
 import { LearningListPage } from './LearningListPage'
 
-/** 013 T028·T043. quickstart 4-1·4-2, US1 시나리오 5, US4 시나리오 1·3. */
+/**
+ * 013 T028·T043(1판)과 T141(2판). quickstart 4-1·4-2·6-1·8-4·11-1·11-2·11-6·11-7, US1 시나리오 5, US4 시나리오
+ * 1·3.
+ */
 
 const apiMocks = vi.hoisted(() => ({
-  fetchLearningArticles: vi.fn(),
+  fetchCurriculum: vi.fn(),
   fetchLearningArticle: vi.fn(),
 }))
 
 vi.mock('@/api/learning', () => apiMocks)
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
-const failed: LearningListResult = {
+const failed: CurriculumResult = {
   status: 'failed',
   kind: 'api',
   code: 'INTERNAL_ERROR',
   message: '글 목록을 만들지 못했습니다.',
 }
 
-const progressWords = /학습 완료|수강|진도|완료율|숙련도|설문/
+const signedInAuth: AuthContextValue = {
+  ...anonymousAuthContext,
+  status: 'authenticated',
+  user: authenticatedUser,
+}
 
-/**
- * 2판 배우기 화면은 `useAuth`를 부르므로 실제 앱처럼 인증 제공자 안에서 그린다. 기본은 비로그인이다
- * (013 T104).
- */
-function renderList() {
-  return renderWithRouter(
-    <AuthContext.Provider value={anonymousAuthContext}>
-      <LearningListPage />
-    </AuthContext.Provider>,
-    { initialEntries: ['/learn'] },
+const progressWords = /학습 완료|수강|진도|완료율|숙련도|설문/
+/** 잠금·예고 어휘(FR-031 표시 규칙, quickstart 11-7). '곧바로' 같은 일반 낱말과 섞이지 않게 '곧 '만 본다. */
+const lockWords = /잠김|해금|열립니다|공개 예정|Coming soon|NEW|곧 /
+
+function loaded(curriculum: Curriculum) {
+  apiMocks.fetchCurriculum.mockResolvedValue({ status: 'loaded', curriculum } satisfies CurriculumResult)
+}
+
+function Probe() {
+  const location = useLocation()
+  return (
+    <p>
+      다른 화면 {location.pathname}
+    </p>
   )
 }
 
-describe('LearningListPage', () => {
+/**
+ * 2판 배우기 화면은 `useAuth`를 부르므로 실제 앱처럼 인증 제공자 안에서 그린다. 기본은 비로그인이다(013 T104).
+ */
+function renderList(entry = '/learn', auth: AuthContextValue = anonymousAuthContext) {
+  return render(
+    <AuthContext.Provider value={auth}>
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/learn" element={<LearningListPage />} />
+          <Route path="*" element={<Probe />} />
+        </Routes>
+      </MemoryRouter>
+    </AuthContext.Provider>,
+  )
+}
+
+describe('LearningListPage — 첫 단계 공개 전', () => {
   beforeEach(() => {
-    apiMocks.fetchLearningArticles.mockReset()
+    apiMocks.fetchCurriculum.mockReset()
+    window.sessionStorage.clear()
   })
 
   afterEach(() => {
@@ -50,10 +83,7 @@ describe('LearningListPage', () => {
   })
 
   it('서버가 준 순서 그대로 제목·질문과 글 연결을 보인다', async () => {
-    apiMocks.fetchLearningArticles.mockResolvedValue({
-      status: 'loaded',
-      articles: articleSummaries,
-    } satisfies LearningListResult)
+    loaded(preReleaseCurriculum)
 
     renderList()
 
@@ -68,8 +98,23 @@ describe('LearningListPage', () => {
     expect(document.body.textContent).not.toMatch(progressWords)
   })
 
+  it('9월 판 목록과 같고 단계·이전 판·준비 중·보기 전환·공개 안내·나의 학습이 없다(FR-031)', async () => {
+    loaded(preReleaseCurriculum)
+
+    renderList()
+
+    await screen.findByRole('list')
+    expect(screen.queryByRole('group', { name: '보기' })).toBeNull()
+    expect(screen.queryByText(/단계/)).toBeNull()
+    expect(screen.queryByText('이전 판')).toBeNull()
+    expect(screen.queryByText('준비 중')).toBeNull()
+    expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
+    expect(screen.queryByText('변경 기록')).toBeNull()
+    expect(screen.queryByRole('table')).toBeNull()
+  })
+
   it('목록을 불러오는 동안에도 상태를 알리고, 진단 진입은 화면 안에 따로 두지 않는다', async () => {
-    apiMocks.fetchLearningArticles.mockReturnValue(new Promise(() => {}))
+    apiMocks.fetchCurriculum.mockReturnValue(new Promise(() => {}))
 
     renderList()
 
@@ -78,18 +123,17 @@ describe('LearningListPage', () => {
   })
 
   it('게시된 글이 없으면 경고가 아닌 한 문장을 보인다', async () => {
-    apiMocks.fetchLearningArticles.mockResolvedValue({ status: 'empty' })
+    loaded({ ...preReleaseCurriculum, preReleaseArticles: [] })
 
     renderList()
 
     expect(await screen.findByText('아직 게시된 글이 없습니다.')).not.toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
-    expect(screen.queryByRole('link', { name: /바로 전략 진단하기/ })).toBeNull()
   })
 
   it('불러오지 못하면 빈 목록과 다르게 경고와 다시 시도를 보인다', async () => {
-    apiMocks.fetchLearningArticles.mockResolvedValue(failed)
+    apiMocks.fetchCurriculum.mockResolvedValue(failed)
 
     renderList()
 
@@ -101,39 +145,39 @@ describe('LearningListPage', () => {
 
   it('다시 시도는 누를 때만 한 번 더 부른다', async () => {
     const user = userEvent.setup()
-    apiMocks.fetchLearningArticles.mockResolvedValueOnce(failed)
-    apiMocks.fetchLearningArticles.mockResolvedValueOnce({ status: 'empty' })
+    apiMocks.fetchCurriculum.mockResolvedValueOnce(failed)
+    apiMocks.fetchCurriculum.mockResolvedValueOnce({
+      status: 'loaded',
+      curriculum: { ...preReleaseCurriculum, preReleaseArticles: [] },
+    })
 
     renderList()
 
     const retry = await screen.findByRole('button', { name: '다시 시도' })
-    expect(apiMocks.fetchLearningArticles).toHaveBeenCalledTimes(1)
+    expect(apiMocks.fetchCurriculum).toHaveBeenCalledTimes(1)
 
     await user.click(retry)
 
     expect(await screen.findByText('아직 게시된 글이 없습니다.')).not.toBeNull()
-    expect(apiMocks.fetchLearningArticles).toHaveBeenCalledTimes(2)
+    expect(apiMocks.fetchCurriculum).toHaveBeenCalledTimes(2)
   })
 
   it('연결 실패처럼 서버 문장이 없는 실패는 고정 문장을 쓴다', async () => {
-    apiMocks.fetchLearningArticles.mockResolvedValue({
+    apiMocks.fetchCurriculum.mockResolvedValue({
       status: 'failed',
       kind: 'network',
       code: null,
       message: '서버에 연결할 수 없습니다.',
-    } satisfies LearningListResult)
+    } satisfies CurriculumResult)
 
     renderList()
 
     expect((await screen.findByRole('alert')).textContent).toBe('배우기 글을 불러오지 못했습니다.')
   })
 
-  it('목록을 열고 닫는 동안 브라우저 저장소에 쓰지 않는다', async () => {
+  it('첫 단계 공개 전에는 목록을 열고 닫는 동안 브라우저 저장소에 아무것도 쓰지 않는다(quickstart 4-1)', async () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
-    apiMocks.fetchLearningArticles.mockResolvedValue({
-      status: 'loaded',
-      articles: articleSummaries,
-    } satisfies LearningListResult)
+    loaded(preReleaseCurriculum)
 
     const { unmount } = renderList()
     await screen.findByRole('list')
@@ -142,3 +186,263 @@ describe('LearningListPage', () => {
     expect(setItem).not.toHaveBeenCalled()
   })
 })
+
+describe('LearningListPage — 첫 단계 공개 뒤', () => {
+  beforeEach(() => {
+    apiMocks.fetchCurriculum.mockReset()
+    window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('기본은 커리큘럼 보기이고 공개된 단계의 글을 읽는 순서대로 잇는다', async () => {
+    loaded(releasedCurriculum)
+
+    renderList()
+
+    const toggle = await screen.findByRole('group', { name: '보기' })
+    expect(within(toggle).getByRole('button', { name: '커리큘럼' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(toggle).getByRole('button', { name: '목록' }).getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByText('읽는 순서를 제안합니다. 공개된 글은 어느 것이든 바로 열 수 있습니다.')).not.toBeNull()
+
+    const stageOne = screen.getByRole('list', { name: '1단계 글' })
+    const stageTwo = screen.getByRole('list', { name: '2단계 글' })
+    expect(within(stageOne).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/learn/harbor-notes',
+      '/learn/dock-fees',
+    ])
+    expect(within(stageTwo).getAllByRole('link')[0].textContent).toContain('2-1')
+    expect(within(stageTwo).getAllByRole('link')[0].textContent).toContain('약 6분')
+    // 용어가 없는 글에는 용어 수가 없다(FR-023).
+    expect(within(stageOne).getAllByRole('link')[0].textContent).toContain('용어 2개')
+    expect(within(stageOne).getAllByRole('link')[1].textContent).not.toContain('용어')
+  })
+
+  it('공개 경계 한 줄 뒤 준비 중 단계는 번호·이름·수준·설명과 사유만 있고 글 제목·편수·날짜가 없다(SC-017)', async () => {
+    loaded(releasedCurriculum)
+
+    renderList()
+
+    expect(await screen.findByText('지금 공개된 단계는 1·2단계입니다. 3~6단계는 준비 중입니다.')).not.toBeNull()
+    const stageFive = screen.getByRole('region', { name: /암초 점검/ })
+    expect(stageFive.textContent).toContain('5단계 · 초급')
+    expect(stageFive.textContent).toContain('준비 중')
+    expect(stageFive.textContent).toContain('이 단계의 글을 모두 준비하면 한 번에 공개합니다.')
+    expect(stageFive.textContent).not.toMatch(/\d+편|\d{4}-\d{2}-\d{2}|약 \d+분/)
+    expect(within(stageFive).queryAllByRole('link')).toHaveLength(0)
+  })
+
+  it('준비 중 단계에 남은 기존 글은 번호 없는 이전 판 쪽지로 열 수 있다', async () => {
+    loaded(releasedCurriculum)
+
+    renderList()
+
+    const stageThree = await screen.findByRole('region', { name: /물때표 읽기/ })
+    expect(within(stageThree).getByRole('heading', { level: 4 }).textContent).toBe(
+      '다시 쓰기 전의 글 2편 · 나의 학습에 기록하지 않습니다',
+    )
+    const note = within(stageThree).getByRole('link', { name: /닻줄 길이/ })
+    expect(note.getAttribute('href')).toBe('/learn/anchor-lines')
+    expect(note.textContent).toContain('이전 판')
+    expect(note.textContent).not.toMatch(/\d+-\d+/)
+  })
+
+  it('비로그인에게는 기록 자리에 견본과 로그인 연결을 두고 글 상태 글자가 없다(quickstart 11-6)', async () => {
+    loaded(releasedCurriculum)
+
+    renderList()
+
+    const sample = await screen.findByRole('region', { name: '로그인하면 학습 기록이 남습니다.' })
+    expect(within(sample).getByRole('link', { name: '로그인' }).getAttribute('href')).toBe('/login')
+    expect(document.body.textContent).not.toMatch(/완료|읽는 중|안 읽음/)
+    // 글 노드와 공개된 단계의 표식은 상태 모양이 아니라 중립 모양이다. 점선은 준비 중 단계의 표식에만 있다.
+    for (const name of ['1단계 글', '2단계 글']) {
+      const nodes = screen.getByRole('list', { name }).querySelectorAll('[data-stamp]')
+      expect(nodes.length).toBeGreaterThan(0)
+      for (const node of nodes) expect(node.getAttribute('data-stamp')).toBe('neutral')
+    }
+    const openMarker = screen.getByRole('region', { name: /항구 기초/ }).querySelector('[data-stamp]')
+    expect(openMarker?.getAttribute('data-stamp')).toBe('neutral')
+  })
+
+  it('로그인 사용자에게는 견본을 두지 않는다. 요약 패널은 나의 학습(B13)이 더한다', async () => {
+    loaded(releasedCurriculum)
+
+    renderList('/learn', signedInAuth)
+
+    await screen.findByRole('group', { name: '보기' })
+    expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
+  })
+
+  it('공개 안내는 7일 안의 줄을 한 줄로 합치고 비로그인에게는 기록 문장을 붙이지 않는다', async () => {
+    loaded(releasedCurriculum)
+
+    renderList()
+
+    const notice = (await screen.findByText(/2단계 '너울과 위험'을 공개했습니다/)).closest('p')!
+    expect(notice.textContent).toContain(
+      "1단계에 새 글 1편을 더했습니다. 2단계 '너울과 위험'을 공개했습니다. 새 글 3편과 다시 쓴 글 1편입니다.",
+    )
+    expect(notice.textContent).not.toContain('지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.')
+    expect(within(notice).getByRole('link', { name: '2단계 보기' }).getAttribute('href')).toBe('/learn#stage-2')
+    // 페이지를 열 때 이미 있는 내용이라 상태 알림으로 두지 않는다(FR-031).
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('로그인 사용자에게는 1단계가 아닌 단계 공개가 있을 때만 기록 문장을 덧붙인다', async () => {
+    loaded(releasedCurriculum)
+    const { unmount } = renderList('/learn', signedInAuth)
+    const notice = (await screen.findByText(/공개했습니다/)).closest('p')!
+    expect(notice.textContent).toContain('지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.')
+    unmount()
+
+    loaded({ ...releasedCurriculum, notices: [stageOneReleased] })
+    renderList('/learn', signedInAuth)
+    const firstOnly = (await screen.findByText(/공개했습니다/)).closest('p')!
+    expect(firstOnly.textContent).not.toContain('지금까지의 읽은 기록, 경험치, 배지는 그대로입니다.')
+  })
+
+  it('[닫기]는 그 탭에서만 기억한다. 다시 열어도 안 보이고 새 탭에서는 보이며 서버를 부르지 않는다', async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    const { unmount } = renderList()
+    await user.click(await screen.findByRole('button', { name: '공개 안내 닫기' }))
+    expect(screen.queryByText(/공개했습니다/)).toBeNull()
+    expect(apiMocks.fetchCurriculum).toHaveBeenCalledTimes(1)
+    unmount()
+
+    // 같은 탭에서 다시 연다(새로 고침·같은 탭 안의 이동).
+    const { unmount: unmountAgain } = renderList()
+    await screen.findByRole('group', { name: '보기' })
+    expect(screen.queryByText(/공개했습니다/)).toBeNull()
+    unmountAgain()
+
+    // 새 탭에는 탭 저장소가 없다.
+    window.sessionStorage.clear()
+    renderList()
+    expect(await screen.findByText(/공개했습니다/)).not.toBeNull()
+  })
+
+  it('목록 보기를 고르면 그 탭 동안 기억하고, 새 탭은 커리큘럼 보기로 시작한다(quickstart 11-1)', async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    const { unmount } = renderList()
+    await user.click(await screen.findByRole('button', { name: '목록' }))
+    const table = screen.getByRole('table')
+    expect(within(table).getAllByRole('rowheader').map((cell) => cell.textContent)).toHaveLength(6)
+    unmount()
+
+    const { unmount: unmountAgain } = renderList()
+    expect(await screen.findByRole('table')).not.toBeNull()
+    expect(screen.getByRole('button', { name: '목록' }).getAttribute('aria-pressed')).toBe('true')
+    unmountAgain()
+
+    window.sessionStorage.clear()
+    renderList()
+    expect(
+      (await screen.findByRole('button', { name: '커리큘럼' })).getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect(screen.queryByRole('table')).toBeNull()
+  })
+
+  it('학습 기록을 쓰지 않고 화면 상태 키 둘만 쓴다. 로그인 연결을 누른 경우에만 014 키가 더해진다', async () => {
+    const user = userEvent.setup()
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    loaded(releasedCurriculum)
+
+    renderList()
+    await user.click(await screen.findByRole('button', { name: '목록' }))
+    await user.click(screen.getByRole('button', { name: '공개 안내 닫기' }))
+    expect(new Set(setItem.mock.calls.map(([key]) => key))).toEqual(
+      new Set(['thorp.learning.view', 'thorp.learning.dismissedNotices']),
+    )
+
+    await user.click(screen.getByRole('link', { name: '로그인' }))
+    expect(await screen.findByText(/다른 화면 \/login/)).not.toBeNull()
+    expect(new Set(setItem.mock.calls.map(([key]) => key))).toEqual(
+      new Set(['thorp.learning.view', 'thorp.learning.dismissedNotices', 'thorp.auth.returnTarget']),
+    )
+  })
+
+  it('주소의 단계 자리(#stage-n)로 열면 그 단계 제목에 초점을 둔다(T203)', async () => {
+    loaded(releasedCurriculum)
+
+    renderList('/learn#stage-3')
+
+    const heading = await screen.findByRole('heading', { level: 3, name: /물때표 읽기/ })
+    expect(document.activeElement).toBe(heading)
+  })
+
+  it("공개 안내의 '2단계 보기'는 2단계 자리로, '변경 기록'은 펼친 변경 기록으로 초점을 옮긴다", async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    renderList()
+    await user.click(await screen.findByRole('link', { name: '2단계 보기' }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: /너울과 위험/ }))
+
+    await user.click(screen.getByRole('link', { name: '변경 기록' }))
+    const log = document.querySelector('details')!
+    expect(log.open).toBe(true)
+    expect(document.activeElement).toBe(log.querySelector('summary'))
+  })
+
+  it('변경 기록은 날짜와 공개한 단계·더한 글·편수를 최신 순서로 쌓고 기록 문장을 넣지 않는다', async () => {
+    loaded(releasedCurriculum)
+
+    renderList('/learn', signedInAuth)
+
+    const log = (await screen.findByText('변경 기록', { selector: 'summary' })).closest('details')!
+    expect(within(log).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      "2026-11-19 · 2단계 공개 · 새 글 3편, 다시 쓴 글 1편('물때 읽기')",
+      "2026-11-15 · 1단계에 글 추가 · 새 글 1편('부두 이용료는 어디로 갈까?')",
+      "2026-11-05 · 1단계 공개 · 새 글 1편, 다시 쓴 글 1편('항구 기록')",
+    ].map((line) => line.replace(' · ', '')))
+    expect(log.textContent).not.toContain('그대로입니다')
+  })
+
+  it('두 보기 어디에도 잠금·예고 어휘와 진도 문구가 없다(quickstart 11-7)', async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    renderList('/learn', signedInAuth)
+    await screen.findByRole('group', { name: '보기' })
+    expect(document.body.textContent).not.toMatch(lockWords)
+    expect(document.body.textContent).not.toMatch(progressWords)
+
+    await user.click(screen.getByRole('button', { name: '목록' }))
+    expect(document.body.textContent).not.toMatch(lockWords)
+    expect(document.body.innerHTML).not.toMatch(/aria-label="[^"]*(잠김|해금|열립니다|공개 예정)/)
+  })
+
+  it('받은 learningReturn을 글 연결에 그대로 싣는다', async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+
+    render(
+      <AuthContext.Provider value={anonymousAuthContext}>
+        <MemoryRouter
+          initialEntries={[{ pathname: '/learn', state: { learningReturn: { path: '/strategy', label: '' } } }]}
+        >
+          <Routes>
+            <Route path="/learn" element={<LearningListPage />} />
+            <Route path="/learn/:articleId" element={<StateProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    await user.click(within(await screen.findByRole('list', { name: '1단계 글' })).getAllByRole('link')[0])
+
+    expect((await screen.findByTestId('state')).textContent).toBe('/strategy')
+  })
+})
+
+function StateProbe() {
+  const location = useLocation()
+  const state = location.state as { learningReturn?: { path: string } } | null
+  return <p data-testid="state">{state?.learningReturn?.path ?? ''}</p>
+}
