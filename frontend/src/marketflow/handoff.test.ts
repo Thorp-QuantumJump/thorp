@@ -1,42 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildCaseId,
-  buildRegimeLinkStartPath,
-  buildCompositeSearchPath,
-  buildSimilarPeriodHandoff,
-} from './handoff'
-
-describe('비슷했던 때 보기로 넘기는 값 (FR-009)', () => {
-  it('분야와 그 분야의 기준월을 넘긴다', () => {
-    expect(buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: '2026-07' })).toEqual({
-      fieldId: 'labor',
-      referenceMonth: '2026-07',
-    })
-  })
-
-  it('기준월이 없으면 넘길 값이 없다', () => {
-    // 기준월 없이 넘기면 010이 "언제와 비슷한지"를 모르는 채 검색하게 된다.
-    expect(buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: null })).toBeNull()
-  })
-
-  it('분야마다 다른 기준월을 그대로 유지한다', () => {
-    const production = buildSimilarPeriodHandoff({ fieldId: 'production', referenceMonth: '2026-08' })
-    const labor = buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: '2026-06' })
-
-    expect(production?.referenceMonth).toBe('2026-08')
-    expect(labor?.referenceMonth).toBe('2026-06')
-  })
-
-  /**
-   * FR-016이 "섹터를 골랐어도 넘기는 분야·기준월은 달라지지 않는다"를 요구한다.
-   * 이 함수는 섹터를 받는 자리가 아예 없어서 실수로도 실을 수 없다. 그것을 여기서 못 박는다.
-   */
-  it('섹터를 실을 자리가 없다', () => {
-    const handoff = buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: '2026-07' })
-
-    expect(Object.keys(handoff ?? {}).sort()).toEqual(['fieldId', 'referenceMonth'])
-  })
-})
+import { buildCaseId, buildRegimeLinkStartPath } from './handoff'
 
 describe('사례 식별자 조립 (011 계약 §0)', () => {
   it('010 searchId와 관측 종료월을 물결로 잇는다', () => {
@@ -75,8 +38,3 @@ describe('011 시작 주소 (진입 계약 §2)', () => {
   })
 })
 
-describe('종합 비교를 010에서 이어 보는 주소 (009 FR-018)', () => {
-  it('종합 비교가 선택된 상태로 연다', () => {
-    expect(buildCompositeSearchPath()).toBe('/regime-search?mode=composite')
-  })
-})

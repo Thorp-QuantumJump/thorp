@@ -13,9 +13,10 @@ import styles from './MarketFlow.module.css'
  * 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다.
  *
  * `compare`는 머리와 지표 칸 사이에 서는 '지금과 비슷했던 과거' 줄이고, `pasts`는 그 줄에서 고른 과거 구간을
- * 지표마다 겹칠 값이다(009 FR-019). 둘 다 없으면 지금의 지표만 보인다.
+ * 지표마다 겹칠 값이다(009 FR-019). 둘 다 없으면 지금의 지표만 보인다. `explorer`는 지표 칸 아래 바닥에 서는
+ * '가까운 과거 사례' 구역이다(2026-10-07).
  */
-export function FieldDetail({ detail, historyNotice, compare = null, pasts = null, showBand = false, comparing = false }: {
+export function FieldDetail({ detail, historyNotice, compare = null, pasts = null, showBand = false, comparing = false, explorer = null }: {
   detail: FieldDetailResult
   /** 서버(목록 응답)가 정한 역사 비교 안내 문장(FR-012). 있을 때만 시점 줄에 짧은 표시를 단다 */
   historyNotice?: string | null
@@ -25,6 +26,7 @@ export function FieldDetail({ detail, historyNotice, compare = null, pasts = nul
   showBand?: boolean
   /** 과거 구간을 고른 상태. 당시 경로를 받는 중에도 그래프 높이를 그대로 둔다. */
   comparing?: boolean
+  explorer?: ReactNode
 }) {
   const reducedMotion = useReducedMotion()
   const titleId = `field-${detail.fieldId}-title`
@@ -109,6 +111,7 @@ export function FieldDetail({ detail, historyNotice, compare = null, pasts = nul
           </p>
         </div>
       ) : null}
+      {explorer}
     </motion.section>
   )
 }
