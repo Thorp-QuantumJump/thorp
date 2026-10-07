@@ -144,3 +144,34 @@
   :global(:root:not([data-design='classic'])) .itemArrow { transition: none; }
   :global(:root:not([data-design='classic'])) .item:hover { transform: none; }
 }
+
+/* 첫 단계를 공개한 뒤: 보기 전환과 읽는 순서 안내를 한 줄에 둔다(design-notes §3.1, 목업 .vrow). */
+.viewRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-top: 14px;
+}
+
+.order {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+}
+
+.order svg {
+  flex: none;
+}
+
+@media (max-width: 719px) {
+  .viewRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

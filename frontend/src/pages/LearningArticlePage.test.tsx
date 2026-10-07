@@ -22,7 +22,6 @@ import { LearningArticlePage } from './LearningArticlePage'
  */
 
 const apiMocks = vi.hoisted(() => ({
-  fetchLearningArticles: vi.fn(),
   fetchLearningArticle: vi.fn(),
 }))
 const glossaryMocks = vi.hoisted(() => ({ fetchGlossaryEntry: vi.fn() }))
@@ -51,6 +50,7 @@ function Probe({ name }: { name: string }) {
     <p>
       {name} {location.pathname}
       {location.search}
+      {location.hash}
     </p>
   )
 }
@@ -308,9 +308,10 @@ describe('LearningArticlePage', () => {
     const header = title.closest('header')!
     const crumb = within(header).getByRole('navigation', { name: '경로' })
     expect(within(crumb).getByRole('link', { name: '배우기' }).getAttribute('href')).toBe('/learn')
+    // 단계 연결은 배우기 목록의 그 단계 자리로 간다(T203).
     expect(
       within(crumb).getByRole('link', { name: '2단계 · 너울과 위험' }).getAttribute('href'),
-    ).toBe('/learn')
+    ).toBe('/learn#stage-2')
     expect(within(header).getByText('2-3')).not.toBeNull()
     expect(within(header).getByText('약 4분')).not.toBeNull()
     expect(screen.getByText('본문 끝')).not.toBeNull()
@@ -320,18 +321,35 @@ describe('LearningArticlePage', () => {
     expect(screen.queryByText('LEARN')).toBeNull()
   })
 
-  it('비로그인 새 기준 글 끝은 확인 문제·다음 글·로그인 안내 순서이고 학습 기록 문구가 없다', async () => {
+  it('비로그인 새 기준 글 끝은 확인 문제·다음 글·견본 순서이고 학습 기록 문구가 없다', async () => {
     loaded(currentArticle)
 
     renderArticle('/learn/swell-reading')
 
     const quiz = await screen.findByRole('region', { name: '확인 문제' })
     const next = screen.getByRole('link', { name: /다음 글/ })
-    const login = screen.getByText('로그인하면 학습 기록이 남습니다.')
+    const sample = screen.getByRole('region', { name: '로그인하면 학습 기록이 남습니다.' })
     expect(quiz.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(next.compareDocumentPosition(login) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(next.compareDocumentPosition(sample) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(next.textContent).toContain('2-4 물때 읽기')
     expect(document.body.textContent).not.toMatch(recordWords)
+  })
+
+  it('비로그인 글 끝의 견본은 한 줄·로그인 연결과 숫자·상태 모양 없는 그림뿐이다(T202)', async () => {
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading')
+
+    const sample = await screen.findByRole('region', { name: '로그인하면 학습 기록이 남습니다.' })
+    // 보조 기술이 읽는 것은 한 줄과 로그인 연결뿐이다. 그림은 aria-hidden이다(design-notes §3.5).
+    expect(sample.textContent).toBe('로그인하면 학습 기록이 남습니다.로그인')
+    expect(within(sample).getByRole('link', { name: '로그인' }).getAttribute('href')).toBe('/login')
+    const art = sample.querySelector('svg')!
+    expect(art.closest('[aria-hidden="true"]')).not.toBeNull()
+    // 숫자·글자, 상태를 뜻하는 점선과 글 도장 모양이 없다.
+    expect(art.querySelector('text')).toBeNull()
+    expect(art.querySelector('[stroke-dasharray]')).toBeNull()
+    expect(sample.querySelector('[data-stamp]')).toBeNull()
   })
 
   it('다음 글 연결은 받은 learningReturn을 그대로 넘긴다', async () => {
@@ -363,13 +381,22 @@ describe('LearningArticlePage', () => {
     expect(screen.queryByText('다음 단계는 준비 중입니다.')).toBeNull()
   })
 
-  it('로그인 연결은 같은 줄의 안내 문장과 색만이 아니라 밑줄과 굵기로도 구분된다', () => {
-    const declarations = cssDeclarations(
-      'components/learning/article/ArticleEnd.module.css',
-      '.loginLink',
-    )
+  it('글 끝의 로그인은 단추가 아닌 글자 연결이라 예시 진입 버튼과 겨루지 않는다(constitution II)', async () => {
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading')
+
+    const sample = await screen.findByRole('region', { name: '로그인하면 학습 기록이 남습니다.' })
+    const login = within(sample).getByRole('link', { name: '로그인' })
+    // 글 화면의 행동 버튼은 '이 예시로 전략 진단하기' 하나다(plan Constitution Check II). 글 끝 견본은 단추 모양 대신
+    // 글자 연결 모양을 쓴다. 이름만 보면 규칙이 지워져도 통과하므로 그 규칙의 선언도 함께 본다.
+    expect(login.className).toMatch(/loginLink/)
+    const declarations = cssDeclarations('components/learning/me/GuestSample.module.css', '.loginLink')
+    expect(declarations).not.toMatch(/background/)
+    // 둘레 글자와 색만으로 가르지 않게 밑줄과 굵기를 두고, 누르는 높이는 44px이다(WCAG 1.4.1, design-notes §6).
     expect(declarations).toMatch(/text-decoration:\s*underline/)
     expect(declarations).toMatch(/font-weight:\s*650/)
+    expect(declarations).toMatch(/min-height:\s*44px/)
   })
 
   it('로그인 연결은 지금 글 주소만 014 키에 적고 로그인 화면으로 간다', async () => {
@@ -444,9 +471,11 @@ describe('LearningArticlePage', () => {
     expect(
       cssDeclarations('components/learning/article/ArticleEnd.module.css', '.concealed'),
     ).toMatch(/visibility:\s*hidden/)
-    expect(screen.getByText('로그인하면 학습 기록이 남습니다.').closest('p')?.className).toMatch(
-      /concealed/,
-    )
+    expect(
+      screen
+        .getByRole('region', { name: '로그인하면 학습 기록이 남습니다.' })
+        .parentElement?.className,
+    ).toMatch(/concealed/)
 
     setAuth(anonymousAuthContext)
     expect(screen.getByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
@@ -516,6 +545,19 @@ describe('LearningArticlePage', () => {
     await user.click(within(crumb).getByRole('link', { name: '배우기' }))
 
     expect(await screen.findByText(/주제 목록 화면/)).not.toBeNull()
+    expect(probedState).toEqual(received)
+  })
+
+  it('경로의 단계 연결은 목록의 그 단계 자리로 가며 받은 learningReturn을 싣는다(T203)', async () => {
+    const user = userEvent.setup()
+    const received = { learningReturn: { path: '/strategy', label: '전략 선택' } }
+    loaded(currentArticle)
+
+    renderArticle({ pathname: '/learn/swell-reading', state: received })
+    const crumb = await screen.findByRole('navigation', { name: '경로' })
+    await user.click(within(crumb).getByRole('link', { name: '2단계 · 너울과 위험' }))
+
+    expect((await screen.findByText(/주제 목록 화면/)).textContent).toContain('/learn#stage-2')
     expect(probedState).toEqual(received)
   })
 
