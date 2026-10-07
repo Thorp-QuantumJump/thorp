@@ -62,11 +62,7 @@ describe('PublishCheckResultList', () => {
             location: { part: 'quiz', index: 0, field: 'explanation' },
             message: '추천으로 읽히는 표현이 있습니다.',
           },
-          {
-            check: 'QUIZ',
-            location: { part: 'quiz' },
-            message: '확인 문제는 2~3개여야 합니다.',
-          },
+          { check: 'QUIZ', location: { part: 'quiz' }, message: '확인 문제는 2~3개여야 합니다.' },
           {
             check: 'RESULT_NUMBER_OUTSIDE_HYPOTHETICAL',
             location: { part: 'block', index: 4, field: 'rows[0][1]' },
@@ -89,6 +85,34 @@ describe('PublishCheckResultList', () => {
     // 검사 이름은 서버 값 그대로다.
     expect(screen.getAllByText('QUIZ')).toHaveLength(2)
     expect(screen.getByText('PLACEMENT')).not.toBeNull()
+  })
+
+  it('(converge) 표 열·도식 계열·다른 이름 위치도 1부터 센 이름으로 보인다', () => {
+    render(
+      <PublishCheckResultList
+        failures={[
+          {
+            check: 'C1',
+            location: { part: 'block', index: 0, field: 'columns[1]' },
+            message: '가',
+          },
+          {
+            check: 'C2',
+            location: { part: 'block', index: 1, field: 'series[0].name' },
+            message: '나',
+          },
+          {
+            check: 'C3',
+            location: { part: 'term', termId: 'x', field: 'aliases[2]' },
+            message: '다',
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('본문 1번째 블록 · 2번째 열 이름')).not.toBeNull()
+    expect(screen.getByText('본문 2번째 블록 · 1번째 계열 이름')).not.toBeNull()
+    expect(screen.getByText('용어 x · 3번째 다른 이름')).not.toBeNull()
   })
 
   it('(2판) 여러 목록을 함께 그려도 제목 id가 겹치지 않는다', () => {

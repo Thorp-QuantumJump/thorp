@@ -153,10 +153,7 @@ export function V2BlockFields({ block, number, terms, onChange }: V2BlockFieldsP
                 allow={FIELD_RUNS.keySummary}
                 rows={2}
                 onChange={(value) =>
-                  onChange({
-                    ...block,
-                    lines: replaceAt(block.lines, index, value),
-                  })
+                  onChange({ ...block, lines: replaceAt(block.lines, index, value) })
                 }
               />
               <button
@@ -262,10 +259,7 @@ export function V2BlockFields({ block, number, terms, onChange }: V2BlockFieldsP
                   allow={FIELD_RUNS.list}
                   rows={2}
                   onChange={(value) =>
-                    onChange({
-                      ...block,
-                      items: replaceAt(block.items, index, value),
-                    })
+                    onChange({ ...block, items: replaceAt(block.items, index, value) })
                   }
                 />
                 <button
@@ -337,10 +331,7 @@ function TableFields({
                 value={column}
                 max={LIMITS.column}
                 onChange={(value) =>
-                  onChange({
-                    ...block,
-                    columns: replaceAt(block.columns, index, value),
-                  })
+                  onChange({ ...block, columns: replaceAt(block.columns, index, value) })
                 }
               />
               <button
@@ -364,12 +355,7 @@ function TableFields({
       <ListControls
         addLabel="행 추가"
         canAdd={block.rows.length < LIMITS.rows}
-        onAdd={() =>
-          onChange({
-            ...block,
-            rows: [...block.rows, block.columns.map(() => '')],
-          })
-        }
+        onAdd={() => onChange({ ...block, rows: [...block.rows, block.columns.map(() => '')] })}
       >
         {block.rows.map((row, rowIndex) => (
           <div key={rowIndex} className={styles.item}>
@@ -429,10 +415,7 @@ function DiagramFields({
         <select
           value={block.kind}
           onChange={(event) =>
-            onChange({
-              ...block,
-              kind: event.target.value === 'line' ? 'line' : 'bar',
-            })
+            onChange({ ...block, kind: event.target.value === 'line' ? 'line' : 'bar' })
           }
         >
           <option value="bar">막대</option>
@@ -462,10 +445,7 @@ function DiagramFields({
           onChange({
             ...block,
             categories: [...block.categories, ''],
-            series: block.series.map((series) => ({
-              ...series,
-              values: [...series.values, 0],
-            })),
+            series: block.series.map((series) => ({ ...series, values: [...series.values, 0] })),
           })
         }
       >
@@ -477,10 +457,7 @@ function DiagramFields({
                 value={category}
                 max={LIMITS.category}
                 onChange={(value) =>
-                  onChange({
-                    ...block,
-                    categories: replaceAt(block.categories, index, value),
-                  })
+                  onChange({ ...block, categories: replaceAt(block.categories, index, value) })
                 }
               />
               <button
@@ -524,10 +501,7 @@ function DiagramFields({
               onChange={(value) =>
                 onChange({
                   ...block,
-                  series: replaceAt(block.series, seriesIndex, {
-                    ...series,
-                    name: value,
-                  }),
+                  series: replaceAt(block.series, seriesIndex, { ...series, name: value }),
                 })
               }
             />
@@ -553,12 +527,7 @@ function DiagramFields({
             <div className={styles.controls}>
               <button
                 type="button"
-                onClick={() =>
-                  onChange({
-                    ...block,
-                    series: removeAt(block.series, seriesIndex),
-                  })
-                }
+                onClick={() => onChange({ ...block, series: removeAt(block.series, seriesIndex) })}
                 aria-label={name(`${seriesIndex + 1}번째 계열 삭제`)}
               >
                 계열 삭제
@@ -599,10 +568,7 @@ function InstitutionNoteFields({
 }) {
   const source: DraftSourceRef = block.source ?? { label: '', url: '' }
   const setSource = (next: DraftSourceRef) =>
-    onChange({
-      ...block,
-      source: next.label === '' && next.url === '' ? null : next,
-    })
+    onChange({ ...block, source: next.label === '' && next.url === '' ? null : next })
 
   return (
     <>
@@ -620,10 +586,7 @@ function InstitutionNoteFields({
           type="date"
           value={block.asOf ?? ''}
           onChange={(event) =>
-            onChange({
-              ...block,
-              asOf: event.target.value === '' ? null : event.target.value,
-            })
+            onChange({ ...block, asOf: event.target.value === '' ? null : event.target.value })
           }
         />
       </label>

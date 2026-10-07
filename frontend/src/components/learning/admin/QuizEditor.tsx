@@ -92,10 +92,7 @@ function QuestionItem({ number, question, onChange, onRemove }: QuestionItemProp
   const setChoices = (choices: DraftQuizChoice[]) => onChange({ ...question, choices })
   const choose = (index: number) =>
     setChoices(
-      question.choices.map((choice, position) => ({
-        ...choice,
-        correct: position === index,
-      })),
+      question.choices.map((choice, position) => ({ ...choice, correct: position === index })),
     )
 
   return (

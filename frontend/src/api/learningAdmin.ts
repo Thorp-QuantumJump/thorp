@@ -108,21 +108,12 @@ export type CreateArticleResult =
 /** 저장과 게시가 함께 쓰는 거절이다. 두 요청이 같은 조건으로 같은 코드를 돌려준다(계약 §5·§6). */
 export type DraftRejection =
   /** `409 LEARNING_DRAFT_CHANGED`. 화면은 입력을 남긴 채 새로 불러오기를 안내한다(R12) */
-  | {
-      status: 'draftChanged'
-      message: string
-      currentDraftVersion: number | null
-    }
+  | { status: 'draftChanged'; message: string; currentDraftVersion: number | null }
   /**
    * `409 LEARNING_TERM_ID_TAKEN`. 다른 글이 쓰는 용어다. `ownerArticleId`가 있으면 화면이 '이 글로
    * 넘겨받기'를 제안할 수 있다(계약 §5, R24)
    */
-  | {
-      status: 'termIdTaken'
-      message: string
-      termId: string | null
-      ownerArticleId: string | null
-    }
+  | { status: 'termIdTaken'; message: string; termId: string | null; ownerArticleId: string | null }
   /**
    * `409 LEARNING_TERM_TRANSFER_INVALID`(2판). `transferFrom`이 지금 소유 글이 아니다. 소유 글이 없어졌으면
    * `ownerArticleId`가 `null`이다 — 화면은 이때 넘겨받기를 비우라고 안내한다(계약 §5)
@@ -167,9 +158,24 @@ export type UnpublishArticleResult =
   | Unauthenticated
   | LoadFailure
 
-/** 미리 보기 결과(계약 §8). 게시 전이라 게시 시각이 없다. */
+/** 정답 보기가 하나가 아니어서 미리 보기에서 풀 수 없는 문제다. 게시 전 검사(`QUIZ`)가 막는 자리다. */
+export type IncompleteQuestion = { questionId: string; prompt: string }
+
+/**
+ * 미리 보기 한 벌(계약 §8). 게시 전이라 게시 시각이 없다.
+ *
+ * <p>미리 보기는 검사하지 않은 초안을 그리므로 공개 글에는 없는 두 빈자리가 온다. 정답 보기가 하나가 아닌
+ * 문제는 `correctChoiceId`가 `null`이고, 예시 없는 V1 초안은 9월 판 모양인데도 `example`이 `null`이다
+ * (백엔드 `ArticleViewAssembler`의 미리 보기 모드). 앞의 것은 `incompleteQuestions`로 따로 두고, 뒤의 것은
+ * 빈 예시로 읽는다. 둘 때문에 미리 보기 전체를 읽지 못하면 운영자가 고치는 중인 초안을 볼 수 없다.
+ */
+export type ArticlePreview = {
+  article: LearningArticleContent
+  incompleteQuestions: IncompleteQuestion[]
+}
+
 export type ArticlePreviewResult =
-  | { status: 'loaded'; article: LearningArticleContent }
+  | { status: 'loaded'; preview: ArticlePreview }
   | { status: 'notFound' }
   | Unauthenticated
   | LoadFailure
@@ -193,11 +199,7 @@ export type StageReleaseOutcome =
       articles: StageCheckFailedArticle[]
     }
   /** `409 LEARNING_STAGE_ALREADY_RELEASED`·`LEARNING_STAGE_ORDER`·`LEARNING_STAGE_EMPTY` */
-  | {
-      status: 'rejected'
-      reason: 'alreadyReleased' | 'order' | 'empty'
-      message: string
-    }
+  | { status: 'rejected'; reason: 'alreadyReleased' | 'order' | 'empty'; message: string }
   /**
    * `409 LEARNING_STAGE_CHANGED`. 요청의 글 목록이나 초안 번호가 서버의 공개 집합과 다르다. 화면은 미리
    * 검사를 다시 하게 하고 이 목록으로 다시 보내지 않는다(R23)
@@ -275,11 +277,7 @@ function readPublication(value: unknown): AdminPublicationRecord | null {
 function readStageRef(value: unknown): AdminArticleStageRef | null {
   if (!isRecord(value) || !isString(value.stageKey) || !isNumber(value.number)) return null
   if (typeof value.released !== 'boolean') return null
-  return {
-    stageKey: value.stageKey,
-    number: value.number,
-    released: value.released,
-  }
+  return { stageKey: value.stageKey, number: value.number, released: value.released }
 }
 
 function readSummary(value: unknown): AdminLearningArticleSummary | null {
@@ -404,12 +402,7 @@ function readBlockV2(value: unknown): AdminDraftBlockV2 | null {
     case 'table': {
       const rows = readAll(value.rows, (row) => readAll(row, readRuns))
       if (!rows || !isString(value.caption) || !isStringArray(value.columns)) return null
-      return {
-        type: 'table',
-        caption: value.caption,
-        columns: [...value.columns],
-        rows,
-      }
+      return { type: 'table', caption: value.caption, columns: [...value.columns], rows }
     }
     case 'diagram': {
       const series = readAll(value.series, readDiagramSeries)
@@ -498,12 +491,7 @@ function readQuizQuestion(value: unknown): DraftQuizQuestion | null {
   const questionId = value.questionId ?? null
   const choices = readAll(value.choices, readQuizChoice)
   if (!choices || !(questionId === null || isString(questionId))) return null
-  return {
-    questionId,
-    prompt: value.prompt,
-    choices,
-    explanation: value.explanation,
-  }
+  return { questionId, prompt: value.prompt, choices, explanation: value.explanation }
 }
 
 /**
@@ -615,11 +603,7 @@ function readUnpublishResult(value: unknown): UnpublishResult | null {
   if (!status) return null
   const revisionNo = value.unpublishedRevisionNo
   if (revisionNo !== null && revisionNo !== undefined && typeof revisionNo !== 'number') return null
-  return {
-    articleId: value.articleId,
-    status,
-    unpublishedRevisionNo: revisionNo ?? null,
-  }
+  return { articleId: value.articleId, status, unpublishedRevisionNo: revisionNo ?? null }
 }
 
 const CHECK_LOCATION_PARTS: readonly PublishCheckLocation['part'][] = [
@@ -651,11 +635,7 @@ function readFailuresStrict(value: unknown): PublishCheckFailure[] | null {
     if (!isRecord(item) || !isString(item.check) || !isString(item.message)) return null
     const location = readLocation(item.location)
     if (!location) return null
-    const failure: PublishCheckFailure = {
-      check: item.check,
-      location,
-      message: item.message,
-    }
+    const failure: PublishCheckFailure = { check: item.check, location, message: item.message }
     if (isString(item.matched)) failure.matched = item.matched
     return failure
   })
@@ -744,11 +724,7 @@ function readReleasedArticle(value: unknown): StageReleasedArticle | null {
   if (!isRecord(value) || !isString(value.articleId) || !isNumber(value.revisionNo)) return null
   const renamedQuestions = readAll(value.renamedQuestions, readRenamedQuestion)
   return renamedQuestions
-    ? {
-        articleId: value.articleId,
-        revisionNo: value.revisionNo,
-        renamedQuestions,
-      }
+    ? { articleId: value.articleId, revisionNo: value.revisionNo, renamedQuestions }
     : null
 }
 
@@ -819,9 +795,7 @@ function unwrap<T>(body: ApiEnvelope<T> | T): T {
   if (isRecord(body) && 'success' in body && 'data' in body) {
     const envelope = body as ApiEnvelope<T>
     if (!envelope.success) {
-      throw new ApiClientError('api', envelope.error.message, {
-        code: envelope.error.code,
-      })
+      throw new ApiClientError('api', envelope.error.message, { code: envelope.error.code })
     }
     return envelope.data
   }
@@ -829,21 +803,11 @@ function unwrap<T>(body: ApiEnvelope<T> | T): T {
 }
 
 function unreadable(): LoadFailure {
-  return {
-    status: 'failed',
-    kind: 'unexpected',
-    code: null,
-    message: UNREADABLE_RESPONSE_MESSAGE,
-  }
+  return { status: 'failed', kind: 'unexpected', code: null, message: UNREADABLE_RESPONSE_MESSAGE }
 }
 
 function toFailure(error: ApiClientError): LoadFailure {
-  return {
-    status: 'failed',
-    kind: error.kind,
-    code: error.code,
-    message: error.message,
-  }
+  return { status: 'failed', kind: error.kind, code: error.code, message: error.message }
 }
 
 function statusOf(error: unknown): number | null {
@@ -981,9 +945,7 @@ export async function fetchAdminArticle(
   try {
     const response = await apiClient.get<ApiEnvelope<AdminLearningArticle>>(
       articlePath(articleId),
-      {
-        signal,
-      },
+      { signal },
     )
     const article = readArticle(unwrap(response.data))
     return article ? { status: 'loaded', article } : unreadable()
@@ -1087,14 +1049,34 @@ export async function fetchArticlePreview(
     const response = await apiClient.get<ApiEnvelope<unknown>>(articlePath(articleId, '/preview'), {
       signal,
     })
-    const article = readArticleContent(unwrap(response.data))
-    return article ? { status: 'loaded', article } : unreadable()
+    const preview = readPreview(unwrap(response.data))
+    return preview ? { status: 'loaded', preview } : unreadable()
   } catch (error) {
     if (statusOf(error) === 401) return { status: 'unauthenticated' }
     const normalized = normalizeApiError(error)
     if (normalized.is('LEARNING_ARTICLE_NOT_FOUND')) return { status: 'notFound' }
     return toFailure(normalized)
   }
+}
+
+/**
+ * 미리 보기 응답을 읽는다. 정답이 정해지지 않은 문제(`correctChoiceId: null`)를 먼저 떼어 내고, 나머지는 공개
+ * 글과 같은 해석기로 읽는다. 떼어 낸 문제도 식별자와 질문을 읽지 못하면 응답 전체를 읽지 못한 것으로 둔다.
+ */
+function readPreview(value: unknown): ArticlePreview | null {
+  if (!isRecord(value) || !Array.isArray(value.quiz)) return null
+  const incompleteQuestions: IncompleteQuestion[] = []
+  const quiz: unknown[] = []
+  for (const item of value.quiz) {
+    if (isRecord(item) && item.correctChoiceId === null) {
+      if (!isString(item.questionId) || !isString(item.prompt)) return null
+      incompleteQuestions.push({ questionId: item.questionId, prompt: item.prompt })
+    } else {
+      quiz.push(item)
+    }
+  }
+  const article = readArticleContent({ ...value, quiz }, { legacyExampleOptional: true })
+  return article ? { article, incompleteQuestions } : null
 }
 
 /** 단계 목록과 단계마다 공개될 글을 받아 온다(계약 §9). */
@@ -1171,25 +1153,13 @@ export async function releaseStage(
       }
     }
     if (normalized.is('LEARNING_STAGE_ALREADY_RELEASED')) {
-      return {
-        status: 'rejected',
-        reason: 'alreadyReleased',
-        message: normalized.message,
-      }
+      return { status: 'rejected', reason: 'alreadyReleased', message: normalized.message }
     }
     if (normalized.is('LEARNING_STAGE_ORDER')) {
-      return {
-        status: 'rejected',
-        reason: 'order',
-        message: normalized.message,
-      }
+      return { status: 'rejected', reason: 'order', message: normalized.message }
     }
     if (normalized.is('LEARNING_STAGE_EMPTY')) {
-      return {
-        status: 'rejected',
-        reason: 'empty',
-        message: normalized.message,
-      }
+      return { status: 'rejected', reason: 'empty', message: normalized.message }
     }
     if (normalized.is('LEARNING_STAGE_CHANGED')) {
       return {

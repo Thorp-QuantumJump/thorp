@@ -28,12 +28,7 @@ export const FIELD_RUNS = {
 } satisfies Record<string, AllowedRuns>
 
 /** 저장 전에 찾은 문법 오류 하나. `where`는 사람이 읽는 칸 이름이다. */
-export type DraftSyntaxIssue = {
-  where: string
-  line: number
-  column: number
-  message: string
-}
+export type DraftSyntaxIssue = { where: string; line: number; column: number; message: string }
 
 export type ServerDraftResult =
   { ok: true; draft: AdminLearningDraft } | { ok: false; issues: DraftSyntaxIssue[] }
@@ -55,10 +50,7 @@ function mapBlockRuns<A, B>(
         ),
       }
     case 'paragraph':
-      return {
-        type: 'paragraph',
-        content: convert(block.content, 'content', FIELD_RUNS.paragraph),
-      }
+      return { type: 'paragraph', content: convert(block.content, 'content', FIELD_RUNS.paragraph) }
     case 'hypothetical':
       return {
         type: 'hypothetical',
@@ -101,10 +93,7 @@ function mapBlockRuns<A, B>(
       return {
         ...block,
         categories: [...block.categories],
-        series: block.series.map((series) => ({
-          ...series,
-          values: [...series.values],
-        })),
+        series: block.series.map((series) => ({ ...series, values: [...series.values] })),
       }
   }
 }

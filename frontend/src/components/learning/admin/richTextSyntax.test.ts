@@ -69,6 +69,43 @@ describe('parseRichText', () => {
   })
 })
 
+describe('parseRichText (converge)', () => {
+  it('출처 이름의 |는 이름에 남기고 마지막 |에서 주소를 가른다', () => {
+    expect(parseRichText('가{{출처:KRX | 공시|https://example.com/a}}')).toEqual({
+      ok: true,
+      runs: [{ text: '가' }, { source: { label: 'KRX | 공시', url: 'https://example.com/a' } }],
+    })
+  })
+
+  it('{로 끝나는 글자 바로 뒤의 표시를 읽는다', () => {
+    expect(parseRichText('a{{{용어:x|y}}')).toEqual({
+      ok: true,
+      runs: [{ text: 'a{' }, { term: 'x', text: 'y' }],
+    })
+  })
+
+  it('칸 맨 앞의 출처 표시와 http·https가 아닌 주소를 위치와 함께 거절한다', () => {
+    const first = parseRichText('{{출처:이름|https://example.com}}글자')
+    expect(first.ok).toBe(false)
+    if (first.ok) return
+    expect(first.issues).toEqual([
+      {
+        line: 1,
+        column: 1,
+        message: '출처 표시는 인용한 글자 바로 뒤에 둡니다. 칸 맨 앞에 둘 수 없습니다.',
+      },
+    ])
+
+    const scheme = parseRichText('글자{{출처:이름|example.com}}')
+    expect(scheme.ok).toBe(false)
+    if (scheme.ok) return
+    expect(scheme.issues[0]).toMatchObject({
+      column: 3,
+      message: '출처 표시의 주소는 http:// 또는 https://로 시작해야 합니다.',
+    })
+  })
+})
+
 describe('formatRichText', () => {
   const runs: DraftRun[] = [
     { text: '괄호 {{ 하나와 ' },
@@ -83,6 +120,16 @@ describe('formatRichText', () => {
       '괄호 \\{{ 하나와 {{용어:keel-room|용골 여유}}\n둘째 줄{{출처:합성 출처|https://example.com/b}}',
     )
     expect(parseRichText(syntax)).toEqual({ ok: true, runs })
+  })
+
+  it('|가 든 출처 이름과 {로 끝나는 글자도 조각 → 문법 → 조각이 같다', () => {
+    const tricky: DraftRun[] = [
+      { text: '앞 {' },
+      { term: 'x', text: 'a|b' },
+      { text: ' 뒤' },
+      { source: { label: 'KRX | 공시', url: 'https://example.com/c' } },
+    ]
+    expect(parseRichText(formatRichText(tricky))).toEqual({ ok: true, runs: tricky })
   })
 
   it('문법 → 조각 → 문법이 같다', () => {

@@ -37,14 +37,25 @@ export type ManuscriptIssue = {
   message: string
 }
 
+/**
+ * 가져온 원고의 문제·보기 식별자 집계. 저장하면 `null`인 문제·보기가 새 식별자를 받는다. 공개된 글이면 새
+ * 문제는 이미 답한 사용자에게도 답하지 않은 문제로 보이므로(data-model §6-3) 화면이 이 수를 알린다.
+ */
+export type ManuscriptIdSummary = {
+  /** 식별자가 `null`인 문제 수(원고에서 `null`이었거나 지금 초안에 없어 바뀐 것) */
+  newQuestions: number
+  /** 식별자가 `null`인 보기 수 */
+  newChoices: number
+  /** 원고에 적혀 있었지만 지금 초안에 없어 `null`로 바꾼 식별자 수 */
+  replaced: number
+}
+
 export type ManuscriptReadResult =
-  { ok: true; draft: EditableDraft } | { ok: false; issues: ManuscriptIssue[] }
+  | { ok: true; draft: EditableDraft; ids: ManuscriptIdSummary }
+  | { ok: false; issues: ManuscriptIssue[] }
 
 /** 지금 서버 초안이 가진 식별자. 원고의 식별자 가운데 여기 없는 것은 `null`이 된다. */
-export type KnownQuizIds = {
-  questionIds: ReadonlySet<string>
-  choiceIds: ReadonlySet<string>
-}
+export type KnownQuizIds = { questionIds: ReadonlySet<string>; choiceIds: ReadonlySet<string> }
 
 export function knownQuizIds(quiz: readonly DraftQuizQuestion[]): KnownQuizIds {
   return {
@@ -111,10 +122,7 @@ function list<T>(value: unknown, where: string, read: (item: unknown, where: str
 
 function sourceRef(value: unknown, where: string): DraftSourceRef {
   const item = record(value, where, ['label', 'url'])
-  return {
-    label: text(item.label, `${where}.label`),
-    url: text(item.url, `${where}.url`),
-  }
+  return { label: text(item.label, `${where}.label`), url: text(item.url, `${where}.url`) }
 }
 
 function example(value: unknown, where: string): AdminDraftExample | null {
@@ -133,10 +141,7 @@ function example(value: unknown, where: string): AdminDraftExample | null {
 
 function source(value: unknown, where: string): AdminDraftSource {
   const item = record(value, where, ['label', 'url'])
-  return {
-    label: text(item.label, `${where}.label`),
-    url: nullableText(item.url, `${where}.url`),
-  }
+  return { label: text(item.label, `${where}.label`), url: nullableText(item.url, `${where}.url`) }
 }
 
 function blockV1(value: unknown, where: string): AdminDraftBlockV1 {
@@ -286,20 +291,28 @@ function termV2(value: unknown, where: string): AdminDraftTermV2 {
   }
 }
 
-function quizQuestion(known: KnownQuizIds) {
+/** 원고의 식별자를 지금 초안에 있는 것만 남긴다. 바꾼 수를 `tally`에 센다. */
+function keepKnown(id: string | null, known: ReadonlySet<string>, tally: { replaced: number }) {
+  if (id === null) return null
+  if (known.has(id)) return id
+  tally.replaced += 1
+  return null
+}
+
+function quizQuestion(known: KnownQuizIds, tally: { replaced: number }) {
   return (value: unknown, where: string): DraftQuizQuestion => {
     const item = record(value, where, ['questionId', 'prompt', 'choices', 'explanation'])
     const questionId =
       item.questionId === undefined ? null : nullableText(item.questionId, `${where}.questionId`)
     return {
-      questionId: questionId !== null && known.questionIds.has(questionId) ? questionId : null,
+      questionId: keepKnown(questionId, known.questionIds, tally),
       prompt: text(item.prompt, `${where}.prompt`),
       choices: list(item.choices, `${where}.choices`, (choice, at): DraftQuizChoice => {
         const row = record(choice, at, ['choiceId', 'text', 'correct'])
         const choiceId =
           row.choiceId === undefined ? null : nullableText(row.choiceId, `${at}.choiceId`)
         return {
-          choiceId: choiceId !== null && known.choiceIds.has(choiceId) ? choiceId : null,
+          choiceId: keepKnown(choiceId, known.choiceIds, tally),
           text: text(row.text, `${at}.text`),
           correct: bool(row.correct, `${at}.correct`),
         }
@@ -324,7 +337,12 @@ const TOP_KEYS = [
   'quiz',
 ] as const
 
-function readShape(value: unknown, articleId: string, known: KnownQuizIds): EditableDraft {
+function readShape(
+  value: unknown,
+  articleId: string,
+  known: KnownQuizIds,
+  tally: { replaced: number },
+): EditableDraft {
   const file = record(value, '원고', TOP_KEYS)
   if (file.articleId !== undefined && text(file.articleId, 'articleId') !== articleId) {
     throw new ShapeError(
@@ -340,7 +358,7 @@ function readShape(value: unknown, articleId: string, known: KnownQuizIds): Edit
     stagePosition: number(file.stagePosition, 'stagePosition'),
     example: file.example === undefined ? null : example(file.example, 'example'),
     sources: list(file.sources ?? [], 'sources', source),
-    quiz: list(file.quiz ?? [], 'quiz', quizQuestion(known)),
+    quiz: list(file.quiz ?? [], 'quiz', quizQuestion(known, tally)),
   }
   if (file.format === 'V1') {
     return {
@@ -384,14 +402,12 @@ export function readManuscript(
   }
 
   let draft: EditableDraft
+  const tally = { replaced: 0 }
   try {
-    draft = readShape(parsed, articleId, known)
+    draft = readShape(parsed, articleId, known, tally)
   } catch (error) {
     if (error instanceof ShapeError) {
-      return {
-        ok: false,
-        issues: [{ where: error.where, message: error.message }],
-      }
+      return { ok: false, issues: [{ where: error.where, message: error.message }] }
     }
     throw error
   }
@@ -408,5 +424,17 @@ export function readManuscript(
       })),
     }
   }
-  return { ok: true, draft }
+  return {
+    ok: true,
+    draft,
+    ids: {
+      newQuestions: draft.quiz.filter((question) => question.questionId === null).length,
+      newChoices: draft.quiz.reduce(
+        (count, question) =>
+          count + question.choices.filter((choice) => choice.choiceId === null).length,
+        0,
+      ),
+      replaced: tally.replaced,
+    },
+  }
 }

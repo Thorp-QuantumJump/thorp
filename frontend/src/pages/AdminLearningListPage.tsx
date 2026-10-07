@@ -21,8 +21,9 @@ import styles from './AdminLearningListPage.module.css'
  * 200을 주지 않는다(계약 §1). 권한이 없는 계정에는 목록도 편집 링크도 만들기 폼도 보이지 않는다
  * (US5 시나리오 1). 편집 수단을 숨기는 것이 아니라 아예 만들지 않는다.
  *
- * <p><b>`needsUpdate`의 `null`을 `false`로 접지 않는다.</b> 대응표를 확인할 수 없어 판정하지 못한 것과
- * 판정해서 괜찮은 것은 다른 사실이다(원칙 VI).
+ * <p><b>`needsUpdate`의 `null`을 `false`로 접지 않는다.</b> 판정하지 못한 것과 판정해서 괜찮은 것은 다른
+ * 사실이다(원칙 VI). (2판) 예시가 선택이 되어 `null`은 '공개 판에 예시가 없음'과 '대응표를 확인할 수 없음' 두
+ * 뜻이다(계약 §2). 응답만으로 둘을 가를 수 없어 두 뜻을 함께 적는다.
  *
  * <p><b>(2판) 형식·단계·판·'확인 필요'·넘겨받는 중을 함께 보인다.</b> '확인 필요'(`needsReview`)의 `null`도
  * `needsUpdate`처럼 `false`로 접지 않는다. 단계 공개는 `StageReleasePanel`이 한다. 새 글은 단계와 단계 안
@@ -72,6 +73,11 @@ export function AdminLearningListPage() {
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [stages, setStages] = useState<StagesState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  /**
+   * 단계를 공개한 뒤 목록과 단계만 다시 읽는다. `attempt`와 따로 둔다 — `attempt`는 권한 확인부터 다시 해 화면
+   * 전체가 '확인 중'으로 바뀌므로, 단계 패널이 내려가 공개 결과와 새 식별자 안내(계약 §6·§11)가 사라진다.
+   */
+  const [dataVersion, setDataVersion] = useState(0)
   const [form, setForm] = useState<CreateFormState>(EMPTY_FORM)
   const [createNotice, setCreateNotice] = useState<string | null>(null)
 
@@ -92,7 +98,8 @@ export function AdminLearningListPage() {
     if (access.status !== 'admin') return
     const controller = new AbortController()
     let active = true
-    setList({ status: 'loading' })
+    // 다시 읽는 동안 이미 보이던 목록을 내리지 않는다. 처음 읽을 때만 '불러오는 중'이다.
+    setList((current) => (current.status === 'loaded' ? current : { status: 'loading' }))
     void fetchAdminArticles(controller.signal).then((result) => {
       if (!active) return
       // 로그인이 풀린 것은 권한 없음과 다른 사실이다. 재로그인 안내로 보낸다(014 FR-012).
@@ -106,13 +113,13 @@ export function AdminLearningListPage() {
       active = false
       controller.abort()
     }
-  }, [access.status, attempt])
+  }, [access.status, attempt, dataVersion])
 
   useEffect(() => {
     if (access.status !== 'admin') return
     const controller = new AbortController()
     let active = true
-    setStages({ status: 'loading' })
+    setStages((current) => (current.status === 'loaded' ? current : { status: 'loading' }))
     void fetchAdminStages(controller.signal).then((result) => {
       if (!active) return
       if (result.status === 'unauthenticated') {
@@ -125,9 +132,10 @@ export function AdminLearningListPage() {
       active = false
       controller.abort()
     }
-  }, [access.status, attempt])
+  }, [access.status, attempt, dataVersion])
 
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
+  const reloadData = useCallback(() => setDataVersion((count) => count + 1), [])
   const onUnauthenticated = useCallback(() => setAccess({ status: 'unauthenticated' }), [])
 
   const submitCreate = async (event: React.FormEvent) => {
@@ -249,8 +257,10 @@ export function AdminLearningListPage() {
                   <td>{article.draftVersion}</td>
                   <td>{article.hasUnpublishedChanges ? '게시하지 않은 변경 있음' : '없음'}</td>
                   <td>
+                    {/* 서버는 공개 판에 예시가 없을 때도, 대응표를 읽지 못했을 때도 null을 준다(계약 §2). 둘을 가를
+                        수 없으므로 두 뜻을 함께 적는다. 어느 쪽도 '없음'(판정해서 괜찮음)으로 접지 않는다. */}
                     {article.needsUpdate === null
-                      ? '대응표를 확인할 수 없음'
+                      ? '예시가 없거나 대응표를 확인할 수 없음'
                       : article.needsUpdate
                         ? '갱신 필요'
                         : '없음'}
@@ -292,7 +302,7 @@ export function AdminLearningListPage() {
         <div className={styles.block}>
           <StageReleasePanel
             stages={stages.stages}
-            onReleased={retry}
+            onReleased={reloadData}
             onUnauthenticated={onUnauthenticated}
           />
         </div>

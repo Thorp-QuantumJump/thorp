@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { adminArticleSummaries, adminStages } from '@/test/learningFixtures'
+import { adminArticleSummaries, adminReadyReadiness, adminStages } from '@/test/learningFixtures'
 import { AdminLearningListPage } from './AdminLearningListPage'
 
 /** 013 T072·T173. US5 시나리오 1, 계약 §1·§2·§3·§9. */
@@ -34,10 +34,9 @@ describe('AdminLearningListPage', () => {
   beforeEach(() => {
     apiMocks.checkAdminAccess.mockReset()
     apiMocks.fetchAdminArticles.mockReset()
-    apiMocks.fetchAdminStages.mockReset().mockResolvedValue({
-      status: 'loaded',
-      stages: adminStages,
-    })
+    apiMocks.fetchAdminStages
+      .mockReset()
+      .mockResolvedValue({ status: 'loaded', stages: adminStages })
     apiMocks.fetchStageReadiness.mockReset()
     apiMocks.releaseStage.mockReset()
     apiMocks.createArticle.mockReset()
@@ -82,7 +81,7 @@ describe('AdminLearningListPage', () => {
     )
   })
 
-  it('needsUpdate가 null이면 확인할 수 없다고 보인다', async () => {
+  it('needsUpdate가 null이면 예시가 없거나 확인할 수 없다고 보인다', async () => {
     apiMocks.checkAdminAccess.mockResolvedValue({ status: 'admin' })
     apiMocks.fetchAdminArticles.mockResolvedValue({
       status: 'loaded',
@@ -90,7 +89,8 @@ describe('AdminLearningListPage', () => {
     })
     renderList()
 
-    expect(await screen.findByText('대응표를 확인할 수 없음')).not.toBeNull()
+    // 예시가 없는 공개 판도 null이다(계약 §2). 대응표 장애로만 읽히게 쓰지 않는다.
+    expect(await screen.findByText('예시가 없거나 대응표를 확인할 수 없음')).not.toBeNull()
   })
 
   it('(2판) 형식·단계·판·확인 필요·넘겨받는 중 열을 행마다 보이고 null을 없음으로 접지 않는다', async () => {
@@ -176,5 +176,46 @@ describe('AdminLearningListPage', () => {
       'textContent',
       '이미 쓰이고 있는 식별자입니다.',
     )
+  })
+
+  it('(converge) 단계를 공개하면 목록과 단계만 다시 읽고 공개 결과 안내를 그대로 둔다', async () => {
+    apiMocks.checkAdminAccess.mockResolvedValue({ status: 'admin' })
+    apiMocks.fetchAdminArticles.mockResolvedValue({ status: 'loaded', articles: [] })
+    apiMocks.fetchStageReadiness.mockResolvedValue({
+      status: 'loaded',
+      readiness: adminReadyReadiness,
+    })
+    apiMocks.releaseStage.mockResolvedValue({
+      status: 'released',
+      result: {
+        stageKey: 'shore-basics',
+        releasedAt: '2026-11-19T01:00:00Z',
+        published: [
+          {
+            articleId: 'channel-depth',
+            revisionNo: 3,
+            renamedQuestions: [{ from: 'q4', to: 'q7' }],
+          },
+        ],
+        transferredTerms: [],
+        logEntryKey: 'stage:shore-basics',
+        checkVersion: 'learning-publish-checks-v2',
+      },
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    renderList()
+
+    await user.click(await screen.findByRole('button', { name: '1단계 미리 검사' }))
+    await screen.findByText(/미리 검사를 모두 통과했습니다/)
+    await user.click(screen.getByRole('button', { name: '1단계 공개' }))
+
+    expect(await screen.findByText(/1단계를 공개했습니다/)).not.toBeNull()
+    // 다시 읽기가 끝난 뒤에도 안내가 남는다. 권한 확인부터 다시 하면 패널이 내려가 안내가 사라진다.
+    await vi.waitFor(() => expect(apiMocks.fetchAdminStages).toHaveBeenCalledTimes(2))
+    expect(apiMocks.fetchAdminArticles).toHaveBeenCalledTimes(2)
+    expect(apiMocks.checkAdminAccess).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(/1단계를 공개했습니다/)).not.toBeNull()
+    expect(screen.getByText(/q4 → q7/)).not.toBeNull()
   })
 })

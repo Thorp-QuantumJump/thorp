@@ -412,8 +412,60 @@ describe('2판 초안 읽기', () => {
     const result = await fetchArticlePreview('channel-depth')
     expect(result.status).toBe('loaded')
     if (result.status !== 'loaded') return
-    expect(result.article.edition).toBe('CURRENT')
-    expect(result.article.blocks).toEqual([{ type: 'heading', text: '소제목' }])
+    expect(result.preview.article.edition).toBe('CURRENT')
+    expect(result.preview.article.blocks).toEqual([{ type: 'heading', text: '소제목' }])
+    expect(result.preview.incompleteQuestions).toEqual([])
+  })
+
+  it('고치는 중인 초안도 읽는다: 정답이 정해지지 않은 문제는 따로 두고, 예시 없는 V1 초안은 빈 예시다', async () => {
+    // 백엔드 미리 보기 모드는 정답 보기가 하나가 아니면 correctChoiceId를, 예시 없는 V1 초안은 example을
+    // null로 보낸다(ArticleViewAssembler). 둘 때문에 미리 보기 전체를 읽지 못하면 고치는 중인 초안을 볼 수 없다.
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({
+        success: true,
+        data: {
+          articleId: 'tide-reading',
+          edition: 'PRE_RELEASE',
+          title: '물때 읽기',
+          question: '질문',
+          readingOrder: 2,
+          stage: { stageKey: 'shore-basics', number: 1, name: '물가 기초' },
+          number: null,
+          readingMinutes: 4,
+          minDwellSeconds: null,
+          blocks: [{ type: 'paragraph', text: '문단' }],
+          quiz: [
+            {
+              questionId: 'q1',
+              prompt: '정답을 아직 고르지 않은 문제',
+              choices: [
+                { choiceId: 'c2', text: '가' },
+                { choiceId: 'c3', text: '나' },
+              ],
+              correctChoiceId: null,
+              explanation: '',
+            },
+          ],
+          example: null,
+          sources: [],
+          next: null,
+          stageArticleCount: null,
+          hasUnreleasedStages: true,
+          publishedAt: null,
+          preview: true,
+        },
+        error: null,
+      }),
+    )
+
+    const result = await fetchArticlePreview('tide-reading')
+    expect(result.status).toBe('loaded')
+    if (result.status !== 'loaded') return
+    expect(result.preview.article.example).toBeNull()
+    expect(result.preview.article.quiz).toEqual([])
+    expect(result.preview.incompleteQuestions).toEqual([
+      { questionId: 'q1', prompt: '정답을 아직 고르지 않은 문제' },
+    ])
   })
 })
 

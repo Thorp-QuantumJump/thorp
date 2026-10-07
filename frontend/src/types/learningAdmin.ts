@@ -33,11 +33,7 @@ export type AdminPublicationRecord = {
 }
 
 /** 목록 항목의 초안 단계(계약 §2). `released`면 V2 글을 글마다 게시할 수 있다. */
-export type AdminArticleStageRef = {
-  stageKey: string
-  number: number
-  released: boolean
-}
+export type AdminArticleStageRef = { stageKey: string; number: number; released: boolean }
 
 /** `GET /admin/learning/articles` 목록의 한 항목(계약 §2). */
 export type AdminLearningArticleSummary = {
@@ -74,10 +70,7 @@ export type AdminLearningArticleSummary = {
 }
 
 /** 출처 표시 조각과 제도 안내의 출처(data-model §5-2). `label`은 저장할 때 비어 있어도 된다. */
-export type DraftSourceRef = {
-  label: string
-  url: string
-}
+export type DraftSourceRef = { label: string; url: string }
 
 /**
  * 초안의 글자 조각(data-model §5-2). 공개 응답과 달리 언급 조각에 `owned`·`aliases`가 없다(계약 §4).
@@ -132,28 +125,16 @@ export type AdminDraftBlockV2<R = DraftRun[]> =
     }
 
 /** 초안 예시의 섹터 한 줄. `weightTenths`는 0.1%p 정수이고 1000이 100%다(002 계약과 같은 단위). */
-export type AdminDraftExampleSector = {
-  code: string
-  weightTenths: number
-}
+export type AdminDraftExampleSector = { code: string; weightTenths: number }
 
 /** 초안의 예시. 초안은 게시 전 검사를 받지 않으므로 통째로 없을 수 있다(계약 §5). */
-export type AdminDraftExample = {
-  sectors: AdminDraftExampleSector[]
-}
+export type AdminDraftExample = { sectors: AdminDraftExampleSector[] }
 
 /** 9월 판 글 끝 출처. V2 초안은 출처를 글자 옆 출처 표시로 두므로 이 목록이 비어 있어야 한다(계약 §5). */
-export type AdminDraftSource = {
-  label: string
-  url: string | null
-}
+export type AdminDraftSource = { label: string; url: string | null }
 
 /** V1 용어 설명 한 줄. `termId`는 만든 뒤 바꾸지 않는다(research R4). */
-export type AdminDraftTermV1 = {
-  termId: string
-  label: string
-  sentence: string
-}
+export type AdminDraftTermV1 = { termId: string; label: string; sentence: string }
 
 /** 1판 코드가 쓰던 이름이다. V1 용어와 같다. */
 export type AdminDraftTerm = AdminDraftTermV1
@@ -175,11 +156,7 @@ export type AdminDraftTermV2 = {
 }
 
 /** 확인 문제의 보기(data-model §6-1). 새 보기는 `choiceId`가 `null`이고 저장 응답에서 채워진다. */
-export type DraftQuizChoice = {
-  choiceId: string | null
-  text: string
-  correct: boolean
-}
+export type DraftQuizChoice = { choiceId: string | null; text: string; correct: boolean }
 
 /** 확인 문제 하나(data-model §6-1). 새 문제는 `questionId`가 `null`이다. */
 export type DraftQuizQuestion = {
@@ -248,9 +225,7 @@ export type CreateArticleRequest = {
 }
 
 /** `PUT /admin/learning/articles/{articleId}` 요청 본문(계약 §5). 초안을 통째로 바꾼다. */
-export type SaveDraftRequest = AdminLearningDraft & {
-  expectedDraftVersion: number
-}
+export type SaveDraftRequest = AdminLearningDraft & { expectedDraftVersion: number }
 
 /**
  * 게시 전 검사에 걸린 위치(계약 §6, data-model §8-4). `part`에 따라 따라오는 필드가 다르다.
@@ -292,11 +267,7 @@ export type PublishCheckFailure = {
 export type RenamedQuestion = { from: string; to: string }
 
 /** 넘겨받은 용어(data-model §7-2). `toArticleId`는 게시된 글이다. */
-export type TransferredTerm = {
-  termId: string
-  fromArticleId: string
-  toArticleId: string
-}
+export type TransferredTerm = { termId: string; fromArticleId: string; toArticleId: string }
 
 /** 게시 200 응답 본문(계약 §6). */
 export type PublishResult = {
@@ -397,16 +368,10 @@ export type StageReleaseResult = {
 }
 
 /** 단계 공개 422의 글 한 편. 걸린 글만 온다(계약 §11). */
-export type StageCheckFailedArticle = {
-  articleId: string
-  failures: PublishCheckFailure[]
-}
+export type StageCheckFailedArticle = { articleId: string; failures: PublishCheckFailure[] }
 
 /** `409 LEARNING_STAGE_CHANGED`가 싣는 서버의 공개 집합(계약 §11). */
-export type StageArticleVersion = {
-  articleId: string
-  draftVersion: number
-}
+export type StageArticleVersion = { articleId: string; draftVersion: number }
 
 /**
  * 원고 파일(research R26, `docs/learning-content/README.md`). 편집기 상태를 그대로 쓴 JSON이며 모양은 저장

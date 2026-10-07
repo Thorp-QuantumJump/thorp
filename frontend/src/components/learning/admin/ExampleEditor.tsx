@@ -21,6 +21,11 @@ import styles from './ExampleEditor.module.css'
 interface ExampleEditorProps {
   example: AdminDraftExample | null
   onChange: (example: AdminDraftExample | null) => void
+  /**
+   * 게시하려면 예시가 있어야 하는가. V1 초안은 있어야 하고, V2 초안은 운영자가 넣을지 고른다(013 FR-003,
+   * v2 규칙 `exampleRequired: false`). 기본은 1판 화면처럼 있어야 한다
+   */
+  required?: boolean
 }
 
 type CatalogState = { status: 'loading' } | SectorCatalogResult
@@ -93,7 +98,7 @@ function WeightField({ valueTenths, onCommit }: WeightFieldProps) {
   )
 }
 
-export function ExampleEditor({ example, onChange }: ExampleEditorProps) {
+export function ExampleEditor({ example, onChange, required = true }: ExampleEditorProps) {
   const [catalog, setCatalog] = useState<CatalogState>({ status: 'loading' })
 
   useEffect(() => {
@@ -128,7 +133,11 @@ export function ExampleEditor({ example, onChange }: ExampleEditorProps) {
 
       {example === null ? (
         <>
-          <p className={styles.empty}>예시가 없습니다. 게시하려면 예시가 있어야 합니다.</p>
+          <p className={styles.empty}>
+            {required
+              ? '예시가 없습니다. 게시하려면 예시가 있어야 합니다.'
+              : "예시가 없습니다. 예시는 넣지 않아도 되며, 없으면 글에 '이 예시로 전략 진단하기'가 없습니다."}
+          </p>
           <button type="button" onClick={() => replaceSectors([])}>
             예시 만들기
           </button>

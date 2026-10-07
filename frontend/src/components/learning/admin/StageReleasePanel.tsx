@@ -85,9 +85,7 @@ interface StageCardProps {
 }
 
 function StageCard({ stage, onReleased, onUnauthenticated }: StageCardProps) {
-  const [readiness, setReadiness] = useState<ReadinessState>({
-    status: 'idle',
-  })
+  const [readiness, setReadiness] = useState<ReadinessState>({ status: 'idle' })
   const [release, setRelease] = useState<ReleaseState>({ status: 'idle' })
 
   const titles = new Map<string, string>(
@@ -333,10 +331,22 @@ function ReleaseView({
       )
     case 'changed':
       return (
-        <p role="alert" className={styles.notice}>
-          {release.message} 그사이 글 목록이나 초안이 바뀌었습니다. 미리 검사를 다시 한 뒤
-          공개하세요.
-        </p>
+        <div role="alert">
+          <p className={styles.notice}>
+            {release.message} 그사이 글 목록이나 초안이 바뀌었습니다. 미리 검사를 다시 한 뒤
+            공개하세요.
+          </p>
+          {/* 서버가 읽은 공개 집합이다(계약 §11). 어느 글이 바뀌었는지 보이기만 하고 이 목록으로 다시 보내지 않는다. */}
+          {release.articles.length > 0 ? (
+            <ul className={styles.issues} aria-label="서버가 읽은 공개 글">
+              {release.articles.map((article) => (
+                <li key={article.articleId}>
+                  {titleOf(article.articleId)} ({article.articleId}) · 초안 {article.draftVersion}번
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       )
     case 'rejected':
     case 'stageNotFound':
