@@ -1,58 +1,12 @@
-import type { MarketFlowFieldId } from '@/types/marketFlow'
-
 /**
  * 시장 흐름에서 바깥 화면으로 넘기는 값을 만든다.
  *
- * 010(경제환경 검색)·011(전략 비교)의 목적지 주소를 여기서 만든다. 주소를 만드는 자리를 한 곳에
- * 두어 두 벌의 계약이 생기지 않게 한다. 011은 진입 계약(`contracts/entry-handoff.md` §2)이 주소를
- * 정했고, 010은 화면이 분야·기준월을 주소에서 읽는다.
+ * 011(전략 비교)의 목적지 주소를 여기서 만든다. 주소를 만드는 자리를 한 곳에 두어 두 벌의 계약이
+ * 생기지 않게 한다. 011은 진입 계약(`contracts/entry-handoff.md` §2)이 주소를 정했다. 010(경제환경 검색)의
+ * 내용은 시장 흐름의 분야 상세 안에서 바로 보이므로(009 FR-019, 2026-10-07) 010으로 넘기는 주소는 없다.
  *
  * 값을 만들 수 없으면 `null`이다. 빈 문자열이나 대체값으로 채우지 않는다(원칙 VI).
  */
-
-/** 010으로 넘기는 값. 분야 하나와 그 분야의 기준월 T_g다(FR-009). */
-export type SimilarPeriodHandoff = {
-  fieldId: MarketFlowFieldId
-  /** 그 분야의 기준월 `YYYY-MM`. 분야마다 다를 수 있다. */
-  referenceMonth: string
-}
-
-/**
- * **섹터를 받지 않는다.** 이것이 FR-016의 "섹터를 골라도 넘기는 분야·기준월은 달라지지
- * 않는다"를 지키는 방식이다. 인자에 자리가 없으면 실수로도 실을 수 없다.
- */
-export function buildSimilarPeriodHandoff(field: {
-  fieldId: MarketFlowFieldId
-  referenceMonth: string | null
-}): SimilarPeriodHandoff | null {
-  if (field.referenceMonth === null) return null
-  return { fieldId: field.fieldId, referenceMonth: field.referenceMonth }
-}
-
-/**
- * 010 검색 화면의 주소다.
- *
- * 분야와 기준월을 **주소에** 싣는다. 상태로 넘기면 새로고침에 사라져 사용자가 같은 화면을 다시
- * 열 수 없고, 주소를 건네 같은 검색을 보여줄 수도 없다. 011이 `?case=`를 주소로 다니는 것과
- * 같은 방식이다.
- *
- * 값을 만들 수 없으면 `null`이라 부르는 쪽이 진입점을 열지 않는다.
- */
-export function buildRegimeSearchPath(handoff: SimilarPeriodHandoff | null): string | null {
-  if (handoff === null) return null
-  const query = new URLSearchParams({ field: handoff.fieldId, month: handoff.referenceMonth })
-  return `/regime-search?${query.toString()}`
-}
-
-/**
- * 종합 비교가 선택된 상태로 010 검색 화면을 여는 주소다(S15P21E205-450, 009 FR-018).
- *
- * 분야 검색은 `buildRegimeSearchPath`로 분야와 010 기준월을 실어 연다. 저장된 판(`?searchId=`)으로 열면 010 화면은
- * 그것을 내 기록의 '다시 보기'로 다뤄 기록하지 않고 분야 선택도 비워 둔다(010 FR-032, 006 R17).
- */
-export function buildCompositeSearchPath(): string {
-  return '/regime-search?mode=composite'
-}
 
 /**
  * 사례 식별자를 만든다. `{010 searchId}~{endMonth}`다(011 계약 §0).

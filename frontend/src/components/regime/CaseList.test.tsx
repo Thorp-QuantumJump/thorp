@@ -109,9 +109,8 @@ describe('사례 목록', () => {
     expect(screen.queryByText('더 보기')).toBeNull()
   })
 
-  it('기준 충족 사례가 없으면 안내와 분야별 탐색을 보인다', () => {
+  it('기준 충족 사례가 없으면 안내를 보이고 참고 사례를 따로 연다', () => {
     const base = result(1, 1, 1)
-    const onBrowseFields = vi.fn()
     const none: RegimeSearchResult = {
       ...base,
       mode: 'COMPOSITE',
@@ -124,10 +123,10 @@ describe('사례 목록', () => {
       referenceCases: base.cases,
       counts: { ...base.counts, stored: 0, displayed: 0 },
     }
-    render(<CaseList result={none} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} onBrowseFields={onBrowseFields} />)
+    render(<CaseList result={none} onShowMore={vi.fn()} isLoading={false} context="시험 검색" fieldNames={{}} />)
     expect(screen.getByText(/충족하는 사례가 없습니다/)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))
-    expect(onBrowseFields).toHaveBeenCalledOnce()
+    // 분야별 탐색 버튼은 두지 않는다(2026-10-07). 시장 흐름에서는 분야 메뉴가 그 길이다.
+    expect(screen.queryByRole('button', { name: '분야별로 살펴보기' })).toBeNull()
     expect(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' })).toBeTruthy()
   })
 
