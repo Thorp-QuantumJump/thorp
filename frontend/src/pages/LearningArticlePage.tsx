@@ -7,6 +7,7 @@ import { ArticleBody } from '@/components/learning/article/ArticleBody'
 import { ArticleEnd, type ArticleEndMode } from '@/components/learning/article/ArticleEnd'
 import { EditionNotice } from '@/components/learning/article/EditionNotice'
 import { ResumeLine } from '@/components/learning/article/ResumeLine'
+import { articleSessionKey } from '@/components/learning/article/articleMarkers'
 import { useArticleCompletion } from '@/components/learning/article/useArticleCompletion'
 import { useLearnerArticle } from '@/components/learning/article/useLearnerArticle'
 import {
@@ -212,7 +213,7 @@ function ArticleView({
   const learner = useLearnerArticle(article.articleId, recording, sessionKey, {
     onUnauthenticated: () => setRejected(true),
   })
-  const record = learner.load.status === 'loaded' ? learner.load.record : null
+  const { record, completed } = learner
   useRestoreFocusAfterConceal(resumeRef, concealed)
 
   // 만료 뒤 다시 로그인했거나 비로그인으로 확인되면 앞선 거부를 잊는다. 거부 직후에 상태가 만료로 바뀌므로
@@ -223,14 +224,11 @@ function ArticleView({
 
   useArticleCompletion({
     root: articleRef,
-    active:
-      recording &&
-      record !== null &&
-      record.state !== 'COMPLETED' &&
-      learner.completion.status === 'idle',
+    active: recording && learner.canComplete,
     minDwellSeconds: article.edition === 'CURRENT' ? article.minDwellSeconds : 0,
-    // 글을 다시 받으면 처음부터 센다. 다른 곳에서 글이 바뀐 뒤의 완료는 바뀐 글로 판정한다.
-    sessionKey: `${article.articleId}|${sessionKey}|${revision}`,
+    sessionKey: articleSessionKey(article.articleId, sessionKey),
+    // 글을 다시 받으면 판정만 다시 연다. 센 시간은 이어 가므로 글 끝을 보고 있었다면 바로 다시 보낸다(R33).
+    rearmKey: revision,
     held: concealed,
     onReady: learner.complete,
   })
@@ -269,7 +267,6 @@ function ArticleView({
 
   // '읽은 정도' 막대(목업 '글 끝'의 `rbar`). 받은 기록과 이 화면에서 잰 가장 큰 비율 가운데 큰 쪽이고, 완료한 글은
   // 다 찬다. 기록을 받지 못했으면 그리지 않는다. 그림이라 화면 낭독기는 읽지 않는다(design-notes §6).
-  const completed = record?.state === 'COMPLETED' || learner.completion.status === 'done'
   const readPercent =
     recording && record !== null ? (completed ? 100 : Math.max(record.percent, furthest)) : null
 
@@ -278,7 +275,7 @@ function ArticleView({
     recording &&
     record?.state === 'READING' &&
     record.percent > 0 &&
-    learner.completion.status !== 'done'
+    !completed
       ? record.percent
       : null
 

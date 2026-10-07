@@ -1,5 +1,7 @@
 import {
   ApiClientError,
+  XSRF_COOKIE_NAME,
+  XSRF_HEADER_NAME,
   apiClient,
   normalizeApiError,
   prepareCsrfToken,
@@ -557,69 +559,58 @@ export function fetchLearnerArticle(
 
 // ── 상태 변경 ────────────────────────────────────────────────────────────────
 
-async function mutate<T>(
-  request: () => Promise<{ data: ApiEnvelope<unknown> }>,
+/**
+ * CSRF로 감싼 POST를 보내고 응답을 읽는다. 실패는 던지지 않고 `toError`로 결과 합집합에 담는다. 완료·첫 답·다시
+ * 풀기가 같은 모양이라 한곳에 둔다.
+ */
+async function post<T, F>(
+  path: string,
+  body: object | undefined,
   read: (value: unknown) => T | null,
-): Promise<T | null> {
-  const response = await runCsrfProtectedMutation(request)
-  return read(unwrap(response.data))
-}
-
-/** 완료(계약 §4). 화면이 본문 끝과 최소 머문 시간이 함께 참이 되는 첫 순간에 한 번 보낸다. */
-export async function completeArticle(
-  articleId: string,
-): Promise<LearningMeResult<CompletionResult>> {
+  toError: (error: unknown) => F,
+): Promise<{ status: 'ok'; data: T } | MeFailure | F> {
   try {
-    const data = await mutate(
-      () => apiClient.post<ApiEnvelope<unknown>>(`${articlePath(articleId)}/completion`),
-      readCompletion,
+    const response = await runCsrfProtectedMutation(() =>
+      apiClient.post<ApiEnvelope<unknown>>(path, body),
     )
+    const data = read(unwrap(response.data))
     return data ? { status: 'ok', data } : unreadable()
   } catch (error) {
-    return toFailure(error)
+    return toError(error)
   }
 }
 
+/** 완료(계약 §4). 화면이 본문 끝과 최소 머문 시간이 함께 참이 되는 첫 순간에 한 번 보낸다. */
+export function completeArticle(articleId: string): Promise<LearningMeResult<CompletionResult>> {
+  return post(`${articlePath(articleId)}/completion`, undefined, readCompletion, toFailure)
+}
+
 /** 첫 답(계약 §5). 이미 답한 문제면 저장된 첫 답이 `alreadyAnswered`로 온다. */
-export async function answerQuestion(
+export function answerQuestion(
   articleId: string,
   questionId: string,
   choiceId: string,
 ): Promise<LearningAnswerResult<AnswerResult>> {
-  try {
-    const data = await mutate(
-      () =>
-        apiClient.post<ApiEnvelope<unknown>>(`${articlePath(articleId)}/answers`, {
-          questionId,
-          choiceId,
-        }),
-      readAnswer,
-    )
-    return data ? { status: 'ok', data } : unreadable()
-  } catch (error) {
-    return toAnswerFailure(error)
-  }
+  return post(
+    `${articlePath(articleId)}/answers`,
+    { questionId, choiceId },
+    readAnswer,
+    toAnswerFailure,
+  )
 }
 
 /** 다시 풀기(계약 §6). 답을 저장하지 않고, 맞히면 익힘만 준다. */
-export async function retryAnswer(
+export function retryAnswer(
   articleId: string,
   questionId: string,
   choiceId: string,
 ): Promise<LearningAnswerResult<RetryResult>> {
-  try {
-    const data = await mutate(
-      () =>
-        apiClient.post<ApiEnvelope<unknown>>(`${articlePath(articleId)}/retry-answers`, {
-          questionId,
-          choiceId,
-        }),
-      readRetry,
-    )
-    return data ? { status: 'ok', data } : unreadable()
-  } catch (error) {
-    return toAnswerFailure(error)
-  }
+  return post(
+    `${articlePath(articleId)}/retry-answers`,
+    { questionId, choiceId },
+    readRetry,
+    toAnswerFailure,
+  )
 }
 
 /** 학습 초기화(계약 §7). 회원정보 화면이 확인을 받은 뒤 부른다. */
@@ -679,8 +670,8 @@ function readCookie(name: string): string | null {
 export function sendPositionOnLeave(articleId: string, percent: number): void {
   const base = apiClient.defaults.baseURL ?? '/api'
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const token = readCookie('XSRF-TOKEN')
-  if (token) headers['X-XSRF-TOKEN'] = token
+  const token = readCookie(XSRF_COOKIE_NAME)
+  if (token) headers[XSRF_HEADER_NAME] = token
   try {
     void fetch(`${base}${articlePath(articleId)}/position`, {
       method: 'PUT',

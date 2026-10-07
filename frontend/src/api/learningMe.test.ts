@@ -140,7 +140,7 @@ describe('나의 학습 통로', () => {
     expect(get.mock.calls[0][0]).toBe('/auth/csrf')
     expect(get.mock.invocationCallOrder[0]).toBeLessThan(post.mock.invocationCallOrder[0])
     expect(post.mock.calls[0][0]).toBe('/learning/me/articles/swell-reading/completion')
-    expect(post.mock.calls[0]).toHaveLength(1)
+    expect(post.mock.calls[0][1]).toBeUndefined()
     expect(result).toEqual({ status: 'ok', data: completionResult })
   })
 

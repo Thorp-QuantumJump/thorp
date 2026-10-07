@@ -10,38 +10,63 @@ import {
 import type {
   AnswerResult,
   CompletionResult,
+  ContinueReading,
   Gained,
   LearnerArticleRecord,
   RetryResult,
   StageProgress,
 } from '@/types/learningMe'
+import { articleSessionKey } from './articleMarkers'
 import { gainedNotice, type GainedEntry } from './completionText'
 import type { QuizSubmitOutcome } from './QuizPanel'
 
 /** 글 기록 조회. 받기 전에는 완료 카드·확인 문제 자리를 비운다(FR-020). */
-export type RecordLoad =
+type RecordLoad =
   | { status: 'loading' }
   | { status: 'loaded'; record: LearnerArticleRecord }
   | { status: 'failed' }
+  /** 다른 곳에서 글이 바뀌었다(게시 취소). 다시 받아도 같으므로 글을 다시 불러오게 한다 */
+  | { status: 'changed' }
   /** 서버가 기록할 수 없는 글이라고 했다. 기록 자리를 그리지 않는다 */
   | { status: 'notRecordable' }
 
-/**
- * 완료 요청. 실패하면 완료 카드와 확인 문제 대신 한 줄을 둔다(FR-021). `failed`는 같은 요청을 다시 보낼 수 있고,
- * `stale`은 다른 곳에서 글이 바뀌어 글을 다시 불러와야 한다(게시 취소, 기록할 수 없는 글이 됨).
- */
-export type CompletionSend =
+/** 완료 요청. `changed`는 다른 곳에서 글이 바뀌어 같은 요청을 다시 보내도 같은 실패라는 뜻이다. */
+type CompletionSend =
   | { status: 'idle' }
   | { status: 'sending' }
   | { status: 'failed' }
-  | { status: 'stale' }
+  | { status: 'changed' }
   | { status: 'done'; completion: CompletionResult }
+
+/**
+ * 글 끝의 기록 자리에 그릴 것(FR-020, FR-021, 계약 §0). 글 끝은 이 값만 보고 그린다.
+ *
+ * - `none`: 기록을 받는 중이거나 아직 완료 전이거나 기록할 수 없는 글이다. 아무것도 그리지 않고, '안 읽음'처럼 보이는
+ *   것을 두지 않는다
+ * - `card`: 완료한 글. 완료 카드와 확인 문제를 그린다
+ * - `loadFailed`: 기록을 받지 못했다. 다시 받을 수 있다
+ * - `notRecorded`: 완료가 기록되지 않았다. 같은 요청을 다시 보낼 수 있다
+ * - `changed`: 다른 곳에서 글이 바뀌었다. 글을 다시 불러와야 한다
+ */
+export type RecordEndView =
+  | { kind: 'none' }
+  | {
+      kind: 'card'
+      record: LearnerArticleRecord
+      /** 완료 시각. 완료로 기록됐는데 서버가 시각을 보내지 않았으면 `null`이다 */
+      completedAt: string | null
+      stageProgress: StageProgress
+      continueReading: ContinueReading
+    }
+  | { kind: 'loadFailed' }
+  | { kind: 'notRecorded' }
+  | { kind: 'changed' }
 
 /** 조용한 알림 하나. 같은 문장이 다시 와도 다시 읽히도록 번호를 붙인다. */
 export type Announcement = { id: number; text: string }
 
 type Snapshot = {
-  /** 이 상태가 속한 글과 로그인 상태. 바뀌면 처음부터다 */
+  /** 이 상태가 속한 글과 로그인 상태(`articleSessionKey`). 바뀌면 처음부터다 */
   key: string
   load: RecordLoad
   completion: CompletionSend
@@ -61,6 +86,38 @@ function initial(key: string): Snapshot {
     announcement: null,
     revision: 0,
   }
+}
+
+/**
+ * 다른 곳에서 글이나 기록이 바뀌어 같은 요청을 다시 보내도 같은 실패인가. 통로의 `stale`과, 기록할 수 없는 글이 된
+ * 경우(`notRecordable`)가 그렇다. 완료와 확인 문제가 같은 판정을 쓴다.
+ */
+function changedElsewhere(status: string): boolean {
+  return status === 'stale' || status === 'notRecordable'
+}
+
+function endViewOf(load: RecordLoad, completion: CompletionSend): RecordEndView {
+  switch (load.status) {
+    case 'failed':
+      return { kind: 'loadFailed' }
+    case 'changed':
+      return { kind: 'changed' }
+    case 'loading':
+    case 'notRecordable':
+      return { kind: 'none' }
+  }
+  const record = load.record
+  if (completion.status === 'done') {
+    const { completedAt, stageProgress, continueReading } = completion.completion
+    return { kind: 'card', record, completedAt, stageProgress, continueReading }
+  }
+  if (record.state === 'COMPLETED') {
+    const { completedAt, stageProgress, continueReading } = record
+    return { kind: 'card', record, completedAt, stageProgress, continueReading }
+  }
+  if (completion.status === 'failed') return { kind: 'notRecorded' }
+  if (completion.status === 'changed') return { kind: 'changed' }
+  return { kind: 'none' }
 }
 
 function hasNews(gained: Gained): boolean {
@@ -99,6 +156,8 @@ interface LearnerArticleOptions {
  *
  * <p><b>조용히 재시도하지 않는다.</b> 실패는 실패로 보이고, 다시 시도는 사용자가 누를 때 한다(계약 §0). 다시 불러올
  * 때는 받아 둔 기록과 이번에 받은 경험치를 지우지 않고, 새 기록이 오면 바꿔 끼운다.
+ *
+ * <p>글 끝에 무엇을 그릴지는 `endView`로 정해 돌려준다. 글 끝이 응답 모양을 파고들지 않게 하려는 것이다.
  */
 export function useLearnerArticle(
   articleId: string,
@@ -106,7 +165,7 @@ export function useLearnerArticle(
   sessionKey: string,
   { onUnauthenticated }: LearnerArticleOptions = {},
 ) {
-  const key = `${articleId}|${sessionKey}`
+  const key = articleSessionKey(articleId, sessionKey)
   const [snapshot, setSnapshot] = useState<Snapshot>(() => initial(key))
   const [attempt, setAttempt] = useState(0)
   const keyRef = useRef(key)
@@ -150,22 +209,25 @@ export function useLearnerArticle(
         }
         // 다시 받다가 실패했으면 받아 둔 기록을 지우지 않는다. 그 자리의 안내가 다시 시도를 그대로 준다.
         if (previous.load.status === 'loaded') return previous
-        return {
-          ...previous,
-          load: result.status === 'notRecordable' ? { status: 'notRecordable' } : { status: 'failed' },
-        }
+        const load: RecordLoad =
+          result.status === 'notRecordable'
+            ? { status: 'notRecordable' }
+            : result.status === 'stale'
+              ? { status: 'changed' }
+              : { status: 'failed' }
+        return { ...previous, load }
       })
     })
     return () => controller.abort()
   }, [articleId, enabled, key, attempt, update, noteUnauthenticated])
 
-  /** 글 기록을 다시 받는다. 다른 곳에서 글이 바뀐 완료 실패(`stale`)는 이때 처음으로 되돌린다. */
+  /** 글 기록을 다시 받는다. 다른 곳에서 글이 바뀐 완료 실패는 이때 처음으로 되돌린다. */
   const reloadRecord = useCallback(() => {
-    update(keyRef.current, (previous) =>
-      previous.completion.status === 'stale'
-        ? { ...previous, completion: { status: 'idle' } }
-        : previous,
-    )
+    update(keyRef.current, (previous) => ({
+      ...previous,
+      load: previous.load.status === 'changed' ? { status: 'loading' } : previous.load,
+      completion: previous.completion.status === 'changed' ? { status: 'idle' } : previous.completion,
+    }))
     setAttempt((count) => count + 1)
   }, [update])
 
@@ -182,46 +244,58 @@ export function useLearnerArticle(
             result.data.stageProgress,
           )
         }
-        const stale = result.status === 'stale' || result.status === 'notRecordable'
-        return { ...previous, completion: { status: stale ? 'stale' : 'failed' } }
+        const status = changedElsewhere(result.status) ? 'changed' : 'failed'
+        return { ...previous, completion: { status } }
       })
     })
   }, [articleId, update, noteUnauthenticated])
 
-  const toOutcome = useCallback(
-    (result: LearningAnswerResult<AnswerResult | RetryResult>): QuizSubmitOutcome => {
+  /**
+   * 첫 답·다시 풀기를 보내고, 성공하면 받은 기록을 고친 뒤 받은 것을 쌓는다. 두 행동이 고치는 기록만 다르다.
+   */
+  const submit = useCallback(
+    async <T extends AnswerResult | RetryResult>(
+      send: () => Promise<LearningAnswerResult<T>>,
+      applyTo: (record: LearnerArticleRecord, saved: T) => LearnerArticleRecord,
+    ): Promise<QuizSubmitOutcome> => {
+      const forKey = keyRef.current
+      const result = await send()
       noteUnauthenticated(result)
-      switch (result.status) {
-        case 'ok':
-          return {
-            status: 'saved',
-            choiceId: result.data.choiceId,
-            correct: result.data.correct,
-            alreadyAnswered: 'alreadyAnswered' in result.data && result.data.alreadyAnswered,
-          }
-        case 'questionNotFound':
-          return { status: 'questionNotFound' }
-        case 'stale':
-        case 'notRecordable':
-          return { status: 'stale' }
-        default:
-          return { status: 'failed' }
+      if (result.status !== 'ok') {
+        if (result.status === 'questionNotFound') return { status: 'questionNotFound' }
+        return { status: changedElsewhere(result.status) ? 'stale' : 'failed' }
+      }
+      const saved = result.data
+      update(forKey, (previous) =>
+        previous.load.status === 'loaded'
+          ? withGained(
+              {
+                ...previous,
+                load: { status: 'loaded', record: applyTo(previous.load.record, saved) },
+              },
+              saved.gained,
+              null,
+            )
+          : previous,
+      )
+      return {
+        status: 'saved',
+        choiceId: saved.choiceId,
+        correct: saved.correct,
+        alreadyAnswered: 'alreadyAnswered' in saved && saved.alreadyAnswered,
       }
     },
-    [noteUnauthenticated],
+    [update, noteUnauthenticated],
   )
 
   const answer = useCallback(
-    async (questionId: string, choiceId: string): Promise<QuizSubmitOutcome> => {
-      const forKey = keyRef.current
-      const result = await answerQuestion(articleId, questionId, choiceId)
-      if (result.status === 'ok') {
-        const saved = result.data
-        update(forKey, (previous) => {
-          if (previous.load.status !== 'loaded') return previous
-          const record = previous.load.record
+    (questionId: string, choiceId: string) =>
+      submit(
+        () => answerQuestion(articleId, questionId, choiceId),
+        (record, saved) => ({
+          ...record,
           // 서버가 돌려준 첫 답으로 둔다. 다른 탭에서 먼저 답했으면 고른 것과 다르다(계약 §5).
-          const answers = [
+          answers: [
             ...record.answers.filter((item) => item.questionId !== saved.questionId),
             {
               questionId: saved.questionId,
@@ -229,46 +303,35 @@ export function useLearnerArticle(
               correct: saved.correct,
               answeredAt: new Date().toISOString(),
             },
-          ]
-          return withGained(
-            {
-              ...previous,
-              load: { status: 'loaded', record: { ...record, answers, quiz: saved.quiz } },
-            },
-            saved.gained,
-            null,
-          )
-        })
-      }
-      return toOutcome(result)
-    },
-    [articleId, update, toOutcome],
+          ],
+          quiz: saved.quiz,
+        }),
+      ),
+    [articleId, submit],
   )
 
   const retry = useCallback(
-    async (questionId: string, choiceId: string): Promise<QuizSubmitOutcome> => {
-      const forKey = keyRef.current
-      const result = await retryAnswer(articleId, questionId, choiceId)
-      if (result.status === 'ok') {
-        const saved = result.data
-        update(forKey, (previous) => {
-          if (previous.load.status !== 'loaded') return previous
-          const record = previous.load.record
-          return withGained(
-            { ...previous, load: { status: 'loaded', record: { ...record, quiz: saved.quiz } } },
-            saved.gained,
-            null,
-          )
-        })
-      }
-      return toOutcome(result)
-    },
-    [articleId, update, toOutcome],
+    (questionId: string, choiceId: string) =>
+      submit(
+        () => retryAnswer(articleId, questionId, choiceId),
+        (record, saved) => ({ ...record, quiz: saved.quiz }),
+      ),
+    [articleId, submit],
   )
 
   return {
-    load: current.load,
-    completion: current.completion,
+    /** 글 기록을 받았으면 그 기록이다. 진행 막대와 '이어서 읽기' 줄이 쓴다 */
+    record: current.load.status === 'loaded' ? current.load.record : null,
+    /** 완료가 기록되었는가(이번 화면에서 기록했거나 이미 완료한 글) */
+    completed:
+      current.completion.status === 'done' ||
+      (current.load.status === 'loaded' && current.load.record.state === 'COMPLETED'),
+    /** 완료 요청을 보낼 수 있는가. 기록을 받았고 아직 완료하지 않았으며 보내는 중이 아니다 */
+    canComplete:
+      current.load.status === 'loaded' &&
+      current.load.record.state !== 'COMPLETED' &&
+      current.completion.status === 'idle',
+    endView: endViewOf(current.load, current.completion),
     gained: current.gained,
     announcement: current.announcement,
     revision: current.revision,
