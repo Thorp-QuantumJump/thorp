@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LearningArticleResult } from '@/api/learning'
+import { apiClient } from '@/api/client'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'
 import { cssDeclarations } from '@/test/cssRule'
@@ -12,6 +13,15 @@ import {
   previousTideArticle,
   tideArticle,
 } from '@/test/learningFixtures'
+import {
+  answerResult,
+  completedRecord,
+  completionResult,
+  openQuiz,
+  readingRecord,
+  retryResult,
+  unreadRecord,
+} from '@/test/learningMeFixtures'
 import { LearningArticlePage } from './LearningArticlePage'
 
 /**
@@ -19,15 +29,32 @@ import { LearningArticlePage } from './LearningArticlePage'
  * FR-019.
  *
  * <p>2판 글 화면은 `useAuth`를 부르므로 `AuthContext.Provider`로 감싸 그린다. 기본은 비로그인이다(T104).
+ * 나의 학습 통로는 대역으로 바꾼다. 기본 글 기록은 연 적이 없는 글이다(T190).
  */
 
 const apiMocks = vi.hoisted(() => ({
   fetchLearningArticle: vi.fn(),
 }))
 const glossaryMocks = vi.hoisted(() => ({ fetchGlossaryEntry: vi.fn() }))
+const meMocks = vi.hoisted(() => ({
+  fetchLearnerArticle: vi.fn(),
+  completeArticle: vi.fn(),
+  answerQuestion: vi.fn(),
+  retryAnswer: vi.fn(),
+  recordPosition: vi.fn(),
+  sendPositionOnLeave: vi.fn(),
+  prepareLeaveRecording: vi.fn(),
+}))
 
 vi.mock('@/api/learning', () => apiMocks)
 vi.mock('@/api/learningGlossary', () => glossaryMocks)
+vi.mock('@/api/learningMe', () => meMocks)
+
+// 글 화면을 내릴 때의 위치 기록은 한 박자 미뤄 나간다(StrictMode 대응). 다음 테스트로 새지 않게 여기서 비운다.
+afterEach(async () => {
+  cleanup()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+})
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
 beforeAll(() => {
@@ -102,6 +129,8 @@ describe('LearningArticlePage', () => {
   beforeEach(() => {
     apiMocks.fetchLearningArticle.mockReset()
     glossaryMocks.fetchGlossaryEntry.mockReset()
+    meMocks.fetchLearnerArticle.mockReset()
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: unreadRecord })
     probedState = undefined
   })
 
@@ -561,7 +590,7 @@ describe('LearningArticlePage', () => {
     expect(probedState).toEqual(received)
   })
 
-  it('글을 열고 확인 문제에 답하고 닫는 동안 브라우저 저장소에 쓰지 않는다', async () => {
+  it('비로그인으로 글을 열고 확인 문제에 답하고 닫는 동안 학습 기록을 브라우저 저장소에 쓰지 않는다', async () => {
     const user = userEvent.setup()
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
     loaded(currentArticle)
@@ -622,5 +651,679 @@ describe('LearningArticlePage — 예시', () => {
         ],
       },
     })
+  })
+})
+
+/**
+ * 013 T189·T190. 로그인 사용자의 글 끝 기록(FR-020~FR-022, research R32·R33, quickstart 10-1~10-4·10-10).
+ *
+ * <p>완료 훅이 `IntersectionObserver`를 쓰므로 대역을 이 파일 안에 둔다. `src/test/setup.ts`에 전역으로 두면
+ * `src/hooks/useNearViewport.test.tsx`의 '없는 환경' 경우가 깨진다.
+ */
+describe('LearningArticlePage — 로그인 기록', () => {
+  class FakeIntersectionObserver {
+    static instances: FakeIntersectionObserver[] = []
+    readonly callback: IntersectionObserverCallback
+    disconnected = false
+
+    constructor(callback: IntersectionObserverCallback) {
+      this.callback = callback
+      FakeIntersectionObserver.instances.push(this)
+    }
+
+    observe() {}
+    unobserve() {}
+    disconnect() {
+      this.disconnected = true
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+  }
+
+  /** 본문 끝 표지가 화면에 들어왔다. 실제 브라우저처럼 연결을 끊은 관찰자는 부르지 않는다. */
+  function reachArticleEnd() {
+    act(() => {
+      for (const observer of FakeIntersectionObserver.instances) {
+        if (observer.disconnected) continue
+        observer.callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          observer as unknown as IntersectionObserver,
+        )
+      }
+    })
+  }
+
+  /** 머문 시간 조건을 바로 채우는 글. 본문 끝만 남는다. */
+  const quickArticle = { ...currentArticle, minDwellSeconds: 0 }
+  const otherUserAuth: AuthContextValue = {
+    ...signedInAuth,
+    user: { ...authenticatedUser, userId: 8 },
+  }
+  const recheck = vi.fn<AuthContextValue['recheck']>()
+  const expiredAuth: AuthContextValue = {
+    ...anonymousAuthContext,
+    status: 'expired',
+    user: null,
+    recheck,
+  }
+  const errorAuth: AuthContextValue = { ...anonymousAuthContext, status: 'error', user: null }
+
+  /** 본문 높이 1000px. 화면 아래 끝(768px)이 본문의 몇 %에 있는지가 읽은 비율이다(research R32). */
+  function readTo(container: HTMLElement, percent: number) {
+    const body = container.querySelector('[data-article-end]')!.parentElement!
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({
+      top: 768 - percent * 10,
+      height: 1000,
+    } as DOMRect)
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+  }
+  const logoutAuth: AuthContextValue = {
+    ...signedInAuth,
+    status: 'logoutUnconfirmed',
+  }
+
+  let scrollTo: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    apiMocks.fetchLearningArticle.mockReset()
+    for (const mock of Object.values(meMocks)) mock.mockReset()
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: unreadRecord })
+    recheck.mockReset()
+    recheck.mockResolvedValue({ status: 'expired', user: null })
+    FakeIntersectionObserver.instances = []
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver)
+    scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('완료한 글은 글 기록을 한 번 받아 완료 카드와 저장된 첫 답을 보이고 이어서 읽기 줄이 없다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+
+    const card = await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(1)
+    expect(meMocks.fetchLearnerArticle.mock.calls[0][0]).toBe('swell-reading')
+    expect(within(card).getByText('2단계 · 4편 중 2편 읽음')).not.toBeNull()
+    expect(within(card).getByRole('region', { name: '확인 문제' })).not.toBeNull()
+    expect(within(card).getByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
+    expect(within(card).getByRole('link', { name: /다음 글.*물때 읽기/ })).not.toBeNull()
+    // 완료 카드 안에 다음 글이 있으므로 글 끝의 다음 글 연결을 겹쳐 두지 않는다.
+    expect(screen.getAllByRole('link', { name: /다음 글/ })).toHaveLength(1)
+    expect(screen.queryByText(/까지 읽었습니다/)).toBeNull()
+    expect(meMocks.completeArticle).not.toHaveBeenCalled()
+  })
+
+  it('기록을 받기 전에는 완료 카드·확인 문제 자리를 비우고, 받지 못하면 한 줄과 다시 시도다', async () => {
+    const user = userEvent.setup()
+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({
+      status: 'failed',
+      kind: 'network',
+      code: null,
+      message: '연결 실패',
+    })
+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'ok', data: completedRecord })
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    expect(screen.queryByRole('region', { name: '확인 문제' })).toBeNull()
+    expect(screen.queryByText(/안 읽음|레벨 1/)).toBeNull()
+
+    const retry = await screen.findByRole('button', { name: '다시 시도' })
+    expect(screen.getByText('학습 기록을 불러오지 못했습니다.')).not.toBeNull()
+    await user.click(retry)
+
+    expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2)
+  })
+
+  it('본문 끝과 머문 시간이 차면 완료를 한 번 보내고 완료 카드와 조용한 알림을 보인다', async () => {
+    meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    expect(meMocks.completeArticle).not.toHaveBeenCalled()
+
+    reachArticleEnd()
+
+    const card = await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+    expect(meMocks.completeArticle).toHaveBeenCalledTimes(1)
+    expect(within(card).getByText('2단계 · 완주 · 4편')).not.toBeNull()
+    const notice = '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다.'
+    expect(within(card).getByText(notice)).not.toBeNull()
+    expect(await within(screen.getByRole('status')).findByText(notice)).not.toBeNull()
+    reachArticleEnd()
+    expect(meMocks.completeArticle).toHaveBeenCalledTimes(1)
+  })
+
+  it('알림 영역은 완료 전부터 비어 있는 채로 있고, 뒤에 받은 것은 그것만 알린다', async () => {
+    const user = userEvent.setup()
+    const allWrong = {
+      total: 2,
+      answered: 2,
+      correct: 0,
+      allAnswered: true,
+      mastered: false,
+      masteredVia: null,
+      retryAvailable: true,
+    }
+    meMocks.fetchLearnerArticle.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...unreadRecord,
+        answers: [
+          { questionId: 'q1', choiceId: 'c1', correct: false, answeredAt: '2026-11-20T03:11:00Z' },
+          { questionId: 'q3', choiceId: 'c5', correct: false, answeredAt: '2026-11-20T03:12:00Z' },
+        ],
+        quiz: allWrong,
+      },
+    })
+    meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+    meMocks.retryAnswer.mockResolvedValue({ status: 'ok', data: retryResult() })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    // 카드가 놓이기 전부터 알림 영역이 비어 있는 채로 있다. 미리 있어야 바뀐 글자가 읽힌다(FR-030).
+    const status = await screen.findByRole('status')
+    expect(status.textContent).toBe('')
+
+    reachArticleEnd()
+    expect(await within(status).findByText(/2단계 글 4편을 모두 읽었습니다/)).not.toBeNull()
+
+    await user.click(await screen.findByRole('button', { name: '다시 풀기' }))
+    const retry = screen.getByRole('heading', { name: '다시 풀기' }).parentElement as HTMLElement
+    await user.click(within(retry).getByRole('button', { name: /합성 보기 나/ }))
+
+    // 앞서 알린 단계 완주·배지·레벨은 다시 읽지 않고 방금 받은 끈기 배지만 알린다.
+    await waitFor(() => expect(status.textContent).toBe('새 배지: 끈기.'))
+    expect(screen.getByText(/새 배지: 2단계 완주\. 새 배지: 끈기\./)).not.toBeNull()
+    expect(screen.getByText('· 익힘')).not.toBeNull()
+    expect(screen.getByText('익힘이 되었습니다.')).not.toBeNull()
+  })
+
+  it('완료가 기록되지 않으면 완료 카드·확인 문제 대신 기록되지 않았습니다와 다시 시도이고 글과 다음 글은 그대로다', async () => {
+    const user = userEvent.setup()
+    meMocks.completeArticle
+      .mockResolvedValueOnce({ status: 'failed', kind: 'network', code: null, message: '실패' })
+      .mockResolvedValueOnce({ status: 'ok', data: completionResult })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    await screen.findByRole('link', { name: /다음 글/ })
+    reachArticleEnd()
+
+    // 완료는 누르지 않아도 나가므로 실패를 화면 낭독기에 바로 알린다(FR-019).
+    expect(within(await screen.findByRole('alert')).getByText('기록되지 않았습니다.')).not.toBeNull()
+    expect(screen.queryByRole('region', { name: '확인 문제' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: '너울 읽기' })).not.toBeNull()
+    expect(screen.getByRole('link', { name: /다음 글/ })).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+
+    expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
+    expect(meMocks.completeArticle).toHaveBeenCalledTimes(2)
+  })
+
+  it('확인 문제에 답하면 저장 응답 뒤에 결과를 보이고 받은 경험치를 카드에 더한다', async () => {
+    const user = userEvent.setup()
+    meMocks.fetchLearnerArticle.mockResolvedValue({
+      status: 'ok',
+      data: { ...completedRecord, answers: [], quiz: openQuiz },
+    })
+    meMocks.answerQuestion.mockResolvedValue({ status: 'ok', data: answerResult() })
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+
+    expect(meMocks.answerQuestion).toHaveBeenCalledWith('swell-reading', 'q1', 'c2')
+    expect(await screen.findByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
+    expect(screen.getByText('첫 답 정답')).not.toBeNull()
+    expect(screen.getByText('· 익힘', { exact: false })).not.toBeNull()
+  })
+
+  it('읽는 중 글은 맨 위에서 열고 기록된 비율의 이어서 읽기 줄을 보이며, 누르면 그 위치로 옮긴다', async () => {
+    const user = userEvent.setup()
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: readingRecord })
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+
+    expect(await screen.findByText('62%까지 읽었습니다')).not.toBeNull()
+    expect(scrollTo).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: '이어서 읽기' }))
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('learningResume: true로 열면 받은 글 기록의 위치로 한 번 옮긴다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: readingRecord })
+    loaded(currentArticle)
+
+    const { container } = renderArticle(
+      { pathname: '/learn/swell-reading', state: { learningResume: true } },
+      signedInAuth,
+    )
+    await screen.findByText('62%까지 읽었습니다')
+    const body = container.querySelector('[data-article-end]')!.parentElement!
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 1000 } as DOMRect)
+
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledTimes(1))
+    // 기록된 62%가 화면 아래 끝에 온다. 실려 온 값이 아니라 받은 기록의 값이다(data-model §15).
+    expect(scrollTo.mock.calls[0][0]).toEqual({ top: expect.any(Number) })
+  })
+
+  it('learningResume이 true가 아니거나 완료한 글이면 맨 위에서 연다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: readingRecord })
+    loaded(currentArticle)
+
+    const first = renderArticle(
+      {
+        pathname: '/learn/swell-reading',
+        state: { learningResume: { articleId: 'swell-reading', percent: 62 } },
+      },
+      signedInAuth,
+    )
+    await screen.findByText('62%까지 읽었습니다')
+    first.unmount()
+
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
+    renderArticle({ pathname: '/learn/swell-reading', state: { learningResume: true } }, signedInAuth)
+    await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('비로그인이면 learningResume이 있어도 옮기지 않는다', async () => {
+    loaded(currentArticle)
+
+    renderArticle({ pathname: '/learn/swell-reading', state: { learningResume: true } })
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+
+    expect(scrollTo).not.toHaveBeenCalled()
+    expect(meMocks.fetchLearnerArticle).not.toHaveBeenCalled()
+  })
+
+  it("읽는 중 글의 맨 위에 '읽은 정도' 막대를 두고, 더 내리면 늘고 완료한 글은 다 찬다", async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: readingRecord })
+    loaded(currentArticle)
+
+    const { container } = renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByText('62%까지 읽었습니다')
+    const fill = () => container.querySelector<HTMLElement>('[class*="readBarFill"]')
+
+    // 그림이라 화면 낭독기는 읽지 않는다. 글자 정보는 62% 줄이 맡는다(design-notes §6).
+    expect(fill()?.parentElement?.getAttribute('aria-hidden')).toBe('true')
+    expect(fill()?.style.width).toBe('62%')
+    readTo(container, 80)
+    expect(fill()?.style.width).toBe('80%')
+    readTo(container, 30)
+    expect(fill()?.style.width).toBe('80%')
+  })
+
+  it("기록을 받지 못했거나 비로그인이면 '읽은 정도' 막대를 그리지 않는다", async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({
+      status: 'failed',
+      kind: 'network',
+      code: null,
+      message: '연결 실패',
+    })
+    loaded(currentArticle)
+
+    const member = renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByText('학습 기록을 불러오지 못했습니다.')
+    expect(member.container.querySelector('[class*="readBar"]')).toBeNull()
+    member.unmount()
+
+    const guest = renderArticle('/learn/swell-reading')
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    expect(guest.container.querySelector('[class*="readBar"]')).toBeNull()
+  })
+
+  it("재확인 동안 '62%까지 읽었습니다' 줄과 막대를 자리를 둔 채 숨긴다", async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: readingRecord })
+    loaded(currentArticle)
+
+    const { container, setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    const line = (await screen.findByText('62%까지 읽었습니다')).closest('p')!
+
+    setAuth(checkingAuth)
+    expect(line.parentElement?.className).toMatch(/concealed/)
+    expect(container.querySelector('[class*="readBar"]')?.className).toMatch(/concealed/)
+    // 이름만 보면 규칙이 지워져도 통과하므로, 숨김 규칙이 실제로 자리를 둔 채 감추는지 함께 본다(R33).
+    expect(cssDeclarations('pages/LearningArticlePage.module.css', '.concealed')).toMatch(
+      /visibility:\s*hidden/,
+    )
+
+    setAuth(signedInAuth)
+    expect(line.parentElement?.className ?? '').not.toMatch(/concealed/)
+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(1)
+  })
+
+  it('checking을 거쳐 같은 사용자로 돌아오면 가장 멀리 읽은 비율을 이어 가 떠날 때 보낸다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: unreadRecord })
+    loaded(currentArticle)
+
+    const { container, setAuth, unmount } = renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    readTo(container, 62)
+
+    setAuth(checkingAuth)
+    readTo(container, 20)
+    setAuth(signedInAuth)
+    unmount()
+
+    await waitFor(() => expect(meMocks.recordPosition).toHaveBeenCalledTimes(1))
+    expect(meMocks.recordPosition).toHaveBeenCalledWith('swell-reading', 62)
+  })
+
+  it('error 상태를 거쳐도 기록 자리를 숨기기만 하고, 같은 사용자로 돌아오면 다시 요청하지 않고 그대로 보인다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    const card = await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+
+    setAuth(errorAuth)
+    expect(card.isConnected).toBe(true)
+    expect(card.parentElement?.className).toMatch(/concealed/)
+
+    setAuth(signedInAuth)
+    expect(card.parentElement?.className ?? '').not.toMatch(/concealed/)
+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(1)
+  })
+
+  it('checking을 거쳐 같은 사용자로 돌아오면 머문 시간을 이어 세고, 그동안 찬 완료는 확인이 끝난 뒤 보낸다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+      loaded(currentArticle)
+
+      const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+      await screen.findByRole('link', { name: /다음 글/ })
+      reachArticleEnd()
+      act(() => {
+        vi.advanceTimersByTime(60_000)
+      })
+
+      setAuth(checkingAuth)
+      act(() => {
+        vi.advanceTimersByTime(30_000)
+      })
+      // 확인하는 동안에는 보내지 않는다(R33).
+      expect(meMocks.completeArticle).not.toHaveBeenCalled()
+
+      setAuth(signedInAuth)
+      await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(1))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('다른 사용자로 확인되면 머문 시간을 처음부터 센다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+      loaded(currentArticle)
+
+      const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+      await screen.findByRole('link', { name: /다음 글/ })
+      reachArticleEnd()
+      act(() => {
+        vi.advanceTimersByTime(60_000)
+      })
+
+      setAuth(checkingAuth)
+      setAuth(otherUserAuth)
+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2))
+      reachArticleEnd()
+      act(() => {
+        vi.advanceTimersByTime(30_000)
+      })
+      expect(meMocks.completeArticle).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.advanceTimersByTime(50_000)
+      })
+      await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(1))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('다른 곳에서 글이 바뀌어 완료가 거절되면 다시 시도 대신 다시 불러오기이고, 화면을 둔 채 글과 기록을 다시 받는다', async () => {
+    const user = userEvent.setup()
+    meMocks.completeArticle.mockResolvedValue({ status: 'stale' })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    await screen.findByRole('link', { name: /다음 글/ })
+    reachArticleEnd()
+
+    expect(
+      within(await screen.findByRole('alert')).getByText(
+        '이 글이 바뀌었습니다. 글을 다시 불러와 주세요.',
+      ),
+    ).not.toBeNull()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '다시 불러오기' }))
+
+    await waitFor(() => expect(apiMocks.fetchLearningArticle).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2))
+    // 화면을 내리지 않는다. 불러오는 중 문장 없이 글이 그대로 있다.
+    expect(screen.queryByText('글을 불러오는 중입니다.')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: '너울 읽기' })).not.toBeNull()
+  })
+
+  it("문제가 바뀌어 '다시 불러오기'를 눌러도 이번에 받은 경험치와 완료 카드를 잃지 않는다", async () => {
+    const user = userEvent.setup()
+    meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+    meMocks.answerQuestion.mockResolvedValue({ status: 'questionNotFound' })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    await screen.findByRole('link', { name: /다음 글/ })
+    reachArticleEnd()
+    await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+
+    await user.click(screen.getByRole('button', { name: /합성 보기 나/ }))
+    await user.click(await screen.findByRole('button', { name: '다시 불러오기' }))
+
+    await waitFor(() => expect(apiMocks.fetchLearningArticle).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
+    expect(screen.getByRole('list', { name: '이번에 받은 경험치' })).not.toBeNull()
+    // 다시 받은 기록으로 확인 문제를 처음부터 그린다. 바뀌었다는 줄은 남지 않는다.
+    await waitFor(() =>
+      expect(screen.queryByText('이 문제가 바뀌었습니다. 글을 다시 불러와 주세요.')).toBeNull(),
+    )
+  })
+
+  it('재확인 동안 완료 카드와 확인 문제를 숨겼다가 같은 사용자면 다시 요청하지 않고 답과 카드를 그대로 보인다', async () => {
+    const user = userEvent.setup()
+    meMocks.fetchLearnerArticle.mockResolvedValue({
+      status: 'ok',
+      data: { ...completedRecord, answers: [], quiz: openQuiz },
+    })
+    meMocks.answerQuestion.mockResolvedValue({ status: 'ok', data: answerResult() })
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+    await screen.findByText('합성 풀이 하나다.', { exact: false })
+    const card = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+
+    setAuth(checkingAuth)
+    expect(card.parentElement?.className).toMatch(/concealed/)
+
+    setAuth(signedInAuth)
+    expect(card.isConnected).toBe(true)
+    expect(card.parentElement?.className ?? '').not.toMatch(/concealed/)
+    expect(screen.getByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(1)
+  })
+
+  it('다른 사용자로 확인되면 앞 사용자의 기록을 버리고 다시 받는다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'ok', data: completedRecord })
+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'ok', data: unreadRecord })
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+
+    setAuth(checkingAuth)
+    setAuth(otherUserAuth)
+
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: '완료 · 2026-11-20' })).toBeNull(),
+    )
+  })
+
+  it('로그아웃을 시작하면 그 즉시 기록 자리를 없앤다', async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
+    loaded(currentArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+
+    setAuth(logoutAuth)
+
+    expect(screen.queryByRole('region', { name: /완료 ·/ })).toBeNull()
+    expect(screen.queryByRole('region', { name: '확인 문제' })).toBeNull()
+  })
+
+  it('거부된 기록 요청 없이 만료되면 기록되지 않았다고 말하지 않고, 확인 문제를 기록 없이 풀게 하며 재로그인을 안내한다', async () => {
+    const user = userEvent.setup()
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', expiredAuth)
+
+    expect(
+      await screen.findByText('로그인이 만료되었습니다. 다시 로그인하면 이 글로 돌아옵니다.'),
+    ).not.toBeNull()
+    // 실패한 요청이 없으므로 이 문장을 두지 않는다. 이미 기록된 것을 기록되지 않았다고 말하지 않는다(spec Edge Cases).
+    expect(screen.queryByText('기록되지 않았습니다.')).toBeNull()
+    expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
+    expect(meMocks.fetchLearnerArticle).not.toHaveBeenCalled()
+
+    // 만료 동안에도 확인 문제는 비로그인처럼 기록 없이 풀 수 있다(FR-012, spec Edge Cases).
+    await user.click(screen.getByRole('button', { name: /합성 보기 나/ }))
+    expect(screen.getByText('합성 풀이 하나다.', { exact: false })).not.toBeNull()
+    expect(meMocks.answerQuestion).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('link', { name: '다시 로그인' }))
+    expect(setItem.mock.calls).toEqual([['thorp.auth.returnTarget', '/learn/swell-reading']])
+  })
+
+  it('기록 요청이 만료로 거부되면 기록되지 않았습니다와 다시 시도를 함께 보이고, 다시 시도는 로그인 상태를 다시 확인한다', async () => {
+    const user = userEvent.setup()
+    meMocks.completeArticle.mockResolvedValue({ status: 'unauthenticated' })
+    loaded(quickArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    await screen.findByRole('link', { name: /다음 글/ })
+    reachArticleEnd()
+    await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(1))
+    // 401을 받으면 014가 전역 상태를 만료로 바꾼다.
+    setAuth(expiredAuth)
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText('기록되지 않았습니다.')).not.toBeNull()
+    expect(
+      screen.getByText('로그인이 만료되었습니다. 다시 로그인하면 이 글로 돌아옵니다.'),
+    ).not.toBeNull()
+
+    await user.click(within(alert).getByRole('button', { name: '다시 시도' }))
+    expect(recheck).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['이전 판', previousTideArticle],
+    ['첫 단계 공개 전', tideArticle],
+  ])('%s 글은 로그인해도 기록을 요청하지 않는다', async (_, article) => {
+    loaded(article)
+
+    const { unmount } = renderArticle('/learn/tide-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1 })
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'))
+    })
+    unmount()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(meMocks.fetchLearnerArticle).not.toHaveBeenCalled()
+    expect(meMocks.completeArticle).not.toHaveBeenCalled()
+    expect(meMocks.recordPosition).not.toHaveBeenCalled()
+    expect(meMocks.sendPositionOnLeave).not.toHaveBeenCalled()
+  })
+
+  it('로그인 사용자의 글은 떠날 때 위치를 보내고, 비로그인에서는 fetch도 apiClient도 부르지 않는다', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const requestSpies = (['get', 'post', 'put', 'delete', 'request'] as const).map((method) =>
+      vi.spyOn(apiClient, method),
+    )
+    loaded(currentArticle)
+
+    const guest = renderArticle('/learn/swell-reading')
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'))
+    })
+    guest.unmount()
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    for (const spy of requestSpies) expect(spy).not.toHaveBeenCalled()
+    expect(meMocks.recordPosition).not.toHaveBeenCalled()
+    expect(meMocks.sendPositionOnLeave).not.toHaveBeenCalled()
+
+    const member = renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'))
+    })
+    member.unmount()
+
+    expect(meMocks.sendPositionOnLeave).toHaveBeenCalledTimes(1)
+    expect(meMocks.sendPositionOnLeave.mock.calls[0][0]).toBe('swell-reading')
+    // 숨김·닫기로 이미 보냈으므로 화면을 내릴 때 다시 보내지 않는다.
+    expect(meMocks.recordPosition).not.toHaveBeenCalled()
+  })
+
+  it('로그인 사용자도 학습 기록을 브라우저 저장소에 쓰지 않는다', async () => {
+    const user = userEvent.setup()
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    meMocks.fetchLearnerArticle.mockResolvedValue({
+      status: 'ok',
+      data: { ...completedRecord, answers: [], quiz: openQuiz },
+    })
+    meMocks.answerQuestion.mockResolvedValue({ status: 'ok', data: answerResult() })
+    loaded(currentArticle)
+
+    const { unmount } = renderArticle('/learn/swell-reading', signedInAuth)
+    await user.click(await screen.findByRole('button', { name: /합성 보기 나/ }))
+    await screen.findByText('합성 풀이 하나다.', { exact: false })
+    unmount()
+
+    expect(setItem).not.toHaveBeenCalled()
   })
 })
