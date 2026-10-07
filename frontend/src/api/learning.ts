@@ -4,6 +4,7 @@ import type {
   ArticleNext,
   ArticleStage,
   CurrentArticleBlock,
+  CurrentLearningArticle,
   DiagramSeries,
   LearningArticle,
   LearningArticleList,
@@ -12,6 +13,7 @@ import type {
   LearningExampleSector,
   LearningSource,
   LegacyArticleBlock,
+  LegacyLearningArticle,
   NoteSource,
   QuizChoice,
   QuizQuestion,
@@ -50,6 +52,14 @@ export type LearningArticleResult =
   | LoadFailure
 
 const UNREADABLE_RESPONSE_MESSAGE = '배우기 글을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+
+/**
+ * 게시 시각을 뺀 글이다. 관리 미리 보기(관리 계약 §8)가 같은 모양에 게시 전이라 `publishedAt`이 `null`인
+ * 응답을 주므로, 해석은 같은 함수로 하고 게시 시각만 따로 읽는다.
+ */
+export type LearningArticleContent =
+  | Omit<LegacyLearningArticle, 'publishedAt'>
+  | Omit<CurrentLearningArticle, 'publishedAt'>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -368,7 +378,7 @@ function readSource(value: unknown): LearningSource | null {
  * <p><b>예시는 판마다 다르다.</b> 새 기준 글은 예시가 선택이라 `null`을 그대로 받고, 9월 판 글은 지금처럼
  * 객체여야 한다(data-model §9).
  */
-function readArticle(value: unknown): LearningArticle | null {
+export function readArticleContent(value: unknown): LearningArticleContent | null {
   const summary = readSummary(value)
   if (!summary || !isRecord(value)) return null
   const edition = value.edition
@@ -383,8 +393,7 @@ function readArticle(value: unknown): LearningArticle | null {
     !(value.number === null || isString(value.number)) ||
     !isNumber(value.readingMinutes) ||
     !(value.stageArticleCount === null || isNumber(value.stageArticleCount)) ||
-    typeof value.hasUnreleasedStages !== 'boolean' ||
-    !isString(value.publishedAt)
+    typeof value.hasUnreleasedStages !== 'boolean'
   ) {
     return null
   }
@@ -397,7 +406,6 @@ function readArticle(value: unknown): LearningArticle | null {
     next,
     stageArticleCount: value.stageArticleCount,
     hasUnreleasedStages: value.hasUnreleasedStages,
-    publishedAt: value.publishedAt,
     quiz,
   }
 
@@ -413,6 +421,13 @@ function readArticle(value: unknown): LearningArticle | null {
   const example = readExample(value.example)
   if (!blocks || !example || value.minDwellSeconds !== null) return null
   return { ...common, edition, blocks, example, minDwellSeconds: null }
+}
+
+/** 공개 글 하나를 읽는다. 게시 시각까지 있어야 한다. */
+function readArticle(value: unknown): LearningArticle | null {
+  const content = readArticleContent(value)
+  if (!content || !isRecord(value) || !isString(value.publishedAt)) return null
+  return { ...content, publishedAt: value.publishedAt }
 }
 
 function unreadable(): LoadFailure {

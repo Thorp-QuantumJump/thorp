@@ -66,7 +66,8 @@
   color: var(--thorp-copy);
 }
 
-.field input {
+.field input,
+.field select {
   padding: 9px 12px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: var(--thorp-radius-control, 8px);
@@ -96,4 +97,14 @@
 
 .main button:hover:not(:disabled) {
   border-color: currentColor;
+}
+
+/* 2판에서 열이 늘어 좁은 화면에서는 표만 가로로 밀린다. 쪽 전체가 밀리지 않게 한다. */
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.block {
+  margin: 24px 0;
 }
