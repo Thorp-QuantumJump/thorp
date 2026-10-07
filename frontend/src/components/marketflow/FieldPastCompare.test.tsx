@@ -30,7 +30,6 @@ type Props = ComponentProps<typeof FieldPastCompare>
 
 function renderCompare(overrides: Partial<Props> = {}) {
   const props: Props = {
-    fieldId: 'production',
     fieldName: '생산',
     referenceMonth: '2026-07',
     nowMonths: ['2026-05', '2026-06', '2026-07'],
@@ -46,6 +45,8 @@ function renderCompare(overrides: Partial<Props> = {}) {
     showBand: false,
     onToggleBand: vi.fn(),
     unplaced: [],
+    onShowAll: vi.fn(),
+    onShowDetail: vi.fn(),
     ...overrides,
   }
   return { props, ...renderWithRouter(<FieldPastCompare {...props} />) }
@@ -67,16 +68,18 @@ describe('FieldPastCompare (009 FR-019)', () => {
     expect(props.onSelect).toHaveBeenLastCalledWith(null)
   })
 
-  it('백테스트는 011 진입 계약으로, 자세히·모두 보기는 010 검색을 분야와 010 기준월로 연다', () => {
-    renderCompare({ referenceMonth: '2026-08' })
+  it('백테스트는 011 진입 계약으로 열고, 자세히·모두 보기는 같은 상자 바닥의 사례 구역으로 옮긴다', () => {
+    const { props } = renderCompare({ referenceMonth: '2026-08' })
 
     expect(screen.getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe(
       '/regime-link/start?case=FIELD%3Aproduction%3A2026-07-01%3Amacro-1%3Acalc-1%3AREGIME-V1.1%7E2001-03',
     )
-    // 저장된 판(?searchId=)으로 열면 010은 '내 기록 다시 보기'로 다뤄 기록하지 않고 분야도 비워 둔다(010 FR-032).
-    // 기준월은 분야 상세의 대상월이 아니라 010이 계산한 달이다(009 FR-009).
-    expect(screen.getByRole('link', { name: '자세히' }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')
-    expect(screen.getByRole('link', { name: /모두 보기/ }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')
+    // 010 검색 화면으로 넘기지 않는다(2026-10-07). 고른 사례의 상세는 아래 구역에서 펼친다.
+    fireEvent.click(screen.getByRole('button', { name: '자세히' }))
+    expect(props.onShowDetail).toHaveBeenCalledWith('2001-03')
+    fireEvent.click(screen.getByRole('button', { name: /모두 보기/ }))
+    expect(props.onShowAll).toHaveBeenCalled()
+    expect(document.querySelector('a[href^="/regime-search"]')).toBeNull()
   })
 
   it('지금만을 고르면 두 행동을 누를 수 없지만 보통 범위는 켤 수 있다', () => {
@@ -115,14 +118,14 @@ describe('FieldPastCompare (009 FR-019)', () => {
     expect(screen.getByText('이 사례는 지표별 당시 경로를 볼 수 없습니다.')).toBeTruthy()
   })
 
-  it('검색을 받지 못해도 경고로 막지 않고, 010으로 가는 길은 분야와 대상월로 남긴다', () => {
+  it('검색을 받지 못해도 경고로 막지 않고, 보낼 결과가 없으므로 모두 보기를 두지 않는다', () => {
     const { props } = renderCompare({ search: { status: 'failed', message: null } })
 
     expect(screen.getByText('과거 사례를 불러오지 못했습니다. 분야 지표는 그대로 볼 수 있습니다.')).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
     expect(props.onRetrySearch).toHaveBeenCalled()
-    expect(screen.getByRole('link', { name: /모두 보기/ }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')
+    expect(screen.queryByRole('button', { name: /모두 보기/ })).toBeNull()
   })
 
   it('검색 상태는 i 표시 뒤로 내리고 보조기기에는 늘 읽히며, 분야만의 유사성임을 밝힌다 (010 FR-037)', async () => {

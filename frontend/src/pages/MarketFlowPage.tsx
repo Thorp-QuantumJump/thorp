@@ -2,14 +2,17 @@ import { Activity, RefreshCw } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'
+import { getRegimeBaselineMonths } from '@/api/regime'
 import { CompositePast } from '@/components/marketflow/CompositePast'
 import { FieldDetail } from '@/components/marketflow/FieldDetail'
 import { FieldPastCompare } from '@/components/marketflow/FieldPastCompare'
 import { CompositeSummaryCard, FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'
+import { PastCaseExplorer, type CaseFocusRequest } from '@/components/marketflow/PastCaseExplorer'
 import { bandLabel, bandOf, pastForIndicator, unplacedVerdicts } from '@/components/marketflow/pastOverlay'
 import { useCaseDetail, usePastSearch } from '@/hooks/usePastCases'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { FieldDetailResult, FieldSummary, FieldSummaryResult, MarketFlowFieldId } from '@/types/marketFlow'
+import type { RegimeBaselineMonths } from '@/types/regime'
 import heading from '@/components/common/PageHeading.module.css'
 import styles from './MarketFlowPage.module.css'
 
@@ -42,9 +45,12 @@ export function MarketFlowPage() {
   const [detailRequest, setDetailRequest] = useState(0)
   const [caseChoices, setCaseChoices] = useState<CaseChoices>({})
   const [showBand, setShowBand] = useState(false)
+  // 010이 계산을 마친 달 목록. 바닥 '가까운 과거 사례' 구역의 기준월 지정 범위다. 못 받으면 지정 칸 없이 최신만 보인다.
+  const [baselines, setBaselines] = useState<RegimeBaselineMonths | null>(null)
+  // 위 줄의 '자세히'·'모두 보기'가 바닥 구역으로 보내는 요청. 같은 사례를 다시 눌러도 옮기도록 횟수를 올린다.
+  const [focusRequest, setFocusRequest] = useState<CaseFocusRequest | null>(null)
   // 마지막으로 상세를 받은 분야와 그때의 다시 불러오기 횟수. 종합 비교를 보다 같은 분야로 돌아오면 다시 받지 않는다.
   const loadedDetail = useRef<{ fieldId: MarketFlowFieldId; request: number } | null>(null)
-  const fieldListRef = useRef<HTMLDivElement>(null)
   const compositeOpen = selectedId === 'composite'
   const selected = compositeOpen ? undefined : summary?.fields.find((field) => field.fieldId === selectedId) ?? summary?.fields[0]
   const selectedFieldId = selected?.fieldId
@@ -63,6 +69,27 @@ export function MarketFlowPage() {
       })
     return () => controller.abort()
   }, [summaryRequest])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    getRegimeBaselineMonths(controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setBaselines(result)
+      })
+      .catch(() => {
+        // 기준월 목록이 없어도 사례 구역은 최신 검색으로 선다. 지정 칸만 두지 않는다.
+      })
+    return () => controller.abort()
+  }, [])
+
+  const fieldNames = useMemo(
+    () => Object.fromEntries(summary?.fields.map((field) => [field.fieldId, field.displayName]) ?? []),
+    [summary],
+  )
+
+  const requestCaseFocus = useCallback((scope: string, endMonth: string | null) => {
+    setFocusRequest((current) => ({ scope, endMonth, nonce: (current?.nonce ?? 0) + 1 }))
+  }, [])
 
   const openField = useCallback((field: FieldSummary) => {
     // 같은 분야의 선택은 조회/차트 애니메이션을 다시 시작하지 않는다.
@@ -175,7 +202,7 @@ export function MarketFlowPage() {
                 마지막 갱신 시각은 말풍선마다 적고(FR-011), 고른 분야의 시각은 상세 머리 오른쪽에 있다.
                 메뉴는 분야 수만큼 같은 폭으로 나누고 끝에 종합 비교 칸 하나를 더해 아래 상세 카드와 폭을 맞춘다.
               */}
-              <div ref={fieldListRef} className={styles.fieldList} style={{ '--field-count': summary.fields.length } as CSSProperties}>
+              <div className={styles.fieldList} style={{ '--field-count': summary.fields.length } as CSSProperties}>
                 <LayoutGroup id={selectionGroup}>
                   {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} />)}
                   <CompositeSummaryCard selected={compositeOpen} onOpen={() => setSelectedId('composite')} />
@@ -185,13 +212,7 @@ export function MarketFlowPage() {
             <div id="market-flow-detail" className={styles.detailPanel} tabIndex={-1} aria-label="선택한 분야 상세">
               <p className={styles.srOnly} role="status">{shownDetail ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>
               {compositeOpen ? (
-                <CompositePast
-                  onShowFields={() => {
-                    setSelectedId(summary.fields[0]?.fieldId ?? null)
-                    // 누른 버튼이 사라지므로 초점을 첫 분야 버튼으로 옮긴다. 그대로 두면 초점이 문서 처음으로 떨어진다.
-                    fieldListRef.current?.querySelector<HTMLButtonElement>('button[aria-controls="market-flow-detail"]')?.focus()
-                  }}
-                />
+                <CompositePast baselines={baselines} fieldNames={fieldNames} focusRequest={focusRequest} />
               ) : shownDetail && displayedDetail ? (
                 // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.
                 <FieldDetail
@@ -203,7 +224,6 @@ export function MarketFlowPage() {
                   comparing={chosenCase !== null}
                   compare={(
                     <FieldPastCompare
-                      fieldId={shownDetail.fieldId}
                       fieldName={shownDetail.displayName}
                       referenceMonth={shownDetail.referenceMonth}
                       nowMonths={shownDetail.indicators[0]?.path.map((point) => point.month) ?? []}
@@ -221,6 +241,26 @@ export function MarketFlowPage() {
                       showBand={showBand}
                       onToggleBand={setShowBand}
                       unplaced={chosenCase ? unplacedVerdicts(shownDetail.indicators, chosenCase) : []}
+                      onShowAll={() => requestCaseFocus(shownDetail.fieldId, null)}
+                      onShowDetail={(endMonth) => requestCaseFocus(shownDetail.fieldId, endMonth)}
+                    />
+                  )}
+                  /*
+                    010 검색 화면의 내용(가까운 사례·사례 상세·기준월 지정·신뢰 범위 표시)은 이 분야 아래에서 바로 본다
+                    (2026-10-07). 분야가 바뀌면 지정한 달과 펼친 상세를 새로 시작한다.
+                  */
+                  explorer={(
+                    <PastCaseExplorer
+                      key={shownDetail.fieldId}
+                      id="market-flow-past-cases"
+                      mode="field"
+                      fieldId={shownDetail.fieldId}
+                      scopeName={shownDetail.displayName}
+                      base={pastSearch}
+                      onRetryBase={retryPastSearch}
+                      baselines={baselines}
+                      fieldNames={fieldNames}
+                      focusRequest={focusRequest}
                     />
                   )}
                 />
