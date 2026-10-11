@@ -135,8 +135,12 @@ describe('LearningMePage', () => {
       ),
     ).not.toBeNull()
     expect(
-      within(read).getByText('읽은 글 27편 · 여섯 단계가 모두 공개된 뒤 받을 수 있습니다.'),
+      within(read).getByText(
+        '읽은 글 27편 · 준비 중 · 여섯 단계가 모두 공개된 뒤 받을 수 있습니다.',
+      ),
     ).not.toBeNull()
+    // 받은 배지의 기준 문장도 글자로 있다. 화면에서는 이름에 맡기고 화면 낭독기에만 읽힌다(FR-019).
+    expect(within(read).getByText('읽은 글 1편 기준 문장이다.').className).toBe('sr-only')
 
     const correct = screen.getByRole('region', { name: '첫 답 정답' })
     expect(within(correct).getByText('아직 받지 않음, 10개 중 3개')).not.toBeNull()
@@ -147,7 +151,39 @@ describe('LearningMePage', () => {
     expect(within(stage).getByText('준비 중')).not.toBeNull()
 
     const level = screen.getByRole('region', { name: '레벨' })
-    expect(within(level).getByText('레벨 4 · 단계가 더 공개된 뒤 받을 수 있습니다.')).not.toBeNull()
+    expect(
+      within(level).getByText('레벨 4 · 준비 중 · 단계가 더 공개된 뒤 받을 수 있습니다.'),
+    ).not.toBeNull()
+  })
+
+  it('특별 배지는 준비 중에도 낱장으로 기준과 받을 수 있게 되는 때를 보인다(FR-024)', async () => {
+    renderMe()
+
+    const special = await screen.findByRole('region', { name: '특별' })
+    expect(within(special).getAllByRole('listitem')).toHaveLength(2)
+    const exploration = within(special).getByText('탐험').closest('li')!
+    expect(exploration.textContent).toContain('준비 중')
+    expect(exploration.textContent).toContain('탐험 기준 문장이다.')
+    expect(exploration.textContent).toContain('여섯 단계가 모두 공개된 뒤 받을 수 있습니다.')
+  })
+
+  it('이 화면의 메달에는 지나가는 광택이 없다(design-notes §5)', async () => {
+    renderMe()
+
+    await screen.findByRole('region', { name: '단계 완주' })
+    expect(document.querySelector('[class*="sweep"]')).toBeNull()
+  })
+
+  it('로그인이 만료된 동안은 기록 대신 재로그인 안내와 쌓이는 것 세 칸을 보인다(research R33)', async () => {
+    renderMe({ ...anonymousAuthContext, status: 'expired', user: null })
+
+    expect(
+      await screen.findByText('로그인이 만료되었습니다. 다시 로그인하면 이 화면으로 돌아옵니다.'),
+    ).not.toBeNull()
+    expect(screen.getByRole('link', { name: '다시 로그인' }).getAttribute('href')).toBe('/login')
+    expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
+    expect(screen.getByRole('region', { name: '나의 학습에 쌓이는 것' })).not.toBeNull()
+    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
   })
 
   it("7일 안에 받은 배지와 닿은 레벨에 '새'가 붙고 닫는 단추가 없다", async () => {

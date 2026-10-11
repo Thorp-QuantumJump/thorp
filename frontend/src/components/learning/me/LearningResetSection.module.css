@@ -17,6 +17,12 @@
   justify-content: flex-end;
 }
 
+/* 누르는 곳은 44px 이상이다(design-notes §6). */
+.actions button,
+.dialogActions button {
+  min-height: 44px;
+}
+
 .notice {
   display: flex;
   gap: 8px;

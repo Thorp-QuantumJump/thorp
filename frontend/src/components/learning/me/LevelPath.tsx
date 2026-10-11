@@ -1,6 +1,6 @@
 import { useId, type CSSProperties } from 'react'
 import type { LevelView } from '@/types/learningMe'
-import { unreachableLevelSentence } from './meCopy'
+import { nextLevelReachable, unreachableLevelSentence } from './meCopy'
 import { MaterialDefs } from './MaterialDefs'
 import { paint, svgId } from './materials'
 import styles from './LevelPath.module.css'
@@ -9,6 +9,26 @@ type Milestone = LevelView['milestones'][number]
 
 /** 보이는 가장 높은 레벨의 문턱이 길의 80% 자리에 온다. 그 뒤 20%는 점선이다(목업 `levelCard`). */
 const VISIBLE_SHARE = 0.8
+
+/**
+ * 이정표 글자('레벨 n'과 문턱) 사이의 가장 작은 간격(길 폭의 %). 이보다 가까운 이정표는 깃발만 두고 글자를 뺀다. 문턱이
+ * 앞쪽에 몰리면(여섯 단계를 모두 공개해 0·100·300이 0~3,500 길에 놓일 때) 글자가 겹치기 때문이다.
+ */
+const LABEL_GAP = 12
+
+/** 글자를 붙일 이정표. 가장 높은 이정표부터 왼쪽으로 가며 간격이 넉넉한 것만 고른다. */
+function labelledLevels(positions: readonly { level: number; at: number }[]): ReadonlySet<number> {
+  const chosen = new Set<number>()
+  let lastAt = Number.POSITIVE_INFINITY
+  for (let i = positions.length - 1; i >= 0; i -= 1) {
+    const { level, at } = positions[i]
+    if (lastAt - at >= LABEL_GAP) {
+      chosen.add(level)
+      lastAt = at
+    }
+  }
+  return chosen
+}
 
 function round(value: number): number {
   return Math.round(value * 1000) / 1000
@@ -36,8 +56,12 @@ export function LevelPath({ level }: { level: LevelView }) {
     thresholdOf(level.milestones, level.unreachableFrom) ||
     100
   const scale = top / VISIBLE_SHARE
-  const at = (value: number) => `${round((Math.min(value, scale) / scale) * 100)}%`
+  const percentAt = (value: number) => round((Math.min(value, scale) / scale) * 100)
+  const at = (value: number) => `${percentAt(value)}%`
   const sentence = unreachableLevelSentence(level)
+  const labelled = labelledLevels(
+    visible.map((item) => ({ level: item.level, at: percentAt(item.threshold) })),
+  )
 
   return (
     <div className={styles.full}>
@@ -58,10 +82,12 @@ export function LevelPath({ level }: { level: LevelView }) {
             style={{ left: at(item.threshold) }}
           >
             <Flag prefix={prefix} reached={level.exp >= item.threshold} />
-            <span className={styles.flagLabel}>
-              레벨 {item.level}
-              <small>{item.threshold.toLocaleString('ko-KR')}</small>
-            </span>
+            {labelled.has(item.level) ? (
+              <span className={styles.flagLabel}>
+                레벨 {item.level}
+                <small>{item.threshold.toLocaleString('ko-KR')}</small>
+              </span>
+            ) : null}
           </span>
         ))}
         <span className={styles.dot} style={{ left: at(level.exp) }}>
@@ -115,7 +141,7 @@ export function LevelPathMini({ level }: { level: LevelView }) {
   const fraction =
     span > 0 ? Math.max(0, Math.min(1, (level.exp - level.currentThreshold) / span)) : 0
   const x = round(x0 + (x1 - x0) * fraction)
-  const blocked = level.current + 1 > level.visibleMax
+  const blocked = !nextLevelReachable(level)
   return (
     <svg className={styles.mini} viewBox="0 0 220 30" aria-hidden="true" focusable="false">
       <defs>
@@ -178,6 +204,9 @@ export function LevelPathMove({ level, expBefore, moving }: LevelPathMoveProps) 
   const levelBefore = levelAt(level.milestones, Math.min(expBefore, level.exp))
   const end = Math.min(level.current + 1, level.unreachableFrom)
   const flags = level.milestones.filter((item) => item.level >= levelBefore && item.level <= end)
+  // 지금 공개된 단계로 닿을 수 없는 레벨은 길 끝의 점선으로만 그리고 이정표·글자를 두지 않는다(FR-029). 길의 눈금은 그
+  // 레벨의 문턱까지 잡아 지금 경험치의 자리를 보인다.
+  const shownFlags = flags.filter((item) => item.level <= level.visibleMax)
   const startThreshold = flags[0]?.threshold ?? 0
   const endThreshold = flags[flags.length - 1]?.threshold ?? level.nextThreshold
   const left = 10
@@ -232,12 +261,13 @@ export function LevelPathMove({ level, expBefore, moving }: LevelPathMoveProps) 
         strokeWidth="4"
         strokeLinecap="round"
       />
-      {flags.map((item, index) => {
+      {shownFlags.map((item, index) => {
         const reached = level.exp >= item.threshold
         const fresh = moving && reached && item.threshold > expBefore
         const fx = x(item.threshold)
-        const anchor = index === 0 ? 'start' : index === flags.length - 1 ? 'end' : 'middle'
-        const tx = index === 0 ? fx - 2 : index === flags.length - 1 ? fx + 10 : fx
+        const last = item.level === end
+        const anchor = index === 0 ? 'start' : last ? 'end' : 'middle'
+        const tx = index === 0 ? fx - 2 : last ? fx + 10 : fx
         return (
           <g
             key={item.level}

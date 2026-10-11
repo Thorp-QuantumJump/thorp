@@ -83,7 +83,10 @@ export const completedRecord: LearnerArticleRecord = {
   stageProgress: { stageNumber: 2, completedCount: 2, publishedCount: 4, stageCompleted: false },
 }
 
-/** 이번 요청에서 완료한 응답. 단계 완주와 새 배지, 새 레벨이 함께 생겼다. */
+/**
+ * 이번 요청에서 완료한 응답. 단계 완주와 새 배지, 새 레벨이 함께 생겼다. 서버는 배지를 레벨 갈래부터 정산하므로
+ * (data-model §12-4) 레벨이 오르면 그 레벨의 레벨 갈래 배지가 맨 앞에 온다.
+ */
 export const completionResult: CompletionResult = {
   completedAt: '2026-11-20T03:10:00Z',
   alreadyCompleted: false,
@@ -95,7 +98,10 @@ export const completionResult: CompletionResult = {
       { kind: 'STAGE_COMPLETED', points: 50, stageNumber: 2 },
     ],
     expTotal: 70,
-    badges: [{ badgeKey: 'stage-swell-and-risk', family: 'STAGE', name: '2단계 완주' }],
+    badges: [
+      { badgeKey: 'level-3', family: 'LEVEL', name: '레벨 3' },
+      { badgeKey: 'stage-swell-and-risk', family: 'STAGE', name: '2단계 완주' },
+    ],
     levelBefore: 2,
     levelAfter: 3,
   },

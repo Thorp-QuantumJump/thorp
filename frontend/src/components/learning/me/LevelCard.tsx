@@ -20,7 +20,7 @@ export function LevelCard({ overview }: { overview: LearnerOverview }) {
     <section className={styles.card} aria-labelledby={titleId}>
       <div className={styles.head}>
         <span className={styles.emblem} aria-hidden="true">
-          <LevelEmblem level={level.current} size={112} shine={level.isNew} />
+          <LevelEmblem level={level.current} size={112} />
         </span>
         <div className={styles.top}>
           <h2 id={titleId} className={styles.level}>

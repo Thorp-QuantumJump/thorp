@@ -10,6 +10,7 @@ import {
   releasedCurriculum,
   stageOneReleased,
 } from '@/test/learningFixtures'
+import { cssMediaDeclarations } from '@/test/cssRule'
 import { learnerOverview } from '@/test/learningMeFixtures'
 import type { Curriculum } from '@/types/learning'
 import { LearningListPage } from './LearningListPage'
@@ -648,7 +649,7 @@ describe('LearningListPage — 나의 학습', () => {
     expect(document.querySelectorAll('[data-stage-well]')).toHaveLength(2)
   })
 
-  it("지금 이어 읽을 글의 카드에 '이어서 읽기 →'를 두고, 열면 기록된 위치로 옮기도록 learningResume을 싣는다", async () => {
+  it("지금 이어 읽을 글의 카드에 빛과 '이어서 읽기 →'를 두고, 누르면 다른 글처럼 맨 위에서 연다(FR-020)", async () => {
     const user = userEvent.setup()
     loaded(releasedCurriculum)
     render(
@@ -667,10 +668,51 @@ describe('LearningListPage — 나의 학습', () => {
     const current = within(stageTwo).getByRole('link', { name: /물때 읽기/ })
     expect(current.textContent).toContain('이어서 읽기')
     expect(current.querySelector('[data-part="tip"]')).not.toBeNull()
+    // 카드 뒤의 빛은 따로 된 층이라 로그인 상태를 다시 확인하는 동안 숨길 수 있다(research R33).
+    expect(current.querySelector('span[aria-hidden="true"][data-learner-mark]:empty')).not.toBeNull()
     expect(within(stageTwo).getByRole('link', { name: /너울 읽기/ }).textContent).not.toContain('이어서 읽기')
 
+    // 목록에서 '읽는 중' 글을 열면 맨 위에서 연다. 기록된 위치로 옮기는 것은 글 맨 위의 한 줄이다(FR-020).
     await user.click(current)
-    expect((await screen.findByTestId('resume')).textContent).toBe('/learn/tide-reading resume')
+    expect((await screen.findByTestId('resume')).textContent?.trim()).toBe('/learn/tide-reading')
+  })
+
+  it("단계 완주 배지를 받은 뒤 그 단계에 글이 더해지면 메달은 그대로이고 진행만 새 글을 포함해 센다(US6 시나리오 8)", async () => {
+    meMocks.fetchLearningMe.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...learnerOverview,
+        stages: learnerOverview.stages.map((stage) =>
+          stage.number === 1 ? { ...stage, completedCount: 2, publishedCount: 3, completed: false } : stage,
+        ),
+      },
+    })
+    loaded(releasedCurriculum)
+    renderList('/learn', signedInAuth)
+
+    await screen.findByRole('region', { name: '나의 학습' })
+    const well = document.querySelector('[data-stage-well="1"]')!
+    expect(well.querySelector('[data-medal="stage-earned"]')).not.toBeNull()
+    expect(well.textContent).toContain('3편 중 2편 읽음')
+    expect(well.textContent).not.toContain('배지까지')
+  })
+
+  it('로그인이 만료된 동안은 기록 자리에 재로그인 안내를 두고 나의 학습을 부르지 않는다(research R33)', async () => {
+    loaded(releasedCurriculum)
+    renderList('/learn', { ...anonymousAuthContext, status: 'expired', user: null })
+
+    expect(
+      await screen.findByText('로그인이 만료되었습니다. 다시 로그인하면 이 화면으로 돌아옵니다.'),
+    ).not.toBeNull()
+    expect(screen.getByRole('link', { name: '다시 로그인' }).getAttribute('href')).toBe('/login')
+    expect(screen.queryByRole('region', { name: '나의 학습' })).toBeNull()
+    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
+  })
+
+  it("'이어서 읽기 →'는 넓은 화면에서 꼬리표 줄 아래 한 줄을 다 쓰고 오른쪽에 붙는다", () => {
+    expect(
+      cssMediaDeclarations('components/learning/curriculum/ArticleNode.module.css', '(min-width: 1024px)', '.goHint'),
+    ).toMatch(/grid-column:\s*1 \/ -1[\s\S]*justify-self:\s*end/)
   })
 
   it("목록 보기는 상태 열과 'n편 중 m편 읽음'·'완주 · n편', 익힌 용어 'm/n'을 보이고 떠 있는 단추가 없다", async () => {

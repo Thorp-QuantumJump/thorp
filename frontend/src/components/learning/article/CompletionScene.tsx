@@ -3,7 +3,12 @@ import { ArticleStamp } from '../me/ArticleStamp'
 import { BadgeMedal } from '../me/BadgeMedal'
 import { LevelEmblem } from '../me/LevelEmblem'
 import { LevelPathMove } from '../me/LevelPath'
-import { familyMedal, progressSpoken } from '../me/meCopy'
+import {
+  familyMedal,
+  nextLevelReachable,
+  progressSpoken,
+  unreachableLevelSentence,
+} from '../me/meCopy'
 import { StageMedal } from '../me/StageMedal'
 import styles from './CompletionScene.module.css'
 
@@ -21,13 +26,19 @@ import styles from './CompletionScene.module.css'
 /**
  * 단계 도장 줄과 줄 끝의 단계 완주 메달. 도장은 그 단계의 공개된 글 수만큼이고, 읽은 편수만큼 찍혀 있다(어느 글이든
  * 읽으면 찍히고 순서와 무관하다). 이 화면에서 방금 완료했으면 마지막으로 찍힌 칸이 '방금 찍힌 도장'이다.
+ *
+ * <p>메달은 단계 완주 배지를 그린다. 배지를 받은 뒤 그 단계에 새 글이 게시되어 다 읽지 않은 상태가 되어도 메달은 받은
+ * 모습 그대로다(`badgeEarned`, US6 시나리오 8). 도장 칸은 좁은 화면에서 줄어들어 한 줄에 들어간다(design-notes §6).
  */
 export function StageStampPath({
   stageProgress,
   freshStamp,
+  badgeEarned = stageProgress.stageCompleted,
 }: {
   stageProgress: StageProgress
   freshStamp: boolean
+  /** 이 단계의 단계 완주 배지를 받았는가. 모르면 지금 다 읽었는지로 정한다 */
+  badgeEarned?: boolean
 }) {
   const { stageNumber, completedCount, publishedCount, stageCompleted } = stageProgress
   const cells = Math.max(publishedCount, completedCount)
@@ -61,7 +72,7 @@ export function StageStampPath({
         <StageMedal
           stageNumber={stageNumber}
           size={54}
-          state={stageCompleted ? 'earned' : 'notYet'}
+          state={badgeEarned ? 'earned' : 'notYet'}
           progress={percent}
         />
       </span>
@@ -158,6 +169,8 @@ export function LevelHero({
 
 /**
  * 다음 목표의 레벨 쪽: 레벨 길과 '경험치 360 · 다음 레벨까지 240'(T208). 길은 그림이고 글자는 보조 기술에 읽힌다.
+ * 다음 레벨이 지금 공개된 단계의 글로 닿을 수 없는 레벨이면 길 끝이 점선이고 FR-029 문장('레벨 N부터는 …')을 덧붙인다
+ * (FR-031).
  */
 export function LevelGoal({
   level,
@@ -168,6 +181,7 @@ export function LevelGoal({
   expBefore: number
   moving: boolean
 }) {
+  const unreachable = nextLevelReachable(level) ? null : unreachableLevelSentence(level)
   return (
     <div className={styles.goal}>
       <LevelPathMove level={level} expBefore={expBefore} moving={moving} />
@@ -175,6 +189,7 @@ export function LevelGoal({
         경험치 <b>{level.exp.toLocaleString('ko-KR')}</b> · 다음 레벨까지{' '}
         <b>{level.remainingToNext.toLocaleString('ko-KR')}</b>
       </p>
+      {unreachable ? <p className={styles.goalNote}>{unreachable}</p> : null}
     </div>
   )
 }

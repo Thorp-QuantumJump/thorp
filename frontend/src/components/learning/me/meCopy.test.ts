@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { learnerOverview } from '@/test/learningMeFixtures'
 import type { BadgeView } from '@/types/learningMe'
 import {
+  earnedStageNumbers,
   groupPreparing,
   joinNames,
   newBadgeLine,
@@ -78,7 +79,7 @@ describe('준비 중 기준 묶음(FR-024, design-notes §3.3)', () => {
     ])
     expect(groups.map((group) => group.line)).toEqual([
       '준비 중인 기준: 읽은 글 10편, 20편. 단계가 더 공개된 뒤 받을 수 있습니다.',
-      '읽은 글 27편 · 여섯 단계가 모두 공개된 뒤 받을 수 있습니다.',
+      '읽은 글 27편 · 준비 중 · 여섯 단계가 모두 공개된 뒤 받을 수 있습니다.',
     ])
   })
 
@@ -136,5 +137,18 @@ describe('새 배지 한 줄(FR-030, quickstart 11-3)', () => {
     expect(
       newBadgeLine(learnerOverview.badges.map((item) => ({ ...item, isNew: false }))),
     ).toBeNull()
+  })
+})
+
+describe('닿을 수 없는 다음 레벨과 받은 단계 완주 배지', () => {
+  it('다음 레벨이 지금 공개된 단계로 닿을 수 없으면 다음 목표로 말하지 않는다(FR-029)', () => {
+    const blocked = { ...learnerOverview.level, current: 3, visibleMax: 3, unreachableFrom: 4 }
+    expect(nextGoalSentence({ level: blocked, badges: learnerOverview.badges })).toBe(
+      '다음 배지(모두 맞힘 1편)까지 1편입니다.',
+    )
+  })
+
+  it('단계 완주 배지를 받은 단계 번호를 모은다', () => {
+    expect([...earnedStageNumbers(learnerOverview.badges)]).toEqual([1])
   })
 })

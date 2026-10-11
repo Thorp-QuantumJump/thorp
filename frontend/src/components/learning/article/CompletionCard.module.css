@@ -324,20 +324,17 @@
   color: var(--thorp-copy);
 }
 
-/* 좁은 화면(목업 720px 미만): 새 배지와 레벨을 한 줄에 나란히, 받은 경험치는 그 아래 전체 폭이다. */
+/* 좁은 화면(목업 720px 미만): 새 배지·레벨·다음 목표·받은 경험치를 한 칸씩 전체 폭으로 쌓는다. */
 @media (max-width: 719px) {
   .section {
     padding: 18px 16px;
   }
 
-  .column {
-    padding: 0 8px;
-  }
-
-  .column:first-child {
-    padding-left: 0;
-  }
-
+  /*
+    칸마다 한 줄 전체 폭으로 쌓는다. 레벨 칸의 레벨 길이 반쪽 폭이면 글자가 9px 안팎으로 줄어 읽히지 않는다(B13
+    converge). 칸 사이는 가로 줄로 나눈다.
+  */
+  .column,
   .expColumn {
     flex: 1 1 100%;
     max-width: none;
@@ -346,7 +343,7 @@
     border-left: 0;
   }
 
-  .expColumn:only-child {
+  .column:first-child {
     padding-top: 0;
     border-top: 0;
   }

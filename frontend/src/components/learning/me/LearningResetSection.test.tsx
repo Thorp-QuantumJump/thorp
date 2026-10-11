@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { AxiosHeaders, type AxiosResponse } from 'axios'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient, resetCsrfToken } from '@/api/client'
+import { cssDeclarations } from '@/test/cssRule'
 import { LearningResetSection } from './LearningResetSection'
 
 /**
@@ -101,5 +102,14 @@ describe('LearningResetSection', () => {
       '미리보기 화면이라 학습 기록을 지우지 않았습니다.',
     )
     expect(remove).not.toHaveBeenCalled()
+  })
+
+  it('단추와 확인 창의 단추는 누르는 곳이 44px 이상이다(design-notes §6)', () => {
+    expect(
+      cssDeclarations(
+        'components/learning/me/LearningResetSection.module.css',
+        '.dialogActions button',
+      ),
+    ).toMatch(/min-height:\s*44px/)
   })
 })

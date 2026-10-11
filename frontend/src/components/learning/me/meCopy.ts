@@ -137,9 +137,10 @@ export type PreparingGroup = {
 }
 
 /**
- * 같은 갈래의 준비 중 배지를 사유 문장이 같은 것끼리 묶는다. 묶음이 한 개면 '읽은 글 27편 · 여섯 단계가 모두 공개된
- * 뒤 받을 수 있습니다.', 여럿이면 '준비 중인 기준: 읽은 글 10편, 20편. …'이다. 기준 글자(배지 이름)는 숨기지 않는다.
- * 사유를 모르는 배지는 이름과 '준비 중'만 한 줄로 둔다.
+ * 같은 갈래의 준비 중 배지를 사유 문장이 같은 것끼리 묶는다. 묶음이 한 개면 '읽은 글 27편 · 준비 중 · 여섯 단계가 모두
+ * 공개된 뒤 받을 수 있습니다.'(design-notes §7 '레벨 5 · 준비 중 · …'), 여럿이면 '준비 중인 기준: 읽은 글 10편, 20편.
+ * …'이다. 어느 쪽이든 '준비 중'이라는 상태 낱말이 글자로 있다. 점선 실루엣 묶음은 그림이라 화면 낭독기가 읽지 않기
+ * 때문이다. 기준 글자(배지 이름)는 숨기지 않는다. 사유를 모르는 배지는 이름과 '준비 중'만 한 줄로 둔다.
  */
 export function groupPreparing(badges: readonly BadgeView[]): PreparingGroup[] {
   const groups: { reason: string | null; badges: BadgeView[] }[] = []
@@ -153,7 +154,9 @@ export function groupPreparing(badges: readonly BadgeView[]): PreparingGroup[] {
     const names = joinNames(members.map((badge) => badge.name))
     if (reason === null) return { reason: '', badges: members, line: `${names} · 준비 중` }
     const line =
-      members.length === 1 ? `${names} · ${reason}` : `준비 중인 기준: ${names}. ${reason}`
+      members.length === 1
+        ? `${names} · 준비 중 · ${reason}`
+        : `준비 중인 기준: ${names}. ${reason}`
     return { reason, badges: members, line }
   })
 }
@@ -180,6 +183,21 @@ export function joinNames(names: readonly string[]): string {
 }
 
 /**
+ * 단계 완주 배지를 이미 받은 단계 번호. 단계 완주 메달은 이 배지를 그린다. 배지를 받은 뒤 그 단계에 새 글이 게시되면
+ * 단계 진행은 새 글을 포함해 다시 세지만 배지는 그대로 남는다(US6 시나리오 8, FR-024). 그래서 메달은 '지금 다 읽었는가'가
+ * 아니라 '배지를 받았는가'로 그린다.
+ */
+export function earnedStageNumbers(badges: readonly BadgeView[]): ReadonlySet<number> {
+  const numbers = new Set<number>()
+  for (const badge of badges) {
+    if (badge.family === 'STAGE' && badge.status === 'EARNED' && badge.stageNumber !== null) {
+      numbers.add(badge.stageNumber)
+    }
+  }
+  return numbers
+}
+
+/**
  * 다음 배지(FR-030 '다음 목표'). 레벨 갈래를 뺀 아직 받지 않은 배지 가운데 남은 양이 가장 적은 것이다. 같으면 응답의
  * 순서(갈래 순서와 사다리 순서)를 따른다. 진행이 없는 배지(끈기 등)는 고르지 않는다.
  */
@@ -199,12 +217,20 @@ export function nextBadge(badges: readonly BadgeView[]): BadgeView | null {
 }
 
 /**
+ * 다음 레벨이 지금 공개된 단계의 글로 닿을 수 있는 레벨인가(FR-029). 아니면 화면은 다음 레벨을 목표로 내세우지 않고
+ * '레벨 N부터는 …' 문장과 점선 길로 보인다(FR-031).
+ */
+export function nextLevelReachable(level: Pick<LevelView, 'current' | 'visibleMax'>): boolean {
+  return level.current + 1 <= level.visibleMax
+}
+
+/**
  * 다음 목표 문장(목업 `DONE_MSG` 끝). 예: '다음 레벨까지 240, 다음 배지(읽은 글 5편)까지 1편입니다.' 레벨이나 배지
- * 가운데 하나만 있으면 그것만 말한다. 둘 다 없으면 빈 문자열이다.
+ * 가운데 하나만 있으면 그것만 말한다. 둘 다 없으면 빈 문자열이다. 지금 닿을 수 없는 다음 레벨은 목표로 말하지 않는다.
  */
 export function nextGoalSentence(overview: Pick<LearnerOverview, 'level' | 'badges'>): string {
   const parts: string[] = []
-  if (overview.level.remainingToNext > 0)
+  if (overview.level.remainingToNext > 0 && nextLevelReachable(overview.level))
     parts.push(`다음 레벨까지 ${overview.level.remainingToNext.toLocaleString('ko-KR')}`)
   const badge = nextBadge(overview.badges)
   if (badge) parts.push(`다음 배지(${badge.name})까지 ${remainingText(badge)}`)

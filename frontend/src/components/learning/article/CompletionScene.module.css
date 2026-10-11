@@ -3,29 +3,38 @@
   no-preference에서만 더한다. 모든 움직임은 950ms 안에 끝나고 되풀이하지 않는다(design-notes §5).
 */
 
-/* 단계 도장 줄: 초록 길 위의 도장과 줄 끝의 단계 완주 메달 */
+/*
+  단계 도장 줄: 초록 길 위의 도장과 줄 끝의 단계 완주 메달. 도장 칸은 32px에서 14px까지 줄어들어 글이 많은 단계(예:
+  아홉 편)도 375px 화면의 한 줄에 들어간다. 카드가 넘치는 부분을 잘라 내므로 줄이 넘치면 메달이 사라진다.
+*/
 .path {
   position: relative;
-  display: inline-flex;
+  display: flex;
   gap: 16px;
-  align-items: flex-end;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
   margin: 6px 0 2px;
 }
 
 .stamps {
   position: relative;
-  display: inline-flex;
-  gap: 22px;
+  display: grid;
+  flex: 0 1 auto;
+  grid-auto-columns: minmax(14px, 32px);
+  grid-auto-flow: column;
+  column-gap: clamp(4px, 1.8vw, 22px);
   align-items: center;
-  padding-bottom: 11px;
+  min-width: 0;
 }
 
 .stamps::before {
   position: absolute;
-  top: 16px;
+  top: 50%;
   right: -20px;
   left: 0;
   height: 4px;
+  margin-top: -2px;
   border-radius: 2px;
   background: var(--thorp-brand-soft);
   content: '';
@@ -34,17 +43,18 @@
 .stamp {
   position: relative;
   display: block;
-  width: 32px;
-  height: 32px;
+  aspect-ratio: 1;
 }
 
 .stamp svg {
+  display: block;
   width: 100%;
   height: 100%;
 }
 
 .medal {
   display: block;
+  flex: none;
   width: 54px;
   height: 54px;
 }
@@ -164,6 +174,16 @@
 .goalText b {
   color: var(--thorp-foreground);
   font-weight: 750;
+}
+
+/* 닿을 수 없는 다음 레벨의 문장(FR-029). 점선 길과 함께 보인다. */
+.goalNote {
+  max-width: 260px;
+  margin: 4px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-wrap: balance;
 }
 
 .next {
@@ -291,18 +311,23 @@
   }
 }
 
+/* 좁은 화면(목업 720px 미만): 방금 얻은 메달·표장을 72px로 줄인다. */
 @media (max-width: 719px) {
-  .stamps {
-    gap: 12px;
+  .path {
+    gap: 10px;
   }
 
-  .stamp {
-    width: 28px;
-    height: 28px;
+  .hero,
+  .flip,
+  .roll {
+    width: 72px;
+    height: 72px;
   }
 
-  .stamps::before {
-    top: 14px;
+  .rollWindow {
+    height: 36px;
+    margin-top: -18px;
+    font-size: 36px;
   }
 }
 

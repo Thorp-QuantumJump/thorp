@@ -1,6 +1,7 @@
-import { useEffect, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import type { ContinueReading } from '@/types/learningMe'
+import { useRestoreFocusAfterConceal } from '../article/useRestoreFocusAfterConceal'
 import { articlePath } from '../learningPaths'
 import { continueLinkState } from './continueLink'
 import styles from './FloatingContinue.module.css'
@@ -21,6 +22,10 @@ interface FloatingContinueProps {
  * 모두 읽었으면 그리지 않는다. 기록을 받지 못했으면 부르는 쪽이 그리지 않는다. 깜빡이거나 맥동하지 않고, 나타날 때의
  * 짧은 움직임은 움직임 줄이기 설정이 아닐 때만 있다. 화면 크기를 재는 `IntersectionObserver`가 없는 환경에서는
  * 패널의 연결이 있으니 그리지 않는다.
+ *
+ * <p>로그인 상태를 다시 확인하는 동안에는 단추를 내리지 않고 자리를 둔 채 숨기며, 확인이 끝나면 숨기기 전의 초점을
+ * 되돌린다(research R33, FR-019). 단추가 있는 동안 문서의 아래쪽 스크롤 여백을 넓혀, 초점을 받은 요소가 단추 밑에
+ * 가려지지 않게 한다(목업 `scroll-padding-bottom`, WCAG 2.4.11).
  */
 export function FloatingContinue({
   continueReading,
@@ -31,11 +36,14 @@ export function FloatingContinue({
   const { kind, articleId, number, percent } = continueReading
   // 패널의 연결은 이어 읽을 글이 바뀌면 다시 그려지므로 그때 다시 잰다.
   const offScreen = useOffScreen(targetRef, articleId)
-  if (kind === 'ALL_DONE' || articleId === null || !offScreen || concealed) return null
+  const linkRef = useRef<HTMLAnchorElement>(null)
+  useRestoreFocusAfterConceal(linkRef, concealed)
+  if (kind === 'ALL_DONE' || articleId === null || !offScreen) return null
   const filled = kind === 'RESUME' ? Math.max(0, Math.min(100, percent ?? 0)) : 0
   return (
     <Link
-      className={styles.fab}
+      ref={linkRef}
+      className={concealed ? `${styles.fab} ${styles.concealed}` : styles.fab}
       to={articlePath(articleId)}
       state={continueLinkState(kind, linkState)}
     >
