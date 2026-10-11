@@ -371,9 +371,12 @@ class LearningCurriculumIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("게시된 글이 하나도 없어도 200이고 여섯 단계가 모두 준비 중이다")
+    @DisplayName("게시된 글이 하나도 없어도 200이고 여섯 단계가 모두 준비 중이다 (quickstart 2-1)")
     void emptyCurriculumIsOk() throws Exception {
         JsonNode curriculum = requestCurriculum();
+
+        // 공개 전 목록은 null이 아니라 빈 배열이다. 화면은 배열인지로 첫 단계 공개 전을 가른다(계약 §1).
+        assertThat(curriculum.get("preReleaseArticles").isArray()).isTrue();
 
         assertThat(curriculum.get("stages")).hasSize(6);
         assertThat(curriculum.get("stages"))
