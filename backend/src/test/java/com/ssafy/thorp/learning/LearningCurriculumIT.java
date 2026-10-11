@@ -40,7 +40,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 커리큘럼 조회(learning-public-api §1, quickstart 6-1·8-4·8-7·11-2 서버 부분, tasks T127).
+ * 커리큘럼 조회(learning-public-api §1, quickstart 2-1·6-1·8-4·8-7·11-2 서버 부분, tasks T127).
  *
  * <p>{@code curriculum-pre-release.json}은 실제 요청과 JSON 동치다. {@code curriculum.json}의 {@code
  * notices}는 지금 시각에 따라 달라지므로, 공개 안내를 보는 경우는 시계를 고정한 {@link LearningQueryService}를 이 테스트 안에서 만들어 부른다.
@@ -209,7 +209,7 @@ class LearningCurriculumIT extends IntegrationTestSupport {
 
     @Test
     @DisplayName(
-            "첫 단계 공개 전에는 curriculum-pre-release.json과 같다 — 9월 판 목록과 같은 글·순서, 모든 단계 준비 중 (quickstart 6-1)")
+            "첫 단계 공개 전에는 curriculum-pre-release.json과 같다 — 공개 중인 글만 판의 읽는 순서로, 모든 단계 준비 중 (quickstart 6-1)")
     void preReleaseMatchesExample() throws Exception {
         seedPreReleaseArticles();
 

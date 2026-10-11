@@ -639,8 +639,10 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                 .isEqualTo("LEARNING_ARTICLE_UNAVAILABLE");
         assertThat(publicCall("/learning/terms/max-drawdown", 404).at("/error/code").asText())
                 .isEqualTo("LEARNING_TERM_NOT_READY");
-        assertThat(publicCall("/learning/curriculum", 200).at("/data/preReleaseArticles"))
-                .isEmpty();
+        JsonNode preReleaseAfterUnpublish =
+                publicCall("/learning/curriculum", 200).at("/data/preReleaseArticles");
+        assertThat(preReleaseAfterUnpublish.isArray()).isTrue();
+        assertThat(preReleaseAfterUnpublish).isEmpty();
         JsonNode afterUnpublish = adminListItem(ARTICLE);
         assertThat(afterUnpublish.get("status").asText()).isEqualTo("DRAFT");
         assertThat(afterUnpublish.at("/lastPublication/action").asText()).isEqualTo("UNPUBLISH");
