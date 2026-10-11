@@ -127,7 +127,7 @@ GET /learning/curriculum
 }
 ```
 
-`releasedStageCount = 0`이면 화면은 9월 판 목록과 같은 모습으로 `preReleaseArticles`만 보인다(FR-031 "지금 모습 그대로"). 이 배열은 공개 중인 글(LEGACY·CURRENT 모두)을 판의 `readingOrder` 오름차순, 같으면 `articleId` 오름차순으로 담는다. 9월 판 목록 경로(§2)와 같은 글·같은 순서다. 이때 `stages[].previousEditionArticles`는 비어 있다.
+`releasedStageCount = 0`이면 화면은 9월 판 목록과 같은 모습으로 `preReleaseArticles`만 보인다(FR-031 "지금 모습 그대로"). 이 배열은 공개 중인 글(LEGACY·CURRENT 모두)을 판의 `readingOrder` 오름차순, 같으면 `articleId` 오름차순으로 담는다. 이때 `stages[].previousEditionArticles`는 비어 있다.
 
 **게시된 글이 하나도 없어도 200이다.** 빈 목록은 정상 화면이다(spec Edge Cases). 서버가 응답을 만들지 못했으면 5xx이며 빈 배열로 대신하지 않는다(원칙 VI).
 

@@ -669,7 +669,7 @@ class LearningRepositoryTest extends RepositoryTestSupport {
     }
 
     @Test
-    @DisplayName("CURRENT 판이 게시 중인 글도 공개 글 목록에 든다 (017 글 열거가 쓰는 조회)")
+    @DisplayName("CURRENT 판이 게시 중인 글도 공개 글 목록에 든다 (017 글 열거가 쓸 조회)")
     void publishedOrderedIncludesCurrentEdition() {
         long id = insertPublishedRevision(COMPLETE_V2_SNAPSHOT);
 
