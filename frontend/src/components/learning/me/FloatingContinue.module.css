@@ -21,9 +21,20 @@
   text-decoration: none;
 }
 
+/* 키보드 초점은 2px 초록 외곽선이다(design-notes §6). 단추 바깥 어두운 바탕 위에 놓인다. */
 .fab:focus-visible {
-  outline: 2px solid var(--thorp-foreground);
+  outline: 2px solid var(--thorp-brand-soft);
   outline-offset: 3px;
+}
+
+/* 로그인 상태를 다시 확인하는 동안: 자리를 둔 채 보이지 않게만 한다(research R33). */
+.concealed {
+  visibility: hidden;
+}
+
+/* 단추가 있는 동안 초점을 받은 요소가 단추 밑에 가려지지 않게 아래 스크롤 여백을 둔다(목업 88px). */
+:global(html):has(.fab) {
+  scroll-padding-bottom: 88px;
 }
 
 .fab svg {
@@ -53,10 +64,13 @@
   }
 }
 
+/* 좁은 화면에서는 양옆 16px을 둔 가로 막대다(목업 720px 미만 .fab). */
 @media (max-width: 719px) {
   .fab {
     right: 16px;
     bottom: 16px;
+    left: 16px;
+    justify-content: center;
   }
 }
 

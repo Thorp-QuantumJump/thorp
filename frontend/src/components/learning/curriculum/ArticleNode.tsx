@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import type { CurriculumArticle } from '@/types/learning'
 import { articlePath } from '../learningPaths'
 import { ArticleStamp } from '../me/ArticleStamp'
-import { continueLinkState } from '../me/continueLink'
 import { roadKind, stampState, type ArticleProgress } from './articleProgress'
 import { roadPointProps } from './stageAnchors'
 import { ChipRow, ProgressChip, ReadingMinutes, TermCount } from './StatusChips'
@@ -33,13 +32,14 @@ const OFFSETS = [0, 64, 96, 64]
  * <p>카드는 번호·제목·질문·상태·예상 읽기 시간·용어 수를 늘 보인다. 상태를 모르면 상태 글자를 두지 않고 도장도 중립
  * 모양이다. 어느 글도 잠그지 않으며 자물쇠를 두지 않는다(FR-023, FR-031).
  *
- * <p>지금 이어 읽을 글(`current`)은 이 화면에서 빛나는 곳 하나다. 읽는 중이면 그 글을 열 때 '이어서 읽기'와 같이
- * 기록된 위치로 옮기도록 navigation state `learningResume`을 싣는다(data-model §15).
+ * <p>지금 이어 읽을 글(`current`)은 이 화면에서 빛나는 곳 하나다. 카드 뒤의 빛과 '이어서 읽기 →' 글자는 그 글이 다음에
+ * 읽을 글이라는 표시일 뿐이고, 카드를 누르면 다른 글처럼 맨 위에서 연다. 목록에서 '읽는 중' 글을 열면 맨 위에서 열고
+ * '62%까지 읽었습니다 · 이어서 읽기' 한 줄을 보이기 때문이다(FR-020, data-model §15). 빛과 글자는 나의 학습 상태
+ * 표시라 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(`data-learner-mark`, research R33).
  */
 export function ArticleNode({ article, stageNumber, index, progress, current = false, linkState }: ArticleNodeProps) {
   const state = stampState(progress)
   const reading = progress?.state === 'reading'
-  const to = current && reading ? continueLinkState('RESUME', linkState) : linkState
   const stamp = (size: number, className: string) => (
     <ArticleStamp
       className={className}
@@ -57,7 +57,7 @@ export function ArticleNode({ article, stageNumber, index, progress, current = f
 
   return (
     <li className={styles.item} style={{ ['--x' as string]: `${OFFSETS[index % OFFSETS.length]}px` }}>
-      <Link className={current ? `${styles.stop} ${styles.current}` : styles.stop} to={articlePath(article.articleId)} state={to}>
+      <Link className={styles.stop} to={articlePath(article.articleId)} state={linkState}>
         {/* 같은 도장을 넓은 화면(48px)과 좁은 화면(40px) 크기로 따로 그린다. 줄이면 상태를 나르는 선이 가늘어진다. */}
         <span
           className={styles.node}
@@ -69,6 +69,7 @@ export function ArticleNode({ article, stageNumber, index, progress, current = f
           {stamp(40, styles.narrow)}
         </span>
         <span className={styles.card}>
+          {current ? <span className={styles.glow} data-learner-mark="" aria-hidden="true" /> : null}
           <span className={styles.main}>
             <span className={styles.number}>{article.number}</span>
             <span className={styles.title}>{article.title}</span>

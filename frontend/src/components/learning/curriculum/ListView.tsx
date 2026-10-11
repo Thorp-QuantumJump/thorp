@@ -350,7 +350,7 @@ function GroupMark({ stage, tracked }: { stage: StageView; tracked: boolean }) {
   const preparing = stage.status !== 'OPEN'
   const kind = preparing ? 'preparing' : tracked ? 'open' : 'neutral'
   return (
-    <span className={styles.groupMark} data-kind={kind}>
+    <span className={styles.groupMark} data-kind={kind} data-learner-mark={kind === 'open' ? '' : undefined}>
       <svg viewBox="0 0 24 24" focusable="false">
         {kind === 'neutral' ? (
           <circle cx="12" cy="12" r="12" />

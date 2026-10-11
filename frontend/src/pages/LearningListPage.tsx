@@ -18,6 +18,8 @@ import { articlePath, stageNumberFromHash } from '@/components/learning/learning
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { FloatingContinue } from '@/components/learning/me/FloatingContinue'
 import { GuestSample } from '@/components/learning/me/GuestSample'
+import { earnedStageNumbers } from '@/components/learning/me/meCopy'
+import { ReloginNotice } from '@/components/learning/me/ReloginNotice'
 import { StageStampWell } from '@/components/learning/me/StageStampWell'
 import { SummaryPanel } from '@/components/learning/me/SummaryPanel'
 import { useLearnerOverview, type OverviewState } from '@/components/learning/me/useLearnerOverview'
@@ -206,6 +208,8 @@ function ReleasedCurriculum({
   const learner = overview.status === 'loaded' ? overview.overview : null
   const progress = useMemo(() => (learner ? progressMapOf(learner.articles) : undefined), [learner])
   const stageCounts = useMemo(() => (learner ? stageCountsOf(learner.stages) : undefined), [learner])
+  // 단계 완주 메달은 배지를 그린다. 배지를 받은 뒤 그 단계에 새 글이 더해져도 메달은 그대로다(US6 시나리오 8).
+  const earnedStages = useMemo(() => (learner ? earnedStageNumbers(learner.badges) : undefined), [learner])
   const continueReading = learner?.continueReading
   const currentArticleId = continueReading && continueReading.kind !== 'ALL_DONE' ? continueReading.articleId : null
 
@@ -227,8 +231,13 @@ function ReleasedCurriculum({
 
   return (
     <>
+      {/*
+        기록 자리: 비로그인은 견본, 로그인이 만료된 동안은 재로그인 안내(research R33 `expired`), 로그인은 요약 패널이다.
+      */}
       {auth === 'anonymous' ? (
         <GuestSample place="list" />
+      ) : auth === 'expired' ? (
+        <ReloginNotice />
       ) : (
         <SummaryPanel
           state={overview}
@@ -265,7 +274,14 @@ function ReleasedCurriculum({
               stageCounts
                 ? (stage) => {
                     const count = stageCounts.get(stage.number)
-                    return count ? <StageStampWell stage={stage} count={count} progress={progress} /> : undefined
+                    return count ? (
+                      <StageStampWell
+                        stage={stage}
+                        count={count}
+                        progress={progress}
+                        badgeEarned={count.completed || (earnedStages?.has(stage.number) ?? false)}
+                      />
+                    ) : undefined
                   }
                 : undefined
             }

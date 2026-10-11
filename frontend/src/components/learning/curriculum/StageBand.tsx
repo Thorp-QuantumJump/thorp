@@ -79,7 +79,12 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
 
   return (
     <div className={styles.band} style={style} {...stageBandProps}>
-      <span className={markerState === 'unread' ? `${styles.marker} ${styles.markerTracked}` : styles.marker} aria-hidden="true">
+      {/* 나의 학습 상태로 그린 표식(실선 칸·체크)은 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(research R33). */}
+      <span
+        className={markerState === 'unread' ? `${styles.marker} ${styles.markerTracked}` : styles.marker}
+        data-learner-mark={markerState === 'neutral' ? undefined : ''}
+        aria-hidden="true"
+      >
         <Marker state={markerState} stageNumber={stage.number} />
         {markerState === 'done' ? null : <span className={styles.markerNumber}>{stage.number}</span>}
       </span>

@@ -21,11 +21,17 @@ import styles from './BadgeFamilies.module.css'
  * '나의 학습'의 갈래별 배지(013 FR-024, design-notes §3.3, 목업 `famBlock`).
  *
  * <p>갈래마다 사다리 모양으로 받은 배지(금속·에나멜, '받음 날짜')와 아직 받지 않은 배지(실선 회색, 기준과 'n/m')를 늘어놓는다.
- * 지금 공개된 콘텐츠로 받을 수 없는 준비 중 기준은 작은 점선 실루엣 묶음과 한 줄로 모으고, 받을 수 있게 되는 때의 문구가
- * 같은 것끼리만 묶는다. 단계 완주 배지 여섯 개만은 단계와 짝을 이루도록 모두 낱장이다. 기준은 모두 보이고 숨긴 배지가
+ * 수를 세는 갈래(레벨·읽은 글·첫 답 정답·모두 맞힘·익힌 용어)의 준비 중 기준은 작은 점선 실루엣 묶음과 한 줄로 모으고,
+ * 받을 수 있게 되는 때의 문구가 같은 것끼리만 묶는다. 이 갈래의 배지 이름은 기준을 그대로 말한다('읽은 글 10편'). 단계
+ * 완주 여섯 개와 특별 갈래(끈기·탐험)는 낱장이다. 단계 완주는 단계와 짝을 이루고, 특별 배지는 이름만으로 기준을 알 수
+ * 없어 준비 중에도 기준 문장이 보여야 하기 때문이다(FR-024, 목업 `FAMS`의 특별 갈래). 기준은 모두 공개하고 숨긴 배지가
  * 없다. 7일 안에 받은 배지에는 '새'가 붙는다.
  *
- * <p>메달 그림은 보조 기술에 읽히지 않는다. 배지 이름·상태·기준·사유 글자가 원본이다.
+ * <p>메달 그림은 보조 기술에 읽히지 않는다. 배지 이름·상태·기준·사유 글자가 원본이다. 받은 배지의 기준 문장은 화면에서는
+ * 이름에 맡기고 화면 낭독기에만 읽힌다(FR-019 '배지는 이름과 기준이 글자로 있어').
+ *
+ * <p>이 화면의 메달에는 지나가는 광택을 주지 않는다. 광택과 빛은 완료 카드의 '방금 얻은 것'에만 한 번 준다(design-notes
+ * §5, §2 화려함의 상한).
  */
 export function BadgeFamilies({ badges }: { badges: readonly BadgeView[] }) {
   const families = new Map<BadgeFamily, BadgeView[]>()
@@ -44,7 +50,7 @@ export function BadgeFamilies({ badges }: { badges: readonly BadgeView[] }) {
 
 function Family({ family, badges }: { family: BadgeFamily; badges: BadgeView[] }) {
   const headingId = useId()
-  const singles = family === 'STAGE'
+  const singles = family === 'STAGE' || family === 'SPECIAL'
   const cards = badges.filter((badge) => singles || badge.status !== 'PREPARING')
   const preparing = singles ? [] : badges.filter((badge) => badge.status === 'PREPARING')
   const groups = groupPreparing(preparing)
@@ -52,31 +58,21 @@ function Family({ family, badges }: { family: BadgeFamily; badges: BadgeView[] }
 
   return (
     <section
-      className={singles ? `${styles.family} ${styles.wide}` : styles.family}
+      className={family === 'STAGE' ? `${styles.family} ${styles.wide}` : styles.family}
       aria-labelledby={headingId}
     >
       <h3 id={headingId} className={styles.familyName}>
         {familyName(family)}
       </h3>
       {cards.length > 0 ? (
-        <ul
-          className={
-            singles || family === 'SPECIAL' ? `${styles.ladder} ${styles.loose}` : styles.ladder
-          }
-        >
+        <ul className={singles ? `${styles.ladder} ${styles.loose}` : styles.ladder}>
           {cards.map((badge, index) => (
             <BadgeCard
               key={badge.badgeKey}
               badge={badge}
               tier={tierOf(badge)}
               // 사다리를 잇는 작은 길: 받은 배지로 오는 길은 초록, 그 밖은 회색. 낱장 갈래는 잇지 않는다.
-              link={
-                singles || family === 'SPECIAL' || index === 0
-                  ? null
-                  : badge.status === 'EARNED'
-                    ? 'earned'
-                    : 'open'
-              }
+              link={singles || index === 0 ? null : badge.status === 'EARNED' ? 'earned' : 'open'}
             />
           ))}
         </ul>
@@ -139,7 +135,6 @@ function BadgeCard({
       level={levelOf(badge)}
       stageNumber={badge.stageNumber ?? undefined}
       special={badge.badgeKey === 'exploration' ? 'exploration' : 'persistence'}
-      shine={badge.isNew}
     />
   )
   const reason = state === 'preparing' ? preparingReasonText(badge) : null
@@ -172,7 +167,11 @@ function BadgeCard({
       <span className={styles.status}>
         <BadgeStatus badge={badge} />
       </span>
-      {state !== 'earned' ? <span className={styles.criterion}>{badge.criterion}</span> : null}
+      {state !== 'earned' ? (
+        <span className={styles.criterion}>{badge.criterion}</span>
+      ) : (
+        <span className="sr-only">{badge.criterion}</span>
+      )}
       {reason ? <span className={styles.criterion}>{reason}</span> : null}
     </li>
   )

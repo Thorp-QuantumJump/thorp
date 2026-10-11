@@ -25,6 +25,8 @@ type Snapshot = {
   state: OverviewState
   /** 마지막으로 끝난 요청이 어느 `refreshKey`의 것이었나 */
   settledFor: string | null
+  /** 마지막으로 성공한 요청이 어느 `refreshKey`의 것이었나. 다시 받다가 실패하면 앞 값이 남아 지금 키와 다르다 */
+  okFor: string | null
 }
 
 interface OverviewOptions {
@@ -79,13 +81,14 @@ export function useLearnerOverview({ settled, enabled, refreshKey = '' }: Overvi
             owner: forOwner,
             state: { status: 'loaded', overview: result.data },
             settledFor: forKey,
+            okFor: forKey,
           }
         }
         if (result.status === 'notRecordable')
-          return { owner: forOwner, state: { status: 'off' }, settledFor: forKey }
+          return { ...previous, state: { status: 'off' }, settledFor: forKey }
         // 다시 받다가 실패했으면 받아 둔 값을 지우지 않는다. 그 값은 여전히 이 사용자의 기록이다.
         if (previous.state.status === 'loaded') return { ...previous, settledFor: forKey }
-        return { owner: forOwner, state: { status: 'failed' }, settledFor: forKey }
+        return { ...previous, state: { status: 'failed' }, settledFor: forKey }
       })
     })
     return () => controller.abort()
@@ -94,10 +97,16 @@ export function useLearnerOverview({ settled, enabled, refreshKey = '' }: Overvi
   /** 사용자가 '다시 시도'를 눌렀다. */
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
 
+  const key = `${refreshKey}#${attempt}`
   return {
     state: current.state,
     /** 지금 `refreshKey`의 요청이 끝났는가(성공이든 실패든). 완료 순간의 알림이 다음 목표를 덧붙일지 기다리는 데 쓴다 */
-    settled: owner === null || current.settledFor === `${refreshKey}#${attempt}`,
+    settled: owner === null || current.settledFor === key,
+    /**
+     * 지금 `refreshKey`의 요청이 성공해 `loaded`가 그 응답인가. 다시 받다가 실패하면 앞 응답이 남아 있어도 거짓이다.
+     * 새 경험치를 반영하지 않은 앞 응답으로 다음 목표를 그리지 않기 위해서다
+     */
+    current: owner !== null && current.okFor === key,
     retry,
   }
 }
@@ -107,5 +116,6 @@ function initial(owner: string | null): Snapshot {
     owner,
     state: owner === null ? { status: 'off' } : { status: 'loading' },
     settledFor: null,
+    okFor: null,
   }
 }

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { fetchCurriculum, type CurriculumResult } from '@/api/learning'
 import { gainedNotice } from '@/components/learning/article/completionText'
+import { useRestoreFocusAfterConceal } from '@/components/learning/article/useRestoreFocusAfterConceal'
 import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
 import { stageCountsOf } from '@/components/learning/curriculum/articleProgress'
 import { ChangeLog } from '@/components/learning/curriculum/ChangeLog'
@@ -14,6 +15,7 @@ import { GainGrid } from '@/components/learning/me/GainGrid'
 import { GuestSample } from '@/components/learning/me/GuestSample'
 import { LevelCard } from '@/components/learning/me/LevelCard'
 import { QuietNotice } from '@/components/learning/me/QuietNotice'
+import { ReloginNotice } from '@/components/learning/me/ReloginNotice'
 import { StageStations } from '@/components/learning/me/StageStations'
 import { useLearnerOverview } from '@/components/learning/me/useLearnerOverview'
 import { stageColor } from '@/components/learning/stageColors'
@@ -33,7 +35,11 @@ type CurriculumState = { status: 'loading' } | CurriculumResult
  * 조용한 알림으로 한 번 읽힌다. '학습 초기화'는 이 화면에 두지 않는다(FR-025, 회원정보 화면).
  *
  * <p><b>비로그인 사용자</b>에게는 '로그인하면 학습 기록이 남습니다.' 한 줄·로그인 연결·견본 그림과 그 아래 '나의 학습에
- * 쌓이는 것' 세 칸을 보인다. 숫자·상태는 없다.
+ * 쌓이는 것' 세 칸을 보인다. 숫자·상태는 없다. 로그인이 만료된 동안은 비로그인처럼 기록을 보이지 않고, 한 줄 자리에
+ * 재로그인 안내를 둔다(research R33 `expired`).
+ *
+ * <p>로그인 상태를 다시 확인하는 동안에는 자리를 둔 채 숨기고, 확인이 끝나면 숨기기 전에 있던 초점을 되돌린다
+ * (research R33, FR-019).
  *
  * <p><b>첫 단계를 공개하기 전에는 배우기 목록으로 보낸다.</b> 나의 학습은 첫 단계를 공개할 때 켠다(FR-031, research R33).
  * 브라우저 저장소에 학습 기록을 쓰지 않는다.
@@ -64,6 +70,8 @@ export function LearningMePage() {
     curriculum.preReleaseArticles === null &&
     curriculum.releasedStageCount > 0
   const overview = useLearnerOverview({ settled, enabled: released })
+  const recordRef = useRef<HTMLDivElement>(null)
+  useRestoreFocusAfterConceal(recordRef, concealed)
 
   if (curriculum && !released) return <Navigate to={LEARN_PATH} replace />
 
@@ -91,11 +99,11 @@ export function LearningMePage() {
         ) : null}
 
         {curriculum && released ? (
-          <div className={concealed ? styles.concealed : undefined}>
+          <div ref={recordRef} className={concealed ? styles.concealed : undefined}>
             {settled.kind === 'anonymous' || settled.kind === 'expired' ? (
               <>
                 <div className={styles.guest}>
-                  <GuestSample place="me" />
+                  {settled.kind === 'expired' ? <ReloginNotice /> : <GuestSample place="me" />}
                 </div>
                 <GainGrid />
               </>

@@ -3,12 +3,13 @@ import { useId, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArticleNext, LearningReturnState } from '@/types/learning'
 import type { ContinueReading, LearnerOverview, LearningResumeState, StageProgress } from '@/types/learningMe'
-import { nextBadge, nextGoalSentence } from '../me/meCopy'
+import { earnedStageNumbers, nextBadge, nextGoalSentence } from '../me/meCopy'
 import { stageColor } from '../stageColors'
 import {
   expLabel,
   formatCompletedDate,
   gainedNotice,
+  newBadgesOf,
   reachedLevel,
   type GainedEntry,
 } from './completionText'
@@ -38,6 +39,11 @@ interface CompletionCardProps {
   overview?: LearnerOverview | null
   /** 이 화면에서 방금 완료했는가. 그러면 단계 도장 줄의 마지막 칸이 '방금 찍힌 도장'이고 움직임이 있다 */
   freshCompletion?: boolean
+  /**
+   * 레벨 길의 점이 옮겨 가는 움직임을 주는가. '나의 학습'이 늦게 와서 카드의 다른 움직임이 이미 끝났으면 주지 않는다.
+   * 완료 카드의 움직임은 한 장면으로 950ms 안에 끝나야 한다(design-notes §5)
+   */
+  animateGoal?: boolean
 }
 
 /**
@@ -69,15 +75,22 @@ export function CompletionCard({
   learningReturn,
   overview = null,
   freshCompletion = false,
+  animateGoal = true,
 }: CompletionCardProps) {
   const titleId = useId()
   const xpId = useId()
   const goalId = useId()
   const { stageNumber, completedCount, publishedCount, stageCompleted } = stageProgress
 
-  const badges = gained.flatMap((entry) =>
-    entry.gained.badges.map((badge) => ({ ...badge, receivedAt: entry.receivedAt })),
+  // 레벨이 오른 응답의 레벨 갈래 배지는 레벨 칸이 말하므로 새 배지에 넣지 않는다. 단계 완주 배지를 앞에 둔다. 이 카드의
+  // 핵심 장면이 단계 완주 메달에 색유리가 차는 순간이기 때문이다(design-notes §3.4).
+  const received = gained.flatMap((entry) =>
+    newBadgesOf(entry).map((badge) => ({ ...badge, receivedAt: entry.receivedAt })),
   )
+  const badges = [
+    ...received.filter((badge) => badge.family === 'STAGE'),
+    ...received.filter((badge) => badge.family !== 'STAGE'),
+  ]
   const level = reachedLevel(gained)
   const exp = gained.flatMap((entry) => entry.gained.exp)
   const expTotal = gained.reduce((sum, entry) => sum + entry.gained.expTotal, 0)
@@ -87,7 +100,12 @@ export function CompletionCard({
   const upcoming = overview ? nextBadge(overview.badges) : null
   // 레벨 길의 점이 옮겨 가기 전 자리: 지금 경험치에서 이 화면에서 받은 경험치를 뺀다.
   const expBefore = overview ? Math.max(0, overview.level.exp - expTotal) : 0
-  const levelGoal = overview ? <LevelGoal level={overview.level} expBefore={expBefore} moving={expTotal > 0} /> : null
+  const levelGoal = overview ? (
+    <LevelGoal level={overview.level} expBefore={expBefore} moving={animateGoal && expTotal > 0} />
+  ) : null
+  // 단계 완주 메달은 배지를 그린다. 배지를 받은 뒤 그 단계에 새 글이 게시되어도 메달은 받은 모습 그대로다(US6 시나리오 8).
+  const stageBadgeEarned =
+    stageCompleted || (overview !== null && earnedStageNumbers(overview.badges).has(stageNumber))
   // 레벨 칸이나 새 배지 칸이 없으면 다음 목표를 따로 한 칸에 둔다.
   const goalColumn = overview !== null && (level === null || (badges.length === 0 && upcoming !== null))
   const glow = { ['--stage' as string]: stageColor(stageNumber) } as CSSProperties
@@ -99,7 +117,11 @@ export function CompletionCard({
           완료 · {formatCompletedDate(completedAt)}
         </h2>
         <div className={styles.headScene}>
-          <StageStampPath stageProgress={stageProgress} freshStamp={freshCompletion} />
+          <StageStampPath
+            stageProgress={stageProgress}
+            freshStamp={freshCompletion}
+            badgeEarned={stageBadgeEarned}
+          />
           <p className={styles.progress}>
             {stageCompleted
               ? `${stageNumber}단계 · 완주 · ${publishedCount}편`
@@ -116,7 +138,7 @@ export function CompletionCard({
                 <span className={styles.label}>새 배지</span>
                 {badges.map((badge, index) => (
                   <div key={badge.badgeKey} className={styles.gainedItem}>
-                    {/* 메달 그림은 첫 배지에만 둔다. 이 카드에서 빛나는 곳은 두 곳까지다(design-notes §2). */}
+                    {/* 메달 그림은 첫 배지(단계 완주가 있으면 그것)에만 둔다. 이 카드에서 빛나는 곳은 두 곳까지다(design-notes §2). */}
                     {index === 0 ? <BadgeHero badge={badge} overviewBadges={overview?.badges ?? null} /> : null}
                     <b className={styles.big}>{badge.name}</b>
                     <ReceivedRow receivedAt={badge.receivedAt} />

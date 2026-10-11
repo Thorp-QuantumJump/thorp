@@ -162,3 +162,46 @@ describe('글 도장의 B13 변형', () => {
     ).toMatch(/animation/)
   })
 })
+
+describe('레벨 길의 글자', () => {
+  it('문턱이 앞쪽에 몰리면 가까운 이정표의 글자를 빼서 겹치지 않게 한다', () => {
+    const thresholds = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600]
+    const level = {
+      ...learnerOverview.level,
+      current: 2,
+      exp: 150,
+      visibleMax: 9,
+      unreachableFrom: 10,
+      unreachableReason: 'MORE_ARTICLES',
+      milestones: thresholds.map((threshold, index) => ({ level: index + 1, threshold })),
+    }
+    const { container } = render(<LevelPath level={level} />)
+
+    const labels = container.textContent?.match(/레벨 \d/g) ?? []
+    // 이정표는 아홉 개이고, 글자는 겹치지 않는 것만 남는다. 가장 높은 레벨의 글자는 늘 있다.
+    expect(container.querySelectorAll('svg[class*="flagArt"]')).toHaveLength(9)
+    expect(labels.length).toBeLessThan(9)
+    expect(labels).toContain('레벨 9')
+    expect(
+      cssMediaDeclarations(
+        'components/learning/me/LevelPath.module.css',
+        '(max-width: 719px)',
+        '.firstFlag .flagLabel',
+      ),
+    ).toMatch(/display:\s*none/)
+  })
+
+  it('완료 카드의 길은 지금 닿을 수 없는 레벨에 이정표와 글자를 두지 않는다(FR-029)', () => {
+    const level = {
+      ...learnerOverview.level,
+      current: 3,
+      exp: 420,
+      visibleMax: 3,
+      unreachableFrom: 4,
+    }
+    const { container } = render(<LevelPathMove level={level} expBefore={390} moving={false} />)
+
+    expect(container.textContent).not.toContain('레벨 4')
+    expect(container.querySelector('[stroke-dasharray="6 6"]')).not.toBeNull()
+  })
+})

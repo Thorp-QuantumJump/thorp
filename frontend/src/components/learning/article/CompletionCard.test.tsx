@@ -330,3 +330,96 @@ describe('CompletionCard — 그림 장면과 다음 목표', () => {
     expect(cssDeclarations(css, '.rollStrip')).not.toMatch(/animation/)
   })
 })
+
+describe('CompletionCard — 레벨 갈래 배지와 단계 완주 메달', () => {
+  it('레벨이 오른 응답의 레벨 갈래 배지는 새 배지로 다시 말하지 않고, 큰 그림은 단계 완주 배지가 맡는다', () => {
+    const entry: GainedEntry = {
+      gained: {
+        ...completionResult.gained,
+        badges: [
+          { badgeKey: 'level-3', family: 'LEVEL', name: '레벨 3' },
+          { badgeKey: 'read-5', family: 'READ', name: '읽은 글 5편' },
+          { badgeKey: 'stage-swell-and-risk', family: 'STAGE', name: '2단계 완주' },
+        ],
+      },
+      receivedAt: '2026-11-20T03:10:00Z',
+      stageProgress: completionResult.stageProgress,
+    }
+    renderCard({ gained: [entry], stageProgress: completionResult.stageProgress })
+
+    const badgeColumn = screen.getByText('새 배지').parentElement!
+    expect(badgeColumn.textContent).not.toContain('레벨 3')
+    const items = badgeColumn.querySelectorAll('b')
+    expect([...items].map((item) => item.textContent)).toEqual(['2단계 완주', '읽은 글 5편'])
+    expect(badgeColumn.querySelector('[data-medal="stage-earned"]')).not.toBeNull()
+    expect(
+      screen.getByText(
+        '2단계 글 4편을 모두 읽었습니다. 새 배지: 읽은 글 5편. 새 배지: 2단계 완주. 레벨 3이 되었습니다.',
+      ),
+    ).not.toBeNull()
+  })
+
+  it('단계 완주 배지를 받은 단계면 지금 다 읽지 않았어도 메달은 받은 모습이다(US6 시나리오 8)', () => {
+    const overview = {
+      ...learnerOverview,
+      badges: learnerOverview.badges.map((badge) =>
+        badge.badgeKey === 'stage-swell-and-risk'
+          ? { ...badge, status: 'EARNED', earnedAt: '2026-11-18T00:00:00Z', progress: null }
+          : badge,
+      ),
+    }
+    renderCard({
+      stageProgress: { stageNumber: 2, completedCount: 4, publishedCount: 5, stageCompleted: false },
+      overview,
+    })
+
+    const path = document.querySelector('[data-stage-path="2"]')!
+    expect(path.querySelector('[data-medal="stage-earned"]')).not.toBeNull()
+    expect(screen.getByText('2단계 · 5편 중 4편 읽음')).not.toBeNull()
+  })
+
+  it('다음 레벨에 지금 닿을 수 없으면 레벨 길 아래에 FR-029 문장을 두고 다음 목표로 말하지 않는다', () => {
+    const answered: GainedEntry = {
+      gained: { exp: [{ kind: 'ANSWER_CORRECT', points: 30 }], expTotal: 30, badges: [], levelBefore: 3, levelAfter: 3 },
+      receivedAt: '2026-11-20T03:12:00Z',
+      stageProgress: null,
+    }
+    renderCard({
+      gained: [answered],
+      overview: { ...learnerOverview, level: { ...learnerOverview.level, current: 3, visibleMax: 3, unreachableFrom: 4 } },
+    })
+
+    const goal = screen.getByRole('group', { name: '다음 목표' })
+    expect(goal.textContent).toContain('레벨 4부터는 단계가 더 공개된 뒤 닿을 수 있습니다.')
+    expect(goal.querySelector('svg')?.textContent).not.toContain('레벨 4')
+    expect(screen.getByText('다음 배지(모두 맞힘 1편)까지 1편입니다.', { exact: false }).textContent).not.toContain(
+      '다음 레벨까지 50,',
+    )
+  })
+
+  it("'나의 학습'이 늦게 오면 레벨 길의 점을 옮기지 않는다(design-notes §5)", () => {
+    const answered: GainedEntry = {
+      gained: { exp: [{ kind: 'ANSWER_CORRECT', points: 30 }], expTotal: 30, badges: [], levelBefore: 2, levelAfter: 2 },
+      receivedAt: '2026-11-20T03:12:00Z',
+      stageProgress: null,
+    }
+    const { unmount } = renderCard({ gained: [answered], overview: learnerOverview })
+    expect(document.querySelector('[class*="moving"]')).not.toBeNull()
+    unmount()
+
+    renderCard({ gained: [answered], overview: learnerOverview, animateGoal: false })
+    expect(document.querySelector('[class*="moving"]')).toBeNull()
+  })
+
+  it('좁은 화면에서는 칸을 한 줄씩 쌓고 큰 그림을 72px로 줄이며 도장 칸이 한 줄에 들어가게 줄어든다(design-notes §6)', () => {
+    expect(
+      cssMediaDeclarations('components/learning/article/CompletionCard.module.css', '(max-width: 719px)', '.expColumn'),
+    ).toMatch(/flex:\s*1 1 100%/)
+    expect(
+      cssMediaDeclarations('components/learning/article/CompletionScene.module.css', '(max-width: 719px)', '.roll'),
+    ).toMatch(/width:\s*72px/)
+    expect(cssDeclarations('components/learning/article/CompletionScene.module.css', '.stamps')).toMatch(
+      /grid-auto-columns:\s*minmax\(14px, 32px\)/,
+    )
+  })
+})

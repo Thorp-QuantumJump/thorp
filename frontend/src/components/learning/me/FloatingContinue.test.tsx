@@ -1,6 +1,8 @@
 import { act, render, screen } from '@testing-library/react'
 import { useRef } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { allDone, learnerOverview } from '@/test/learningMeFixtures'
 import type { ContinueReading } from '@/types/learningMe'
@@ -60,6 +62,32 @@ function Harness({
   )
 }
 
+const CSS = 'components/learning/me/FloatingContinue.module.css'
+
+function RoutedHarness() {
+  const ref = useRef<HTMLAnchorElement>(null)
+  return (
+    <>
+      <a ref={ref} href="#panel">
+        패널의 이어서 읽기
+      </a>
+      <FloatingContinue
+        continueReading={learnerOverview.continueReading}
+        targetRef={ref}
+        concealed={false}
+      />
+    </>
+  )
+}
+
+function StateProbe() {
+  const location = useLocation()
+  const state = location.state as { learningResume?: boolean } | null
+  return (
+    <p data-testid="state">{`${location.pathname} ${state?.learningResume ? 'resume' : ''}`}</p>
+  )
+}
+
 describe('FloatingContinue', () => {
   beforeEach(() => {
     FakeIntersectionObserver.instances = []
@@ -90,10 +118,42 @@ describe('FloatingContinue', () => {
     expect(screen.getAllByRole('link')).toHaveLength(1)
   })
 
-  it('로그인 상태를 다시 확인하는 동안에는 숨긴다', () => {
-    render(<Harness continueReading={learnerOverview.continueReading} concealed />)
+  it('로그인 상태를 다시 확인하는 동안에는 내리지 않고 숨겼다가 확인이 끝나면 그대로 보인다(R33)', () => {
+    const { rerender } = render(<Harness continueReading={learnerOverview.continueReading} />)
     report(false)
-    expect(screen.queryByRole('link', { name: /이어서 읽기 2-1/ })).toBeNull()
+    const link = screen.getByRole('link', { name: '이어서 읽기 2-1' })
+
+    rerender(<Harness continueReading={learnerOverview.continueReading} concealed />)
+    expect(screen.getByRole('link', { name: '이어서 읽기 2-1', hidden: true })).toBe(link)
+    expect(link.className).toMatch(/concealed/)
+    expect(cssDeclarations(CSS, '.concealed')).toMatch(/visibility:\s*hidden/)
+
+    rerender(<Harness continueReading={learnerOverview.continueReading} />)
+    expect(screen.getByRole('link', { name: '이어서 읽기 2-1' })).toBe(link)
+    expect(link.className).not.toMatch(/concealed/)
+  })
+
+  it('읽는 중 글이면 기록된 위치로 옮기도록 learningResume을 싣는다', async () => {
+    render(
+      <MemoryRouter initialEntries={['/learn']}>
+        <Routes>
+          <Route path="/learn" element={<RoutedHarness />} />
+          <Route path="*" element={<StateProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    report(false)
+
+    await userEvent.click(screen.getByRole('link', { name: '이어서 읽기 2-1' }))
+    expect(screen.getByTestId('state').textContent).toBe('/learn/tide-reading resume')
+  })
+
+  it('초점 외곽선은 초록이고, 단추가 있는 동안 아래 스크롤 여백을 두며, 좁은 화면에서는 가로 막대다', () => {
+    expect(cssDeclarations(CSS, '.fab:focus-visible')).toMatch(
+      /outline:\s*2px solid var\(--thorp-brand-soft\)/,
+    )
+    expect(cssDeclarations(CSS, ':global(html):has(.fab)')).toMatch(/scroll-padding-bottom:\s*88px/)
+    expect(cssMediaDeclarations(CSS, '(max-width: 719px)', '.fab')).toMatch(/left:\s*16px/)
   })
 
   it('화면 위치를 잴 수 없으면 그리지 않는다', () => {

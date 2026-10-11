@@ -219,3 +219,67 @@ describe('SummaryPanel', () => {
     expect(document.activeElement).toBe(document.body)
   })
 })
+
+describe('SummaryPanel — 로그인 상태와 비는 자리', () => {
+  beforeEach(() => {
+    meMocks.fetchLearningMe.mockReset()
+  })
+
+  it('error 동안에도 숨기기만 하고 같은 userId로 확인되면 다시 부르지 않는다(R33)', async () => {
+    loaded()
+    const { rerender } = render(tree(signedIn))
+    const panel = await screen.findByRole('region', { name: '나의 학습' })
+
+    rerender(tree({ ...anonymousAuthContext, status: 'error', user: null }))
+    expect(panel.className).toMatch(/concealed/)
+    rerender(tree(signedIn))
+    expect(screen.getByRole('region', { name: '나의 학습' })).toBe(panel)
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
+  })
+
+  it('로그아웃을 시작하면 그 즉시 패널을 버린다(014 FR-009)', async () => {
+    loaded()
+    const { rerender } = render(tree(signedIn))
+    await screen.findByRole('region', { name: '나의 학습' })
+
+    rerender(tree({ ...anonymousAuthContext, status: 'logoutUnconfirmed', user: null }))
+    expect(screen.queryByRole('region', { name: '나의 학습', hidden: true })).toBeNull()
+  })
+
+  it('확인이 끝나면 숨기기 전에 패널 안에 있던 초점을 되돌린다(FR-019)', async () => {
+    loaded()
+    const { rerender } = render(tree(signedIn))
+    const more = await screen.findByRole('link', { name: '모두 보기' })
+    more.focus()
+
+    rerender(tree(checking))
+    // 숨긴 요소의 초점은 브라우저가 문서 몸통으로 옮긴다. jsdom은 옮기지 않으므로 같은 일을 한다.
+    more.blur()
+    rerender(tree(signedIn))
+    expect(document.activeElement).toBe(more)
+  })
+
+  it("공개된 글이 0편이면 '이어서 읽기' 칸을 두지 않는다(계약 §1)", async () => {
+    loaded({
+      ...learnerOverview,
+      counts: { ...learnerOverview.counts, completedArticles: 0, publishedArticles: 0 },
+      continueReading: { ...allDone, moreStagesPreparing: true },
+    })
+    render(tree(signedIn))
+
+    const panel = await screen.findByRole('region', { name: '나의 학습' })
+    expect(panel.textContent).not.toContain('이어서 읽기')
+    expect(panel.textContent).not.toContain('모두 읽었습니다')
+  })
+
+  it('다음 레벨에 지금 닿을 수 없으면 FR-029 문장을 덧붙인다(FR-031)', async () => {
+    loaded({
+      ...learnerOverview,
+      level: { ...learnerOverview.level, current: 3, visibleMax: 3, unreachableFrom: 4 },
+    })
+    render(tree(signedIn))
+
+    const panel = await screen.findByRole('region', { name: '나의 학습' })
+    expect(panel.textContent).toContain('레벨 4부터는 단계가 더 공개된 뒤 닿을 수 있습니다.')
+  })
+})

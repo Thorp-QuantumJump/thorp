@@ -67,6 +67,21 @@ export function stageCompletedSentence(entry: GainedEntry): string | null {
     : null
 }
 
+/** 새로 일어난 일(경험치·배지·레벨)이 있는 `gained`인가. */
+export function hasGainedNews(gained: Gained): boolean {
+  return gained.exp.length > 0 || gained.badges.length > 0 || gained.levelAfter > gained.levelBefore
+}
+
+/**
+ * 응답 하나에서 '새 배지'로 말할 배지. 레벨이 오른 응답에는 그 레벨의 레벨 갈래 배지가 함께 온다(서버는 배지 목록을
+ * 레벨 갈래부터 정산한다, data-model §12-4). 레벨은 '레벨 3이 되었습니다'로 따로 말하므로 그 응답의 레벨 갈래 배지는
+ * 새 배지로 다시 말하지 않는다(design-notes §7 완료 카드 상태 문장, §3.1).
+ */
+export function newBadgesOf(entry: Pick<GainedEntry, 'gained'>): GainedEntry['gained']['badges'] {
+  const { badges, levelBefore, levelAfter } = entry.gained
+  return levelAfter > levelBefore ? badges.filter((badge) => badge.family !== 'LEVEL') : badges
+}
+
 /** 받은 것 가운데 레벨이 오른 마지막 응답. 오르지 않았으면 `null`이다. */
 export function reachedLevel(entries: readonly GainedEntry[]): GainedEntry | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
@@ -88,7 +103,7 @@ export function gainedNotice(entries: readonly GainedEntry[]): string {
   for (const entry of entries) {
     const stage = stageCompletedSentence(entry)
     if (stage) parts.push(stage)
-    for (const badge of entry.gained.badges) parts.push(`새 배지: ${badge.name}.`)
+    for (const badge of newBadgesOf(entry)) parts.push(`새 배지: ${badge.name}.`)
   }
   const level = reachedLevel(entries)?.gained.levelAfter
   if (level !== undefined) parts.push(`레벨 ${level}${subjectParticle(level)} 되었습니다.`)

@@ -145,6 +145,14 @@
   color: var(--thorp-foreground);
 }
 
+/* 닿을 수 없는 다음 레벨의 문장(FR-029) */
+.note {
+  margin: 2px 0 0;
+  color: var(--thorp-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
 .caption {
   color: var(--thorp-muted);
   font-size: 0.8125rem;

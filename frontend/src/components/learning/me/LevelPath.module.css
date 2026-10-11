@@ -242,6 +242,11 @@
   .flagLabel small {
     display: none;
   }
+
+  /* 좁은 화면에서는 레벨 1 글자를 뺀다. 레벨 2 글자와 겹친다(목업 720px 미만 .m-flag.f1 .ml). */
+  .firstFlag .flagLabel {
+    display: none;
+  }
 }
 
 @media (forced-colors: active) {

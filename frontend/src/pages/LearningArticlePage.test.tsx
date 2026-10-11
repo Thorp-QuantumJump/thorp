@@ -837,6 +837,50 @@ describe('LearningArticlePage — 로그인 기록', () => {
     expect(within(card).getByText('다음 배지')).not.toBeNull()
   })
 
+  it("다시 연 완료 글에서는 '나의 학습'을 부르지 않는다. 그 요청의 정산을 보일 자리가 없다(T204)", async () => {
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
+    meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: learnerOverview })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+
+    expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
+  })
+
+  it("완료 뒤 '나의 학습' 요청의 정산으로 생긴 배지도 완료 카드와 알림에 더한다(FR-030)", async () => {
+    meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+    meMocks.fetchLearningMe.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...learnerOverview,
+        gained: {
+          exp: [],
+          expTotal: 0,
+          badges: [{ badgeKey: 'persistence', family: 'SPECIAL', name: '끈기' }],
+          levelBefore: 3,
+          levelAfter: 3,
+        },
+      },
+    })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    reachArticleEnd()
+
+    const notice =
+      '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다. 새 배지: 끈기. ' +
+      '다음 레벨까지 50, 다음 배지(모두 맞힘 1편)까지 1편입니다.'
+    expect(await within(screen.getByRole('status')).findByText(notice)).not.toBeNull()
+    const card = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+    const badgeColumn = within(card).getByText('새 배지').parentElement!
+    expect(badgeColumn.textContent).toContain('끈기')
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
+  })
+
   it('알림 영역은 완료 전부터 비어 있는 채로 있고, 뒤에 받은 것은 그것만 알린다', async () => {
     const user = userEvent.setup()
     const allWrong = {

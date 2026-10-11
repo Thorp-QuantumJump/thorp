@@ -1,12 +1,13 @@
-import { useId, type Ref } from 'react'
+import { useId, useRef, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 import type { LearnerOverview } from '@/types/learningMe'
 import { gainedNotice } from '../article/completionText'
+import { useRestoreFocusAfterConceal } from '../article/useRestoreFocusAfterConceal'
 import { LEARN_ME_PATH } from '../learningPaths'
 import { ContinueCard } from './ContinueCard'
 import { LevelEmblem } from './LevelEmblem'
 import { LevelPathMini } from './LevelPath'
-import { newBadgeLine } from './meCopy'
+import { newBadgeLine, nextLevelReachable, unreachableLevelSentence } from './meCopy'
 import { NewPill } from './NewPill'
 import { QuietNotice } from './QuietNotice'
 import type { OverviewState } from './useLearnerOverview'
@@ -31,7 +32,10 @@ interface SummaryPanelProps {
  * 줄과 '새'를 둔다. 이번 조회에서 새로 생긴 배지·레벨(`gained`)은 초점을 옮기지 않는 조용한 알림으로 한 번 읽힌다.
  *
  * <p>기록을 받지 못했으면 '학습 기록을 불러오지 못했습니다'와 '다시 시도'만 한 번 보인다. '안 읽음'·0편·레벨 1로 채우지
- * 않는다(FR-020). 받는 중이면 아무것도 그리지 않는다.
+ * 않는다(FR-020). 받는 중이면 아무것도 그리지 않는다. 공개된 글이 0편이면 '이어서 읽기' 칸을 두지 않는다(계약 §1).
+ *
+ * <p>로그인 상태를 다시 확인하는 동안에는 자리를 둔 채 숨기고, 확인이 끝나면 숨기기 전에 패널 안에 있던 초점을 되돌린다
+ * (research R33, FR-019).
  */
 export function SummaryPanel({
   state,
@@ -41,12 +45,15 @@ export function SummaryPanel({
   continueRef,
 }: SummaryPanelProps) {
   const titleId = useId()
+  const panelRef = useRef<HTMLElement>(null)
+  useRestoreFocusAfterConceal(panelRef, concealed)
   if (state.status === 'off' || state.status === 'loading') return null
 
   const hide = concealed ? styles.concealed : ''
   if (state.status === 'failed') {
     return (
       <section
+        ref={panelRef}
         className={`${styles.panel} ${styles.failed} ${hide}`}
         aria-labelledby={titleId}
         data-summary-panel="failed"
@@ -67,6 +74,7 @@ export function SummaryPanel({
   const { overview } = state
   return (
     <section
+      ref={panelRef}
       className={`${styles.panel} ${hide}`}
       aria-labelledby={titleId}
       data-summary-panel="loaded"
@@ -95,14 +103,16 @@ export function SummaryPanel({
             <small>개</small>
           </span>
         </div>
-        <div className={`${styles.cell} ${styles.resumeCell}`}>
-          <ContinueCard
-            continueReading={overview.continueReading}
-            publishedArticles={overview.counts.publishedArticles}
-            linkState={linkState}
-            linkRef={continueRef}
-          />
-        </div>
+        {overview.counts.publishedArticles > 0 ? (
+          <div className={`${styles.cell} ${styles.resumeCell}`}>
+            <ContinueCard
+              continueReading={overview.continueReading}
+              publishedArticles={overview.counts.publishedArticles}
+              linkState={linkState}
+              linkRef={continueRef}
+            />
+          </div>
+        ) : null}
       </div>
       <NewBadgeRow overview={overview} />
       <QuietNotice
@@ -114,6 +124,8 @@ export function SummaryPanel({
 
 function LevelCell({ overview }: { overview: LearnerOverview }) {
   const { level } = overview
+  // 다음 레벨이 지금 공개된 단계로 닿을 수 없으면 작은 레벨 길 끝이 점선이고 FR-029 문장을 덧붙인다(FR-031).
+  const unreachable = nextLevelReachable(level) ? null : unreachableLevelSentence(level)
   return (
     <div className={`${styles.cell} ${styles.levelCell}`}>
       <span className={styles.emblem} aria-hidden="true">
@@ -128,6 +140,7 @@ function LevelCell({ overview }: { overview: LearnerOverview }) {
         <p className={styles.sub}>
           다음 레벨까지 <b>{level.remainingToNext.toLocaleString('ko-KR')}</b>
         </p>
+        {unreachable ? <p className={styles.note}>{unreachable}</p> : null}
       </div>
     </div>
   )
