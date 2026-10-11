@@ -2,8 +2,9 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import type { ComponentProps } from 'react'
-import { allDone, completedRecord, completionResult, resumeNext } from '@/test/learningMeFixtures'
+import { allDone, completedRecord, completionResult, learnerOverview, resumeNext } from '@/test/learningMeFixtures'
 import { CompletionCard } from './CompletionCard'
 import {
   expLabel,
@@ -225,5 +226,107 @@ describe('완료 카드 글자', () => {
     expect(gainedNotice([completionEntry, later])).toBe(
       '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 새 배지: 끈기. 레벨 3이 되었습니다.',
     )
+  })
+})
+
+/**
+ * 013 T193·T204·T208·T209. 완료 카드의 그림 장면과 다음 목표(design-notes §3.4·§5, 목업 '글 끝', quickstart 10-6).
+ */
+describe('CompletionCard — 그림 장면과 다음 목표', () => {
+  it("다시 받은 '나의 학습'으로 레벨 칸 아래 경험치와 다음 레벨까지, 새 배지 칸 아래 다음 배지를 둔다(T208)", () => {
+    renderCard({
+      gained: [completionEntry],
+      stageProgress: completionResult.stageProgress,
+      overview: learnerOverview,
+      freshCompletion: true,
+    })
+
+    const badgeColumn = screen.getByText('새 배지').parentElement!
+    expect(within(badgeColumn).getByText('다음 배지')).not.toBeNull()
+    expect(badgeColumn.textContent).toContain('모두 맞힘 1편')
+    expect(within(badgeColumn).getByText('1편 중 0편')).not.toBeNull()
+    const levelColumn = screen.getByText('레벨', { selector: 'span' }).parentElement!
+    expect(levelColumn.textContent).toContain('경험치 250 · 다음 레벨까지 50')
+    expect(
+      screen.getByText(
+        '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다. 다음 레벨까지 50, 다음 배지(모두 맞힘 1편)까지 1편입니다.',
+      ),
+    ).not.toBeNull()
+  })
+
+  it("'나의 학습'을 받지 못하면 다음 목표의 그림과 글자만 빠지고 B12의 글자는 그대로다(T204)", () => {
+    renderCard({ gained: [completionEntry], stageProgress: completionResult.stageProgress, overview: null })
+
+    expect(screen.queryByText('다음 배지')).toBeNull()
+    expect(screen.queryByText(/다음 레벨까지/)).toBeNull()
+    expect(screen.getByText('2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다.')).not.toBeNull()
+    expect(screen.getByText('레벨 3')).not.toBeNull()
+  })
+
+  it('레벨이 오르지 않았고 새 배지도 없으면 다음 목표를 따로 한 칸에 둔다', () => {
+    const answered: GainedEntry = {
+      gained: { exp: [{ kind: 'ANSWER_CORRECT', points: 30 }], expTotal: 30, badges: [], levelBefore: 2, levelAfter: 2 },
+      receivedAt: '2026-11-20T03:12:00Z',
+      stageProgress: null,
+    }
+    renderCard({ gained: [answered], overview: learnerOverview })
+
+    const goal = screen.getByRole('group', { name: '다음 목표' })
+    expect(goal.textContent).toContain('경험치 250 · 다음 레벨까지 50')
+    expect(goal.textContent).toContain('모두 맞힘 1편')
+  })
+
+  it('그림 장면은 모두 보조 기술에 읽히지 않고, 방금 완료했을 때만 마지막 칸이 방금 찍힌 도장이다', () => {
+    const { unmount } = renderCard({
+      gained: [completionEntry],
+      stageProgress: completionResult.stageProgress,
+      overview: learnerOverview,
+      freshCompletion: true,
+    })
+    const card = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+    for (const svg of card.querySelectorAll('svg')) {
+      expect(svg.closest('[aria-hidden="true"]')).not.toBeNull()
+    }
+    const path = card.querySelector('[data-stage-path="2"]')!
+    expect(path.querySelectorAll('[data-stamp="done"]')).toHaveLength(4)
+    expect(path.querySelectorAll('[data-fresh]')).toHaveLength(1)
+    expect(path.querySelector('[data-medal="stage-earned"]')).not.toBeNull()
+    unmount()
+
+    // 다시 연 완료 글은 최종 모습 그대로다.
+    renderCard({ overview: learnerOverview })
+    const reopened = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+    expect(reopened.querySelectorAll('[data-fresh]')).toHaveLength(0)
+    expect(reopened.querySelector('[data-stage-path="2"]')?.querySelectorAll('[data-stamp="done"]')).toHaveLength(2)
+    expect(reopened.querySelector('[data-medal="stage-notYet"]')).not.toBeNull()
+  })
+
+  it('카드 뒤에 그 단계 색의 옅은 빛을 깐다(T209)', () => {
+    renderCard()
+    const card = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+    expect(card.getAttribute('style')).toMatch(/--stage:\s*#B7DD6E/i)
+    expect(cssDeclarations('components/learning/article/CompletionCard.module.css', '.card::before')).toMatch(
+      /var\(--stage/,
+    )
+  })
+
+  it('움직임은 줄이기 설정이 아닐 때만 있고 950ms 안에 끝나며 되풀이하지 않는다(design-notes §5)', () => {
+    const css = 'components/learning/article/CompletionScene.module.css'
+    const media = '(prefers-reduced-motion: no-preference)'
+    const timings: [string, number][] = [
+      ['.fresh svg', 540],
+      ['.planted svg', 700],
+      ['.flipFrom', 450],
+      ['.flipTo', 650],
+      ['.rolling', 700],
+    ]
+    for (const [selector, end] of timings) {
+      const declaration = cssMediaDeclarations(css, media, selector)
+      const [duration, delay] = [...declaration.matchAll(/(\d+)ms/g)].map((match) => Number(match[1]))
+      expect(duration + delay).toBe(end)
+      expect(duration + delay).toBeLessThanOrEqual(950)
+      expect(declaration).not.toMatch(/infinite/)
+    }
+    expect(cssDeclarations(css, '.rollStrip')).not.toMatch(/animation/)
   })
 })

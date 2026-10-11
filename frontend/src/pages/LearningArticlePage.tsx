@@ -305,6 +305,7 @@ function ArticleView({
           <div ref={resumeRef} className={concealed ? styles.concealed : undefined}>
             <ResumeLine
               percent={resumeAt}
+              stageNumber={article.stage.number}
               onResume={() => {
                 scrollToReadPercent(articleRef.current, resumeAt)
                 focusReadPosition(articleRef.current, resumeAt)

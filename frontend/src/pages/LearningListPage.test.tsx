@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +10,7 @@ import {
   releasedCurriculum,
   stageOneReleased,
 } from '@/test/learningFixtures'
+import { learnerOverview } from '@/test/learningMeFixtures'
 import type { Curriculum } from '@/types/learning'
 import { LearningListPage } from './LearningListPage'
 
@@ -23,7 +24,10 @@ const apiMocks = vi.hoisted(() => ({
   fetchLearningArticle: vi.fn(),
 }))
 
+const meMocks = vi.hoisted(() => ({ fetchLearningMe: vi.fn() }))
+
 vi.mock('@/api/learning', () => apiMocks)
+vi.mock('@/api/learningMe', () => meMocks)
 vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))
 
 const failed: CurriculumResult = {
@@ -71,6 +75,12 @@ function renderList(entry = '/learn', auth: AuthContextValue = anonymousAuthCont
     </AuthContext.Provider>,
   )
 }
+
+// 로그인 사용자의 '나의 학습'(B13). 기본은 받은 모습이고, 실패·지연은 그 검사에서 바꾼다.
+beforeEach(() => {
+  meMocks.fetchLearningMe.mockReset()
+  meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: learnerOverview })
+})
 
 describe('LearningListPage — 첫 단계 공개 전', () => {
   beforeEach(() => {
@@ -268,12 +278,12 @@ describe('LearningListPage — 첫 단계 공개 뒤', () => {
     expect(openMarker?.getAttribute('data-stamp')).toBe('neutral')
   })
 
-  it('로그인 사용자에게는 견본을 두지 않는다. 요약 패널은 나의 학습(B13)이 더한다', async () => {
+  it('로그인 사용자에게는 견본 대신 나의 학습 요약 패널을 둔다', async () => {
     loaded(releasedCurriculum)
 
     renderList('/learn', signedInAuth)
 
-    await screen.findByRole('group', { name: '보기' })
+    expect(await screen.findByRole('region', { name: '나의 학습' })).not.toBeNull()
     expect(screen.queryByText('로그인하면 학습 기록이 남습니다.')).toBeNull()
   })
 
@@ -430,7 +440,8 @@ describe('LearningListPage — 첫 단계 공개 뒤', () => {
     renderList('/learn#stage-3')
 
     const heading = await screen.findByRole('heading', { level: 3, name: /물때표 읽기/ })
-    expect(document.activeElement).toBe(heading)
+    // 단계 자리로 옮기는 일은 그린 뒤의 효과에서 한다. 부하가 큰 실행에서도 그 효과가 끝난 뒤를 본다.
+    await waitFor(() => expect(document.activeElement).toBe(heading))
   })
 
   it('로그인 상태를 확인하는 동안에는 단계 자리로 옮기지 않고, 확인이 끝난 뒤 한 번만 옮긴다', async () => {
@@ -575,4 +586,182 @@ function StateProbe() {
   const location = useLocation()
   const state = location.state as { learningReturn?: { path: string } } | null
   return <p data-testid="state">{state?.learningReturn?.path ?? ''}</p>
+}
+
+/** 이 파일 안에서만 쓰는 `IntersectionObserver` 대역. 요약 패널의 '이어서 읽기'가 화면에 보이는지를 손으로 알린다. */
+class FakeIntersectionObserver {
+  static instances: FakeIntersectionObserver[] = []
+  targets: Element[] = []
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    FakeIntersectionObserver.instances.push(this)
+  }
+  observe(target: Element) {
+    this.targets.push(target)
+  }
+  disconnect() {
+    this.targets = []
+  }
+  unobserve() {}
+  takeRecords() {
+    return []
+  }
+  report(isIntersecting: boolean) {
+    const entries = this.targets.map((target) => ({ target, isIntersecting }) as IntersectionObserverEntry)
+    if (entries.length > 0) this.callback(entries, this as unknown as IntersectionObserver)
+  }
+}
+
+/**
+ * 013 T192·T196·T206. 로그인 사용자의 요약 패널, 글별 상태, 단계별 완료 수, 떠 있는 '이어서 읽기'(FR-020, design-notes
+ * §3.1·§3.2·§4, quickstart 11-3·11-4).
+ */
+describe('LearningListPage — 나의 학습', () => {
+  beforeEach(() => {
+    apiMocks.fetchCurriculum.mockReset()
+    window.sessionStorage.clear()
+    FakeIntersectionObserver.instances = []
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('커리큘럼 보기의 글 노드·카드에 글별 상태와 익힌 용어를, 단계 띠에 도장 줄과 완료 수를 채운다', async () => {
+    loaded(releasedCurriculum)
+    renderList('/learn', signedInAuth)
+
+    await screen.findByRole('region', { name: '나의 학습' })
+    const stageOne = screen.getByRole('list', { name: '1단계 글' })
+    const stageTwo = screen.getByRole('list', { name: '2단계 글' })
+    expect(within(stageOne).getAllByText('완료')).toHaveLength(2)
+    expect(within(stageTwo).getByText('62% 읽는 중')).not.toBeNull()
+    expect(within(stageTwo).getByText('안 읽음')).not.toBeNull()
+    expect(within(stageOne).getByText('용어 2개 중 2개 익힘')).not.toBeNull()
+    const harbor = within(stageOne).getByRole('link', { name: /항구 기록/ })
+    expect(harbor.querySelector('[data-stamp]')?.getAttribute('data-stamp')).toBe('done')
+
+    // 단계 띠: 다 읽은 1단계는 '완주 · 2편', 2단계는 '2편 중 0편 읽음'
+    expect(screen.getByText('완주 · 2편')).not.toBeNull()
+    expect(screen.getByText('2편 중 0편 읽음')).not.toBeNull()
+    expect(document.querySelectorAll('[data-stage-well]')).toHaveLength(2)
+  })
+
+  it("지금 이어 읽을 글의 카드에 '이어서 읽기 →'를 두고, 열면 기록된 위치로 옮기도록 learningResume을 싣는다", async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+    render(
+      <AuthContext.Provider value={signedInAuth}>
+        <MemoryRouter initialEntries={['/learn']}>
+          <Routes>
+            <Route path="/learn" element={<LearningListPage />} />
+            <Route path="*" element={<ResumeProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+
+    await screen.findByRole('region', { name: '나의 학습' })
+    const stageTwo = screen.getByRole('list', { name: '2단계 글' })
+    const current = within(stageTwo).getByRole('link', { name: /물때 읽기/ })
+    expect(current.textContent).toContain('이어서 읽기')
+    expect(current.querySelector('[data-part="tip"]')).not.toBeNull()
+    expect(within(stageTwo).getByRole('link', { name: /너울 읽기/ }).textContent).not.toContain('이어서 읽기')
+
+    await user.click(current)
+    expect((await screen.findByTestId('resume')).textContent).toBe('/learn/tide-reading resume')
+  })
+
+  it("목록 보기는 상태 열과 'n편 중 m편 읽음'·'완주 · n편', 익힌 용어 'm/n'을 보이고 떠 있는 단추가 없다", async () => {
+    const user = userEvent.setup()
+    loaded(releasedCurriculum)
+    renderList('/learn', signedInAuth)
+
+    await screen.findByRole('region', { name: '나의 학습' })
+    await user.click(screen.getByRole('button', { name: '목록' }))
+
+    const table = screen.getByRole('table')
+    expect(within(table).getByRole('columnheader', { name: '상태' })).not.toBeNull()
+    expect(within(table).getAllByText('완료')).toHaveLength(2)
+    expect(within(table).getByText('62% 읽는 중')).not.toBeNull()
+    expect(within(table).getByText(/완주 · 2편/)).not.toBeNull()
+    expect(within(table).getByText(/2편 중 0편 읽음/)).not.toBeNull()
+    expect(within(table).getByText('2개 중 2개 익힘')).not.toBeNull()
+
+    act(() => FakeIntersectionObserver.instances.forEach((observer) => observer.report(false)))
+    expect(screen.queryByRole('link', { name: /^이어서 읽기 2-1$/ })).toBeNull()
+  })
+
+  it("커리큘럼 보기에서는 패널의 '이어서 읽기'가 화면 밖이면 떠 있는 단추가 나타난다", async () => {
+    loaded(releasedCurriculum)
+    renderList('/learn', signedInAuth)
+
+    await screen.findByRole('region', { name: '나의 학습' })
+    expect(screen.queryByRole('link', { name: '이어서 읽기 2-1' })).toBeNull()
+
+    // 떠 있는 단추가 패널의 연결을 지켜보기 시작한 뒤에 화면 밖으로 나갔다고 알린다.
+    await waitFor(() => expect(FakeIntersectionObserver.instances.some((observer) => observer.targets.length > 0)).toBe(true))
+    act(() => FakeIntersectionObserver.instances.forEach((observer) => observer.report(false)))
+    expect((await screen.findByRole('link', { name: '이어서 읽기 2-1' })).getAttribute('href')).toBe('/learn/tide-reading')
+  })
+
+  it("기록을 받지 못하면 패널 자리에 실패 한 줄만 두고 글별 상태·단계 완료 수를 비운다(quickstart 11-4)", async () => {
+    const user = userEvent.setup()
+    meMocks.fetchLearningMe.mockResolvedValue({ status: 'failed', kind: 'network', code: null, message: '' })
+    loaded(releasedCurriculum)
+    renderList('/learn', signedInAuth)
+
+    expect(await screen.findByText('학습 기록을 불러오지 못했습니다.')).not.toBeNull()
+    expect(screen.getAllByText('학습 기록을 불러오지 못했습니다.')).toHaveLength(1)
+    expect(document.body.textContent).not.toMatch(/안 읽음|편 중 \d+편 읽음|완주 ·|레벨 1/)
+    for (const node of screen.getByRole('list', { name: '1단계 글' }).querySelectorAll('[data-stamp]')) {
+      expect(node.getAttribute('data-stamp')).toBe('neutral')
+    }
+    act(() => FakeIntersectionObserver.instances.forEach((observer) => observer.report(false)))
+    expect(screen.queryByRole('link', { name: /^이어서 읽기/ })).toBeNull()
+
+    meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: learnerOverview })
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByText('완주 · 2편')).not.toBeNull()
+    expect(within(screen.getByRole('list', { name: '2단계 글' })).getByText('62% 읽는 중')).not.toBeNull()
+  })
+
+  it('요약 패널이 늦게 들어와도 단계 자리로 옮긴 위치가 밀리지 않게 응답 뒤에 한 번 옮긴다(T206)', async () => {
+    let resolveMe: (value: unknown) => void = () => {}
+    meMocks.fetchLearningMe.mockReturnValue(new Promise((resolve) => (resolveMe = resolve)))
+    loaded(releasedCurriculum)
+    renderList('/learn#stage-2', signedInAuth)
+
+    const heading = await screen.findByRole('heading', { level: 3, name: /너울과 위험/ })
+    // 패널이 들어오기 전에는 옮기지 않는다. 먼저 옮기면 패널 높이만큼 아래로 밀린다.
+    expect(document.activeElement).not.toBe(heading)
+
+    await act(async () => resolveMe({ status: 'ok', data: learnerOverview }))
+    expect(await screen.findByRole('region', { name: '나의 학습' })).not.toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: /너울과 위험/ }))
+  })
+
+  it('비로그인에게는 나의 학습을 부르지 않는다', async () => {
+    loaded(releasedCurriculum)
+    renderList()
+
+    await screen.findByRole('group', { name: '보기' })
+    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
+  })
+
+  it('첫 단계 공개 전에는 로그인해도 나의 학습을 부르지 않는다', async () => {
+    loaded(preReleaseCurriculum)
+    renderList('/learn', signedInAuth)
+
+    await screen.findByRole('list')
+    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
+    expect(screen.queryByRole('region', { name: '나의 학습' })).toBeNull()
+  })
+})
+
+function ResumeProbe() {
+  const location = useLocation()
+  const state = location.state as { learningResume?: boolean } | null
+  return <p data-testid="resume">{`${location.pathname} ${state?.learningResume ? 'resume' : ''}`}</p>
 }

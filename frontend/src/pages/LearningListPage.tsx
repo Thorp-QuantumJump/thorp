@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { fetchCurriculum, type CurriculumResult } from '@/api/learning'
 import { useAuth } from '@/auth/auth-context'
 import { useSettledAuth, type SettledAuth } from '@/components/learning/article/useSettledAuth'
+import { progressMapOf, stageCountsOf } from '@/components/learning/curriculum/articleProgress'
 import { ChangeLog } from '@/components/learning/curriculum/ChangeLog'
 import { READING_ORDER_NOTE } from '@/components/learning/curriculum/curriculumCopy'
 import { JourneyMap } from '@/components/learning/curriculum/JourneyMap'
@@ -15,7 +16,11 @@ import { ViewToggle } from '@/components/learning/curriculum/ViewToggle'
 import { readStoredView, type LearningView } from '@/components/learning/curriculum/viewStorage'
 import { articlePath, stageNumberFromHash } from '@/components/learning/learningPaths'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
+import { FloatingContinue } from '@/components/learning/me/FloatingContinue'
 import { GuestSample } from '@/components/learning/me/GuestSample'
+import { StageStampWell } from '@/components/learning/me/StageStampWell'
+import { SummaryPanel } from '@/components/learning/me/SummaryPanel'
+import { useLearnerOverview, type OverviewState } from '@/components/learning/me/useLearnerOverview'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import type { Curriculum, LearningArticleSummary } from '@/types/learning'
 import heading from '@/components/common/PageHeading.module.css'
@@ -31,8 +36,10 @@ type ListState = { status: 'loading' } | CurriculumResult
  * 전에만 배열이므로(계약 §1, `readCurriculum`이 공개한 단계 수와 맞는지 확인한다) 그 값으로 두 모습을 가른다.
  *
  * <p><b>공개한 뒤에는 단계별 커리큘럼이다.</b> 보기 전환, 공개 안내, 커리큘럼 보기(여정 지도) 또는 목록 보기, 공개
- * 경계, 변경 기록을 보인다. 비로그인 사용자에게는 기록 자리에 견본 그림과 로그인 연결을 둔다. 로그인 사용자의 요약
- * 패널과 글별 상태는 '나의 학습'(B13)이 더한다. 읽는 순서는 제안이고 어느 글도 잠그지 않는다(FR-023).
+ * 경계, 변경 기록을 보인다. 비로그인 사용자에게는 기록 자리에 견본 그림과 로그인 연결을 둔다. 로그인 사용자에게는 그
+ * 자리에 '나의 학습' 요약 패널을 두고, 글별 상태·단계별 완료 수·지금 이어 읽을 글과 커리큘럼 보기의 떠 있는 '이어서
+ * 읽기'를 더한다(FR-020). 기록을 받지 못하면 패널 자리에 실패 한 줄만 두고 다른 자리를 비운다. 읽는 순서는 제안이고
+ * 어느 글도 잠그지 않는다(FR-023).
  *
  * <p><b>학습 기록을 브라우저 저장소에 쓰지 않는다.</b> 이 화면이 쓰는 키는 탭 단위 화면 상태 둘(고른 보기
  * `thorp.learning.view`, 닫은 안내 `thorp.learning.dismissedNotices`)이고, 로그인 연결을 누르면 014가 돌아올 자리를
@@ -41,7 +48,7 @@ type ListState = { status: 'loading' } | CurriculumResult
 export function LearningListPage() {
   const location = useLocation()
   const { status: authStatus } = useAuth()
-  const { settled } = useSettledAuth()
+  const { settled, concealed } = useSettledAuth()
   const [state, setState] = useState<ListState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -64,20 +71,24 @@ export function LearningListPage() {
   // 둔다. 같은 주소를 다시 눌러도 옮기도록 이동마다(`location.key`) 한 번 한다.
   //
   // 로그인 상태를 확인하는 동안에는 기다린다. 확인이 끝나 비로그인 견본이 목록 위에 들어오면 먼저 옮긴 자리가 그만큼
-  // 아래로 밀리기 때문이다. 014는 탭이 다시 보일 때마다 상태를 `checking`으로 두므로, 같은 이동에서 두 번 옮기지 않게
+  // 아래로 밀리기 때문이다. 같은 까닭으로 로그인 사용자의 요약 패널(또는 실패 한 줄)이 '나의 학습' 응답 뒤에 들어올
+  // 때까지도 기다린다(T206). 014는 탭이 다시 보일 때마다 상태를 `checking`으로 두므로, 같은 이동에서 두 번 옮기지 않게
   // 옮긴 이동을 기억한다.
+  const curriculum = state.status === 'loaded' ? state.curriculum : null
+  const released = curriculum !== null && curriculum.preReleaseArticles === null && curriculum.releasedStageCount > 0
+  const overview = useLearnerOverview({ settled, enabled: released })
+
   const loaded = state.status === 'loaded'
   const authChecking = authStatus === 'checking'
+  const overviewPending = overview.state.status === 'loading'
   const movedFor = useRef<string | null>(null)
   useEffect(() => {
-    if (!loaded || authChecking || movedFor.current === location.key) return
+    if (!loaded || authChecking || overviewPending || movedFor.current === location.key) return
     movedFor.current = location.key
     const stageNumber = stageNumberFromHash(location.hash)
     if (stageNumber === null) return
     moveToStage(stageNumber)
-  }, [loaded, authChecking, location.hash, location.key])
-
-  const curriculum = state.status === 'loaded' ? state.curriculum : null
+  }, [loaded, authChecking, overviewPending, location.hash, location.key])
 
   return (
     <div className={styles.page}>
@@ -112,7 +123,14 @@ export function LearningListPage() {
         ) : null}
 
         {curriculum && curriculum.preReleaseArticles === null ? (
-          <ReleasedCurriculum curriculum={curriculum} auth={settled.kind} linkState={location.state} />
+          <ReleasedCurriculum
+            curriculum={curriculum}
+            auth={settled.kind}
+            overview={overview.state}
+            concealed={concealed}
+            onRetryOverview={overview.retry}
+            linkState={location.state}
+          />
         ) : null}
 
         {state.status === 'failed' ? (
@@ -155,6 +173,11 @@ interface ReleasedCurriculumProps {
   curriculum: Curriculum
   /** 마지막으로 확인된 로그인 상태. 비로그인이면 견본을, 로그인이면 공개 안내에 기록 문장을 더한다 */
   auth: SettledAuth['kind']
+  /** 로그인 사용자의 '나의 학습'. 요약 패널과 글별 상태를 채운다 */
+  overview: OverviewState
+  /** 로그인 상태를 다시 확인하는 중이라 나의 학습 자리를 둔 채 숨긴다(research R33) */
+  concealed: boolean
+  onRetryOverview: () => void
   linkState: unknown
 }
 
@@ -164,12 +187,27 @@ interface ReleasedCurriculumProps {
  * <p>고른 보기와 닫은 안내는 이 부분만 쓰는 탭 단위 화면 상태라 여기서 읽고 쓴다. 첫 단계 공개 전 목록은 이 부분을
  * 그리지 않으므로 저장소를 읽지도 쓰지도 않는다(quickstart 4-1).
  */
-function ReleasedCurriculum({ curriculum, auth, linkState }: ReleasedCurriculumProps) {
+function ReleasedCurriculum({
+  curriculum,
+  auth,
+  overview,
+  concealed,
+  onRetryOverview,
+  linkState,
+}: ReleasedCurriculumProps) {
   const [view, setView] = useState<LearningView>(readStoredView)
   const [dismissed, setDismissed] = useState<string[]>(readDismissedNotices)
   const [changeLogOpen, setChangeLogOpen] = useState(false)
   const pressedViewRef = useRef<HTMLButtonElement>(null)
   const changeLogSummaryRef = useRef<HTMLElement>(null)
+  const continueRef = useRef<HTMLAnchorElement>(null)
+
+  // 받은 '나의 학습'에서 글별 상태와 단계별 완료 수를 만든다. 받지 못했으면 비워 두고 '안 읽음'·0편으로 채우지 않는다.
+  const learner = overview.status === 'loaded' ? overview.overview : null
+  const progress = useMemo(() => (learner ? progressMapOf(learner.articles) : undefined), [learner])
+  const stageCounts = useMemo(() => (learner ? stageCountsOf(learner.stages) : undefined), [learner])
+  const continueReading = learner?.continueReading
+  const currentArticleId = continueReading && continueReading.kind !== 'ALL_DONE' ? continueReading.articleId : null
 
   const notices = curriculum.notices.filter((entry) => !dismissed.includes(entry.entryKey))
 
@@ -189,7 +227,17 @@ function ReleasedCurriculum({ curriculum, auth, linkState }: ReleasedCurriculumP
 
   return (
     <>
-      {auth === 'anonymous' ? <GuestSample place="list" /> : null}
+      {auth === 'anonymous' ? (
+        <GuestSample place="list" />
+      ) : (
+        <SummaryPanel
+          state={overview}
+          concealed={concealed}
+          onRetry={onRetryOverview}
+          linkState={linkState}
+          continueRef={continueRef}
+        />
+      )}
 
       <ReleaseNotice
         notices={notices}
@@ -207,11 +255,27 @@ function ReleasedCurriculum({ curriculum, auth, linkState }: ReleasedCurriculumP
         </p>
       </div>
 
-      {view === 'curriculum' ? (
-        <JourneyMap stages={curriculum.stages} linkState={linkState} />
-      ) : (
-        <ListView stages={curriculum.stages} linkState={linkState} />
-      )}
+      {/* 로그인 상태를 다시 확인하는 동안 나의 학습 상태 표시(`data-learner-mark`)를 자리를 둔 채 숨긴다(research R33). */}
+      <div className={concealed ? styles.learnerConcealed : undefined}>
+        {view === 'curriculum' ? (
+          <JourneyMap
+            stages={curriculum.stages}
+            progress={progress}
+            renderStageProgress={
+              stageCounts
+                ? (stage) => {
+                    const count = stageCounts.get(stage.number)
+                    return count ? <StageStampWell stage={stage} count={count} progress={progress} /> : undefined
+                  }
+                : undefined
+            }
+            currentArticleId={currentArticleId}
+            linkState={linkState}
+          />
+        ) : (
+          <ListView stages={curriculum.stages} progress={progress} stageCounts={stageCounts} linkState={linkState} />
+        )}
+      </div>
 
       <ChangeLog
         entries={curriculum.changeLog}
@@ -219,6 +283,16 @@ function ReleasedCurriculum({ curriculum, auth, linkState }: ReleasedCurriculumP
         onToggle={setChangeLogOpen}
         summaryRef={changeLogSummaryRef}
       />
+
+      {/* 떠 있는 '이어서 읽기'는 커리큘럼 보기에서만 둔다. 기록을 받지 못했으면 두지 않는다(FR-020). */}
+      {view === 'curriculum' && continueReading ? (
+        <FloatingContinue
+          continueReading={continueReading}
+          targetRef={continueRef}
+          concealed={concealed}
+          linkState={linkState}
+        />
+      ) : null}
     </>
   )
 }

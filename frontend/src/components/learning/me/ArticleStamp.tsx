@@ -30,6 +30,13 @@ interface ArticleStampProps {
   disc?: boolean
   /** `done`에서 번호 대신 큰 체크만 둔다. 번호가 바로 옆 카드에 있는 자리다 */
   checkOnly?: boolean
+  /**
+   * `done`의 '방금 찍힌 도장'(목업 `stampSVG`의 `fresh`). 속을 진하게 채우고 더 기울이며 바깥에 옅은 후광 한 겹을
+   * 두른다. 완료 카드의 마지막 칸이 쓴다
+   */
+  fresh?: boolean
+  /** `reading`의 진행 호 끝에 빛 점을 둔다. 지금 이어 읽을 글의 도장이다(목업 `tip`) */
+  tip?: boolean
   className?: string
 }
 
@@ -59,6 +66,8 @@ export function ArticleStamp({
   tilt = 0,
   disc = false,
   checkOnly = false,
+  fresh = false,
+  tip = false,
   className,
 }: ArticleStampProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
@@ -99,7 +108,7 @@ export function ArticleStamp({
         </>
       )
     return (
-      <svg className={classes} viewBox="0 0 44 44" width={size} height={size} aria-hidden="true" focusable="false" overflow="visible" data-stamp="done">
+      <svg className={classes} viewBox="0 0 44 44" width={size} height={size} aria-hidden="true" focusable="false" overflow="visible" data-stamp="done" data-fresh={fresh ? '' : undefined}>
         <defs>
           {/* 도장 잉크가 종이에 번진 가장자리. 그림자 번짐은 쓰지 않는다 */}
           <filter id={`${id}-ink`} x="-15%" y="-15%" width="130%" height="130%">
@@ -110,8 +119,17 @@ export function ArticleStamp({
           </filter>
         </defs>
         {paper}
-        <g transform={`rotate(${TILTS[tilt % TILTS.length]} 22 22)`} filter={`url(#${id}-ink)`}>
-          <circle data-part="ink" className={styles.ink} cx="22" cy="22" r="20" fillOpacity={0.2} strokeWidth={round(2.2 * viewPerPixel)} />
+        {fresh ? <circle data-part="halo" className={styles.halo} cx="22" cy="22" r="23.5" strokeWidth={round(3 * viewPerPixel)} /> : null}
+        <g transform={`rotate(${fresh ? -8 : TILTS[tilt % TILTS.length]} 22 22)`} filter={`url(#${id}-ink)`}>
+          <circle
+            data-part="ink"
+            className={styles.ink}
+            cx="22"
+            cy="22"
+            r="20"
+            fillOpacity={fresh ? 0.45 : 0.2}
+            strokeWidth={round((fresh ? 2.6 : 2.2) * viewPerPixel)}
+          />
           <circle className={styles.inkRing} cx="22" cy="22" r="16.6" strokeWidth={round(viewPerPixel)} />
           {mark}
         </g>
@@ -160,6 +178,25 @@ export function ArticleStamp({
           transform="rotate(-90 22 22)"
         />
       ) : null}
+      {state === 'reading' && tip ? <ProgressTip id={id} percent={percent} viewPerPixel={viewPerPixel} /> : null}
     </svg>
+  )
+}
+
+/** 진행 호 끝의 빛 점(목업 `tip`). 옅은 빛 번짐 위에 밝은 점 하나다. */
+function ProgressTip({ id, percent, viewPerPixel }: { id: string; percent: number; viewPerPixel: number }) {
+  const angle = ((-90 + percent * 3.6) * Math.PI) / 180
+  const x = round(22 + 20 * Math.cos(angle))
+  const y = round(22 + 20 * Math.sin(angle))
+  return (
+    <g data-part="tip" className={styles.tip}>
+      <defs>
+        <filter id={`${id}-soft`} x="-1" y="-1" width="3" height="3">
+          <feGaussianBlur stdDeviation="2.4" />
+        </filter>
+      </defs>
+      <circle className={styles.tipGlow} cx={x} cy={y} r={round(7 * viewPerPixel)} opacity={0.3} filter={`url(#${id}-soft)`} />
+      <circle className={styles.tipCore} cx={x} cy={y} r={round(3.4 * viewPerPixel)} />
+    </g>
   )
 }

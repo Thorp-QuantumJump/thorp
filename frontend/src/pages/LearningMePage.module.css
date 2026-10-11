@@ -1,0 +1,200 @@
+.page {
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--thorp-background);
+  color: var(--thorp-foreground);
+  font-family: var(--thorp-font-page, inherit);
+}
+
+.main {
+  width: min(
+    100% - var(--thorp-page-gutter),
+    var(--thorp-page-width-flow, var(--thorp-page-width))
+  );
+  margin: 0 auto;
+  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
+}
+
+.back {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--thorp-foreground);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}
+
+.title {
+  margin: 2px 0 0;
+  font-size: var(--thorp-text-title, clamp(1.9rem, 5vw, 3.2rem));
+  font-weight: 700;
+  letter-spacing: var(--thorp-title-tracking, -0.05em);
+  line-height: var(--thorp-title-leading, 1.05);
+}
+
+.quiet {
+  margin: 16px 0 0;
+  color: var(--thorp-copy);
+  font-size: var(--thorp-text-body, 0.95rem);
+  line-height: 1.7;
+}
+
+/* 로그인 상태를 다시 확인하는 동안: 자리를 둔 채 보이지 않게만 한다(research R33). */
+.concealed {
+  visibility: hidden;
+}
+
+.guest {
+  margin-top: 22px;
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin: 22px 0 0;
+  color: var(--thorp-copy);
+}
+
+.retry {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--thorp-line-control);
+  border-radius: var(--thorp-radius-control, 8px);
+  background: transparent;
+  color: var(--thorp-foreground);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.retry:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}
+
+.section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin: 44px 0 14px;
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.section small {
+  color: var(--thorp-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.continue {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: 1px solid rgb(3 199 90 / 22%);
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgb(3 199 90 / 6%), transparent 60%), var(--thorp-surface);
+}
+
+.terms {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.term {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 12px;
+  background: var(--thorp-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.term:hover {
+  border-color: var(--thorp-line-strong);
+}
+
+.term:hover b {
+  color: var(--thorp-brand-soft);
+}
+
+.term:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}
+
+.term i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--stage);
+}
+
+.term span {
+  min-width: 0;
+}
+
+.term b {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.term small {
+  display: block;
+  margin-top: 2px;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.termsNote {
+  margin: 10px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+}
+
+.log {
+  margin-top: 44px;
+}
+
+@media (max-width: 1023px) {
+  .terms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 719px) {
+  .terms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section {
+    margin-top: 36px;
+  }
+}

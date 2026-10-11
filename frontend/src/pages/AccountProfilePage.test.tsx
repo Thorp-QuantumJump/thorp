@@ -119,4 +119,13 @@ describe('AccountProfilePage', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('서버에 연결할 수 없습니다')
     expect(screen.queryByRole('status')).toBeNull()
   })
+
+  it("아래 '학습 기록' 구역에 학습 초기화가 있고, 누르기 전에는 확인 창이 없다(013 FR-025)", () => {
+    renderPage()
+
+    const section = screen.getByRole('region', { name: '학습 기록' })
+    expect(section.textContent).toContain('배우기의 나의 학습 기록을 모두 지웁니다.')
+    expect(screen.getByRole('button', { name: '학습 초기화' })).toBeTruthy()
+    expect(screen.queryByRole('dialog', { name: '학습 기록을 모두 지울까요?' })).toBeNull()
+  })
 })

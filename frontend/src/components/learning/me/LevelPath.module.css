@@ -1,0 +1,269 @@
+/*
+  레벨 길(013 design-notes §3.3, 목업 .mile·miniMile·mm2). 읽은 구간은 초록, 남은 구간은 회색 실선, 지금 공개된 단계로는
+  닿을 수 없는 구간은 같은 회색의 점선이다. 색은 의미 토큰이다.
+*/
+.full {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.mile {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 96px;
+  margin: 18px 6px 0;
+}
+
+.defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.track {
+  position: absolute;
+  inset: 46px 0 auto;
+  height: 4px;
+}
+
+.track i {
+  position: absolute;
+  top: 0;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.done {
+  background: var(--thorp-brand-soft);
+}
+
+.todo {
+  top: 0.5px !important;
+  height: 3px !important;
+  background: color-mix(in srgb, var(--thorp-muted) 70%, var(--thorp-background));
+}
+
+.preparing {
+  top: 0.5px !important;
+  height: 3px !important;
+  background: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--thorp-muted) 70%, var(--thorp-background)) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.flag {
+  position: absolute;
+  top: 0;
+  width: 0;
+}
+
+.flagArt {
+  position: absolute;
+  top: 20px;
+  left: -1px;
+  width: 20px;
+  height: 28px;
+  overflow: visible;
+}
+
+.pole {
+  stroke: var(--thorp-muted);
+}
+
+.cloth {
+  fill: var(--thorp-surface);
+  stroke: var(--thorp-muted);
+}
+
+.reached .pole,
+.reached .cloth {
+  stroke: var(--thorp-brand-soft);
+}
+
+.flagLabel {
+  position: absolute;
+  top: 58px;
+  left: 0;
+  transform: translateX(-50%);
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.flagLabel small {
+  display: block;
+  color: var(--thorp-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.firstFlag .flagLabel {
+  transform: none;
+  text-align: left;
+}
+
+.dot {
+  position: absolute;
+  top: 41px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--thorp-brand-soft);
+  box-shadow:
+    0 0 0 4px rgb(3 199 90 / 20%),
+    0 0 14px rgb(47 220 122 / 45%);
+}
+
+.bubble {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--thorp-brand-soft);
+  color: var(--thorp-action-foreground);
+  font: 750 0.75rem/1 var(--thorp-font-display, inherit);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.bubble::after {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  margin-left: -4px;
+  border: 4px solid transparent;
+  border-top-color: var(--thorp-brand-soft);
+  border-bottom: 0;
+  content: '';
+}
+
+.after {
+  flex: 0 0 220px;
+  margin: 52px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+/* 요약 패널과 완료 카드의 작은 길 */
+.mini {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: 30px;
+  margin: 6px 0 2px;
+  overflow: visible;
+}
+
+.move {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  margin-top: 14px;
+  overflow: visible;
+}
+
+.todoLine {
+  fill: none;
+  stroke: color-mix(in srgb, var(--thorp-muted) 70%, var(--thorp-background));
+}
+
+.doneLine {
+  fill: none;
+  stroke: var(--thorp-brand-soft);
+}
+
+.dotFill {
+  fill: var(--thorp-brand-soft);
+}
+
+.moveLabel {
+  fill: var(--thorp-muted);
+}
+
+/* 완료 카드: 점이 받은 경험치만큼 옮겨 가고 새로 지난 이정표가 초록이 된다. 950ms 안에 끝난다(design-notes §5). */
+@media (prefers-reduced-motion: no-preference) {
+  .moving .mover {
+    animation: move 400ms 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  }
+
+  .moving .bar {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: grow 400ms 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  }
+
+  .fresh .pole,
+  .fresh .cloth {
+    animation: reach 250ms 650ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+}
+
+@keyframes move {
+  from {
+    transform: translateX(var(--from, 0px));
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(var(--sx, 1));
+  }
+}
+
+@keyframes reach {
+  from {
+    fill-opacity: 0;
+    stroke: var(--thorp-muted);
+  }
+}
+
+@media (max-width: 719px) {
+  .full {
+    display: block;
+  }
+
+  .after {
+    margin: 4px 0 0;
+  }
+
+  .flagLabel small {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .pole,
+  .cloth,
+  .todoLine,
+  .doneLine {
+    stroke: CanvasText;
+  }
+
+  .done,
+  .dot,
+  .dotFill {
+    background: Highlight;
+    fill: Highlight;
+  }
+
+  .todo {
+    background: CanvasText;
+  }
+
+  .preparing {
+    background: repeating-linear-gradient(to right, CanvasText 0 6px, transparent 6px 12px);
+  }
+}
