@@ -25,7 +25,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 배우기 공개 조회 세 주소를 실제로 호출한다(learning-public-api, quickstart 2-1·2-2·3-5·4-4·6-1·9-2 서버 쪽).
+ * 배우기 공개 조회 주소(글 하나·용어 하나)와 지운 9월 판 목록 경로를 실제로 호출한다(learning-public-api, quickstart
+ * 2-2·3-5·4-4·6-1·9-2 서버 쪽).
  *
  * <p><b>응답이 {@code docs/specs/learning-api/examples/}의 예시 파일과 JSON 동치인지 단언한다.</b> 계약이 구현과 어긋나면 여기서
  * 깨진다. 9월 판 글 응답 {@code article.json}만은 2판에서 필드가 더해졌으므로 응답 가운데 그 파일에 있는 키만 골라 비교한다({@link
@@ -95,65 +96,30 @@ class LearningPublicApiIT extends IntegrationTestSupport {
         seeds.seedSectorMap(names);
     }
 
-    /** articles-list.json의 두 글을 심는다. 수익과 손실은 article.json 전체로 심는다. */
+    /** 9월 판의 두 글을 심는다. 섹터와 ETF는 최소 판, 수익과 손실은 article.json 전체로 심는다. */
     private void publishListFixture() throws Exception {
-        JsonNode list = example("articles-list.json").get("articles");
-        JsonNode first = list.get(0);
-        seeds.publishMinimal(
-                first.get("articleId").asText(),
-                first.get("title").asText(),
-                first.get("question").asText(),
-                first.get("readingOrder").asInt());
+        seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "섹터와 대표 ETF는 무엇이 같고 무엇이 다른가?", 1);
         JsonNode article = example("article.json");
         seeds.publishFromResponse(article, article.get("readingOrder").asInt());
     }
 
-    // --- §1 목록 ---
+    // --- 9월 판 목록(지웠다) ---
 
     @Test
-    @DisplayName("게시된 글이 없으면 200 articles: []다 (quickstart 2-1)")
-    void emptyListBeforePublishing() throws Exception {
-        JsonNode data = data("/learning/articles");
-
-        assertThat(data.get("articles").isArray()).isTrue();
-        assertThat(data.get("articles")).isEmpty();
-    }
-
-    @Test
-    @DisplayName("목록 응답이 articles-list.json과 같다")
-    void listMatchesExample() throws Exception {
-        seedFullSectorMap();
+    @DisplayName("9월 판 목록 경로는 지웠다 — 글이 게시돼 있어도 404다 (B16)")
+    void legacyListRouteIsGone() throws Exception {
         publishListFixture();
 
-        assertThat(data("/learning/articles")).isEqualTo(example("articles-list.json"));
-    }
-
-    @Test
-    @DisplayName("목록은 판의 readingOrder, articleId 순이고 초안 컬럼의 순서를 따르지 않는다")
-    void listIsOrderedByRevisionReadingOrderThenArticleId() throws Exception {
-        // 넣는 차례를 기대하는 차례와 다르게 둔다. 초안 reading_order는 backtest 6, transaction-cost 7,
-        // sectors-and-etf 1이지만 판에는 1·1·2를 준다 — 초안 컬럼으로 정렬하면 순서가 달라진다.
-        seeds.publishMinimal("transaction-cost", "거래비용", "q", 2);
-        seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "q", 1);
-        seeds.publishMinimal("backtest", "백테스트", "q", 1);
-
-        JsonNode articles = data("/learning/articles").get("articles");
-
-        assertThat(articles)
-                .extracting(item -> item.get("articleId").asText())
-                .containsExactly("backtest", "sectors-and-etf", "transaction-cost");
+        mockMvc.perform(get("/learning/articles")).andExpect(status().isNotFound());
     }
 
     // --- §2 글 하나 ---
 
     @Test
-    @DisplayName("초안뿐인 글은 목록에 없고 단건은 404 LEARNING_ARTICLE_UNAVAILABLE이다 (quickstart 2-2, SC-006)")
+    @DisplayName("초안뿐인 글은 404 LEARNING_ARTICLE_UNAVAILABLE이다 (quickstart 2-2, SC-006)")
     void draftArticleIsUnavailable() throws Exception {
         seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "q", 1);
 
-        assertThat(data("/learning/articles").get("articles"))
-                .extracting(item -> item.get("articleId").asText())
-                .doesNotContain(ARTICLE);
         assertErrorCode("/learning/articles/" + ARTICLE, "LEARNING_ARTICLE_UNAVAILABLE");
     }
 
@@ -250,22 +216,6 @@ class LearningPublicApiIT extends IntegrationTestSupport {
         assertThat(term.get("articleId").asText()).isEqualTo("volatility-is-not-loss");
         assertThat(term.get("articleTitle").asText()).isEqualTo("변동성은 손실일까?");
         assertThat(fieldNames(term)).containsExactlyElementsOf(fieldNames(example("term.json")));
-    }
-
-    @Test
-    @DisplayName("9월 판 목록 경로는 CURRENT 글도 같은 모양으로 싣는다")
-    void legacyListIncludesCurrentArticles() throws Exception {
-        publishCurrentFixture();
-
-        assertThat(data("/learning/articles").get("articles"))
-                .extracting(item -> item.get("articleId").asText())
-                .contains("volatility-is-not-loss", "returns-and-losses");
-        assertThat(data("/learning/articles").get("articles"))
-                .allSatisfy(
-                        item ->
-                                assertThat(fieldNames(item))
-                                        .containsExactly(
-                                                "articleId", "title", "question", "readingOrder"));
     }
 
     /** {@code actual}에서 {@code expected}의 최상위 키만 남긴다. 2판에서 더한 필드를 빼고 9월 판 필드만 비교할 때 쓴다. */

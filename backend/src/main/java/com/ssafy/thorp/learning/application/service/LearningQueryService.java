@@ -87,8 +87,8 @@ public class LearningQueryService {
     }
 
     /**
-     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로가 쓴다
-     * (learning-public-api §2). 017의 글 열거도 이 조회를 쓴다.
+     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로는
+     * 지웠지만(learning-public-api §2) 017의 글 열거({@code readArticle})가 이 조회를 쓴다.
      *
      * @return 게시된 글이 없으면 빈 목록. 빈 목록은 정상 화면이다(spec Edge Cases)
      */
