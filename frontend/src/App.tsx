@@ -103,6 +103,12 @@ const LearningListPage = lazy(() =>
   })),
 )
 
+const LearningMePage = lazy(() =>
+  import('@/pages/LearningMePage').then((module) => ({
+    default: module.LearningMePage,
+  })),
+)
+
 const LearningArticlePage = lazy(() =>
   import('@/pages/LearningArticlePage').then((module) => ({
     default: module.LearningArticlePage,
@@ -179,6 +185,8 @@ function AnimatedRoutes() {
             <Route path="/param-search" element={<ParamSearchPage />} />
             {/* 배우기는 로그인 없이 연다. 진단의 전제가 아니다(013 FR-011·FR-012). */}
             <Route path="/learn" element={<LearningListPage />} />
+            {/* '나의 학습'(013 FR-020). 글 주소(`/learn/:articleId`)보다 먼저 둔다. 글 식별자 `me`는 쓰지 않는다. */}
+            <Route path="/learn/me" element={<LearningMePage />} />
             <Route path="/learn/:articleId" element={<LearningArticlePage />} />
             {/* 첫 화면의 '전략 진단하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}
             <Route path="/diagnosis/sectors" element={<SectorSelectionPage />} />

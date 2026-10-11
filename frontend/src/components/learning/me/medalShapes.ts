@@ -159,3 +159,27 @@ export function stageArchProgressPath(inset: number): string {
 
 /** 단계 완주 아치의 납선(번호 원이 없는 모양). 스테인드글라스 조각을 나누는 선이다. */
 export const STAGE_LEAD_PATH = 'M50 6V28M50 54V88M18 50L37.5 44.5M62.5 44.5L82 50M18 66L50 74L82 66'
+
+/**
+ * 단계 완주 아치 가운데 번호 원의 글자 크기와 반지름(viewBox 단위). 번호가 화면에서 12px 아래로 내려가지 않게 아치가
+ * 작을수록 원과 글자를 키운다(목업 `archNum`). 화면 36px 미만이면 번호를 그리지 않는다.
+ */
+export function stageNumberCircle(size: number): { fontSize: number; radius: number } {
+  const fontSize = round(Math.max(17, 1200 / size))
+  return { fontSize, radius: round((13 * fontSize) / 17) }
+}
+
+/**
+ * 단계 완주 아치의 납선. 가운데 번호 원(반지름 `radius`, 0이면 원 없음) 둘레에서 끊긴다(목업 `leadPath`). 가로
+ * 범위 `x0`~`x1`, 세로 범위 `y0`~`y1`을 받아 색유리 조각을 나누는 선과 바깥 납선에 함께 쓴다.
+ */
+export function stageLeadPath(radius: number, x0 = 18, x1 = 82, y0 = 6, y1 = 88): string {
+  const toCircle = (sx: number) => {
+    const dx = sx - 50
+    const dy = 9
+    const length = Math.hypot(dx, dy)
+    return point([50 + (radius * dx) / length, 41 + (radius * dy) / length])
+  }
+  const vertical = radius > 0 ? `M50 ${y0}V${round(41 - radius)}M50 ${round(41 + radius)}V${y1}` : `M50 ${y0}V${y1}`
+  return `${vertical}M${x0} 50L${toCircle(x0)}M${toCircle(x1)}L${x1} 50M${x0} 66L50 74L${x1} 66`
+}

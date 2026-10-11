@@ -58,6 +58,22 @@
   border-color: var(--thorp-line-strong);
 }
 
+/* 지금 이어 읽을 글: 이 화면에서 빛나는 곳 하나(design-notes §2). 초록 테두리와 옅은 빛이다. */
+.current .card {
+  border-color: rgb(3 199 90 / 45%);
+  background:
+    linear-gradient(90deg, rgb(3 199 90 / 8%), transparent 70%),
+    color-mix(in srgb, var(--thorp-surface) 92%, transparent);
+  box-shadow: 0 0 0 4px rgb(3 199 90 / 6%);
+}
+
+.goHint {
+  color: var(--thorp-brand-soft);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .main {
   display: block;
   min-width: 0;
@@ -107,6 +123,7 @@
   .chips {
     display: grid;
     grid-template-columns: 112px 56px 70px;
+    grid-auto-flow: row;
     gap: 8px;
     justify-content: end;
     justify-items: start;

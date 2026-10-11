@@ -1,0 +1,67 @@
+/* 떠 있는 '이어서 읽기'(목업 .fab). 초록 단추 모양이고 깜빡이거나 맥동하지 않는다. */
+.fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  height: 48px;
+  padding: 0 18px 0 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #14d468, var(--thorp-accent));
+  box-shadow:
+    0 3px 0 #02813b,
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    0 14px 30px -10px rgb(0 0 0 / 80%);
+  color: var(--thorp-action-foreground);
+  font-size: 0.94rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.fab:focus-visible {
+  outline: 2px solid var(--thorp-foreground);
+  outline-offset: 3px;
+}
+
+.fab svg {
+  width: 26px;
+  height: 26px;
+}
+
+.track {
+  fill: rgb(1 23 10 / 18%);
+}
+
+.arc {
+  fill: none;
+  stroke: var(--thorp-action-foreground);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fab {
+    animation: fab-in 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  }
+}
+
+@keyframes fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (max-width: 719px) {
+  .fab {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+@media (forced-colors: active) {
+  .fab {
+    border: 1px solid ButtonText;
+  }
+}

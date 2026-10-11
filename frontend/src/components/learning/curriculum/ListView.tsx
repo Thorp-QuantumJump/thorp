@@ -2,15 +2,23 @@ import { Link } from 'react-router-dom'
 import type { StageView } from '@/types/learning'
 import { articlePath } from '../learningPaths'
 import { stageColor } from '../stageColors'
+import type { ArticleProgress, ArticleProgressMap, StageCount } from './articleProgress'
 import { PREVIOUS_EDITION_NOTE, UNRELEASED_STAGE_NOTE, boundarySentence, preparingReason } from './curriculumCopy'
 import { stageAnchorProps, stageHeadingProps } from './stageAnchors'
 import { StageLandscape } from './StageLandscape'
 import { isReleased, stageMinutes } from './stages'
-import { ChipRow, PreparingChip, PreviousEditionChip, ReadingMinutes, TermCount } from './StatusChips'
+import { ChipRow, PreparingChip, PreviousEditionChip, ProgressChip, ReadingMinutes, TermCount } from './StatusChips'
 import styles from './ListView.module.css'
 
 interface ListViewProps {
   stages: readonly StageView[]
+  /**
+   * 글별 나의 학습 상태(B13). 있으면 로그인 사용자의 모습이다. 상태 열과 '완료'·'62% 읽는 중'·'안 읽음' 꼬리표, 익힌
+   * 용어 'm/n', 정거장 점의 상태 모양, 초록·회색 노선이 생긴다. 없으면 상태를 모르는 모습(비로그인·기록 없음)이다
+   */
+  progress?: ArticleProgressMap
+  /** 단계별 완료 수(B13). 있으면 단계 구분 줄에 'n편 중 m편 읽음'·'완주 · n편'을 보인다 */
+  stageCounts?: ReadonlyMap<number, StageCount>
   /** 글로 옮겨 가도 처음 떠난 화면을 잃지 않게 싣는 navigation state */
   linkState?: unknown
 }
@@ -23,10 +31,10 @@ type Row =
   | { type: 'boundary'; sentence: string }
 
 /**
- * 노선의 모양. 공개된 단계는 짙은 중립 노선, 준비 중 단계로 가는 노선은 점선이다. 글별 상태에 따른 초록·회색 노선은
- * 나의 학습(B13 T192)이 더한다.
+ * 노선의 모양. 준비 중 단계로 가는 노선은 점선이다. 글별 상태를 알면 읽은 글로 가는 노선은 초록(`read`), 그 밖은 회색
+ * 실선(`unread`)이고, 모르면 짙은 중립 노선(`neutral`)이다(목업 `listRows`).
  */
-type RailKind = 'neutral' | 'preparing'
+type RailKind = 'read' | 'unread' | 'neutral' | 'preparing'
 
 type Rails = { top: RailKind | null; bottom: RailKind | null }
 
@@ -41,30 +49,34 @@ type Rails = { top: RailKind | null; bottom: RailKind | null }
  * 단계에 남은 기존 글은 번호 없이 '이전 판'이다. 공개된 단계가 끝나는 자리에 공개 경계 한 줄을 둔다. 두 보기 모두에
  * 해당하는 FR-031 규칙이다(목업의 목록 보기는 이 둘을 빼고 그렸지만 spec을 따른다).
  *
- * <p>이 묶음(B11)의 목록 보기는 글별 상태를 모르는 모습(비로그인)이다. 상태 열, 단계별 진행('n편 중 m편 읽음',
- * '완주 · n편'), 상태에 따른 정거장 점은 나의 학습(B13 T192)이 더한다.
+ * <p>로그인 사용자의 나의 학습 상태(`progress`)를 받으면 상태 열, 단계별 진행('n편 중 m편 읽음', '완주 · n편'), 상태에
+ * 따른 정거장 점과 노선을 더한다. 상태를 모르는 글은 상태 칸을 비우고 '안 읽음'으로 채우지 않는다(FR-020).
  */
-export function ListView({ stages, linkState }: ListViewProps) {
+export function ListView({ stages, progress, stageCounts, linkState }: ListViewProps) {
   const rows = toRows(stages)
-  const rails = railsOf(rows)
+  const rails = railsOf(rows, progress)
   // 표와 좁은 화면 목록은 같은 줄 목록을 단계 묶음으로 나눠 그린다. 경계 줄은 자기 묶음이다.
   const sections = toSections(rows)
-  const columnCount = 4
+  const signedIn = progress !== undefined
+  const columnCount = signedIn ? 5 : 4
 
   return (
     <>
       <h2 className={styles.srOnly}>글 목록</h2>
       <table className={styles.table}>
         <caption className={styles.srOnly}>
-          배우기 글 목록. 읽는 순서대로 번호, 제목과 질문, 읽기 시간, 그 글의 용어 개수를 보입니다.
+          {signedIn
+            ? '배우기 글 목록. 읽는 순서대로 번호, 제목과 질문, 상태, 읽기 시간, 익힌 용어를 보입니다.'
+            : '배우기 글 목록. 읽는 순서대로 번호, 제목과 질문, 읽기 시간, 그 글의 용어 개수를 보입니다.'}
         </caption>
         <thead>
           <tr>
             <td className={styles.rail} aria-hidden="true" />
             <th scope="col">번호</th>
             <th scope="col">제목과 질문</th>
+            {signedIn ? <th scope="col">상태</th> : null}
             <th scope="col">읽기</th>
-            <th scope="col">이 글의 용어</th>
+            <th scope="col">{signedIn ? '용어' : '이 글의 용어'}</th>
           </tr>
         </thead>
         {sections.map((section) => {
@@ -98,21 +110,22 @@ export function ListView({ stages, linkState }: ListViewProps) {
                     <tr key="group" className={styles.groupRow}>
                       <td className={styles.rail} aria-hidden="true">
                         {rail}
-                        <GroupMark stage={stage} />
+                        <GroupMark stage={stage} tracked={signedIn} />
                       </td>
                       <th colSpan={columnCount} scope="rowgroup" tabIndex={-1} {...stageHeadingProps}>
-                        <GroupText stage={stage} />
+                        <GroupText stage={stage} count={stageCounts?.get(stage.number)} />
                       </th>
                     </tr>
                   )
                 }
                 if (row.type === 'article') {
                   const article = stage.articles[row.index]
+                  const entry = progress?.get(article.articleId)
                   return (
                     <tr key={article.articleId}>
                       <td className={styles.rail} aria-hidden="true">
                         {rail}
-                        <StationDot />
+                        <StationDot progress={entry} />
                       </td>
                       <td className={styles.number}>{article.number}</td>
                       <td className={styles.titleCell}>
@@ -121,9 +134,10 @@ export function ListView({ stages, linkState }: ListViewProps) {
                         </Link>
                         <span className={styles.question}>{article.question}</span>
                       </td>
+                      {signedIn ? <td className={styles.status}>{entry ? <ProgressChip progress={entry} /> : null}</td> : null}
                       <td className={styles.minor}>약 {article.readingMinutes}분</td>
                       <td className={styles.minor}>
-                        <TermCount termCount={article.termCount} withLabel={false} />
+                        <TermCount termCount={article.termCount} progress={entry} withLabel={false} />
                       </td>
                     </tr>
                   )
@@ -146,6 +160,7 @@ export function ListView({ stages, linkState }: ListViewProps) {
                       <span className={styles.question}>{article.question}</span>
                       <span className={styles.srOnly}>{PREVIOUS_EDITION_NOTE}</span>
                     </td>
+                    {signedIn ? <td className={styles.status} /> : null}
                     <td className={styles.minor}>약 {article.readingMinutes}분</td>
                     <td className={styles.minor} />
                   </tr>
@@ -184,10 +199,10 @@ export function ListView({ stages, linkState }: ListViewProps) {
                   <div key="group" className={styles.groupHead}>
                     <span className={styles.rail} aria-hidden="true">
                       <Rail {...rails[index]} />
-                      <GroupMark stage={stage} />
+                      <GroupMark stage={stage} tracked={signedIn} />
                     </span>
                     <h3 tabIndex={-1} {...stageHeadingProps}>
-                      <GroupText stage={stage} />
+                      <GroupText stage={stage} count={stageCounts?.get(stage.number)} />
                     </h3>
                   </div>
                 )
@@ -195,10 +210,11 @@ export function ListView({ stages, linkState }: ListViewProps) {
               <ol className={styles.plain}>
                 {section.rows.map(({ row, index }) => {
                   if (row.type === 'group' || row.type === 'boundary') return null
+                  const entry = row.type === 'article' ? progress?.get(stage.articles[row.index].articleId) : undefined
                   const rail = (
                     <span className={styles.rail} aria-hidden="true">
                       <Rail {...rails[index]} />
-                      {row.type === 'article' ? <StationDot /> : null}
+                      {row.type === 'article' ? <StationDot progress={entry} /> : null}
                     </span>
                   )
                   if (row.type === 'article') {
@@ -213,8 +229,9 @@ export function ListView({ stages, linkState }: ListViewProps) {
                           </span>
                           <span className={styles.rowQuestion}>{article.question}</span>
                           <ChipRow>
+                            {entry ? <ProgressChip progress={entry} /> : null}
                             <ReadingMinutes minutes={article.readingMinutes} />
-                            <TermCount termCount={article.termCount} />
+                            <TermCount termCount={article.termCount} progress={entry} />
                           </ChipRow>
                         </Link>
                       </li>
@@ -285,19 +302,27 @@ function toSections(rows: Row[]): Section[] {
   return sections
 }
 
-/** 그 줄로 들어오는 노선의 모양. 준비 중 단계와 경계 줄은 점선, 공개된 단계는 중립이다. */
-function railKind(row: Row): RailKind {
-  return row.type === 'boundary' || row.stage.status !== 'OPEN' ? 'preparing' : 'neutral'
+/**
+ * 그 줄로 들어오는 노선의 모양. 준비 중 단계와 경계 줄은 점선이다. 상태를 알면 읽은 글로 들어오는 노선은 초록, 그 밖은
+ * 회색 실선이고, 모르면 중립이다.
+ */
+function railKind(row: Row, progress: ArticleProgressMap | undefined): RailKind {
+  if (row.type === 'boundary' || row.stage.status !== 'OPEN') return 'preparing'
+  if (!progress) return 'neutral'
+  if (row.type !== 'article') return 'unread'
+  const entry = progress.get(row.stage.articles[row.index].articleId)
+  if (!entry) return 'neutral'
+  return entry.state === 'done' ? 'read' : 'unread'
 }
 
 /**
  * 줄마다 위아래 노선. 커리큘럼 보기의 길처럼 공개 경계 앞에서 노선이 끝나고, 경계 줄에서 점선이 새로 시작한다.
  */
-function railsOf(rows: Row[]): Rails[] {
+function railsOf(rows: Row[], progress: ArticleProgressMap | undefined): Rails[] {
   return rows.map((row, i) => {
     const next = rows[i + 1]
-    const top = i === 0 || row.type === 'boundary' ? null : railKind(row)
-    const bottom = next === undefined || next.type === 'boundary' ? null : railKind(next)
+    const top = i === 0 || row.type === 'boundary' ? null : railKind(row, progress)
+    const bottom = next === undefined || next.type === 'boundary' ? null : railKind(next, progress)
     return { top, bottom }
   })
 }
@@ -307,24 +332,30 @@ function railsOf(rows: Row[]): Rails[] {
  * 넘기고 색·점선은 `ListView.module.css`가 정한다.
  */
 function Rail({ top, bottom }: Rails) {
+  // 초록·회색 노선은 나의 학습 상태 표시다. 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(research R33).
+  const mark = (kind: RailKind) => (kind === 'read' || kind === 'unread' ? '' : undefined)
   return (
     <>
-      {top ? <span className={styles.railTop} data-kind={top} /> : null}
-      {bottom ? <span className={styles.railBottom} data-kind={bottom} /> : null}
+      {top ? <span className={styles.railTop} data-kind={top} data-learner-mark={mark(top)} /> : null}
+      {bottom ? <span className={styles.railBottom} data-kind={bottom} data-learner-mark={mark(bottom)} /> : null}
     </>
   )
 }
 
-/** 단계 구분 줄의 표식(24px). 공개된 단계는 채운 원판, 준비 중은 점선 칸이다. 색은 CSS가 정한다. */
-function GroupMark({ stage }: { stage: StageView }) {
+/**
+ * 단계 구분 줄의 표식(24px). 준비 중은 점선 칸, 공개된 단계는 상태를 알면 실선 회색 칸(`open`), 모르면 채운 원판이다.
+ * 색은 CSS가 정한다.
+ */
+function GroupMark({ stage, tracked }: { stage: StageView; tracked: boolean }) {
   const preparing = stage.status !== 'OPEN'
+  const kind = preparing ? 'preparing' : tracked ? 'open' : 'neutral'
   return (
-    <span className={styles.groupMark} data-kind={preparing ? 'preparing' : 'neutral'}>
+    <span className={styles.groupMark} data-kind={kind}>
       <svg viewBox="0 0 24 24" focusable="false">
-        {preparing ? (
-          <circle cx="12" cy="12" r="11.25" strokeWidth="1.5" strokeDasharray="4 3" />
-        ) : (
+        {kind === 'neutral' ? (
           <circle cx="12" cy="12" r="12" />
+        ) : (
+          <circle cx="12" cy="12" r="11.25" strokeWidth="1.5" strokeDasharray={preparing ? '4 3' : undefined} />
         )}
       </svg>
       <span>{stage.number}</span>
@@ -332,22 +363,47 @@ function GroupMark({ stage }: { stage: StageView }) {
   )
 }
 
-/** 글 줄의 정거장 점(14px). 상태를 모르는 중립 점이다. */
-function StationDot() {
+/**
+ * 글 줄의 정거장 점(14px, 목업 `sdot`). 완료는 초록 채움과 체크, 읽는 중은 실선 회색 칸과 초록 진행 호, 안 읽음은 실선
+ * 회색 칸, 상태를 모르면 중립 점이다. 글자는 상태 칸이 원본이다.
+ */
+function StationDot({ progress }: { progress?: ArticleProgress }) {
+  const kind = progress ? (progress.state === 'done' ? 'done' : progress.state === 'reading' ? 'reading' : 'unread') : 'neutral'
   return (
-    <span className={styles.dot}>
+    <span className={styles.dot} data-kind={kind} data-learner-mark={progress ? '' : undefined}>
       <svg viewBox="0 0 14 14" focusable="false">
-        <circle cx="7" cy="7" r="6.5" />
+        {kind === 'neutral' ? <circle cx="7" cy="7" r="6.5" /> : null}
+        {kind === 'done' ? (
+          <>
+            <circle cx="7" cy="7" r="7" />
+            <path d="M3.9 7.2 L6.1 9.4 L10.2 4.9" fill="none" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        ) : null}
+        {kind === 'reading' || kind === 'unread' ? <circle cx="7" cy="7" r="6.25" strokeWidth="1.5" /> : null}
+        {progress?.state === 'reading' ? (
+          <circle
+            className={styles.dotArc}
+            cx="7"
+            cy="7"
+            r="9.5"
+            strokeWidth="2"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray={`${progress.percent} 100`}
+            transform="rotate(-90 7 7)"
+          />
+        ) : null}
       </svg>
     </span>
   )
 }
 
 /**
- * 단계 구분 줄의 글자. 공개된 단계는 번호·이름·수준과 글 수·예상 읽기 시간이고, 공개하지 않았거나 글이 0편인 단계는
- * 번호·이름·수준, '준비 중', 한 줄 설명, 사유다(FR-031).
+ * 단계 구분 줄의 글자. 공개된 단계는 번호·이름·수준과, 나의 학습 완료 수를 알면 'n편 중 m편 읽음'(다 읽었으면 '완주 ·
+ * n편'), 모르면 글 수·예상 읽기 시간이다. 공개하지 않았거나 글이 0편인 단계는 번호·이름·수준, '준비 중', 한 줄 설명,
+ * 사유다(FR-031).
  */
-function GroupText({ stage }: { stage: StageView }) {
+function GroupText({ stage, count }: { stage: StageView; count?: StageCount }) {
   const separator = <span className={styles.separator}>·</span>
   const name = (
     <span className={styles.groupName}>
@@ -382,9 +438,13 @@ function GroupText({ stage }: { stage: StageView }) {
         <StageLandscape stageNumber={stage.number} mini />
       </span>
       {name}
-      <span className={styles.groupProgress}>
+      <span className={styles.groupProgress} data-learner-mark={count ? '' : undefined}>
         {separator}
-        {stage.articles.length}편 · 약 {stageMinutes(stage)}분
+        {count
+          ? count.completed
+            ? `완주 · ${count.publishedCount}편`
+            : `${count.publishedCount}편 중 ${count.completedCount}편 읽음`
+          : `${stage.articles.length}편 · 약 ${stageMinutes(stage)}분`}
       </span>
     </span>
   )

@@ -1,0 +1,186 @@
+/* 단계별 진행의 여섯 정거장(목업 .stations·.station). */
+.stations {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+}
+
+.station {
+  position: relative;
+  min-width: 0;
+  padding: 0 6px;
+  text-align: center;
+}
+
+/* 정거장 사이의 길: 공개된 단계 사이는 회색 실선, 준비 중 단계로 가는 길은 점선 */
+.station::before {
+  position: absolute;
+  top: 32px;
+  right: calc(50% + 40px);
+  left: calc(-50% + 40px);
+  height: 3px;
+  margin-top: -1.5px;
+  background: color-mix(in srgb, var(--thorp-muted) 70%, var(--thorp-background));
+  content: '';
+}
+
+.station:first-child::before {
+  display: none;
+}
+
+.dashed::before {
+  background: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--thorp-muted) 70%, var(--thorp-background)) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.node {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  border-radius: 50%;
+  color: var(--thorp-foreground);
+  font: 750 1rem/1 var(--thorp-font-display, inherit);
+  text-decoration: none;
+}
+
+a.node:hover {
+  color: var(--thorp-brand-soft);
+}
+
+a.node:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}
+
+.pendingNode {
+  color: var(--thorp-muted);
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 64px;
+  height: 64px;
+  overflow: visible;
+}
+
+.number {
+  position: relative;
+}
+
+.plate {
+  fill: var(--thorp-surface);
+  stroke: var(--thorp-muted);
+}
+
+.inner {
+  fill: none;
+  stroke-opacity: 0.28;
+}
+
+.segment {
+  fill: none;
+  stroke: color-mix(in srgb, var(--thorp-muted) 70%, var(--thorp-background));
+}
+
+.segmentRead {
+  fill: none;
+  stroke: var(--thorp-brand-soft);
+}
+
+.platePending {
+  fill: var(--thorp-background);
+  stroke: var(--thorp-muted);
+}
+
+.innerPending {
+  fill: none;
+  stroke: var(--thorp-muted);
+  stroke-opacity: 0.55;
+}
+
+.icon {
+  display: block;
+  width: 36px;
+  height: 25px;
+  margin: 10px auto 0;
+}
+
+.icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kicker {
+  display: block;
+  margin-top: 6px;
+  color: var(--thorp-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.name {
+  display: block;
+  min-height: calc(2 * 1.4em);
+  margin-top: 1px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.progress {
+  display: block;
+  margin-top: 4px;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+}
+
+.preparing {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-top: 6px;
+  padding: 0 8px;
+  border: 1px dashed var(--thorp-muted);
+  border-radius: 999px;
+  color: var(--thorp-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+@media (max-width: 719px) {
+  .stations {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 20px;
+  }
+
+  .station:nth-child(3n + 1)::before {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .plate,
+  .platePending,
+  .innerPending {
+    stroke: CanvasText;
+  }
+
+  .segmentRead {
+    stroke: Highlight;
+  }
+
+  .segment {
+    stroke: CanvasText;
+  }
+}

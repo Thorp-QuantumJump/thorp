@@ -1,8 +1,10 @@
 import { ChevronRight } from 'lucide-react'
-import { useId, type ReactNode } from 'react'
+import { useId, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArticleNext, LearningReturnState } from '@/types/learning'
-import type { ContinueReading, LearningResumeState, StageProgress } from '@/types/learningMe'
+import type { ContinueReading, LearnerOverview, LearningResumeState, StageProgress } from '@/types/learningMe'
+import { nextBadge, nextGoalSentence } from '../me/meCopy'
+import { stageColor } from '../stageColors'
 import {
   expLabel,
   formatCompletedDate,
@@ -10,6 +12,7 @@ import {
   reachedLevel,
   type GainedEntry,
 } from './completionText'
+import { BadgeHero, LevelGoal, LevelHero, NextBadgeLine, StageStampPath } from './CompletionScene'
 import styles from './CompletionCard.module.css'
 
 interface CompletionCardProps {
@@ -28,15 +31,27 @@ interface CompletionCardProps {
   quiz: ReactNode
   next: ArticleNext | null
   learningReturn?: LearningReturnState
+  /**
+   * 완료 뒤 다시 받은 '나의 학습'(T204). 레벨 길, 다음 레벨까지 남은 경험치, 다음 배지는 이 값에서 읽는다. 받지
+   * 못했으면 `null`이고 그 그림과 글자만 빠진다. B12가 둔 글자는 그대로다
+   */
+  overview?: LearnerOverview | null
+  /** 이 화면에서 방금 완료했는가. 그러면 단계 도장 줄의 마지막 칸이 '방금 찍힌 도장'이고 움직임이 있다 */
+  freshCompletion?: boolean
 }
 
 /**
  * 글 끝 완료 카드(013 FR-021·FR-030, design-notes §3.4, 목업 '글 끝'의 `doneCard`).
  *
- * <p>구역은 위에서부터 머리(완료 날짜와 단계 진행), 이번에 얻은 것(새 배지·새 레벨·받은 경험치와 상태 문장),
- * 익힐 용어와 확인 문제, 다음 글 자리다. 그림 장면(단계 도장 줄과 완주 메달, 레벨 표장과 길, 다음 배지 메달)과
- * 움직임, 다음 레벨·다음 배지까지의 글자는 B13(T193·T204)이 더한다. 이 카드는 글자만으로 완결하고 빈 그림 자리를
- * 두지 않는다.
+ * <p>구역은 위에서부터 머리(완료 날짜, 단계 도장 줄과 단계 완주 메달, 단계 진행), 이번에 얻은 것(새 배지의 메달,
+ * 새 레벨의 표장, 레벨 길, 받은 경험치와 상태 문장), 익힐 용어와 확인 문제, 다음 글 자리다. 카드 뒤에는 그 단계 색의
+ * 옅은 빛을 깐다(목업 `.done-card::before`, T209).
+ *
+ * <p><b>다음 목표는 완료 뒤 다시 받은 '나의 학습'에서 읽는다(T204).</b> 완료 응답(계약 §4)에는 레벨 문턱·경험치 합계·
+ * 다음 배지가 없기 때문이다. 받으면 레벨 칸 아래에 '경험치 360 · 다음 레벨까지 240'과 레벨 길을, 새 배지 칸 아래에
+ * '다음 배지 · 읽은 글 5편 · 4/5'를 두고 상태 문장 끝에 '다음 레벨까지 240, 다음 배지(읽은 글 5편)까지 1편입니다.'를
+ * 덧붙인다(T208). 받지 못하면 이 그림과 글자만 빼고 나머지 글자는 그대로다. 서두르게 하거나 놓치면 잃는다는 문장은
+ * 쓰지 않는다. 그림은 모두 `aria-hidden`이고 움직임은 줄이기 설정이 아닐 때만 950ms 안에 끝난다.
  *
  * <p><b>알림은 글 끝의 상태 영역이 한다.</b> 이 카드의 상태 문장은 보이는 글자일 뿐 알림 영역이 아니다. 알림은
  * 글 끝(`ArticleEnd`)이 카드보다 먼저 둔 `role="status"` 영역에 방금 받은 것만 넣는다(FR-030, quickstart §13).
@@ -52,9 +67,12 @@ export function CompletionCard({
   quiz,
   next,
   learningReturn,
+  overview = null,
+  freshCompletion = false,
 }: CompletionCardProps) {
   const titleId = useId()
   const xpId = useId()
+  const goalId = useId()
   const { stageNumber, completedCount, publishedCount, stageCompleted } = stageProgress
 
   const badges = gained.flatMap((entry) =>
@@ -63,20 +81,31 @@ export function CompletionCard({
   const level = reachedLevel(gained)
   const exp = gained.flatMap((entry) => entry.gained.exp)
   const expTotal = gained.reduce((sum, entry) => sum + entry.gained.expTotal, 0)
-  const status = gainedNotice(gained)
+  const goal = overview ? nextGoalSentence(overview) : ''
+  const status = [gainedNotice(gained), goal].filter(Boolean).join(' ')
   const hasNews = badges.length > 0 || level !== null || exp.length > 0
+  const upcoming = overview ? nextBadge(overview.badges) : null
+  // 레벨 길의 점이 옮겨 가기 전 자리: 지금 경험치에서 이 화면에서 받은 경험치를 뺀다.
+  const expBefore = overview ? Math.max(0, overview.level.exp - expTotal) : 0
+  const levelGoal = overview ? <LevelGoal level={overview.level} expBefore={expBefore} moving={expTotal > 0} /> : null
+  // 레벨 칸이나 새 배지 칸이 없으면 다음 목표를 따로 한 칸에 둔다.
+  const goalColumn = overview !== null && (level === null || (badges.length === 0 && upcoming !== null))
+  const glow = { ['--stage' as string]: stageColor(stageNumber) } as CSSProperties
 
   return (
-    <section className={styles.card} aria-labelledby={titleId}>
+    <section className={styles.card} style={glow} aria-labelledby={titleId}>
       <div className={`${styles.section} ${styles.head}`}>
         <h2 id={titleId} className={styles.date}>
           완료 · {formatCompletedDate(completedAt)}
         </h2>
-        <p className={styles.progress}>
-          {stageCompleted
-            ? `${stageNumber}단계 · 완주 · ${publishedCount}편`
-            : `${stageNumber}단계 · ${publishedCount}편 중 ${completedCount}편 읽음`}
-        </p>
+        <div className={styles.headScene}>
+          <StageStampPath stageProgress={stageProgress} freshStamp={freshCompletion} />
+          <p className={styles.progress}>
+            {stageCompleted
+              ? `${stageNumber}단계 · 완주 · ${publishedCount}편`
+              : `${stageNumber}단계 · ${publishedCount}편 중 ${completedCount}편 읽음`}
+          </p>
+        </div>
       </div>
 
       {hasNews ? (
@@ -85,21 +114,35 @@ export function CompletionCard({
             {badges.length > 0 ? (
               <div className={styles.column}>
                 <span className={styles.label}>새 배지</span>
-                {badges.map((badge) => (
+                {badges.map((badge, index) => (
                   <div key={badge.badgeKey} className={styles.gainedItem}>
+                    {/* 메달 그림은 첫 배지에만 둔다. 이 카드에서 빛나는 곳은 두 곳까지다(design-notes §2). */}
+                    {index === 0 ? <BadgeHero badge={badge} overviewBadges={overview?.badges ?? null} /> : null}
                     <b className={styles.big}>{badge.name}</b>
                     <ReceivedRow receivedAt={badge.receivedAt} />
                   </div>
                 ))}
+                {upcoming ? <NextBadgeLine badge={upcoming} /> : null}
               </div>
             ) : null}
             {level ? (
               <div className={styles.column}>
                 <span className={styles.label}>레벨</span>
                 <div className={styles.gainedItem}>
+                  <LevelHero levelBefore={level.gained.levelBefore} levelAfter={level.gained.levelAfter} />
                   <b className={styles.big}>레벨 {level.gained.levelAfter}</b>
                   <ReceivedRow receivedAt={level.receivedAt} />
                 </div>
+                {levelGoal}
+              </div>
+            ) : null}
+            {goalColumn ? (
+              <div className={styles.column} role="group" aria-labelledby={goalId}>
+                <span id={goalId} className={styles.label}>
+                  다음 목표
+                </span>
+                {level === null ? levelGoal : null}
+                {badges.length === 0 && upcoming ? <NextBadgeLine badge={upcoming} /> : null}
               </div>
             ) : null}
             {exp.length > 0 ? (

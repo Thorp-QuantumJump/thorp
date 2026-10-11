@@ -1,9 +1,10 @@
 /*
-  목업 '글 끝'의 완료 카드(.done-card)를 글자만으로 따른다. 단계 색 빛과 그림 장면은 B13(T193)이 더한다.
-  초록 테두리와 옅은 고리는 '방금 끝낸 것'을 보이는 카드에만 쓴다.
+  목업 '글 끝'의 완료 카드(.done-card). 그림 장면은 CompletionScene이 그린다. 초록 테두리와 옅은 고리는 '방금 끝낸
+  것'을 보이는 카드에만 쓴다.
 */
 .card {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--thorp-accent) 35%, transparent);
   border-radius: var(--thorp-radius-card, 16px);
@@ -11,6 +12,19 @@
   box-shadow:
     0 0 0 6px color-mix(in srgb, var(--thorp-accent) 6%, transparent),
     0 30px 60px -36px rgb(0 0 0 / 90%);
+}
+
+/* 카드 뒤에 깐 그 단계 색의 옅은 빛(목업 .done-card::before, T209). 그림이라 움직임이 없다. */
+.card::before {
+  position: absolute;
+  top: -140px;
+  right: -120px;
+  z-index: -1;
+  width: 420px;
+  height: 360px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--stage, transparent) 10%, transparent), transparent);
+  content: '';
+  pointer-events: none;
 }
 
 /* 구역 사이를 가는 줄로 나눈다(목업 .dc-sec). */
@@ -29,6 +43,15 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+
+/* 머리의 단계 도장 줄과 단계 진행(목업 .dc-left) */
+.headScene {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  min-width: 0;
 }
 
 .date {
