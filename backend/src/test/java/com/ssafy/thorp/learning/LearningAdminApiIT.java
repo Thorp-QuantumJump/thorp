@@ -567,7 +567,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
         assertThat(published.get("checkVersion").asText()).isEqualTo("learning-publish-checks-v1");
         assertThat(published.get("sectorMapVersion").asText()).isEqualTo(LearningSeeds.MAP_VERSION);
 
-        JsonNode publicList = publicCall("/learning/articles", 200).at("/data/articles");
+        JsonNode publicList =
+                publicCall("/learning/curriculum", 200).at("/data/preReleaseArticles");
         assertThat(publicList)
                 .extracting(item -> item.get("articleId").asText())
                 .containsExactly(ARTICLE);
@@ -638,7 +639,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {
                 .isEqualTo("LEARNING_ARTICLE_UNAVAILABLE");
         assertThat(publicCall("/learning/terms/max-drawdown", 404).at("/error/code").asText())
                 .isEqualTo("LEARNING_TERM_NOT_READY");
-        assertThat(publicCall("/learning/articles", 200).at("/data/articles")).isEmpty();
+        assertThat(publicCall("/learning/curriculum", 200).at("/data/preReleaseArticles"))
+                .isEmpty();
         JsonNode afterUnpublish = adminListItem(ARTICLE);
         assertThat(afterUnpublish.get("status").asText()).isEqualTo("DRAFT");
         assertThat(afterUnpublish.at("/lastPublication/action").asText()).isEqualTo("UNPUBLISH");
