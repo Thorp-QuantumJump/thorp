@@ -20,7 +20,7 @@ describe('PublishCheckResultList', () => {
     render(<PublishCheckResultList failures={publishCheckFailures} />)
 
     expect(screen.getByText('본문 3번째 블록')).not.toBeNull()
-    expect(screen.getByText('용어 max-drawdown')).not.toBeNull()
+    expect(screen.getByText('용어 swell-height')).not.toBeNull()
     expect(screen.getByText('예시')).not.toBeNull()
   })
 

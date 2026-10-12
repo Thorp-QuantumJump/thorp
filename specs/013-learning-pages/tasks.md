@@ -760,7 +760,7 @@ Task: "T026" / "T027" / "T028" / "T029"                        # 테스트 병�
 
 - [X] T197 (BE) `GET /learning/articles`를 지운다 — `LearningController`의 메서드와 응답 DTO, `LearningPublicApiIT`의 해당 경우, `docs/specs/learning-api/examples/articles-list.json`과 README 표의 줄. `LearningQueryService.listPublished()`와 저장소 조회 `findPublishedOrdered()`는 커리큘럼의 `preReleaseArticles`나 017 `readArticle` 도구(게시 글 열거, 017 plan '근거 팩과 도구')가 쓰면 남긴다. 017 코드가 아직 병합되지 않았어도 017 plan이 이 조회를 가리키면 지우지 않는다([plan](plan.md) "교차 의존"). 프런트엔드에 `fetchLearningArticles`·`LearningArticleList` 참조가 0건인지 먼저 확인한다(T140이 지운다). B11이 운영에 배포된 뒤에만 병합한다 ‹B16›
 - [X] T198 (DOCS) 2판 문서 동기화 — `backend/src/main/resources/registry/parameter-registry.yml`의 주석 참조(`data-model.md §8` → `§13`), `docs/specs/learning-api/README.md` 최종 표, spec·plan·contracts와 구현의 차이 반영, [specs/README.md](../README.md) 색인 확인, 1판 `tasks.md` 머리의 Jira 문장은 기록으로 두고 고치지 않음 ‹B15›
-- [X] T199 (DOCS) [quickstart.md](quickstart.md) §6~§13을 실제 화면과 HTTP로 돌려 [validation.md](validation.md)에 '2판' 절로 기록한다 — 성공·실패·미수행을 구분하고, HTTP나 자동 확인만 있는 항목을 화면 확인으로 세지 않으며, 375px 확인은 iframe 하네스로 잰다. SC-002는 패턴 검사 통과로 증명되지 않는다는 문장과 SC-005 '사용성 확인: 미수행'(또는 결과)을 따로 적는다 ‹B15›
+- [X] T199 (DOCS) [quickstart.md](quickstart.md) §6~§13을 실제 화면과 HTTP로 돌려 [validation.md](validation.md)에 '2판' 절로 기록한다 — 성공·실패·미수행을 구분하고, HTTP나 자동 확인만 있는 항목을 화면 확인으로 세지 않으며, 375px 확인은 iframe 하네스로 잰다(2026-10-12 B15부터 내장 브라우저의 뷰포트 에뮬레이션도 쓸 수 있다, quickstart §13). SC-002는 패턴 검사 통과로 증명되지 않는다는 문장과 SC-005 '사용성 확인: 미수행'(또는 결과)을 따로 적는다 ‹B15›
 - [X] T200 (DOCS) [plan.md](plan.md) "첫 단계 공개 조건" 여섯 항목의 확인 상태(누가, 언제, 결과)를 `validation.md` 2판 절에 표로 둔다. 코드 묶음의 완료와 첫 단계 공개를 섞어 보고하지 않는다 ‹B15›
 
 ---
