@@ -71,7 +71,7 @@ GET /admin/learning/articles
 | 필드 | 근거 |
 |---|---|
 | `hasUnpublishedChanges` | 공개 중인 판 이후 초안이 저장됐는지. 게시된 글을 고친 뒤 게시를 잊는 일을 막는다 |
-| `needsUpdate` | 공개 중인 판의 예시 섹터가 지금 열린 대응표에 없다(spec Edge Cases, R8). 예시가 없거나 대응표를 읽지 못하면 `null` |
+| `needsUpdate` | 공개 중인 판의 예시 섹터가 지금 열린 대응표에 없다(spec Edge Cases, R8). 게시되지 않은 글은 `false`, 공개 중인 판에 예시가 없거나 대응표를 읽지 못하면 `null` |
 | `lastPublication` | FR-018. 게시·게시 취소 기록 중 마지막 것. 기록이 없으면 `null` |
 | `format` **(2판)** | 초안 형식 `V1`·`V2`(R16) |
 | `stage`·`stagePosition` **(2판)** | 초안 배치. 공개 배치와 다르면 다시 게시해야 공개된다(FR-023) |
@@ -372,8 +372,10 @@ GET /admin/learning/articles/{articleId}/preview
 지금 초안을 독자 화면과 똑같이 그리기 위한 응답이다(FR-016). 모양은 [공개 계약](./learning-public-api.md) §3의 글 응답과 같다. 화면은 같은 글 부품으로 그리고, 학습 기록·완료 카드 없이 확인 문제만 비로그인 모드로 보인다.
 
 - `edition`은 이 초안을 지금 게시하면 될 값(`V2` → `CURRENT`, `V1` → 첫 단계 공개 전이면 `PRE_RELEASE`, 뒤면 `PREVIOUS`)이다. `preview: true`가 더 붙는다.
-- `number`·`next`는 `null`이다. 게시 전이라 정해지지 않는다.
-- `readingMinutes`·`minDwellSeconds`는 지금 규칙 파일로 계산한다. 예시의 `available`은 지금 대응표로 판정한다.
+- `number`·`next`·`stageArticleCount`·`publishedAt`은 `null`이다. 게시 전이라 정해지지 않는다.
+- `readingMinutes`·`minDwellSeconds`는 지금 규칙 파일로 계산한다. V1 초안의 `minDwellSeconds`는 `null`이다. 예시의 `available`은 지금 대응표로 판정한다.
+- 정답 보기가 정확히 하나가 아닌 문제는 `correctChoiceId: null`이다. 게시 전 검사 `QUIZ`가 막는 상태라 공개 응답에는 나오지 않는다.
+- 예시 없는 V1 초안은 9월 판 모양이어도 `example: null`이다.
 - 언급 조각의 `aliases`는 그 용어가 이 초안의 용어면 초안에서, 다른 글의 용어면 게시 용어 색인에서 온다.
 - 게시 전 검사는 하지 않는다. 검사 결과는 게시(§6)나 단계 미리 검사(§10)로 본다.
 

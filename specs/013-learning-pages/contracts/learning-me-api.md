@@ -80,6 +80,7 @@ GET /learning/me
 | `articles` | 공개된 글마다 상태(`UNREAD`·`READING`·`COMPLETED`)와 비율, 용어 수. `READING`의 `percent`는 1~99 | FR-020, FR-023 |
 | `stages` | 여섯 단계 전부. `OPEN`은 두 수가 있고, `REPREPARING`은 `completedCount: 0`·`publishedCount: 0`, `PREPARING`은 둘 다 `null`이다 | FR-020, FR-031 |
 | `badges` | 31개 전부, 갈래(`LEVEL`·`READ`·`CORRECT`·`PERFECT`·`STAGE`·`TERMS`·`SPECIAL`) 순서. `status`는 `EARNED`·`NOT_YET`·`PREPARING`이다. 배지의 `PREPARING`은 지금 공개된 콘텐츠로는 받을 수 없다는 뜻이고(사유는 `preparingReason`), `stages[].status`의 `PREPARING`(단계 공개 전)과 이름만 같다 | FR-024, [data-model](../data-model.md) §12-4 |
+| `badges[].progress` | `NOT_YET`일 때만 `{ current, target }`이다. 받은 배지·`PREPARING`·진행이 없는 기준(`persistence`)은 `null`이다. 받은 배지에는 새 기준의 진행 수치를 보이지 않는다 | FR-024, [data-model](../data-model.md) §12-4 |
 | `badges[].preparingReason` | `MORE_STAGES`·`MORE_ARTICLES`·`ALL_STAGES`·`STAGE_NOT_RELEASED`·`STAGE_EMPTY`. 화면이 [design-notes](../design-notes.md) §7 문구로 바꾼다 | FR-024 |
 | `badges[].isNew` | 받은 지 7일 안 | FR-030 |
 | `gained` | 이번 정산에서 새로 생긴 것(§8). 화면은 조용한 알림으로 보인다 | FR-030 |

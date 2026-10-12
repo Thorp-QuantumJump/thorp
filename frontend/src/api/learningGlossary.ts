@@ -56,7 +56,7 @@ function readErrorCode(body: unknown): string | null {
 /**
  * 용어 설명 한 건을 받아 온다.
  *
- * @param termId 표시 이름이 아니라 고정 식별자다(013 data-model §8)
+ * @param termId 표시 이름이 아니라 고정 식별자다(013 data-model §2)
  * @param signal 도움말을 닫거나 다시 열 때 앞선 요청을 끊는 용도
  */
 export async function fetchGlossaryEntry(
