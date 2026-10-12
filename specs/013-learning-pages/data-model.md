@@ -84,7 +84,7 @@ users ─┬─ learning_progress    (사용자 × 글: 읽은 위치·완료·�
 | `stage_id` **(2판)** | `BIGINT` | NOT NULL, FK → `learning_stage.id` | 초안 배치: 넣을 단계 |
 | `stage_position` **(2판)** | `SMALLINT` | NOT NULL, `1..99` | 초안 배치: 단계 안 순서. 유일하지 않다(같으면 `articleId` 순) |
 | `published_stage_id` **(2판)** | `BIGINT` | NULL 허용, FK | 공개 배치: 공개 중인 판이 보이는 단계 |
-| `published_stage_position` **(2판)** | `SMALLINT` | NULL 허용 | 공개 배치: 단계 안 순서 |
+| `published_stage_position` **(2판)** | `SMALLINT` | NULL 허용, `1..99` | 공개 배치: 단계 안 순서 |
 | `quiz` **(2판)** | `JSONB` | NOT NULL, 기본 `[]` | §6의 확인 문제 초안 |
 | `quiz_seq` **(2판)** | `INTEGER` | NOT NULL, 기본 `0`, `≥ 0` | 문제·보기 식별자 카운터. 줄지 않는다(R21) |
 | `first_released_at` **(2판)** | `TIMESTAMPTZ` | NULL 허용 | 공개된 단계에 처음 게시된 시각. 한 번 쓴 뒤 비우지 않는다(R27) |
@@ -93,6 +93,8 @@ users ─┬─ learning_progress    (사용자 × 글: 읽은 위치·완료·�
 **불변식**:
 - `status = 'PUBLISHED'`이면 `published_revision_id`가 있고, `'DRAFT'`이면 없다(테이블 CHECK).
 - **(2판)** `(published_stage_id IS NULL) = (published_revision_id IS NULL)`, `(published_stage_position IS NULL) = (published_stage_id IS NULL)`(테이블 CHECK).
+
+**(2판) 색인**: `idx_learning_article_stage`(`stage_id`). 단계 목록과 단계 공개가 초안 배치로 글을 고른다.
 
 ### 3-3. `learning_term` — 초안 용어 설명
 
@@ -781,7 +783,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 | `LearningArticle` | `domain/model` | 초안 작업본. **(2판)** `format`, 초안·공개 배치, 확인 문제, 식별자 주기(§6-2) |
 | `LearningTerm` | `domain/model` | 초안 용어 설명. **(2판)** 다른 이름·세 문장·`transferFrom` |
 | `ArticleBlock` | `domain/model` | `sealed interface`. 9월 판 네 종류에 **(2판)** `KeySummaryBlock`·`MisconceptionBlock`·`ListBlock`·`TableBlock`·`DiagramBlock`·`InstitutionNoteBlock`. `ParagraphBlock`·`HypotheticalBlock`은 `RichText`를 담고, V1은 글자 조각 하나로 읽고 쓴다 |
-| `RichText`, `Run`(`TextRun`·`TermMentionRun`·`SourceRun`) **(2판)** | `domain/model` | 글자 조각(§5-2) |
+| `RichText`, `Run`(`TextRun`·`TermMentionRun`·`SourceRun`), `SourceRef` **(2판)** | `domain/model` | 글자 조각(§5-2). `SourceRef`는 출처 이름과 주소로, 출처 표시 조각과 제도 안내가 함께 쓴다 |
 | `ArticleFormat`, `Edition`, `Placement` **(2판)** | `domain/model` | R15·R16 |
 | `QuizQuestion`, `QuizChoice`, `QuizIdentity` **(2판)** | `domain/model` | 확인 문제와 같은 문제 판정(§6-3) |
 | `ReadingEstimate` **(2판)** | `domain/model` | 본문 글자 수·분·최소 머문 시간(R20) |
@@ -803,7 +805,8 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 |---|---|---|
 | `LearningArticleSummary`, `LearningArticle`, `ArticleBlock`, `LearningExample`, `LearningTermEntry` | `frontend/src/types/learning.ts` | 공개 조회 응답과 1:1. **(2판)** `Curriculum`, `StageView`, `ReleaseLogEntry`, `Run`, `QuizQuestion`, `edition`을 더한다 |
 | `LearnerOverview`, `LearnerArticleRecord`, `CompletionResult`, `AnswerResult`, `BadgeView`, `LevelView`, `PreparingReason` **(2판)** | `frontend/src/types/learningMe.ts` | 나의 학습 응답과 1:1 |
-| `AdminLearningArticleSummary`, `AdminLearningArticle`, `PublishCheckFailure` | `frontend/src/types/learningAdmin.ts` | 관리 응답과 1:1. **(2판)** `format`, 배치, 확인 문제 초안, `StageAdminView`, `StageReadiness`, `ManuscriptFile` |
+| `AdminLearningArticleSummary`, `AdminLearningArticle`, `PublishCheckFailure` | `frontend/src/types/learningAdmin.ts` | 관리 응답과 1:1. **(2판)** `format`, 배치, 확인 문제 초안, `hasLegacyRevision`, `StageAdminView`, `StageReadiness`, `ArticlePreview` |
+| `EditableDraft`, `ManuscriptFile` **(2판)** | `frontend/src/components/learning/admin/editableDraft.ts`, `manuscript.ts` | 관리 화면의 편집 모양(글자 조각 필드가 편집 문법 문자열, R26)과 원고 파일 모양. 서버 DTO가 아니라 `types/`에 두지 않는다. 초안 모양은 `frontend/src/api/learningAdminShape.ts` 한 곳이 정한다 |
 | `LearningReturnState` | `frontend/src/types/learning.ts` | navigation state `learningReturn: { path, label }` (R11). **(2판)** `label`은 더 쓰지 않고 문구는 `returnTargets.ts` 표가 정한다(R35). 모양은 호환을 위해 그대로 둔다 |
 | `learningResume` **(2판)** | navigation state | '이어서 읽기'로 연 글은 기록된 위치로 간다(FR-020). 값은 `true`이고, `continueReading.kind`가 `RESUME`일 때 완료 카드·요약 패널·떠 있는 '이어서 읽기'·'나의 학습' 화면의 '이어서 읽기'가 싣는다. 글 화면은 받은 글 기록의 `percent` 위치로 간다 |
 | `thorp.learning.adminDraft.{articleId}` | `sessionStorage` | 저장하지 않은 관리 편집 내용(R12). **(2판)** 내용 버전 2(형식·배치·확인 문제 포함) |

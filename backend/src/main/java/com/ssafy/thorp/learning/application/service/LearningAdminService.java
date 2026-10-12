@@ -205,7 +205,7 @@ public class LearningAdminService {
                                 command.title(),
                                 readingOrder,
                                 command.placement()));
-        return new AdminArticleResult(created, null, null);
+        return new AdminArticleResult(created, null, null, false);
     }
 
     /**
@@ -651,7 +651,9 @@ public class LearningAdminService {
         return new AdminArticleResult(
                 article,
                 published.map(ArticleRevision::revisionNo).orElse(null),
-                published.map(ArticleRevision::edition).orElse(null));
+                published.map(ArticleRevision::edition).orElse(null),
+                revisionRepository.existsByArticleIdAndEdition(
+                        article.articleId(), Edition.LEGACY));
     }
 
     private static Optional<Set<String>> openSectorCodes(Optional<SectorMapView> map) {

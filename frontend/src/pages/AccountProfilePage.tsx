@@ -1,11 +1,15 @@
-import { CircleCheck, UserRound } from 'lucide-react'
+import { BookOpenCheck, CircleCheck, UserRound } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { normalizeApiError } from '@/api/client'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { AuthField } from '@/components/auth/AuthField'
+import { isFirstStageReleased } from '@/components/learning/curriculum/stages'
+import { LearningResetSection } from '@/components/learning/me/LearningResetSection'
+import { RecordLoadFailure } from '@/components/learning/me/RecordLoadFailure'
 import heading from '@/components/common/PageHeading.module.css'
 import { Button } from '@/components/ui/button'
+import { useCurriculum } from '@/hooks/useCurriculum'
 import styles from './AccountProfilePage.module.css'
 
 const nicknameRuleMessage = '닉네임은 2~20자로 입력해 주세요.'
@@ -14,7 +18,9 @@ const nicknameRuleMessage = '닉네임은 2~20자로 입력해 주세요.'
  * 회원정보 수정 화면. 이메일은 보기만 하고 닉네임 하나를 바꾼다(`PATCH /accounts/me`).
  *
  * 저장에 성공하면 로그인 상태의 사용자가 바뀐 값으로 갈아 끼워져 머리 메뉴의 닉네임도 함께 바뀐다.
- * 개발용 미리보기(`preview`)는 서버를 부르지 않는다.
+ * 아래 '학습 기록' 구역에서 배우기의 나의 학습 기록 전체를 지운다(013 FR-025). 나의 학습은 첫 단계를 공개할 때
+ * 켜므로(FR-031) 이 구역도 커리큘럼으로 공개를 확인한 뒤에만 보인다(research R36). 확인하지 못하면 구역에 실패 한 줄과
+ * '다시 시도'를 둔다. 개발용 미리보기(`preview`)는 서버를 부르지 않고 구역을 늘 보인다.
  */
 export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
   const { user, updateNickname } = useAuth()
@@ -23,6 +29,16 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
+  const curriculum = useCurriculum({ enabled: !preview })
+  // 나의 학습은 첫 단계를 공개할 때 켠다(013 FR-031). 공개를 확인하지 못하면 구역을 빼지 않고 실패 한 줄과 '다시 시도'를
+  // 둔다. 학습 초기화로 가는 길(FR-025)이 말없이 사라지지 않게 하려는 것이다. 미리보기는 서버를 부르지 않고 구역을 보인다.
+  const learning = preview
+    ? 'on'
+    : curriculum.state.status === 'failed'
+      ? 'failed'
+      : curriculum.state.status === 'loaded' && isFirstStageReleased(curriculum.state.curriculum)
+        ? 'on'
+        : 'off'
 
   // 저장 성공 안내는 지우지 않는다. 저장이 성공하면 바로 이 값이 바뀌어 여기가 다시 돈다.
   useEffect(() => {
@@ -149,6 +165,28 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
             </div>
           </form>
         </section>
+
+        {learning !== 'off' ? (
+          <section className={styles.section} aria-labelledby="learning-section-title">
+            <div className={styles.sectionHeading}>
+              <span className={`${styles.sectionIndex} ${heading.classicOnly}`}>02</span>
+              <span className={styles.sectionIcon} aria-hidden="true">
+                <BookOpenCheck size={18} />
+              </span>
+              <div>
+                <h2 id="learning-section-title">학습 기록</h2>
+                <p>배우기에서 읽은 글과 확인 문제의 기록입니다.</p>
+              </div>
+            </div>
+            <div className={styles.form}>
+              {learning === 'on' ? (
+                <LearningResetSection preview={preview} />
+              ) : (
+                <RecordLoadFailure onRetry={curriculum.retry} />
+              )}
+            </div>
+          </section>
+        ) : null}
       </main>
     </div>
   )

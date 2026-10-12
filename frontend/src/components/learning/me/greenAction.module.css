@@ -1,0 +1,22 @@
+/*
+  초록 단추 모양의 '이어서 읽기'(목업 .go·.fab). 요약 패널·'나의 학습'의 이어서 읽기 칸과 커리큘럼 보기의 떠 있는 단추가
+  함께 쓴다. 이 규칙은 색·그림자·글자만 정하고, 놓이는 자리와 크기·모서리는 쓰는 쪽이 정한다. 떠 있는 단추처럼 그림자를
+  한 겹 더할 때는 쓰는 쪽이 --action-lift를 둔다.
+*/
+.action {
+  background: linear-gradient(180deg, #14d468, var(--thorp-accent));
+  box-shadow:
+    0 3px 0 #02813b,
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    var(--action-lift, 0 0 0 transparent);
+  color: var(--thorp-action-foreground);
+  font-size: 0.94rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+/* 키보드 초점은 2px 초록 외곽선이다(design-notes §6). 단추 바깥 어두운 바탕 위에 놓인다. */
+.action:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}

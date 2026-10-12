@@ -294,6 +294,17 @@ export type CurrentLearningArticle = LearningArticleCommon & {
 /** `GET /learning/articles/{articleId}` 응답 본문. 공개 중인 판의 내용이다. `edition`으로 가른다. */
 export type LearningArticle = LegacyLearningArticle | CurrentLearningArticle
 
+/**
+ * 게시 시각을 뺀 글이다. 관리 미리 보기(관리 계약 §8)가 같은 모양에 게시 전이라 `publishedAt`이 `null`인 응답을
+ * 주므로, 해석은 공개 글과 같은 함수로 하고 게시 시각만 따로 읽는다(`api/learning.ts`의 `readArticleContent`).
+ *
+ * 미리 보기는 예시 없는 V1 초안을 9월 판 모양에 `example: null`로 보낸다. 그래서 이 타입의 9월 판 예시는 비어 있을
+ * 수 있다. 공개 글(`LearningArticle`)의 9월 판에는 늘 예시가 있다.
+ */
+export type LearningArticleContent =
+  | (Omit<LegacyLearningArticle, 'publishedAt' | 'example'> & { example: LearningExample | null })
+  | Omit<CurrentLearningArticle, 'publishedAt'>
+
 /** `GET /learning/terms/{termId}` 응답 본문. 설명 문장은 화면이 짓거나 줄이지 않고 그대로 보인다. */
 export type LearningTermEntry = {
   termId: string

@@ -8,6 +8,9 @@
 /** 배우기 목록 주소. */
 export const LEARN_PATH = '/learn'
 
+/** '나의 학습' 화면 주소. 요약 패널의 '모두 보기'가 연다. 글 주소(`/learn/:articleId`)보다 먼저 맞춘다. */
+export const LEARN_ME_PATH = `${LEARN_PATH}/me`
+
 /** 글 하나의 주소. 글 식별자는 주소 조각으로 안전하게 바꾼다. */
 export function articlePath(articleId: string): string {
   return `${LEARN_PATH}/${encodeURIComponent(articleId)}`

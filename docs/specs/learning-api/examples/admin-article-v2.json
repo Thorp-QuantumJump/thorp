@@ -91,5 +91,6 @@
     ]
   },
   "publishedRevisionNo": null,
-  "publishedEdition": null
+  "publishedEdition": null,
+  "hasLegacyRevision": false
 }

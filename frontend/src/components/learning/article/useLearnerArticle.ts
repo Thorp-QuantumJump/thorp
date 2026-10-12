@@ -43,7 +43,7 @@ type CompletionSend =
  *
  * - `none`: 기록을 받는 중이거나 아직 완료 전이거나 기록할 수 없는 글이다. 아무것도 그리지 않고, '안 읽음'처럼 보이는
  *   것을 두지 않는다
- * - `card`: 완료한 글. 완료 카드와 확인 문제를 그린다
+ * - `card`: 완료한 글. 완료 카드와 확인 문제를 그린다. `fresh`는 이 화면에서 방금 완료했는가다
  * - `loadFailed`: 기록을 받지 못했다. 다시 받을 수 있다
  * - `notRecorded`: 완료가 기록되지 않았다. 같은 요청을 다시 보낼 수 있다
  * - `changed`: 다른 곳에서 글이 바뀌었다. 글을 다시 불러와야 한다
@@ -57,6 +57,8 @@ export type RecordEndView =
       completedAt: string | null
       stageProgress: StageProgress
       continueReading: ContinueReading
+      /** 이 화면에서 방금 완료했는가. 다시 연 완료 글이나 이미 완료한 글의 완료 응답이면 `false`다 */
+      fresh: boolean
     }
   | { kind: 'loadFailed' }
   | { kind: 'notRecorded' }
@@ -108,12 +110,19 @@ function endViewOf(load: RecordLoad, completion: CompletionSend): RecordEndView 
   }
   const record = load.record
   if (completion.status === 'done') {
-    const { completedAt, stageProgress, continueReading } = completion.completion
-    return { kind: 'card', record, completedAt, stageProgress, continueReading }
+    const { completedAt, stageProgress, continueReading, alreadyCompleted } = completion.completion
+    return {
+      kind: 'card',
+      record,
+      completedAt,
+      stageProgress,
+      continueReading,
+      fresh: !alreadyCompleted,
+    }
   }
   if (record.state === 'COMPLETED') {
     const { completedAt, stageProgress, continueReading } = record
-    return { kind: 'card', record, completedAt, stageProgress, continueReading }
+    return { kind: 'card', record, completedAt, stageProgress, continueReading, fresh: false }
   }
   if (completion.status === 'failed') return { kind: 'notRecorded' }
   if (completion.status === 'changed') return { kind: 'changed' }

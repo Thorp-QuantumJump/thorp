@@ -6,6 +6,7 @@ import {
   adminV2Article,
   publishCheckFailures,
 } from '@/test/learningFixtures'
+import type { AdminDraftTermV2 } from '@/types/learningAdmin'
 import { apiClient } from './client'
 import {
   checkAdminAccess,
@@ -49,6 +50,35 @@ function envelopeError(code: string, message: string, details?: unknown) {
 /** 상태 변경 요청은 `runCsrfProtectedMutation`이 앞서 토큰을 준비한다. 그 요청까지 막아 둔다. */
 function stubCsrfPreparation() {
   return vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse({ success: true, data: null }))
+}
+
+/** 키 하나를 뺀 사본이다. `undefined`로 두는 것과 달리 키 자체가 없다. */
+function omit<T extends object, K extends keyof T>(value: T, key: K): Omit<T, K> {
+  const copy = { ...value }
+  delete copy[key]
+  return copy
+}
+
+/** 새 기준 판 글 하나의 미리 보기 응답(계약 §8). */
+const previewBody = {
+  articleId: 'channel-depth',
+  edition: 'CURRENT',
+  title: '물길 깊이 재기',
+  question: '질문',
+  readingOrder: 102,
+  stage: { stageKey: 'shore-basics', number: 1, name: '물가 기초' },
+  number: null,
+  readingMinutes: 5,
+  minDwellSeconds: 150,
+  blocks: [{ type: 'heading', text: '소제목' }],
+  quiz: [],
+  example: null,
+  sources: [],
+  next: null,
+  stageArticleCount: null,
+  hasUnreleasedStages: true,
+  publishedAt: null,
+  preview: true,
 }
 
 beforeEach(() => {
@@ -381,32 +411,48 @@ describe('2판 초안 읽기', () => {
     })
   })
 
+  // 빠진 키를 빈 값으로 채우면 다음 저장에서 그 내용이 말없이 사라진다(원칙 VI).
+  it.each([
+    ['초안의 quiz', { draft: omit(adminV2Article.draft, 'quiz') }],
+    [
+      '용어의 transferFrom',
+      {
+        draft: {
+          ...adminV2Article.draft,
+          terms: adminV2Article.draft.terms.map((term) =>
+            omit(term as AdminDraftTermV2, 'transferFrom'),
+          ),
+        },
+      },
+    ],
+    ['hasLegacyRevision', { hasLegacyRevision: undefined }],
+    ['publishedRevisionNo', { publishedRevisionNo: undefined }],
+  ])('%s 키가 빠진 응답은 빈 값으로 채우지 않고 읽지 못한 응답이다', async (_name, patch) => {
+    const data = JSON.parse(JSON.stringify({ ...adminV2Article, ...patch }))
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data, error: null }),
+    )
+
+    await expect(fetchAdminArticle('channel-depth')).resolves.toMatchObject({
+      status: 'failed',
+      kind: 'unexpected',
+    })
+  })
+
+  it('preview 표시가 없는 응답은 미리 보기로 읽지 않는다', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      axiosResponse({ success: true, data: omit(previewBody, 'preview'), error: null }),
+    )
+
+    await expect(fetchArticlePreview('channel-depth')).resolves.toMatchObject({
+      status: 'failed',
+      kind: 'unexpected',
+    })
+  })
+
   it('미리 보기는 게시 시각이 null이어도 공개 글과 같은 해석기로 읽는다', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue(
-      axiosResponse({
-        success: true,
-        data: {
-          articleId: 'channel-depth',
-          edition: 'CURRENT',
-          title: '물길 깊이 재기',
-          question: '질문',
-          readingOrder: 102,
-          stage: { stageKey: 'shore-basics', number: 1, name: '물가 기초' },
-          number: null,
-          readingMinutes: 5,
-          minDwellSeconds: 150,
-          blocks: [{ type: 'heading', text: '소제목' }],
-          quiz: [],
-          example: null,
-          sources: [],
-          next: null,
-          stageArticleCount: null,
-          hasUnreleasedStages: true,
-          publishedAt: null,
-          preview: true,
-        },
-        error: null,
-      }),
+      axiosResponse({ success: true, data: previewBody, error: null }),
     )
 
     const result = await fetchArticlePreview('channel-depth')

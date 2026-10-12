@@ -669,6 +669,22 @@ class LearningRepositoryTest extends RepositoryTestSupport {
     }
 
     @Test
+    @DisplayName("CURRENT 판이 게시 중인 글도 공개 글 목록에 든다 (017 글 열거가 쓸 조회)")
+    void publishedOrderedIncludesCurrentEdition() {
+        long id = insertPublishedRevision(COMPLETE_V2_SNAPSHOT);
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT edition FROM learning_article_revision WHERE id = ?",
+                                String.class,
+                                id))
+                .isEqualTo("CURRENT");
+        assertThat(articleRepository.findPublishedOrdered())
+                .containsExactly(
+                        new LearningArticleSummaryResult("returns-and-losses", "수익과 손실", "질문", 8));
+    }
+
+    @Test
     @DisplayName("V2 판 JSON에 reading이 없으면 빈 값으로 채우지 않고 실패한다 (원칙 VI)")
     void missingV2ReadingFails() {
         assertThat(COMPLETE_V2_SNAPSHOT).contains(V2_READING);

@@ -23,7 +23,7 @@
 GET /learning/me
 ```
 
-배우기 목록(요약 패널, 글별 상태, 단계별 완료 수, 떠 있는 '이어서 읽기')과 '나의 학습' 화면이 쓴다. **요청마다 정산을 한다**([data-model](../data-model.md) §12-5, [research](../research.md) R30). 운영자의 게시 취소나 단계 이동으로 채워진 단계 완주·배지가 이때 생긴다.
+배우기 목록(요약 패널, 글별 상태, 단계별 완료 수, 떠 있는 '이어서 읽기')과 '나의 학습' 화면, 글 끝 완료 카드가 쓴다. 완료 카드는 카드가 놓일 때와 그 화면에서 경험치·배지를 받을 때마다 부른다(§4). **요청마다 정산을 한다**([data-model](../data-model.md) §12-5, [research](../research.md) R30). 운영자의 게시 취소나 단계 이동으로 채워진 단계 완주·배지가 이때 생긴다.
 
 **첫 단계를 공개하기 전**에는 `409 LEARNING_NOT_RECORDABLE`이다. 나의 학습은 첫 단계를 공개할 때 켠다(FR-031). 화면은 커리큘럼의 `releasedStageCount = 0`이면 이 요청을 보내지 않고 나의 학습 요소를 그리지 않는다([research](../research.md) R33).
 
@@ -80,6 +80,7 @@ GET /learning/me
 | `articles` | 공개된 글마다 상태(`UNREAD`·`READING`·`COMPLETED`)와 비율, 용어 수. `READING`의 `percent`는 1~99 | FR-020, FR-023 |
 | `stages` | 여섯 단계 전부. `OPEN`은 두 수가 있고, `REPREPARING`은 `completedCount: 0`·`publishedCount: 0`, `PREPARING`은 둘 다 `null`이다 | FR-020, FR-031 |
 | `badges` | 31개 전부, 갈래(`LEVEL`·`READ`·`CORRECT`·`PERFECT`·`STAGE`·`TERMS`·`SPECIAL`) 순서. `status`는 `EARNED`·`NOT_YET`·`PREPARING`이다. 배지의 `PREPARING`은 지금 공개된 콘텐츠로는 받을 수 없다는 뜻이고(사유는 `preparingReason`), `stages[].status`의 `PREPARING`(단계 공개 전)과 이름만 같다 | FR-024, [data-model](../data-model.md) §12-4 |
+| `badges[].progress` | `NOT_YET`일 때만 `{ current, target }`이다. 받은 배지·`PREPARING`·진행이 없는 기준(`persistence`)은 `null`이다. 받은 배지에는 새 기준의 진행 수치를 보이지 않는다 | FR-024, [data-model](../data-model.md) §12-4 |
 | `badges[].preparingReason` | `MORE_STAGES`·`MORE_ARTICLES`·`ALL_STAGES`·`STAGE_NOT_RELEASED`·`STAGE_EMPTY`. 화면이 [design-notes](../design-notes.md) §7 문구로 바꾼다 | FR-024 |
 | `badges[].isNew` | 받은 지 7일 안 | FR-030 |
 | `gained` | 이번 정산에서 새로 생긴 것(§8). 화면은 조용한 알림으로 보인다 | FR-030 |
@@ -170,6 +171,7 @@ POST /learning/me/articles/{articleId}/completion
 - 이미 완료한 글이면 `alreadyCompleted: true`, 그때의 `completedAt`, 빈 `gained`로 200이다. 완료를 되돌리는 경로는 없다(FR-021).
 - 완료와 함께 `ARTICLE_COMPLETED` 20과 정산(단계 완주·배지)을 한 트랜잭션에서 한다.
 - `continueReading`은 이 완료를 반영한 값이다(§2와 같다). 완료 카드의 '다음 글' 자리 문구에 쓴다.
+- 이 응답에는 경험치 합계·레벨 문턱·보이는 가장 높은 레벨·다음 배지의 진행이 없다. 완료 카드의 그림 장면(레벨 길)과 다음 목표('경험치 360 · 다음 레벨까지 240', '다음 배지 · 읽은 글 5편 · 4/5')는 화면이 §1을 불러 그린다(2026-10-12 B13 T204). 완료 카드가 놓일 때 한 번, 이 화면에서 완료·첫 답·다시 풀기로 경험치·배지를 받을 때마다 다시 부른다. 다시 연 완료 글도 부른다. 단계 완주 메달은 지금 다 읽었는지가 아니라 그 단계의 배지를 받았는지로 그리므로(spec US6 시나리오 8) 배지 목록이 있어야 하기 때문이다. 그 요청의 정산으로 새로 생긴 것(§1 `gained`)은 완료 카드의 받은 것에 더하고 조용한 알림으로 알린다. §1 요청이 실패하면(다시 받다가 실패한 경우를 포함해) 이 응답으로 그린 글자(완료 날짜·단계 진행·새 배지·레벨·받은 경험치·상태 문장)는 그대로 두고 레벨 길과 다음 목표만 뺀다. 조용히 다시 부르지 않는다.
 
 ### 실패
 

@@ -3,7 +3,6 @@ package com.ssafy.thorp.learning.presentation.controller;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.learning.application.service.LearningQueryService;
 import com.ssafy.thorp.learning.presentation.response.CurriculumResponse;
-import com.ssafy.thorp.learning.presentation.response.LearningArticleListResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningArticleResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningTermResponse;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p><b>비로그인을 허용한다</b>(계약 머리말, FR-012). {@code SecurityConfig}가 이 경로를 {@code
  * anyRequest().permitAll()}로 두므로 추가 설정이 없다. 사용자 식별을 읽지 않고 조회를 사용자별로 남기지 않는다.
  *
- * <p>여러 용어를 한 번에 받는 조회는 두지 않는다(계약 §4, research R10).
+ * <p>여러 용어를 한 번에 받는 조회는 두지 않는다(계약 §5, research R10).
  */
 @RestController
 @RequestMapping("/learning")
@@ -36,14 +35,6 @@ public class LearningController {
     public ResponseEntity<ApiResponse<CurriculumResponse>> curriculum() {
         return ResponseEntity.ok(
                 ApiResponse.ok(CurriculumResponse.from(learningQueryService.curriculum())));
-    }
-
-    /** 공개 중인 글 목록. 게시된 글이 없으면 {@code articles: []}로 200이다. */
-    @GetMapping("/articles")
-    public ResponseEntity<ApiResponse<LearningArticleListResponse>> listArticles() {
-        return ResponseEntity.ok(
-                ApiResponse.ok(
-                        LearningArticleListResponse.from(learningQueryService.listPublished())));
     }
 
     /** 공개 중인 글 하나. 볼 수 없는 글은 404 {@code LEARNING_ARTICLE_UNAVAILABLE}이다. */

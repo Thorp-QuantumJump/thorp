@@ -25,7 +25,12 @@ npm run lint && npm run build && npm test
 - 용어 도움말은 `components/learning/TermHelp.tsx` 하나를 쓴다. 필수 prop은 `termId`·`label`이고 나머지(`returnTo`·`note`·`on`·`fallbackMeaning`·`articleLinkLabel`)는 선택이다(013 term-help-ui §2). 글 본문과 013이 소유하는 용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015).
 - 013이 소유하지 않는 설명(지표 계산식, 그 화면에서만 쓰는 구분, 조작 안내)은 `components/common/InlineHelp.tsx`에 담아 물음표 뒤로 내린다. TermHelp와 달리 설명을 props로 받는다. 013이 그 용어를 소유하게 되면 TermHelp로 옮기고 화면에서 문장을 지운다(013 FR-015).
 - FR이 표시를 요구하는 문장은 도움말로 내리지 않는다. 002 FR-016(0% 섹터의 뜻)과 003 FR-004(기본값은 편의용 출발점)가 그 예다. spec이 도움말 자리를 따로 정한 문장만 예외다. 002 FR-009(선택 섹터의 두 가지 뜻)는 2026-09-29부터 002 화면에 표시하지 않는다.
-- `sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`는 관리 화면의 저장하지 않은 편집 내용과 그 기반 `draftVersion`을 보관한다. 저장 성공 시 지우며, 복원할 때는 보관한 판 번호를 유지한다.
+- `sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`는 관리 화면의 저장하지 않은 편집 내용과 그 기반
+  `draftVersion`을 보관한다(내용 버전 2, `components/learning/admin/adminDraftStorage.ts`). 복원할 때는 보관한 판
+  번호를 유지한다. V2 글자 조각 필드는 편집 문법 문자열(`{{용어:…}}`·`{{출처:…}}`, 013 research R26)로 담는다.
+  지우는 곳은 편집 화면 하나이고 그때는 저장 성공, 운영자의 '버리기', 버전 1 보관본을 복원하지 않는다고 알린 뒤뿐이다.
+  읽기(`readUnsentDraft`)는 지우지 않는다. 게시·단계 공개가 성공하면 그 글 보관본의 문제 식별자와 `transferFrom`을
+  응답대로 고친다(`applyPublishToUnsentDraft`).
 - 학습 기록은 브라우저 저장소에 쓰지 않는다. 배우기 화면이 쓰는 키는 화면 상태 키 둘(탭 단위 `sessionStorage`)이고, 로그인 연결을 누르면 014 `useLoginReturn`이 `thorp.auth.returnTarget`을 쓴다(013 FR-023·FR-031, research R34). `thorp.learning.view`는 배우기 목록에서 고른 보기(`curriculum`·`list`), `thorp.learning.dismissedNotices`는 그 탭에서 닫은 공개 안내의 `entryKey` 목록이다. 둘 다 내용 버전을 두고 모든 접근을 try/catch로 감싼다(`components/learning/curriculum/viewStorage.ts`·`noticeStorage.ts`).
 - 컴포넌트는 함수형, 파일명 PascalCase(`BacktestForm.tsx`), 훅은 `use` 접두사
 - API 필드는 camelCase (백엔드와 동일)
@@ -38,10 +43,6 @@ npm run lint && npm run build && npm test
   가입 성공 시 지운다.
 - `sessionStorage` 키 `thorp.auth.loginEmail`은 로그인 화면에 쳐 둔 이메일을 보관한다.
   **비밀번호는 넣지 않는다.** 로그인 성공 시 지운다.
-- 배우기 관리 화면 보관본(`thorp.learning.adminDraft.{articleId}`)은 내용 버전 2다. V2 글자 조각 필드를 편집 문법
-  문자열(`{{용어:…}}`·`{{출처:…}}`, 013 research R26)로 담고, 버전 1 보관본은 복원하지 않고 버린다는 안내와 함께
-  지운다. 게시·단계 공개가 성공하면 그 글 보관본의 문제 식별자와 `transferFrom`을 응답대로 고친다
-  (`components/learning/admin/adminDraftStorage.ts`의 `applyPublishToUnsentDraft`).
 - `localStorage` 키 `thorp.design`은 디자인 개편 전후 전환값(`classic`·`new`)이다. `index.html`이 `?design=`에서 받아
   저장하고, `classic`이면 `<html data-design="classic">`을 붙인다. 새 색·모서리 토큰은 `index.css`의 기본 `:root`에,
   예전 값은 `[data-design='classic']`에 둔다. 개편 뒤 새로 생긴 토큰은 각 자리에서 `var(--토큰, 예전 값)`으로 쓰고
