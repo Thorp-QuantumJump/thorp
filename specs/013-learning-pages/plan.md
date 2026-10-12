@@ -5,7 +5,7 @@
 > 2판 plan 문서 작업의 브랜치는 `docs(fe)/spec-013-plan`(origin/dev `e120010a`에서 땀)이다. 2026-09-29부터 Jira 티켓을 쓰지 않으므로 구현 묶음의 브랜치는 `{type}({position})/{description}` 형식으로 착수할 때 만든다.
 > 1판(2026-09-16)의 묶음 B01~B06은 구현·병합되었다. 1판 실행 결과와 남은 수동 확인(T097)은 [validation.md](validation.md)에 있다.
 
-**Input**: `specs/013-learning-pages/spec.md` (Clarifications 2026-09-16·2026-10-02·2026-10-05, FR-001~FR-031, SC-001~SC-017)
+**Input**: `specs/013-learning-pages/spec.md` (Clarifications 2026-09-16·2026-10-02·2026-10-05·2026-10-07, FR-001~FR-031, SC-001~SC-017)
 
 ## Summary
 
@@ -50,7 +50,7 @@
 - 예시 비중 단위는 002 계약과 같은 0.1%p 정수다([data-model](data-model.md) §9).
 - 로컬 프로필은 Flyway가 꺼져 있어 초기 자리가 생기지 않는다. 확인 방법은 [quickstart](quickstart.md) §0이다.
 
-**Scale/Scope**: 단계 여섯, 글 27편(기존 아홉 + 새 18편 자리), 배지 31개, 관리 사용자 몇 명. 공개 경로 셋(`/learn`, `/learn/me`, `/learn/:articleId`)과 회원정보 화면(`/account/profile`)의 '학습 기록' 구역, 관리 경로 둘(`/admin/learning`에 단계 패널, `/admin/learning/:articleId`). API는 공개 넷, 나의 학습 일곱, 관리 열하나다.
+**Scale/Scope**: 단계 여섯, 글 27편(기존 아홉 + 새 18편 자리), 배지 31개, 관리 사용자 몇 명. 공개 경로 셋(`/learn`, `/learn/me`, `/learn/:articleId`)과 회원정보 화면(`/account/profile`)의 '학습 기록' 구역, 관리 경로 둘(`/admin/learning`에 단계 패널, `/admin/learning/:articleId`). API는 공개 셋(B16이 `GET /learning/articles`를 지웠다), 나의 학습 일곱, 관리 열하나다.
 
 `NEEDS CLARIFICATION`으로 남은 항목은 없다. spec이 plan으로 넘긴 값(읽기 시간 계산과 허용 오차, 최소 머문 시간, 보기 수 상한, 도식·표 상한, 처음 나오는 자리, 확인 필요 기간, 넘기기 처리, 이전 판 수정 중 새 원고 위치, 저장 구조)은 R16~R40에서 정했다.
 
@@ -71,7 +71,7 @@
 | IX. 실행 한도는 실측으로 정한다 | 백테스트를 실행하지 않는다 | 해당 없음 |
 | X. 자료는 이용 조건 안에서만 | 글은 KRX 시세를 쓰지 않는다. 외부 인용은 '(*출처)'로 출처를 싣고 내용을 보증하지 않는다(FR-007) | 통과 |
 | "하지 않는 것" | 사용자 간 랭킹·리더보드 없음, 배우기 밖 알림·학습 알림·연속 출석 없음, 숙련 퀀트 연구 화면 없음 | 통과 |
-| 기록·개인정보·보관 | 나의 학습은 사용자 식별자로만 묶고 이메일·닉네임을 담지 않는다. 집계·관리 화면 노출 없음(FR-020). '학습 초기화'로 사용자가 지운다. 보관 기간은 PD-13을 따르고 무기한 보관을 전제하지 않는다. 비로그인 기록은 없다. 탭 저장소에는 화면 상태 둘만 두며 이는 6.1.0 초안(탭을 닫으면 지워짐)과도 맞다 | 통과 |
+| 기록·개인정보·보관 | 나의 학습은 사용자 식별자로만 묶고 이메일·닉네임을 담지 않는다. 집계·관리 화면 노출 없음(FR-020). '학습 초기화'로 사용자가 지운다. 보관 기간은 PD-13을 따르고 무기한 보관을 전제하지 않는다. 비로그인 기록은 없다. 탭 저장소에는 화면 상태 둘만 두며 이는 6.1.0 초안(탭을 닫으면 지워짐)과도 맞다. 같은 절의 'CSV/JSON 내보내기'는 계산 기록('내 기록', 006)에 적용하고 나의 학습 기록은 대상이 아니라고 본다(2026-10-12 B15, 팀 확인 필요). 대상으로 정하면 spec 013에 FR을 더한다 | 통과 |
 | 화면 구조(6.2.0 초안, 미승인) | 예시를 글마다 고른다(FR-003)는 미승인 초안을 앞서 적용한다. 반려되면 `exampleRequired: true`인 v3 규칙을 더하고 FR-003을 되돌린다(R19) | 조건부 통과 |
 | 스키마 변경 규칙 | 묶음마다 마이그레이션·매핑·검증을 같은 MR에 담는다. 적용된 `V20260917101000`을 고치지 않는다. 2판 마이그레이션 셋에는 이 절의 '되돌릴 수 없는 변경'(배포 전 백업·팀 승인 대상)이 없다고 판정한다. B07은 테이블·열·행을 더할 뿐 기존 값을 지우거나 바꾸지 않는다. 기존 행에 NOT NULL을 거는 `stage_id`·`stage_position`과 공개 배치 CHECK는 같은 마이그레이션이 먼저 채운 뒤 걸므로 기존 행이 어기지 않는다. 아홉 글 밖의 글이 있어 채우지 못하면 Flyway가 그 마이그레이션을 한 트랜잭션으로 되돌려 새 버전이 기동하지 못할 뿐 데이터는 그대로다(세 마이그레이션은 트랜잭션 밖에서만 도는 문장을 쓰지 않는다). 그래서 배포 직전 운영 DB의 글 목록을 확인하고, 다른 글이 있으면 그 글의 단계 배치를 정하는 대응을 더한다(R15). B08의 `uq_learning_term_key` 삭제는 데이터를 지우지 않고, 새 부분 유일 색인 둘은 기존 행이 어길 수 없다(`transfer_from_article_id`가 모두 NULL이고 `term_key`는 이미 유일하다, R24). B09는 새 테이블만 만든다. 이 판정과 영향 범위를 B07·B08 MR 본문에 적는다. 확인 결과 행을 지우거나 기존 값을 바꿔야만 풀리면 그 대응은 이 규칙에 해당하므로 배포 전에 운영 DB를 백업하고 팀 승인을 받는다 | 통과 |
 | 작업 묶음·Git | 묶음 열, 묶음마다 목적 하나·독립 검증·미완성 task 없음. 브랜치 `{type}({position})/{description}` | 통과 |
@@ -138,8 +138,9 @@ specs/013-learning-pages/
 │   ├── learning-admin-api.md      # 관리 권한·초안·게시·미리 보기·단계 공개
 │   └── term-help-ui.md            # 공용 도움말, 돌아가기 표, 예시 진입, 설정 항목 도움말
 ├── checklists/
-│   └── requirements.md
-└── tasks.md                # /speckit-tasks 산출물 — 이 명령이 만들지 않는다. 1판 T001~T097이 있고 2판 task는 /speckit-tasks가 더한다
+│   ├── requirements.md
+│   └── review.md           # 2판 요구사항 품질 검토(검토자가 표시)
+└── tasks.md                # 1판 T001~T097, 2판 T098~T211(converge가 더한 Phase 27~31 포함)
 ```
 
 원고는 코드가 아니라 콘텐츠이므로 spec 폴더가 아니라 `docs/learning-content/`에 둔다(R25·R26).
@@ -147,9 +148,12 @@ specs/013-learning-pages/
 ```text
 docs/learning-content/
 ├── README.md               # 원고 형식과 편집 문법 (B14)
+├── term-map.md             # 27편 용어 대응표(첫 단계 공개 조건 4, R39)
 ├── current/{articleId}.json # 게시 중인 내용과 같은 원고 (원고 MR)
 └── next/{articleId}.json    # 단계 공개를 기다리는 새 기준 원고 (원고 MR)
 ```
+
+2026-10-12 기준 `current/`는 아직 없다. 여섯 단계는 2026-10-11에 공개됐고, 식별자가 채워진 원고를 내보내 `next/`에서 `current/`로 옮기는 일(R25)은 원고 MR이 한다.
 
 ### Source Code (repository root)
 
@@ -159,33 +163,44 @@ docs/learning-content/
 backend/src/main/java/com/ssafy/thorp/learning/
 ├── presentation/
 │   ├── controller/      # LearningController(+커리큘럼), LearningAdminController(+미리 보기),
-│   │                    # LearningStageAdminController, LearnerController(/learning/me)
-│   ├── request/         # V2 블록·글자 조각·확인 문제·용어 요청, StageReleaseRequest,
-│   │                    # PositionRequest, AnswerRequest
+│   │                    # LearningStageAdminController, LearnerController(/learning/me),
+│   │                    # DraftCommands(저장 요청 → 명령)
+│   ├── request/         # SaveDraftRequest(+V2 블록·글자 조각·확인 문제·용어 중첩 record), RichTextField,
+│   │                    # UniqueElementValues, StageReleaseRequest, PositionRequest, AnswerRequest
 │   ├── response/        # CurriculumResponse, LearnerOverviewResponse 등
 │   └── support/         # LearnerAccess, UniqueConstraintViolations(부분 색인 이름)
 ├── application/
 │   ├── service/         # LearningQueryService(+커리큘럼·V2 글), LearningAdminService(+형식·게시 방식·
-│   │                    # 넘기기·미리 보기), LearningStageAdminService, LearnerService
+│   │                    # 넘기기·미리 보기), LearningStageAdminService, LearnerService,
+│   │                    # ArticlePublisher(글마다 게시·단계 공개의 잠금과 게시), TermOwnership(용어 소유 판정),
+│   │                    # ArticleViewAssembler(판 → 응답), LearningTime
+│   ├── command/         # ReleaseStageCommand
+│   ├── result/          # CurriculumResult, StageAdminResult, StageReadinessResult, StageReleaseResult,
+│   │                    # LearnerOverviewResult, LearnerArticleResult, CompletionResult, AnswerResult 등
+│   ├── exception/       # StageNotFound·StageChanged·TermTransferInvalid·NotRecordable·CompletionRequired·
+│   │                    # QuestionNotFound·RetryNotAvailable(모두 …Exception)
 │   ├── repository/      # LearningStageRepository, ReleaseLogRepository, LearnerProgressRepository,
 │   │                    # LearnerAnswerRepository, ExpLedgerRepository, BadgeAwardRepository
-│   └── port/            # PublishCheckRulesPort(+v2)
+│   └── port/            # PublishCheckRulesPort(+v2), InstitutionNoteReviewPeriod
 ├── domain/
 │   ├── model/           # data-model §14의 2판 타입
-│   └── vo/              # StageKey, QuestionId, ChoiceId, BadgeKey
+│   ├── vo/              # StageKey, QuestionId, ChoiceId, BadgeKey
+│   └── exception/       # FormatOutdated·InvalidDraft·StageNotReleased·StageCheckFailed·
+│                        # StageReleaseBlocked(모두 …Exception)
 └── infrastructure/
-    ├── persistence/     # 새 JPA 엔티티·매퍼, 장부·답·배지의 ON CONFLICT 저장(JdbcTemplate)
+    ├── persistence/     # 단계·변경 기록의 JPA 엔티티·매퍼(StageLookup·StageDirectory·ReleaseLogMapper 등),
+    │                    # 나의 학습 네 테이블(진행·답·장부·배지)의 JdbcTemplate 저장(ON CONFLICT)
     ├── rules/           # YamlPublishCheckRulesLoader(+v2)
-    └── config/          # LearningProperties(institution-note-review-days)
+    └── config/          # LearningProperties(institution-note-review-days), LearningConfig
 
 backend/src/main/java/com/ssafy/thorp/common/
 ├── config/SecurityConfig.java      # /learning/me/** 를 authenticated()로 묶는 한 줄
 └── exception/ErrorCode.java        # spec 013 블록에 2판 코드 열셋
 
 backend/src/main/resources/
-├── db/migration/V{B07 작성 시각}__learning_stages_and_v2_content.sql
-├── db/migration/V{B08 작성 시각}__learning_stage_release.sql
-├── db/migration/V{B09 작성 시각}__learning_records.sql
+├── db/migration/V20261006093000__learning_stages_and_v2_content.sql   # B07
+├── db/migration/V20261006184500__learning_stage_release.sql            # B08
+├── db/migration/V20261007100000__learning_records.sql                  # B09
 └── learning/publish-checks-v2.yml
 
 backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java   # 규칙 하나 더함(learning → backtest 금지)
@@ -200,20 +215,29 @@ frontend/src/
 ├── pages/AccountProfilePage.tsx(+구역)       # /account/profile 의 '학습 기록' 구역
 ├── pages/AdminLearningListPage.tsx(+단계 패널), pages/AdminLearningEditPage.tsx(+V2)
 ├── App.tsx(+/learn/me)
+├── hooks/               # useLearnerOverview.ts, useCompletionFollowUp.ts(완료 뒤 GET /learning/me),
+│                        # useCurriculum.ts, useOffScreen.ts, useModalDialog.ts
 └── components/learning/
+    ├── learningPaths.ts, stageColors.ts
     ├── article/         # ArticleBody, RichText, firstOccurrences.ts, KeySummary, Misconception,
     │                    # ComparisonTable, HypotheticalDiagram, InstitutionNote, TermDefinition,
-    │                    # EditionNotice, QuizPanel, CompletionCard, ResumeLine,
-    │                    # useArticleCompletion.ts, useReadingPosition.ts
+    │                    # EditionNotice, QuizPanel, CompletionCard, CompletionScene, CompletionAnnouncement,
+    │                    # ArticleEnd, ResumeLine, completionText.ts, diagramShape.ts, useLearnerArticle.ts,
+    │                    # useArticleCompletion.ts, useReadingPosition.ts, useSettledAuth.ts,
+    │                    # useRestoreFocusAfterConceal.ts
     ├── curriculum/      # JourneyMap, StageBand, StageLandscape, ArticleNode, ListView, ViewToggle,
-    │                    # ReleaseNotice, ReleaseBoundary, PreviousEditionCards, ChangeLog,
+    │                    # ReleaseNotice, ReleaseBoundary, PreviousEditionCards, ChangeLog, StatusChips,
+    │                    # curriculumCopy.ts, articleProgress.ts, stages.ts, stageAnchors.ts,
     │                    # viewStorage.ts, noticeStorage.ts
-    ├── me/              # SummaryPanel, FloatingContinue, LevelEmblem, LevelPath, StageMedal,
-    │                    # ArticleStamp, BadgeMedal, BadgeFamilies, GuestSample,
-    │                    # LearningResetSection, useLearnerOverview.ts, medalShapes.ts
+    ├── me/              # SummaryPanel, FloatingContinue, ContinueCard, continueLink.ts, LevelCard, LevelEmblem,
+    │                    # LevelPath, StageMedal, StageStampWell, StageStations, ArticleStamp, BadgeMedal,
+    │                    # BadgeFamilies, GainGrid, GuestSample, LearningResetSection, ReloginNotice, NewPill,
+    │                    # QuietNotice, RecordLoadFailure, ProgressFraction, ExpLine, MedalParts, MaterialDefs,
+    │                    # materials.ts, medalShapes.ts, meCopy.ts, badgeRules.ts, svgCoord.ts
     ├── returnTargets.ts, ReturnLink.tsx      # ReturnToDiagnosisLink를 대신한다(R35)
     ├── TermHelp.tsx(+fallbackMeaning·articleLinkLabel, returnTo 선택)
-    └── admin/           # BlockEditor(+V2), RichTextField, richTextSyntax.ts, QuizEditor,
+    └── admin/           # BlockEditor(+V2), V2BlockFields, NumberField, RichTextField, richTextSyntax.ts,
+                         # editableDraft.ts, manuscript.ts, draftLabels.ts, QuizEditor,
                          # TermListEditor(+다른 이름·세 문장·넘겨받기), PlacementEditor,
                          # ArticlePreview, ManuscriptTransfer, StageReleasePanel,
                          # PublishCheckResultList(+v2·단계)
@@ -236,12 +260,12 @@ constitution "작업 묶음"이 **작업 묶음 = 1 Branch = 1 MR**이고 **묶�
 | B08 | `feat(be): 배우기 단계를 차례로 공개하고 변경 기록을 남긴다` | `feat(be)/learning-stage-release` | 마이그레이션(변경 기록 테이블, `first_released_at`, 넘겨받기 열과 부분 유일 색인), 단계 목록·미리 검사·공개, 넘기기, `ARTICLE_ADDED` 기록, 커리큘럼 API(공개 안내·변경 기록·이전 판·첫 단계 공개 전 목록), 오류 코드, 픽스처, 통합 테스트 | US5 시나리오 7~9, FR-001·FR-023·FR-031 | B07 |
 | B09 | `feat(be): 로그인 사용자의 나의 학습을 기록하고 경험치와 배지를 계산한다` | `feat(be)/learning-records` | 마이그레이션(나의 학습 네 테이블), `/learning/me` 일곱 엔드포인트, `SecurityConfig` 한 줄, `LearnerAccess`, 장부·정답 몫 상한·레벨·닿을 수 있는 레벨·배지 31개·'준비 중' 판정·정산, 학습 초기화, ArchUnit 규칙 하나, 오류 코드, 픽스처, 통합 테스트(동시 답 포함) | US6 서버, FR-020~FR-022·FR-024·FR-025·FR-028~FR-030 | B08 |
 | B10 | `feat(fe): 배우기 글 화면에 새 요소와 비로그인 확인 문제를 보인다` | `feat(fe)/learning-article-v2` | 글 응답 타입·API, 블록·글자 조각 그리기, 처음 나오는 자리, 가상 도식, 제도 안내, 용어 세 문장과 ⚠️, 글 안 도움말, 이전 판 머리·끝, 비로그인 확인 문제와 글 끝 로그인 연결(`useLoginReturn`), 읽기 시간, 돌아가기 표와 `ReturnLink`, `TermHelp`의 2판 prop, 1판 화면 테스트 갱신, `vite.config.ts` `include` | US1·US3, FR-005~FR-010·FR-019·FR-022(비로그인)·FR-026 | B07 계약 |
-| B11 | `feat(fe): 배우기 목록을 단계별 여정 지도와 목록 보기로 보인다` | `feat(fe)/learning-curriculum` | 커리큘럼 API, 첫 단계 공개 전 목록(9월 판 모습, 보기 전환·나의 학습 요소 없음), 여정 지도(풍경·길·노드, 노드의 글 도장 부품 `ArticleStamp`), 목록 보기(표·좁은 화면 목록), 보기 기억, 공개 경계·준비 중·다시 준비 중·이전 판 카드, 공개 안내와 [닫기], 변경 기록, 비로그인 한 줄·로그인 연결(`useLoginReturn`)과 견본 그림(`GuestSample`과 메달 실루엣 `medalShapes.ts`), `frontend/CLAUDE.md` 저장 키, 옛 목록 조회 함수(`fetchLearningArticles`)와 그 타입·테스트 삭제 | US1, FR-001·FR-023·FR-031 | B08 계약, B10 |
+| B11 | `feat(fe): 배우기 목록을 단계별 여정 지도와 목록 보기로 보인다` | `feat(fe)/learning-curriculum` | 커리큘럼 API, 첫 단계 공개 전 목록(9월 판 모습, 보기 전환·나의 학습 요소 없음), 여정 지도(풍경·길·노드, 노드의 글 도장 부품 `ArticleStamp`), 목록 보기(표·좁은 화면 목록), 보기 기억, 공개 경계·준비 중·다시 준비 중·이전 판 카드, 공개 안내와 [닫기], 변경 기록, 비로그인 한 줄·로그인 연결(`useLoginReturn`)과 견본 그림(`GuestSample`과 메달 실루엣 `medalShapes.ts`), `frontend/CLAUDE.md` 저장 키, 옛 목록 조회 함수(`fetchLearningArticles`)와 그 타입·테스트 삭제, 비로그인 글 끝의 견본(T202)과 글 머리 단계 연결(T203) | US1, FR-001·FR-023·FR-031 | B08 계약, B10 |
 | B12 | `feat(fe): 글 끝에서 완료와 확인 문제를 기록한다` | `feat(fe)/learning-article-records` | 나의 학습 API(글 기록·위치·완료·첫 답·다시 풀기), 완료 판정, 읽은 위치와 keepalive, 완료 카드(글자와 조용한 알림. 그림 장면과 움직임은 B13)와 마지막 글의 끝 문구(`continueReading`), 글을 연 채 로그인 상태가 바뀔 때 글 끝·타이머 초기화, 저장 뒤 공개하는 확인 문제, 다시 풀기, '62%까지 읽었습니다' 줄, 기록 실패와 로그인 상태 처리(만료 때 014 재로그인 안내) | US6 시나리오 1~3·5·9·10, FR-021·FR-022 | B09 계약, B10 |
-| B13 | `feat(fe): 나의 학습 화면과 학습 초기화를 만든다` | `feat(fe)/learning-journal` | `GET /learning/me` 훅, 첫 단계 공개 전 숨김(`/learn/me`는 `/learn`으로), 요약 패널, 목록의 글별 상태·단계 완료 수, 떠 있는 '이어서 읽기', 그림 부품(레벨 표장·레벨 길·단계 완주 메달·배지 메달)과 완료 카드의 그림 장면·움직임, `/learn/me`(레벨 카드·표장·레벨 길·숫자 줄·단계 진행·익힌 용어·배지 메달·준비 중 묶음·'새'), 비로그인 견본 화면(B11의 `GuestSample`과 '나의 학습에 쌓이는 것' 세 칸), 회원정보의 '학습 초기화' | US6 시나리오 4·6·8·11, FR-020·FR-024·FR-025·FR-029·FR-030 | B09 계약, B11, B12 |
+| B13 | `feat(fe): 나의 학습 화면과 학습 초기화를 만든다` | `feat(fe)/learning-journal` | `GET /learning/me` 훅, 첫 단계 공개 전 숨김(`/learn/me`는 `/learn`으로), 요약 패널, 목록의 글별 상태·단계 완료 수, 떠 있는 '이어서 읽기', 그림 부품(레벨 표장·레벨 길·단계 완주 메달·배지 메달)과 완료 카드의 그림 장면·움직임, `/learn/me`(레벨 카드·표장·레벨 길·숫자 줄·단계 진행·익힌 용어·배지 메달·준비 중 묶음·'새'), 비로그인 견본 화면(B11의 `GuestSample`과 '나의 학습에 쌓이는 것' 세 칸), 회원정보의 '학습 초기화', 완료 카드 뒤 `GET /learning/me` 재조회와 다음 목표 글자(T204·T208), 만료 동안 목록·'나의 학습'의 재로그인 안내 | US6 시나리오 4·6·8·11, FR-020·FR-024·FR-025·FR-029·FR-030 | B09 계약, B11, B12 |
 | B14 | `feat(fe): 관리 화면에서 새 기준 글을 편집하고 단계를 공개한다` | `feat(fe)/learning-admin-v2` | 관리 타입·API 2판, 형식·배치 편집, V2 블록 편집기와 편집 문법, 확인 문제 편집기, 용어 v2와 넘겨받기, 미리 보기, 원고 가져오기·내보내기, `docs/learning-content/README.md`, 단계 패널(미리 검사·공개 확인), 목록 2판 열 | US5, FR-016·FR-017·FR-031 | B07·B08 계약, B10 |
-| B16 | `refactor(be): 화면이 쓰지 않는 배우기 글 목록 경로를 지운다` | `refactor(be)/learning-articles-endpoint` | `GET /learning/articles`와 그 픽스처·테스트 정리(커리큘럼 조회가 같은 목록을 `preReleaseArticles`로 준다) | — | B11 배포 |
-| B15 | `docs(fe): spec 013 2판 문서 동기화와 최종 검증` | `docs(fe)/spec-013-v2-wrapup` | [quickstart](quickstart.md) §6~§13 실행 기록(`validation.md` 2판 절), spec·plan과 구현 차이 반영, README 색인 확인 | — | 전부(B16 포함) |
+| B16 | `refactor(be): 화면이 쓰지 않는 배우기 글 목록 경로를 지운다` | `feat(be)/spec-013-b16`(계획은 `refactor(be)/learning-articles-endpoint`) | `GET /learning/articles`와 그 픽스처·테스트 정리(커리큘럼 조회가 같은 목록을 `preReleaseArticles`로 준다) | — | B11 배포 |
+| B15 | `docs(fe): spec 013 2판 문서 동기화와 최종 검증` | `docs(fe)/spec-013-v2-wrapup` | [quickstart](quickstart.md) §6~§13 실행 기록(`validation.md` 2판 절), spec·plan·contracts·design-notes·목업과 구현 차이 반영(T198·T207·T210·T211), 첫 단계 공개 조건 확인 표(T200), README 색인 확인 | — | 전부(B16 포함) |
 
 ```text
 B07 ──▶ B08 ──▶ B09
@@ -255,6 +279,17 @@ B07 ──▶ B08 ──▶ B09
 ```
 
 **묶음 열 = 브랜치 열 = MR 열.** 프런트엔드 묶음은 계약 픽스처를 기준으로 백엔드 병합을 기다리지 않고 시작할 수 있다(1판과 같다).
+
+실제 병합(2026-10-12 기준)에서는 묶음마다 구현 MR 뒤에 converge·리뷰 수정 MR이 따로 붙었다. 아래가 그 브랜치이고, 모두 같은 묶음의 일이다. 표의 MR 제목은 계획한 제목이며 실제 MR 제목과 다를 수 있다.
+
+- B07: `fix(be)/learning-v2-review`
+- B08: `fix(be)/learning-stage-release-review`
+- B09: `docs(fe)/spec-013-b09-converge`, `fix(be)/learning-records-review`
+- B10: `docs(fe)/spec-013-converge`, `fix(fe)/learning-article-v2-review`
+- B11: `docs(fe)/spec-013-b11-converge`, `fix(fe)/learning-curriculum-review`
+- B12: `docs(fe)/spec-013-b12-converge`, `fix(fe)/learning-article-records-review`(2026-10-12 미병합)
+- B13·B16: 사용자 지시로 구현·converge·리뷰 수정을 한 브랜치(`feat(fe)/learning-journal`, `feat(be)/spec-013-b16`)에 담았다. B16은 절 번호 수정 MR도 같은 브랜치에서 했다
+- B14: `fix(fe)/learning-admin-v2-review`(2026-10-12 진행 중)
 
 ### 묶음을 이렇게 자른 이유
 
