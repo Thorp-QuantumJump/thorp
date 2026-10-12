@@ -214,6 +214,20 @@ function RecordQuiz({
   const retry = (questionId: string, choiceId: string) =>
     void send('retry', questionId, choiceId, onRetry)
 
+  /** 결과를 받았으면 답한 목록, 보내는 중이거나 실패했으면 잠긴 목록, 아니면 고를 수 있는 단추다. */
+  const viewOf = (
+    round: Pending['round'],
+    questionId: string,
+    chosen: string | undefined,
+    choose: (questionId: string, choiceId: string) => void,
+  ): ItemView => {
+    if (chosen !== undefined) return { kind: 'answered', choiceId: chosen }
+    if (pending?.round === round && pending.questionId === questionId) {
+      return { kind: 'locked', choiceId: pending.choiceId }
+    }
+    return { kind: 'open', onChoose: (choiceId) => choose(questionId, choiceId) }
+  }
+
   const pendingLine = (round: Pending['round'], questionId: string) =>
     pending?.round === round && pending.questionId === questionId ? (
       <PendingLine
@@ -239,20 +253,13 @@ function RecordQuiz({
     <PanelFrame embedded>
       {shown.map(({ question, index }) => {
         const answered = saved.get(question.questionId)
-        const locked = pending?.round === 'first' && pending.questionId === question.questionId
         return (
           <QuizItem
             key={question.questionId}
             number={index + 1}
             question={question}
             firstAnswer
-            view={
-              answered
-                ? { kind: 'answered', choiceId: answered.choiceId }
-                : locked
-                  ? { kind: 'locked', choiceId: pending.choiceId }
-                  : { kind: 'open', onChoose: (choiceId) => answer(question.questionId, choiceId) }
-            }
+            view={viewOf('first', question.questionId, answered?.choiceId, answer)}
             explanationRef={
               justAnswered === `first:${question.questionId}` ? explanationRef : undefined
             }
@@ -283,23 +290,12 @@ function RecordQuiz({
           </p>
           {retryShown.map((question, index) => {
             const done = retryAnswers[index]
-            const locked =
-              !done && pending?.round === 'retry' && pending.questionId === question.questionId
             return (
               <QuizItem
                 key={question.questionId}
                 number={index + 1}
                 question={question}
-                view={
-                  done
-                    ? { kind: 'answered', choiceId: done.choiceId }
-                    : locked
-                      ? { kind: 'locked', choiceId: pending.choiceId }
-                      : {
-                          kind: 'open',
-                          onChoose: (choiceId) => retry(question.questionId, choiceId),
-                        }
-                }
+                view={viewOf('retry', question.questionId, done?.choiceId, retry)}
                 explanationRef={
                   justAnswered === `retry:${question.questionId}` ? explanationRef : undefined
                 }
@@ -443,47 +439,33 @@ function QuizItem({ number, question, view, firstAnswer, explanationRef, childre
         </>
       ) : null}
 
-      {view.kind === 'locked' ? (
-        // 저장 응답 전에는 맞았는지를 드러내지 않는다. 고른 보기만 표시하고 바꿀 수 없다(FR-022).
-        <ol className={styles.answered}>
-          {question.choices.map((choice, index) => {
-            const picked = choice.choiceId === view.choiceId
-            return (
-              <li key={choice.choiceId} className={styles.answer} data-picked={picked || undefined}>
-                <span className={styles.choiceNumber} aria-hidden="true">
-                  {index + 1}
-                </span>
-                <span className={styles.choiceText}>
-                  <span className="sr-only">{index + 1}. </span>
-                  {choice.text}
-                </span>
-                {picked ? (
-                  <span className={styles.tags}>
-                    <span className={styles.tagPicked}>고른 답</span>
-                  </span>
-                ) : null}
-              </li>
-            )
-          })}
-        </ol>
-      ) : null}
-
-      {view.kind === 'answered' ? (
-        <AnsweredChoices question={question} chosen={view.choiceId} explanationRef={explanationRef} />
-      ) : null}
+      {view.kind === 'open' ? null : (
+        <ChosenChoices
+          question={question}
+          chosen={view.choiceId}
+          revealed={view.kind === 'answered'}
+          explanationRef={explanationRef}
+        />
+      )}
 
       {children}
     </div>
   )
 }
 
-function AnsweredChoices({
+/**
+ * 고른 뒤의 보기 목록. 저장 응답을 받기 전(`revealed`가 거짓)에는 고른 보기만 표시하고 맞았는지·정답·풀이를
+ * 드러내지 않는다(FR-022). 받은 뒤에는 고른 답·맞음·정답·틀린 보기와 풀이를 보인다.
+ */
+function ChosenChoices({
   question,
   chosen,
+  revealed,
   explanationRef,
 }: {
   question: QuizQuestion
   chosen: string
+  revealed: boolean
   explanationRef?: RefObject<HTMLParagraphElement | null>
 }) {
   const pickedIndex = question.choices.findIndex((choice) => choice.choiceId === chosen)
@@ -493,7 +475,7 @@ function AnsweredChoices({
       <ol className={styles.answered}>
         {question.choices.map((choice, index) => {
           const picked = choice.choiceId === chosen
-          const correct = choice.choiceId === question.correctChoiceId
+          const correct = revealed && choice.choiceId === question.correctChoiceId
           return (
             <li
               key={choice.choiceId}
@@ -508,25 +490,31 @@ function AnsweredChoices({
                 <span className="sr-only">{index + 1}. </span>
                 {choice.text}
               </span>
-              <span className={styles.tags}>
-                {picked ? <span className={styles.tagPicked}>고른 답</span> : null}
-                {correct ? (
-                  <span className={styles.tagCorrect}>{picked ? '맞음' : '정답'}</span>
-                ) : (
-                  <span className={styles.tagWrong}>틀린 보기</span>
-                )}
-              </span>
+              {picked || revealed ? (
+                <span className={styles.tags}>
+                  {picked ? <span className={styles.tagPicked}>고른 답</span> : null}
+                  {revealed ? (
+                    correct ? (
+                      <span className={styles.tagCorrect}>{picked ? '맞음' : '정답'}</span>
+                    ) : (
+                      <span className={styles.tagWrong}>틀린 보기</span>
+                    )
+                  ) : null}
+                </span>
+              ) : null}
             </li>
           )
         })}
       </ol>
-      <p ref={explanationRef} className={styles.explanation} tabIndex={-1}>
-        <span className="sr-only">
-          고른 답 {pickedIndex + 1}번, {pickedCorrect ? '맞음' : '틀린 보기'}.{' '}
-        </span>
-        {/* 이름표와 풀이 사이에 실제 띄어쓰기를 둔다. 여백만 두면 읽기·복사에서 '풀이합성…'처럼 붙는다. */}
-        <b>풀이</b> {question.explanation}
-      </p>
+      {revealed ? (
+        <p ref={explanationRef} className={styles.explanation} tabIndex={-1}>
+          <span className="sr-only">
+            고른 답 {pickedIndex + 1}번, {pickedCorrect ? '맞음' : '틀린 보기'}.{' '}
+          </span>
+          {/* 이름표와 풀이 사이에 실제 띄어쓰기를 둔다. 여백만 두면 읽기·복사에서 '풀이합성…'처럼 붙는다. */}
+          <b>풀이</b> {question.explanation}
+        </p>
+      ) : null}
     </>
   )
 }

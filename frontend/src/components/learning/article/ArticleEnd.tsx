@@ -69,7 +69,9 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   const endRef = useRef<HTMLDivElement>(null)
   useRestoreFocusAfterConceal(endRef, concealed)
   const concealable = concealed ? styles.concealed : undefined
+  const carried = learningReturn ? { learningReturn } : undefined
   const unrecorded = mode.kind === 'guest' || mode.kind === 'expired'
+  const view = mode.kind === 'record' ? mode.learner.endView : null
 
   // 완료 카드의 다음 목표(레벨 길·다음 레벨까지·다음 배지)와 단계 완주 메달의 배지는 '나의 학습' 전체에서 읽는다(T204,
   // US6 시나리오 8). 그 요청의 정산으로 생긴 것은 카드에 잇고 알린다. 받지 못해도 카드의 글자는 그대로다.
@@ -77,32 +79,31 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   const learner = mode.kind === 'record' ? mode.learner : null
   const followUp = useCompletionFollowUp({
     auth: settled,
-    enabled: learner !== null && hasCompletionCard(learner),
+    enabled: view?.kind === 'card',
     articleRevision: learner?.articleRevision ?? 0,
     gainedCount: learner?.gained.length ?? 0,
   })
 
-  const card = learner ? completionCard(article, learner, learningReturn, followUp) : null
-
   return (
     <div ref={endRef} className={styles.end}>
-      {/* 새 배지·레벨 알림 영역. 완료 카드보다 먼저, 비어 있는 채로 둔다. 미리 있어야 바뀐 글자가 읽힌다(FR-030). */}
+      {/*
+        새 배지·레벨 알림 영역. 완료 카드보다 먼저, 비어 있는 채로 둔다. 미리 있어야 바뀐 글자가 읽힌다(FR-030).
+        확인하는 동안에는 기록 자리와 함께 보조 기술에서 빠진다(R33).
+      */}
       {mode.kind === 'record' ? (
-        <CompletionAnnouncement
-          announcement={mode.learner.announcement}
-          notice={followUp.notice}
-          ready={followUp.finished}
-        />
+        <div className={concealable}>
+          <CompletionAnnouncement
+            announcement={mode.learner.announcement}
+            notice={followUp.notice}
+            ready={followUp.finished}
+            held={concealed}
+          />
+        </div>
       ) : null}
 
       {mode.kind === 'expired' && mode.rejected ? (
         <div className={concealable}>
-          <p className={styles.lineText} role="alert">
-            <span>기록되지 않았습니다.</span>
-            <button type="button" className={styles.inlineButton} onClick={mode.onRetry}>
-              다시 시도
-            </button>
-          </p>
+          <FailureLine message="기록되지 않았습니다." action="다시 시도" onAction={mode.onRetry} />
         </div>
       ) : null}
 
@@ -113,18 +114,25 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
         </div>
       ) : null}
 
-      {mode.kind === 'record' ? (
-        <div className={concealable}>{card ?? <RecordFailureLine learner={mode.learner} />}</div>
+      {mode.kind === 'record' && view ? (
+        <div className={concealable}>
+          <RecordPlace
+            article={article}
+            learner={mode.learner}
+            learningReturn={learningReturn}
+            followUp={followUp}
+          />
+        </div>
       ) : null}
 
       {/* 완료 카드가 있으면 다음 글 자리는 카드 안에 있다. */}
-      {card ? null : (
+      {view?.kind === 'card' ? null : (
         <nav className={styles.next} aria-label="다음 읽을 글">
           {article.next ? (
             <Link
               className={styles.nextLink}
               to={`/learn/${encodeURIComponent(article.next.articleId)}`}
-              state={learningReturn ? { learningReturn } : undefined}
+              state={carried}
             >
               <span className={styles.nextLabel}>다음 글</span>
               <span className={styles.nextTitle}>
@@ -134,11 +142,7 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
             </Link>
           ) : (
             <>
-              <Link
-                className={styles.listLink}
-                to="/learn"
-                state={learningReturn ? { learningReturn } : undefined}
-              >
+              <Link className={styles.listLink} to="/learn" state={carried}>
                 배우기 목록으로
               </Link>
               {article.hasUnreleasedStages ? (
@@ -167,38 +171,82 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   )
 }
 
-/** 완료 카드가 놓이는가. 기록을 받았고 완료한 글이다. */
-function hasCompletionCard(learner: LearnerEnd): boolean {
-  if (learner.load.status !== 'loaded') return false
-  return learner.completion.status === 'done' || learner.load.record.state === 'COMPLETED'
+/** 실패 한 줄과 그 행동. 화면 낭독기가 바로 읽도록 `role="alert"`다(FR-019, R13). */
+function FailureLine({
+  message,
+  action,
+  onAction,
+}: {
+  message: string
+  action: string
+  onAction: () => void
+}) {
+  return (
+    <p className={styles.lineText} role="alert">
+      <span>{message}</span>
+      <button type="button" className={styles.inlineButton} onClick={onAction}>
+        {action}
+      </button>
+    </p>
+  )
 }
 
-/** 완료한 글이면 완료 카드를 짓는다. 기록을 받기 전이거나 아직 완료하지 않았으면 `null`이다. */
-function completionCard(
-  article: ArticleEndProps['article'],
-  learner: LearnerEnd,
-  learningReturn: LearningReturnState | undefined,
-  followUp: CompletionFollowUp,
-) {
-  if (learner.load.status !== 'loaded' || !hasCompletionCard(learner)) return null
-  const record = learner.load.record
-  const done = learner.completion.status === 'done' ? learner.completion.completion : null
+/**
+ * 로그인 사용자의 기록 자리. 기록 훅이 정한 `endView`대로 완료 카드나 실패 한 줄을 그리고, 받는 중이거나 완료
+ * 전이면 아무것도 그리지 않는다. 그동안 '안 읽음'처럼 보이는 것을 두지 않는다(FR-020, FR-021, 계약 §0).
+ */
+function RecordPlace({
+  article,
+  learner,
+  learningReturn,
+  followUp,
+}: {
+  article: ArticleEndProps['article']
+  learner: LearnerEnd
+  learningReturn: LearningReturnState | undefined
+  followUp: CompletionFollowUp
+}) {
+  const view = learner.endView
+  switch (view.kind) {
+    case 'none':
+      return null
+    case 'loadFailed':
+      return (
+        <FailureLine
+          message="학습 기록을 불러오지 못했습니다."
+          action="다시 시도"
+          onAction={learner.reloadRecord}
+        />
+      )
+    case 'notRecorded':
+      return (
+        <FailureLine message="기록되지 않았습니다." action="다시 시도" onAction={learner.complete} />
+      )
+    case 'changed':
+      return (
+        <FailureLine
+          message="이 글이 바뀌었습니다. 글을 다시 불러와 주세요."
+          action="다시 불러오기"
+          onAction={learner.reloadArticle}
+        />
+      )
+  }
 
   const terms = article.blocks.flatMap((block) => (block.type === 'term' ? [block.label] : []))
   return (
     <CompletionCard
-      completedAt={done?.completedAt ?? record.completedAt ?? ''}
+      completedAt={view.completedAt}
       stageKey={article.stage.stageKey}
-      stageProgress={done?.stageProgress ?? record.stageProgress}
-      continueReading={done?.continueReading ?? record.continueReading}
+      stageProgress={view.stageProgress}
+      continueReading={view.continueReading}
       gained={[...learner.gained, ...followUp.extra]}
       terms={terms}
-      mastered={record.quiz.mastered}
+      mastered={view.record.quiz.mastered}
       next={article.next}
       learningReturn={learningReturn}
       overview={followUp.overview}
       // 이 화면에서 방금 완료했으면 마지막 도장이 찍히는 움직임을 준다. 다시 연 완료 글은 최종 모습 그대로다.
-      freshCompletion={done !== null && !done.alreadyCompleted}
+      freshCompletion={view.fresh}
       goalLateMs={followUp.lateMs}
       quiz={
         <QuizPanel
@@ -206,8 +254,8 @@ function completionCard(
           key={`${learner.articleRevision}:${learner.revision}`}
           questions={article.quiz}
           mode="record"
-          answers={record.answers}
-          summary={record.quiz}
+          answers={view.record.answers}
+          summary={view.record.quiz}
           hasTerms={terms.length > 0}
           onAnswer={learner.answer}
           onRetry={learner.retry}
@@ -216,44 +264,4 @@ function completionCard(
       }
     />
   )
-}
-
-/**
- * 완료 카드 대신 놓이는 한 줄. 기록을 받지 못했으면 '학습 기록을 불러오지 못했습니다', 완료가 기록되지 않았으면
- * '기록되지 않았습니다', 다른 곳에서 글이 바뀌었으면 글을 다시 불러오라는 문장이다(FR-020, FR-021, 계약 §0).
- * 기록을 받는 중이거나 완료 전이면 아무것도 그리지 않는다. 그동안 '안 읽음'처럼 보이는 것을 두지 않는다.
- */
-function RecordFailureLine({ learner }: { learner: LearnerEnd }) {
-  if (learner.load.status === 'failed') {
-    return (
-      <p className={styles.lineText} role="alert">
-        <span>학습 기록을 불러오지 못했습니다.</span>
-        <button type="button" className={styles.inlineButton} onClick={learner.reloadRecord}>
-          다시 시도
-        </button>
-      </p>
-    )
-  }
-  if (learner.load.status !== 'loaded') return null
-  if (learner.completion.status === 'failed') {
-    return (
-      <p className={styles.lineText} role="alert">
-        <span>기록되지 않았습니다.</span>
-        <button type="button" className={styles.inlineButton} onClick={learner.complete}>
-          다시 시도
-        </button>
-      </p>
-    )
-  }
-  if (learner.completion.status === 'stale') {
-    return (
-      <p className={styles.lineText} role="alert">
-        <span>이 글이 바뀌었습니다. 글을 다시 불러와 주세요.</span>
-        <button type="button" className={styles.inlineButton} onClick={learner.reloadArticle}>
-          다시 불러오기
-        </button>
-      </p>
-    )
-  }
-  return null
 }
