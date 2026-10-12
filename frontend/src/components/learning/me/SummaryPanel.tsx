@@ -7,10 +7,11 @@ import { LEARN_ME_PATH } from '../learningPaths'
 import { ContinueCard } from './ContinueCard'
 import { LevelEmblem } from './LevelEmblem'
 import { LevelPathMini } from './LevelPath'
-import { newBadgeLine, nextLevelReachable, unreachableLevelSentence } from './meCopy'
+import { newBadgeLine, unreachableNextLevelSentence } from './meCopy'
 import { NewPill } from './NewPill'
 import { QuietNotice } from './QuietNotice'
-import type { OverviewState } from './useLearnerOverview'
+import { RecordLoadFailure } from './RecordLoadFailure'
+import type { OverviewState } from '@/hooks/useLearnerOverview'
 import styles from './SummaryPanel.module.css'
 
 interface SummaryPanelProps {
@@ -58,15 +59,10 @@ export function SummaryPanel({
         aria-labelledby={titleId}
         data-summary-panel="failed"
       >
-        <h2 id={titleId} className={styles.srOnly}>
+        <h2 id={titleId} className="sr-only">
           나의 학습
         </h2>
-        <p className={styles.failure}>
-          <span>학습 기록을 불러오지 못했습니다.</span>
-          <button type="button" className={styles.retry} onClick={onRetry}>
-            다시 시도
-          </button>
-        </p>
+        <RecordLoadFailure onRetry={onRetry} />
       </section>
     )
   }
@@ -123,7 +119,7 @@ export function SummaryPanel({
 function LevelCell({ overview }: { overview: LearnerOverview }) {
   const { level } = overview
   // 다음 레벨이 지금 공개된 단계로 닿을 수 없으면 작은 레벨 길 끝이 점선이고 FR-029 문장을 덧붙인다(FR-031).
-  const unreachable = nextLevelReachable(level) ? null : unreachableLevelSentence(level)
+  const unreachable = unreachableNextLevelSentence(level)
   return (
     <div className={`${styles.cell} ${styles.levelCell}`}>
       <span className={styles.emblem} aria-hidden="true">

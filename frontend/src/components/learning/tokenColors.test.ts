@@ -15,9 +15,10 @@ import { describe, expect, it } from 'vitest'
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
-function rootTokenColors(): Map<string, string> {
+/** `index.css`에서 `head`로 시작하는 규칙 블록 하나를 꺼낸다. */
+function indexCssBlock(head: string): string {
   const css = readFileSync(resolve(sourceRoot, 'index.css'), 'utf-8')
-  const start = css.indexOf(':root {')
+  const start = css.indexOf(head)
   let depth = 0
   let end = start
   for (let i = css.indexOf('{', start); i < css.length; i += 1) {
@@ -28,7 +29,20 @@ function rootTokenColors(): Map<string, string> {
       break
     }
   }
-  const block = css.slice(start, end)
+  return css.slice(start, end)
+}
+
+/**
+ * classic에서 `initial`로 비우는 토큰. 개편 뒤 새로 생긴 토큰이라 각 자리는 `var(--토큰, 예전 값)`으로 써야 classic이
+ * 예전 화면으로 돌아간다(frontend/CLAUDE.md).
+ */
+function classicClearedTokens(): string[] {
+  const block = indexCssBlock(":root[data-design='classic'] {")
+  return [...block.matchAll(/(--thorp-[\w-]+):\s*initial\s*;/g)].map((match) => match[1])
+}
+
+function rootTokenColors(): Map<string, string> {
+  const block = indexCssBlock(':root {')
   const colors = new Map<string, string>()
   for (const match of block.matchAll(/(--thorp-[\w-]+):\s*(#[0-9a-fA-F]{6}|rgb\((\d+) (\d+) (\d+)\))\s*;/g)) {
     const [, name, value, r, g, b] = match
@@ -56,6 +70,14 @@ const TARGETS = [
   resolve(sourceRoot, 'components/learning/stageColors.ts'),
   resolve(sourceRoot, 'pages/LearningListPage.tsx'),
   resolve(sourceRoot, 'pages/LearningListPage.module.css'),
+  resolve(sourceRoot, 'pages/LearningMePage.tsx'),
+  resolve(sourceRoot, 'pages/LearningMePage.module.css'),
+]
+
+/** '나의 학습'(013 B13)이 만든 화면: `me/` 부품, 완료 카드의 그림 장면, '나의 학습' 화면. */
+const LEARNER_TARGETS = [
+  ...sources('components/learning/me'),
+  ...sources('components/learning/article').filter((path) => /[\\/]CompletionScene\./.test(path)),
   resolve(sourceRoot, 'pages/LearningMePage.tsx'),
   resolve(sourceRoot, 'pages/LearningMePage.module.css'),
 ]
@@ -93,6 +115,21 @@ describe('배우기 화면의 색', () => {
       '#03c75a',
       '#01170a',
     ])
+  })
+
+  it("'나의 학습' 화면은 classic에서 비우는 토큰을 예전 값과 함께 쓴다", () => {
+    const cleared = classicClearedTokens()
+    // 확인 창 배경막처럼 개편 뒤 생긴 토큰이 들어 있어야 이 검사가 뜻이 있다.
+    expect(cleared).toContain('--thorp-overlay')
+    const found: string[] = []
+    for (const path of LEARNER_TARGETS) {
+      const text = readFileSync(path, 'utf-8')
+      for (const match of text.matchAll(/var\((--thorp-[\w-]+)\s*\)/g)) {
+        if (cleared.includes(match[1]))
+          found.push(`${path.slice(sourceRoot.length + 1)}: ${match[0]}`)
+      }
+    }
+    expect(found).toEqual([])
   })
 
   it('의미 토큰과 같은 색을 hex나 rgb()로 박지 않는다', () => {

@@ -9,7 +9,8 @@ import type {
   StageProgress,
 } from '@/types/learningMe'
 import { stageProgressLabel } from '../curriculum/articleProgress'
-import { earnedStageNumbers, nextBadge, nextGoalSentence } from '../me/meCopy'
+import { earnedStageNumbers, nextBadge } from '../me/badgeRules'
+import { nextGoalSentence } from '../me/meCopy'
 import { stageColor } from '../stageColors'
 import {
   expLabel,
@@ -48,10 +49,10 @@ interface CompletionCardProps {
   /** 이 화면에서 방금 완료했는가. 그러면 단계 도장 줄의 마지막 칸이 '방금 찍힌 도장'이고 움직임이 있다 */
   freshCompletion?: boolean
   /**
-   * 레벨 길의 점이 옮겨 가는 움직임을 주는가. '나의 학습'이 늦게 와서 카드의 다른 움직임이 이미 끝났으면 주지 않는다.
-   * 완료 카드의 움직임은 한 장면으로 950ms 안에 끝나야 한다(design-notes §5)
+   * 받은 것이 생긴 뒤 '나의 학습'이 오기까지 걸린 시간(ms). 레벨 길의 점이 옮겨 가는 움직임을 그만큼 당겨 카드의 다른
+   * 움직임과 한 장면으로 950ms 안에 끝낸다(design-notes §5). `null`이면 너무 늦게 와서 움직이지 않는다
    */
-  animateGoal?: boolean
+  goalLateMs?: number | null
 }
 
 /**
@@ -84,7 +85,7 @@ export function CompletionCard({
   learningReturn,
   overview = null,
   freshCompletion = false,
-  animateGoal = true,
+  goalLateMs = 0,
 }: CompletionCardProps) {
   const titleId = useId()
   const xpId = useId()
@@ -114,8 +115,10 @@ export function CompletionCard({
   const upcoming = overview ? nextBadge(overview.badges) : null
   // 레벨 길의 점이 옮겨 가기 전 자리: 지금 경험치에서 이 화면에서 받은 경험치를 뺀다.
   const expBefore = overview ? Math.max(0, overview.level.exp - expTotal) : 0
+  // 이 화면에서 경험치를 받았고 '나의 학습'이 움직임 창 안에 왔을 때만 점을 옮긴다.
+  const goalMotion = goalLateMs !== null && expTotal > 0 ? goalLateMs : null
   const levelGoal = overview ? (
-    <LevelGoal level={overview.level} expBefore={expBefore} moving={animateGoal && expTotal > 0} />
+    <LevelGoal level={overview.level} expBefore={expBefore} lateMs={goalMotion} />
   ) : null
   // 단계 완주 메달은 배지를 그린다. 배지를 받은 뒤 그 단계에 새 글이 게시되어도 메달은 받은 모습 그대로다(US6 시나리오 8).
   const stageBadgeEarned =

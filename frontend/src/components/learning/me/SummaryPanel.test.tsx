@@ -8,7 +8,7 @@ import { allDone, learnerOverview } from '@/test/learningMeFixtures'
 import type { LearnerOverview } from '@/types/learningMe'
 import { useSettledAuth } from '../article/useSettledAuth'
 import { SummaryPanel } from './SummaryPanel'
-import { useLearnerOverview } from './useLearnerOverview'
+import { useLearnerOverview } from '@/hooks/useLearnerOverview'
 
 /**
  * 013 T191·T192·T196. 요약 패널과 '나의 학습' 조회 훅(FR-020·FR-030, research R33, quickstart 11-3·11-4).

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { fetchCurriculum, type CurriculumResult } from '@/api/learning'
 import { useAuth } from '@/auth/auth-context'
 import { useSettledAuth, type SettledAuth } from '@/components/learning/article/useSettledAuth'
 import { progressMapOf, stageCountsOf } from '@/components/learning/curriculum/articleProgress'
@@ -19,17 +18,16 @@ import { articlePath, stageNumberFromHash } from '@/components/learning/learning
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { FloatingContinue } from '@/components/learning/me/FloatingContinue'
 import { GuestSample } from '@/components/learning/me/GuestSample'
-import { earnedStageNumbers } from '@/components/learning/me/meCopy'
+import { earnedStageNumbers } from '@/components/learning/me/badgeRules'
 import { ReloginNotice } from '@/components/learning/me/ReloginNotice'
 import { StageStampWell } from '@/components/learning/me/StageStampWell'
 import { SummaryPanel } from '@/components/learning/me/SummaryPanel'
-import { useLearnerOverview, type OverviewState } from '@/components/learning/me/useLearnerOverview'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import { useCurriculum } from '@/hooks/useCurriculum'
+import { useLearnerOverview, type OverviewState } from '@/hooks/useLearnerOverview'
 import type { Curriculum, LearningArticleSummary } from '@/types/learning'
 import heading from '@/components/common/PageHeading.module.css'
 import styles from './LearningListPage.module.css'
-
-type ListState = { status: 'loading' } | CurriculumResult
 
 /**
  * 배우기 목록(`/learn`, 013 US1·FR-023·FR-031).
@@ -52,23 +50,7 @@ export function LearningListPage() {
   const location = useLocation()
   const { status: authStatus } = useAuth()
   const { settled, concealed } = useSettledAuth()
-  const [state, setState] = useState<ListState>({ status: 'loading' })
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-    setState({ status: 'loading' })
-    void fetchCurriculum(controller.signal).then((result) => {
-      if (active) setState(result)
-    })
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [attempt])
-
-  const retry = useCallback(() => setAttempt((count) => count + 1), [])
+  const { state, retry } = useCurriculum()
 
   // 공개 안내의 '○단계 보기'와 글 머리의 단계 연결(`/learn#stage-n`)이 가리키는 단계 자리로 옮기고 그 제목에 초점을
   // 둔다. 같은 주소를 다시 눌러도 옮기도록 이동마다(`location.key`) 한다.

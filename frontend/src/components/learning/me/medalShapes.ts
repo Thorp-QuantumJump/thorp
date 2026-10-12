@@ -112,6 +112,29 @@ export function medalRim(size: number): number {
   return pixels * (100 / size)
 }
 
+/**
+ * 읽은 글 갈래의 글리프(펼친 책, 목업 `bglyph`). 배지 메달과 '나의 학습' 숫자 줄의 아이콘이 같은 모양을 쓴다. 사다리
+ * 자리가 높은 메달은 메달 쪽에서 쪽을 한 겹씩 더한다.
+ */
+export const READ_GLYPH_PATH =
+  'M50 39C44 34.5 37 34 31 36V61C37 59 44 59.5 50 63.5C56 59.5 63 59 69 61V36C63 34 56 34.5 50 39ZM50 39V63.5'
+
+/**
+ * 익힌 용어 갈래의 글리프(형광펜 친 낱말 줄, 목업 `bglyph`). 형광펜 칸, 그 위의 굵은 낱말 줄, 아래 두 줄이다. 배지 메달과
+ * '나의 학습' 숫자 줄의 아이콘이 같은 모양을 쓴다.
+ */
+export const TERMS_GLYPH = {
+  marker: { x: 27, y: 37, width: 36, height: 9, rx: 2 },
+  markedLine: 'M31 38H56',
+  lines: 'M31 53H69M31 63H61',
+} as const
+
+/** 낱말 카드의 접힌 모서리 선. `closed`면 면으로 칠할 수 있게 닫는다. */
+export function termFoldPath(inset: number, closed = false): string {
+  const card = termCardGeometry(inset)
+  return `M${roundCoord(card.x1 - card.fold)} ${card.y0}V${roundCoord(card.y0 + card.fold)}H${card.x1}${closed ? 'Z' : ''}`
+}
+
 /** 모서리 접힌 낱말 카드의 치수. 접힌 모서리를 따로 그릴 때도 쓴다. */
 export function termCardGeometry(inset: number) {
   return {

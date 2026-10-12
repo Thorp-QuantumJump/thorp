@@ -193,21 +193,24 @@
   fill: var(--thorp-muted);
 }
 
-/* 완료 카드: 점이 받은 경험치만큼 옮겨 가고 새로 지난 이정표가 초록이 된다. 950ms 안에 끝난다(design-notes §5). */
+/*
+  완료 카드: 점이 받은 경험치만큼 옮겨 가고 새로 지난 이정표가 초록이 된다. 받은 것이 생긴 순간부터 세어 950ms 안에
+  끝난다(design-notes §5). 길은 '나의 학습'을 받은 뒤에 그려지므로 늦게 그려진 만큼(--late, 250ms까지) 시작을 당긴다.
+*/
 @media (prefers-reduced-motion: no-preference) {
   .moving .mover {
-    animation: move 400ms 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+    animation: move 400ms calc(300ms - var(--late, 0ms)) cubic-bezier(0.05, 0.7, 0.1, 1) both;
   }
 
   .moving .bar {
     transform-box: fill-box;
     transform-origin: left center;
-    animation: grow 400ms 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+    animation: grow 400ms calc(300ms - var(--late, 0ms)) cubic-bezier(0.05, 0.7, 0.1, 1) both;
   }
 
   .fresh .pole,
   .fresh .cloth {
-    animation: reach 250ms 650ms cubic-bezier(0.2, 0, 0, 1) both;
+    animation: reach 250ms calc(650ms - var(--late, 0ms)) cubic-bezier(0.2, 0, 0, 1) both;
   }
 }
 

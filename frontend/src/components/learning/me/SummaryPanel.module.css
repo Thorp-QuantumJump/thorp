@@ -29,33 +29,12 @@
   visibility: hidden;
 }
 
+/* 기록을 받지 못했을 때의 패널. 실패 한 줄(RecordLoadFailure)의 글자 크기를 여기서 정한다. */
 .failed {
   padding: 14px 20px;
-}
-
-.failure {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: center;
-  margin: 0;
-  color: var(--thorp-copy);
   font-size: 0.9375rem;
 }
 
-.retry {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 8px);
-  background: transparent;
-  color: var(--thorp-foreground);
-  font: inherit;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.retry:focus-visible,
 .more:focus-visible {
   outline: 2px solid var(--thorp-brand-soft);
   outline-offset: 3px;
@@ -185,15 +164,6 @@
   color: var(--thorp-foreground);
   font-size: 0.9375rem;
   font-weight: 650;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 @media (max-width: 1023px) {

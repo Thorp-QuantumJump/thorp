@@ -142,21 +142,28 @@ describe('AccountProfilePage', () => {
     expect(screen.queryByRole('dialog', { name: '학습 기록을 모두 지울까요?' })).toBeNull()
   })
 
-  it("첫 단계 공개 전이나 커리큘럼을 받지 못하면 '학습 기록' 구역이 없다(013 FR-031)", async () => {
+  it("첫 단계 공개 전에는 '학습 기록' 구역이 없다(013 FR-031, research R36)", async () => {
     apiMocks.fetchCurriculum.mockResolvedValue({ status: 'loaded', curriculum: preReleaseCurriculum })
-    const { unmount } = renderPage()
+    renderPage()
     await waitFor(() => expect(apiMocks.fetchCurriculum).toHaveBeenCalled())
     // 받은 응답이 화면에 반영된 뒤를 본다.
     await act(async () => {})
     expect(screen.queryByRole('region', { name: '학습 기록' })).toBeNull()
     expect(screen.queryByRole('button', { name: '학습 초기화' })).toBeNull()
-    unmount()
+  })
 
-    apiMocks.fetchCurriculum.mockResolvedValue({ status: 'failed', kind: 'network', code: null, message: '' })
+  it("공개를 확인하지 못하면 구역을 빼지 않고 실패 한 줄과 '다시 시도'를 둔다(013 FR-025)", async () => {
+    const user = userEvent.setup()
+    apiMocks.fetchCurriculum.mockResolvedValueOnce({ status: 'failed', kind: 'network', code: null, message: '' })
     renderPage()
-    await waitFor(() => expect(apiMocks.fetchCurriculum).toHaveBeenCalledTimes(2))
-    await act(async () => {})
-    expect(screen.queryByRole('region', { name: '학습 기록' })).toBeNull()
+
+    const section = await screen.findByRole('region', { name: '학습 기록' })
+    expect(section.textContent).toContain('학습 기록을 불러오지 못했습니다.')
+    expect(screen.queryByRole('button', { name: '학습 초기화' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByRole('button', { name: '학습 초기화' })).toBeTruthy()
+    expect(apiMocks.fetchCurriculum).toHaveBeenCalledTimes(2)
   })
 
   it("개발용 미리보기는 커리큘럼을 부르지 않고 '학습 기록' 구역을 보인다", () => {

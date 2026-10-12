@@ -127,7 +127,7 @@ describe('레벨 길', () => {
 
   it('완료 카드의 길은 받은 경험치만큼 점을 옮기고 그 움직임은 줄이기 설정이 아닐 때만 있다', () => {
     const { container } = render(
-      <LevelPathMove level={learnerOverview.level} expBefore={180} moving />,
+      <LevelPathMove level={learnerOverview.level} expBefore={180} lateMs={0} />,
     )
     const svg = container.querySelector('svg')!
     expect(svg.getAttribute('aria-hidden')).toBe('true')
@@ -138,7 +138,7 @@ describe('레벨 길', () => {
         '(prefers-reduced-motion: no-preference)',
         '.moving .mover',
       ),
-    ).toMatch(/animation:\s*move 400ms 300ms/)
+    ).toMatch(/animation:\s*move 400ms calc\(300ms - var\(--late, 0ms\)\)/)
   })
 })
 
@@ -210,7 +210,7 @@ describe('레벨 길의 글자', () => {
       visibleMax: 3,
       unreachableFrom: 4,
     }
-    const { container } = render(<LevelPathMove level={level} expBefore={390} moving={false} />)
+    const { container } = render(<LevelPathMove level={level} expBefore={390} lateMs={null} />)
 
     expect(container.textContent).not.toContain('레벨 4')
     expect(container.querySelector('[stroke-dasharray="6 6"]')).not.toBeNull()

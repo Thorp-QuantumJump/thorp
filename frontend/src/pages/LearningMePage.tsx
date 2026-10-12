@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { fetchCurriculum, type CurriculumResult } from '@/api/learning'
 import { settledGainedNotice } from '@/components/learning/article/completionText'
 import { useRestoreFocusAfterConceal } from '@/components/learning/article/useRestoreFocusAfterConceal'
 import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
@@ -16,16 +15,16 @@ import { GainGrid } from '@/components/learning/me/GainGrid'
 import { GuestSample } from '@/components/learning/me/GuestSample'
 import { LevelCard } from '@/components/learning/me/LevelCard'
 import { QuietNotice } from '@/components/learning/me/QuietNotice'
+import { RecordLoadFailure } from '@/components/learning/me/RecordLoadFailure'
 import { ReloginNotice } from '@/components/learning/me/ReloginNotice'
 import { StageStations } from '@/components/learning/me/StageStations'
-import { useLearnerOverview } from '@/components/learning/me/useLearnerOverview'
 import { stageColor } from '@/components/learning/stageColors'
 import { AppHeader } from '@/components/navigation/AppHeader'
+import { useCurriculum } from '@/hooks/useCurriculum'
+import { useLearnerOverview } from '@/hooks/useLearnerOverview'
 import type { Curriculum } from '@/types/learning'
 import type { LearnerOverview } from '@/types/learningMe'
 import styles from './LearningMePage.module.css'
-
-type CurriculumState = { status: 'loading' } | CurriculumResult
 
 /**
  * '나의 학습' 화면(`/learn/me`, 013 FR-020·FR-024·FR-025·FR-029·FR-030, design-notes §3.3).
@@ -48,22 +47,7 @@ type CurriculumState = { status: 'loading' } | CurriculumResult
 export function LearningMePage() {
   const location = useLocation()
   const { settled, concealed } = useSettledAuth()
-  const [curriculumState, setCurriculumState] = useState<CurriculumState>({ status: 'loading' })
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-    setCurriculumState({ status: 'loading' })
-    void fetchCurriculum(controller.signal).then((result) => {
-      if (active) setCurriculumState(result)
-    })
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [attempt])
-  const retryCurriculum = useCallback(() => setAttempt((count) => count + 1), [])
+  const { state: curriculumState, retry: retryCurriculum } = useCurriculum()
 
   const curriculum = curriculumState.status === 'loaded' ? curriculumState.curriculum : null
   const released = curriculum !== null && isFirstStageReleased(curriculum)
@@ -112,12 +96,9 @@ export function LearningMePage() {
               </p>
             ) : null}
             {settled.kind === 'authenticated' && overview.state.status === 'failed' ? (
-              <p className={styles.failure}>
-                <span>학습 기록을 불러오지 못했습니다.</span>
-                <button type="button" className={styles.retry} onClick={overview.retry}>
-                  다시 시도
-                </button>
-              </p>
+              <div className={styles.failure}>
+                <RecordLoadFailure onRetry={overview.retry} />
+              </div>
             ) : null}
             {overview.state.status === 'loaded' ? (
               <Journal

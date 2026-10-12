@@ -837,16 +837,32 @@ describe('LearningArticlePage — 로그인 기록', () => {
     expect(within(card).getByText('다음 배지')).not.toBeNull()
   })
 
-  it("다시 연 완료 글에서는 '나의 학습'을 부르지 않는다. 그 요청의 정산을 보일 자리가 없다(T204)", async () => {
+  it("다시 연 완료 글도 '나의 학습'을 받아 단계 완주 메달을 배지로 그린다(US6 시나리오 8, T204)", async () => {
+    // 2단계 완주 배지를 받은 뒤 그 단계에 글이 더해져, 지금은 4편 중 2편만 읽은 상태다.
     meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
-    meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: learnerOverview })
+    meMocks.fetchLearningMe.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...learnerOverview,
+        badges: learnerOverview.badges.map((item) =>
+          item.badgeKey === 'stage-swell-and-risk'
+            ? { ...item, status: 'EARNED', earnedAt: '2026-11-18T00:00:00Z', progress: null }
+            : item,
+        ),
+      },
+    })
     loaded(quickArticle)
 
     renderArticle('/learn/swell-reading', signedInAuth)
 
-    expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
+    const card = await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+    expect(within(card).getByText('2단계 · 4편 중 2편 읽음')).not.toBeNull()
+    await waitFor(() => expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(card.querySelector('[data-medal="stage-earned"]')).not.toBeNull())
+    expect(card.querySelector('[data-medal="stage-notYet"]')).toBeNull()
+    // 이 화면에서 받은 것이 없으므로 받은 것 칸과 알림은 그대로 비어 있다.
+    expect(within(card).queryByText('이번에 받은 경험치')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('')
   })
 
   it("완료 뒤 '나의 학습' 요청의 정산으로 생긴 배지도 완료 카드와 알림에 더한다(FR-030)", async () => {

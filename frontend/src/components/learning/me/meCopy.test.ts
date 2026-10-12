@@ -3,18 +3,23 @@ import { learnerOverview } from '@/test/learningMeFixtures'
 import type { BadgeView } from '@/types/learningMe'
 import {
   badgeLevel,
+  badgePercent,
+  badgeThreshold,
   earnedStageNumbers,
-  groupPreparing,
-  joinNames,
   medalSpecOf,
-  newBadgeLine,
   nextBadge,
-  nextGoalSentence,
-  preparingReasonText,
-  progressSpoken,
   specialBadgeOf,
   stageBadgeKey,
+} from './badgeRules'
+import {
+  badgeRibbon,
+  newBadgeLine,
+  nextGoalSentence,
+  preparingLines,
+  preparingReasonText,
+  progressSpoken,
   unreachableLevelSentence,
+  unreachableNextLevelSentence,
 } from './meCopy'
 
 /**
@@ -70,27 +75,58 @@ describe('준비 중 사유 문장', () => {
 })
 
 describe('준비 중 기준 묶음(FR-024, design-notes §3.3)', () => {
-  it('같은 사유끼리만 한 줄로 묶고 이름을 줄인다', () => {
-    const groups = groupPreparing([
-      badge({ badgeKey: 'read-10', family: 'READ', name: '읽은 글 10편' }),
-      badge({ badgeKey: 'read-20', family: 'READ', name: '읽은 글 20편' }),
-      badge({
-        badgeKey: 'read-27',
-        family: 'READ',
-        name: '읽은 글 27편',
-        preparingReason: 'ALL_STAGES',
-      }),
-    ])
-    expect(groups.map((group) => group.line)).toEqual([
+  it('같은 사유끼리만 한 줄로 묶고 기준 수를 잇는다', () => {
+    expect(
+      preparingLines([
+        badge({ badgeKey: 'read-10', family: 'READ', name: '읽은 글 10편' }),
+        badge({ badgeKey: 'read-20', family: 'READ', name: '읽은 글 20편' }),
+        badge({
+          badgeKey: 'read-27',
+          family: 'READ',
+          name: '읽은 글 27편',
+          preparingReason: 'ALL_STAGES',
+        }),
+      ]),
+    ).toEqual([
       '준비 중인 기준: 읽은 글 10편, 20편. 단계가 더 공개된 뒤 받을 수 있습니다.',
       '읽은 글 27편 · 준비 중 · 여섯 단계가 모두 공개된 뒤 받을 수 있습니다.',
     ])
   })
 
-  it('셋 이상 이어진 레벨은 물결표로 잇는다', () => {
-    expect(joinNames(['레벨 5', '레벨 6', '레벨 7', '레벨 8'])).toBe('레벨 5~8')
-    expect(joinNames(['첫 답 정답 25개', '첫 답 정답 50개'])).toBe('첫 답 정답 25개, 50개')
-    expect(joinNames(['끈기', '탐험'])).toBe('끈기, 탐험')
+  it('기준 수는 배지 키에서 읽고, 셋 이상 이어진 레벨은 물결표로 잇는다', () => {
+    const levels = [5, 6, 7, 8].map((n) =>
+      badge({ badgeKey: `level-${n}`, family: 'LEVEL', name: `레벨 ${n}` }),
+    )
+    expect(preparingLines(levels)).toEqual([
+      '준비 중인 기준: 레벨 5~8. 단계가 더 공개된 뒤 받을 수 있습니다.',
+    ])
+    // 화면 이름이 바뀌어도 기준 수는 키에서 온다.
+    expect(
+      preparingLines([
+        badge({ badgeKey: 'correct-25', family: 'CORRECT', name: '첫 답 정답 스물다섯 개' }),
+        badge({ badgeKey: 'correct-50', family: 'CORRECT', name: '첫 답 정답 쉰 개' }),
+      ]),
+    ).toEqual(['준비 중인 기준: 첫 답 정답 25개, 50개. 단계가 더 공개된 뒤 받을 수 있습니다.'])
+  })
+
+  it('기준 수가 없는 배지가 섞이면 이름을 쉼표로 잇는다', () => {
+    expect(
+      preparingLines([
+        badge({ badgeKey: 'terms-25', family: 'TERMS', name: '익힌 용어 25개' }),
+        badge({ badgeKey: 'terms-all', family: 'TERMS', name: '그때 게시된 용어 전체' }),
+      ]),
+    ).toEqual([
+      '준비 중인 기준: 익힌 용어 25개, 그때 게시된 용어 전체. 단계가 더 공개된 뒤 받을 수 있습니다.',
+    ])
+  })
+
+  it('메달 리본은 키의 기준 수와 단위이고, 전체가 기준이면 전체다', () => {
+    expect(badgeRibbon({ badgeKey: 'read-5', family: 'READ' })).toBe('5편')
+    expect(badgeRibbon({ badgeKey: 'level-4', family: 'LEVEL' })).toBe('4')
+    expect(badgeRibbon({ badgeKey: 'terms-all', family: 'TERMS' })).toBe('전체')
+    expect(badgeRibbon({ badgeKey: 'persistence', family: 'SPECIAL' })).toBe('')
+    expect(badgeThreshold('correct-10')).toBe(10)
+    expect(badgeThreshold('terms-all')).toBeNull()
   })
 })
 
@@ -150,6 +186,16 @@ describe('닿을 수 없는 다음 레벨과 받은 단계 완주 배지', () =>
     expect(nextGoalSentence({ level: blocked, badges: learnerOverview.badges })).toBe(
       '다음 배지(모두 맞힘 1편)까지 1편입니다.',
     )
+    // 다음 목표 옆에는 닿을 수 없을 때만 FR-029 문장을 붙인다.
+    expect(unreachableNextLevelSentence(blocked)).toBe(
+      '레벨 4부터는 단계가 더 공개된 뒤 닿을 수 있습니다.',
+    )
+    expect(unreachableNextLevelSentence(learnerOverview.level)).toBeNull()
+  })
+
+  it('아직 받지 않은 배지의 진행 비율을 진행 호에 넘긴다', () => {
+    expect(badgePercent({ progress: { current: 3, target: 5 } })).toBe(60)
+    expect(badgePercent({ progress: null })).toBe(0)
   })
 
   it('단계 완주 배지를 받은 단계 번호를 모은다', () => {

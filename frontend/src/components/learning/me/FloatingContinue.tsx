@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useRef, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
+import { useOffScreen } from '@/hooks/useOffScreen'
 import type { ContinueReading } from '@/types/learningMe'
 import { useRestoreFocusAfterConceal } from '../article/useRestoreFocusAfterConceal'
 import { articlePath } from '../learningPaths'
@@ -69,21 +70,4 @@ export function FloatingContinue({
       <span>이어서 읽기{number ? ` ${number}` : ''}</span>
     </Link>
   )
-}
-
-/** 대상이 화면 밖에 있는가. 잴 수 없으면 화면 안에 있는 것으로 본다. */
-function useOffScreen(targetRef: RefObject<HTMLElement | null>, watchKey: string | null): boolean {
-  const [offScreen, setOffScreen] = useState(false)
-  useEffect(() => {
-    const target = targetRef.current
-    setOffScreen(false)
-    if (!target || typeof IntersectionObserver === 'undefined') return
-    const observer = new IntersectionObserver((entries) => {
-      const entry = entries[entries.length - 1]
-      if (entry) setOffScreen(!entry.isIntersecting)
-    })
-    observer.observe(target)
-    return () => observer.disconnect()
-  }, [targetRef, watchKey])
-  return offScreen
 }
