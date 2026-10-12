@@ -24,8 +24,11 @@ import { BadgeHero, LevelGoal, LevelHero, NextBadgeLine, StageStampPath } from '
 import styles from './CompletionCard.module.css'
 
 interface CompletionCardProps {
-  /** 완료 시각(ISO 8601). 서울 날짜로 보인다 */
-  completedAt: string
+  /**
+   * 완료 시각(ISO 8601). 서울 날짜로 보인다. 완료로 기록됐는데 시각이 없으면 `null`이고, 빈 날짜 대신 '완료'만
+   * 보인다(원칙 VI)
+   */
+  completedAt: string | null
   /** 이 글이 놓인 단계의 키. 새 단계 완주 배지가 이 단계의 것인지 배지 키(`stage-{stageKey}`)로 가른다 */
   stageKey: string
   stageProgress: StageProgress
@@ -132,7 +135,7 @@ export function CompletionCard({
     <section className={styles.card} style={glow} aria-labelledby={titleId}>
       <div className={`${styles.section} ${styles.head}`}>
         <h2 id={titleId} className={styles.date}>
-          완료 · {formatCompletedDate(completedAt)}
+          {completedAt ? `완료 · ${formatCompletedDate(completedAt)}` : '완료'}
         </h2>
         <div className={styles.headScene}>
           <StageStampPath

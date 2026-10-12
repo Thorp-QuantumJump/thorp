@@ -13,8 +13,8 @@ npm run lint && npm run build && npm test
 ## 폴더 규칙
 
 - `src/pages/` 라우트 단위 화면, `src/components/` 재사용 컴포넌트
-- `src/api/` 서버 통신 전용 — 컴포넌트에서 axios 직접 호출 금지, `apiClient` 경유
-- `src/types/` 백엔드 DTO와 1:1 대응 타입 (`backtest.ts` 참고). 백엔드 스펙 변경 시 여기부터 갱신
+- `src/api/` 서버 통신 전용 — 컴포넌트에서 axios 직접 호출 금지, `apiClient` 경유. 예외는 페이지가 사라지는 중에도 끝까지 가야 하는 요청 하나다. 탭을 숨기거나 닫을 때의 읽은 위치(`api/learningMe.ts`의 `sendPositionOnLeave`, 013 research R32)는 `fetch`의 `keepalive`로 보내고, 기준 주소는 `apiClient.defaults.baseURL`, CSRF 이름은 `client.ts`의 `XSRF_COOKIE_NAME`·`XSRF_HEADER_NAME`을 그대로 쓴다. `EventSource`로 받는 `api/progressStream.ts`도 `apiClient`를 쓰지 않는다
+- `src/types/` 백엔드 DTO와 1:1 대응 타입 (`backtest.ts` 참고). 백엔드 스펙 변경 시 여기부터 갱신. 화면 사이에 싣는 navigation state의 모양(`LearningReturnState`·`LearningResumeState`, 013 data-model §15)도 그 도메인 타입 파일에 둔다
 - `src/hooks/` 커스텀 훅
 - `src/components/records/` 내 기록(spec 006) 목록 줄·펼침 층·더 보기 메뉴·대화상자. 성과 수치와 성과 정렬 선택지를 두지 않고(원칙 III), '설정 바꿔 비교'는 005의 `prefillStrategySettings`를 `reopenSettings.ts` 어댑터로 부를 뿐 인계 빌더를 따로 만들지 않는다
 

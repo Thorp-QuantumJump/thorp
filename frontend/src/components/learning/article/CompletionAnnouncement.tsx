@@ -20,15 +20,20 @@ export const SUFFIX_WAIT_MS = 4000
  * <p>'나의 학습'의 정산으로 새로 생긴 배지·레벨은 덧붙일 알림이 없어도 알린다(계약 §4). 경험치만 받은 완료라 글 기록
  * 응답의 알림이 없었거나, 응답이 기다림을 넘겨 왔을 때다. 그때는 그것과 다음 목표를 따로 한 번 알린다. 한 알림과 한
  * 응답의 새 배지는 한 번만 읽힌다.
+ *
+ * <p>로그인 상태를 다시 확인하는 동안(`held`) 온 알림은 확인이 끝나 다시 보일 때 한 번만 넣는다(research R33).
  */
 export function CompletionAnnouncement({
   announcement,
   notice,
   ready,
+  held = false,
 }: {
   announcement: Announcement | null
   notice: OverviewNotice | null
   ready: boolean
+  /** 로그인 상태를 다시 확인하는 중이라 알림 영역이 보조 기술에서 빠져 있는가 */
+  held?: boolean
 }) {
   const [message, setMessage] = useState('')
   const [waited, setWaited] = useState<number | null>(null)
@@ -65,5 +70,5 @@ export function CompletionAnnouncement({
     setMessage([notice.news, notice.goal].filter(Boolean).join(' '))
   }, [notice])
 
-  return <QuietNotice text={message} />
+  return <QuietNotice text={message} held={held} />
 }

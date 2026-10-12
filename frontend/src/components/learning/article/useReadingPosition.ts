@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { prepareLeaveRecording, recordPosition, sendPositionOnLeave } from '@/api/learningMe'
+import { articleBodyOf, articleEndOf, articleSessionKey } from './articleMarkers'
 
 interface ReadingPositionOptions {
   /** 글 전체. 그 안의 `data-article-end` 표지를 감싼 요소가 본문이다(ArticleBody) */
@@ -20,10 +21,6 @@ export function measureReadPercent(body: HTMLElement): number | null {
   if (rect.height <= 0) return null
   const ratio = ((window.innerHeight - rect.top) / rect.height) * 100
   return Math.min(100, Math.max(0, Math.floor(ratio)))
-}
-
-function bodyOf(root: HTMLElement | null): HTMLElement | null {
-  return root?.querySelector('[data-article-end]')?.parentElement ?? null
 }
 
 /**
@@ -70,7 +67,7 @@ export function useReadingPosition({
 
   useEffect(() => {
     const session = sessionKey
-    const leaveKey = `${articleId}|${session}`
+    const leaveKey = articleSessionKey(articleId, session)
     const pendingLeave = pendingLeaveRef.current
     if (pendingLeave?.key === leaveKey) {
       clearTimeout(pendingLeave.timer)
@@ -81,7 +78,7 @@ export function useReadingPosition({
     setFurthest(0)
 
     const measure = () => {
-      const body = bodyOf(root.current)
+      const body = articleBodyOf(root.current)
       if (!body) return
       const percent = measureReadPercent(body)
       if (percent !== null && percent > max) {
@@ -132,7 +129,7 @@ export function useReadingPosition({
  * 하지 않는다(013 FR-020 '이어서 읽기').
  */
 export function scrollToReadPercent(root: HTMLElement | null, percent: number): void {
-  const body = bodyOf(root)
+  const body = articleBodyOf(root)
   if (!body) return
   const rect = body.getBoundingClientRect()
   const top = window.scrollY + rect.top + (rect.height * percent) / 100 - window.innerHeight
@@ -145,13 +142,14 @@ export function scrollToReadPercent(root: HTMLElement | null, percent: number): 
  * 않는다.
  */
 export function focusReadPosition(root: HTMLElement | null, percent: number): void {
-  const body = bodyOf(root)
+  const body = articleBodyOf(root)
   if (!body) return
   const bodyRect = body.getBoundingClientRect()
   const line = bodyRect.top + (bodyRect.height * percent) / 100
+  const end = articleEndOf(root)
   let target: HTMLElement | null = null
   for (const child of Array.from(body.children)) {
-    if (!(child instanceof HTMLElement) || child.hasAttribute('data-article-end')) continue
+    if (!(child instanceof HTMLElement) || child === end) continue
     if (target !== null && child.getBoundingClientRect().top > line) break
     target = child
   }

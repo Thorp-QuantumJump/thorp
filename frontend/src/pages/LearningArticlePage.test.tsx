@@ -1487,4 +1487,84 @@ describe('LearningArticlePage — 로그인 기록', () => {
 
     expect(setItem).not.toHaveBeenCalled()
   })
+
+  it('글 기록 조회가 다른 곳에서 바뀐 글이라고 하면 다시 시도 대신 다시 불러오기를 준다', async () => {
+    const user = userEvent.setup()
+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'stale' })
+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'ok', data: completedRecord })
+    loaded(currentArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText('이 글이 바뀌었습니다. 글을 다시 불러와 주세요.')).not.toBeNull()
+    // 같은 404를 되풀이하는 '다시 시도'를 주지 않는다.
+    expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
+
+    await user.click(within(alert).getByRole('button', { name: '다시 불러오기' }))
+
+    await waitFor(() => expect(apiMocks.fetchLearningArticle).toHaveBeenCalledTimes(2))
+    expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2)
+  })
+
+  it('완료가 거절된 뒤 글을 다시 불러오면 머문 시간을 처음부터 세지 않고 바로 다시 보낸다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      meMocks.completeArticle
+        .mockResolvedValueOnce({ status: 'stale' })
+        .mockResolvedValueOnce({ status: 'ok', data: completionResult })
+      loaded(currentArticle)
+
+      renderArticle('/learn/swell-reading', signedInAuth)
+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+      await screen.findByRole('link', { name: /다음 글/ })
+      reachArticleEnd()
+      act(() => {
+        vi.advanceTimersByTime(80_000)
+      })
+      await screen.findByText('이 글이 바뀌었습니다. 글을 다시 불러와 주세요.')
+
+      await user.click(screen.getByRole('button', { name: '다시 불러오기' }))
+
+      // 80초를 다시 기다리지 않는다.
+      await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(2))
+      expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('확인하는 동안 온 새 배지 알림은 숨겨 두었다가 같은 사용자로 확인되면 한 번만 알린다', async () => {
+    let settle: (value: unknown) => void = () => {}
+    meMocks.completeArticle.mockReturnValue(
+      new Promise((resolve) => {
+        settle = resolve
+      }),
+    )
+    loaded(quickArticle)
+
+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    const status = await screen.findByRole('status')
+    reachArticleEnd()
+    await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(1))
+
+    setAuth(checkingAuth)
+    await act(async () => settle({ status: 'ok', data: completionResult }))
+    // 확인하는 동안에는 알림 영역도 기록 자리와 함께 보조 기술에서 빠지고 글자를 넣지 않는다(R33).
+    expect(status.parentElement?.className).toMatch(/concealed/)
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    expect(status.textContent).toBe('')
+
+    setAuth(signedInAuth)
+    await waitFor(() => expect(status.textContent).toMatch(/새 배지: 2단계 완주/))
+
+    // 탭을 다시 오가도 같은 알림을 되풀이하지 않는다.
+    setAuth(checkingAuth)
+    setAuth(signedInAuth)
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    expect(status.textContent).toMatch(/새 배지: 2단계 완주/)
+  })
 })
