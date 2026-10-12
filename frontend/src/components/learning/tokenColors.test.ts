@@ -74,13 +74,39 @@ const TARGETS = [
   resolve(sourceRoot, 'pages/LearningMePage.module.css'),
 ]
 
-/** '나의 학습'(013 B13)이 만든 화면: `me/` 부품, 완료 카드의 그림 장면, '나의 학습' 화면. */
-const LEARNER_TARGETS = [
-  ...sources('components/learning/me'),
-  ...sources('components/learning/article').filter((path) => /[\\/]CompletionScene\./.test(path)),
-  resolve(sourceRoot, 'pages/LearningMePage.tsx'),
-  resolve(sourceRoot, 'pages/LearningMePage.module.css'),
-]
+/**
+ * 새 디자인에만 쓰는 규칙의 표지. `:global(:root:not([data-design='classic'])) .item { … }`처럼 classic 밖으로 한정한
+ * 규칙은 classic에서 쓰이지 않으니, 그 안에서는 classic에서 비우는 토큰을 대체값 없이 써도 된다.
+ */
+const NEW_DESIGN_ONLY = "not([data-design='classic'])"
+
+/**
+ * 주석을 지운 소스에서 `index` 자리의 선언이 classic에서도 쓰이는가. 그 선언이 속한 규칙의 선택자(바로 앞 `{`와 그 앞의
+ * `}`·`;`·`{` 사이 글자)를 쉼표로 나눠, 하나라도 classic 밖으로 한정되지 않았으면 쓰인다고 본다.
+ */
+function appliesInClassic(css: string, index: number): boolean {
+  const open = css.lastIndexOf('{', index)
+  const start = Math.max(
+    css.lastIndexOf('}', open),
+    css.lastIndexOf(';', open),
+    css.lastIndexOf('{', open - 1),
+  )
+  const selector = css.slice(start + 1, open)
+  // `:is(.a, .b)`처럼 괄호 안에 있는 쉼표에서는 나누지 않는다.
+  const selectors: string[] = []
+  let depth = 0
+  let from = 0
+  for (let i = 0; i < selector.length; i += 1) {
+    if (selector[i] === '(') depth += 1
+    if (selector[i] === ')') depth -= 1
+    if (selector[i] === ',' && depth === 0) {
+      selectors.push(selector.slice(from, i))
+      from = i + 1
+    }
+  }
+  selectors.push(selector.slice(from))
+  return selectors.some((part) => !part.includes(NEW_DESIGN_ONLY))
+}
 
 /** 소스에 값으로 쓴 색을 hex로 모은다. `#rrggbb`와 `rgb(r g b)`·`rgb(r, g, b)`(투명도를 붙인 것 포함)다. */
 function writtenColors(text: string): { written: string; hex: string }[] {
@@ -117,15 +143,23 @@ describe('배우기 화면의 색', () => {
     ])
   })
 
-  it("'나의 학습' 화면은 classic에서 비우는 토큰을 예전 값과 함께 쓴다", () => {
+  it('classic 밖으로 한정한 규칙만 classic에서 쓰이지 않는다고 본다', () => {
+    const rule = (selector: string) => `${selector} { padding: var(--thorp-pad-card); }`
+    const scoped = rule(`:global(:root:${NEW_DESIGN_ONLY}) :is(.item, .row)`)
+    expect(appliesInClassic(scoped, scoped.indexOf('var('))).toBe(false)
+    const mixed = rule(`:global(:root:${NEW_DESIGN_ONLY}) .item, .row`)
+    expect(appliesInClassic(mixed, mixed.indexOf('var('))).toBe(true)
+  })
+
+  it('classic에서도 쓰는 규칙은 classic에서 비우는 토큰을 예전 값과 함께 쓴다', () => {
     const cleared = classicClearedTokens()
     // 확인 창 배경막처럼 개편 뒤 생긴 토큰이 들어 있어야 이 검사가 뜻이 있다.
     expect(cleared).toContain('--thorp-overlay')
     const found: string[] = []
-    for (const path of LEARNER_TARGETS) {
-      const text = readFileSync(path, 'utf-8')
+    for (const path of TARGETS) {
+      const text = readFileSync(path, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '')
       for (const match of text.matchAll(/var\((--thorp-[\w-]+)\s*\)/g)) {
-        if (cleared.includes(match[1]))
+        if (cleared.includes(match[1]) && appliesInClassic(text, match.index ?? 0))
           found.push(`${path.slice(sourceRoot.length + 1)}: ${match[0]}`)
       }
     }
