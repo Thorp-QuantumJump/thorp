@@ -208,7 +208,8 @@ docs/specs/learning-api/examples/   # 2판 픽스처(커리큘럼·V2 글·이�
 
 frontend/src/
 ├── types/learning.ts(+), types/learningMe.ts, types/learningAdmin.ts(+)
-├── api/learning.ts(+커리큘럼), api/learningMe.ts(keepalive 위치 기록 포함), api/learningAdmin.ts(+단계·미리 보기)
+├── api/learning.ts(+커리큘럼), api/learningMe.ts(keepalive 위치 기록 포함), api/learningAdmin.ts(+단계·미리 보기),
+│   api/learningAdminShape.ts(초안 모양 한 곳, B14 리뷰 수정)
 ├── pages/LearningListPage.tsx(다시 씀)       # /learn
 ├── pages/LearningMePage.tsx                  # /learn/me
 ├── pages/LearningArticlePage.tsx(다시 씀)    # /learn/:articleId
@@ -220,6 +221,7 @@ frontend/src/
 └── components/learning/
     ├── learningPaths.ts, stageColors.ts
     ├── article/         # ArticleBody, RichText, firstOccurrences.ts, KeySummary, Misconception,
+    │                    # ArticleExample, ArticleSourceList(글 화면·미리 보기 공용, B14 리뷰 수정),
     │                    # ComparisonTable, HypotheticalDiagram, InstitutionNote, TermDefinition,
     │                    # EditionNotice, QuizPanel, CompletionCard, CompletionScene, CompletionAnnouncement,
     │                    # ArticleEnd, ResumeLine, completionText.ts, diagramShape.ts, useLearnerArticle.ts,
@@ -239,7 +241,8 @@ frontend/src/
     └── admin/           # BlockEditor(+V2), V2BlockFields, NumberField, RichTextField, richTextSyntax.ts,
                          # editableDraft.ts, manuscript.ts, draftLabels.ts, QuizEditor,
                          # TermListEditor(+다른 이름·세 문장·넘겨받기), PlacementEditor,
-                         # ArticlePreview, ManuscriptTransfer, StageReleasePanel,
+                         # ArticlePreview, ManuscriptTransfer, StageReleasePanel, RestorePrompt,
+                         # SourceListEditor, EditActionNotice, PublishedChanges, adminTime.ts(B14 리뷰 수정),
                          # PublishCheckResultList(+v2·단계)
 
 frontend/vite.config.ts             # test.include에 src/components/learning/**/*.test.ts
