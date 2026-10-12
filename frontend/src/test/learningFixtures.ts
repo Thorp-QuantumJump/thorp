@@ -646,7 +646,7 @@ export const publishCheckFailures: PublishCheckFailure[] = [
   },
   {
     check: 'RESULT_NUMBER_OUTSIDE_HYPOTHETICAL',
-    location: { part: 'term', termId: 'max-drawdown' },
+    location: { part: 'term', termId: 'swell-height' },
     matched: '-30%',
     message: '실제 결과로 읽히는 숫자는 가상의 계산 예 블록에만 쓸 수 있습니다.',
   },
