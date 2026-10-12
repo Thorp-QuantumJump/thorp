@@ -25,8 +25,8 @@ interface ListViewProps {
 
 type Row =
   | { type: 'group'; stage: StageView }
-  | { type: 'article'; stage: StageView; index: number }
-  | { type: 'previous'; stage: StageView; index: number }
+  | { type: 'article'; stage: StageView; article: StageView['articles'][number] }
+  | { type: 'previous'; stage: StageView; article: StageView['previousEditionArticles'][number] }
   /** 공개된 단계가 끝나는 자리의 한 줄(FR-031) */
   | { type: 'boundary'; sentence: string }
 
@@ -119,7 +119,7 @@ export function ListView({ stages, progress, stageCounts, linkState }: ListViewP
                   )
                 }
                 if (row.type === 'article') {
-                  const article = stage.articles[row.index]
+                  const { article } = row
                   const entry = progress?.get(article.articleId)
                   return (
                     <tr key={article.articleId}>
@@ -143,7 +143,7 @@ export function ListView({ stages, progress, stageCounts, linkState }: ListViewP
                   )
                 }
                 if (row.type !== 'previous') return null
-                const article = stage.previousEditionArticles[row.index]
+                const { article } = row
                 return (
                   <tr key={article.articleId} className={styles.previousRow}>
                     <td className={styles.rail} aria-hidden="true">
@@ -210,7 +210,7 @@ export function ListView({ stages, progress, stageCounts, linkState }: ListViewP
               <ol className={styles.plain}>
                 {section.rows.map(({ row, index }) => {
                   if (row.type === 'group' || row.type === 'boundary') return null
-                  const entry = row.type === 'article' ? progress?.get(stage.articles[row.index].articleId) : undefined
+                  const entry = row.type === 'article' ? progress?.get(row.article.articleId) : undefined
                   const rail = (
                     <span className={styles.rail} aria-hidden="true">
                       <Rail {...rails[index]} />
@@ -218,7 +218,7 @@ export function ListView({ stages, progress, stageCounts, linkState }: ListViewP
                     </span>
                   )
                   if (row.type === 'article') {
-                    const article = stage.articles[row.index]
+                    const { article } = row
                     return (
                       <li key={article.articleId}>
                         <Link className={styles.row} to={articlePath(article.articleId)} state={linkState}>
@@ -237,7 +237,7 @@ export function ListView({ stages, progress, stageCounts, linkState }: ListViewP
                       </li>
                     )
                   }
-                  const article = stage.previousEditionArticles[row.index]
+                  const { article } = row
                   return (
                     <li key={article.articleId}>
                       <Link className={styles.row} to={articlePath(article.articleId)} state={linkState}>
@@ -274,9 +274,9 @@ function toRows(stages: readonly StageView[]): Row[] {
     }
     rows.push({ type: 'group', stage })
     if (stage.status === 'OPEN') {
-      stage.articles.forEach((_, index) => rows.push({ type: 'article', stage, index }))
+      stage.articles.forEach((article) => rows.push({ type: 'article', stage, article }))
     } else {
-      stage.previousEditionArticles.forEach((_, index) => rows.push({ type: 'previous', stage, index }))
+      stage.previousEditionArticles.forEach((article) => rows.push({ type: 'previous', stage, article }))
     }
   }
   return rows
@@ -310,7 +310,7 @@ function railKind(row: Row, progress: ArticleProgressMap | undefined): RailKind 
   if (row.type === 'boundary' || row.stage.status !== 'OPEN') return 'preparing'
   if (!progress) return 'neutral'
   if (row.type !== 'article') return 'unread'
-  const entry = progress.get(row.stage.articles[row.index].articleId)
+  const entry = progress.get(row.article.articleId)
   if (!entry) return 'neutral'
   return entry.state === 'done' ? 'read' : 'unread'
 }

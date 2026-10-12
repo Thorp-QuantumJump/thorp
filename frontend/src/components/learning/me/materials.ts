@@ -11,15 +11,28 @@ import type { MedalKind } from './medalShapes'
  * `materials.module.css`의 클래스가 토큰으로 칠한다(디자인 전환 `classic`을 함께 따른다).
  */
 
+/**
+ * 재질 이름. 목업의 그라디언트 식별자와는 이름이 다르다(목업 `b-metal2`는 `metalPlain`, `b-hl`은 `highlight`, `b-pin`은
+ * `bevel`).
+ *
+ * - `gmetal`·`gtext`·`face`: 레벨 표장의 초록 금속, 숫자, 안쪽 면
+ * - `metal`: 메달 테두리의 은록 금속. 왼쪽 위에 따뜻한 빛이 한 번 들어온다
+ * - `metalPlain`: 같은 은록 금속에서 따뜻한 빛을 뺀 것. 읽은 글 메달이 금·황동으로 읽히지 않게 쓴다
+ * - `glass`: 단계 완주 메달 색유리의 광택
+ * - `highlight`: 받은 메달 면 위쪽의 흰 빛
+ * - `bevel`: 받은 메달 면 테두리의 빛(위)과 그늘(아래)
+ * - `sweep`·`shadow`·`glow`: 지나가는 흰 띠, 받은 물건 밑 그림자, 초록 빛 점
+ * - `en-*`: 갈래별 에나멜 면
+ */
 export type Material =
   | 'gmetal'
   | 'gtext'
   | 'face'
   | 'metal'
-  | 'metal2'
+  | 'metalPlain'
   | 'glass'
-  | 'pin'
-  | 'hl'
+  | 'bevel'
+  | 'highlight'
   | 'sweep'
   | 'shadow'
   | 'glow'

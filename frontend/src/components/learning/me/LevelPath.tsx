@@ -187,16 +187,21 @@ interface LevelPathMoveProps {
   level: LevelView
   /** 이 화면에서 받은 경험치를 더하기 전의 경험치. 점이 여기서 지금 경험치로 옮겨 간다 */
   expBefore: number
-  /** 움직임을 준다(이 화면에서 경험치를 받았을 때) */
-  moving: boolean
+  /**
+   * 움직임을 준다면, 받은 것이 생긴 뒤 이 길이 그려지기까지 걸린 시간(ms). 움직임의 시작을 그만큼 당겨 완료 카드의 다른
+   * 움직임과 한 장면으로 끝낸다. `null`이면 움직이지 않는다
+   */
+  lateMs: number | null
 }
 
 /**
  * 완료 카드의 레벨 길(목업 `mm2`). 받기 전 레벨의 이정표부터 다음 레벨의 이정표까지이고, 받은 경험치만큼 점이 앞으로
- * 옮겨 간다. 새로 지난 이정표는 회색에서 초록 금속으로 바뀐다. 움직임은 줄이기 설정이 아닐 때만 있고 950ms 안에
- * 끝난다(design-notes §5).
+ * 옮겨 간다. 새로 지난 이정표는 회색에서 초록 금속으로 바뀐다. 움직임은 줄이기 설정이 아닐 때만 있고, 받은 것이 생긴
+ * 순간부터 세어 950ms 안에 끝난다(design-notes §5). 길은 '나의 학습'을 받은 뒤에 그려지므로 늦게 그려진 만큼(`--late`)
+ * 움직임을 당긴다.
  */
-export function LevelPathMove({ level, expBefore, moving }: LevelPathMoveProps) {
+export function LevelPathMove({ level, expBefore, lateMs }: LevelPathMoveProps) {
+  const moving = lateMs !== null
   const prefix = svgId(useId())
   const levelBefore = levelAt(level.milestones, Math.min(expBefore, level.exp))
   const end = Math.min(level.current + 1, level.unreachableFrom)
@@ -224,6 +229,7 @@ export function LevelPathMove({ level, expBefore, moving }: LevelPathMoveProps) 
   const style = {
     ['--from' as string]: `${roundCoord(from - to)}px`,
     ['--sx' as string]: String(roundCoord((from - left) / Math.max(1, to - left))),
+    ['--late' as string]: `${Math.max(0, Math.round(lateMs ?? 0))}ms`,
   } as CSSProperties
 
   return (

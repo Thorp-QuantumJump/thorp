@@ -1,5 +1,6 @@
 import type { StageView } from '@/types/learning'
 import {
+  stagePercent,
   stageProgressLabel,
   stampState,
   type ArticleProgressMap,
@@ -36,14 +37,13 @@ export function StageStampWell({
   badgeEarned = count.completed,
 }: StageStampWellProps) {
   const { completedCount, publishedCount, completed } = count
-  const percent = publishedCount > 0 ? Math.round((completedCount / publishedCount) * 100) : 0
   const medal = (size: number, className: string) => (
     <StageMedal
       className={className}
       stageNumber={stage.number}
       size={size}
       state={badgeEarned ? 'earned' : 'notYet'}
-      progress={percent}
+      progress={stagePercent(count)}
     />
   )
 
@@ -88,7 +88,7 @@ export function StageStampWell({
             <span aria-hidden="true">
               {stage.number}단계 완주 · {completedCount}/{publishedCount}
             </span>
-            <span className={styles.srOnly}>
+            <span className="sr-only">
               {stage.number}단계 완주 배지까지 {publishedCount}편 중 {completedCount}편
             </span>
           </>

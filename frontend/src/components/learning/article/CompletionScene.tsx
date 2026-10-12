@@ -1,17 +1,15 @@
 import type { CSSProperties } from 'react'
 import type { BadgeView, GainedBadge, LevelView, StageProgress } from '@/types/learningMe'
+import { stagePercent } from '../curriculum/articleProgress'
 import { ArticleStamp } from '../me/ArticleStamp'
 import { BadgeMedal } from '../me/BadgeMedal'
+import { badgePercent, medalSpecOf, stageBadgeKey } from '../me/badgeRules'
+import { ExpLine } from '../me/ExpLine'
 import { LevelEmblem } from '../me/LevelEmblem'
 import { LevelPathMove } from '../me/LevelPath'
 import { cssLinearGradient, GTEXT_STOPS } from '../me/materials'
-import {
-  medalSpecOf,
-  nextLevelReachable,
-  progressSpoken,
-  stageBadgeKey,
-  unreachableLevelSentence,
-} from '../me/meCopy'
+import { unreachableNextLevelSentence } from '../me/meCopy'
+import { ProgressFraction } from '../me/ProgressFraction'
 import { StageMedal } from '../me/StageMedal'
 import styles from './CompletionScene.module.css'
 
@@ -50,7 +48,6 @@ export function StageStampPath({
 }) {
   const { stageNumber, completedCount, publishedCount, stageCompleted } = stageProgress
   const cells = Math.max(publishedCount, completedCount)
-  const percent = publishedCount > 0 ? Math.round((completedCount / publishedCount) * 100) : 0
   return (
     <span className={styles.path} aria-hidden="true" data-stage-path={stageNumber}>
       <span className={styles.stamps}>
@@ -81,7 +78,7 @@ export function StageStampPath({
           stageNumber={stageNumber}
           size={54}
           state={badgeEarned ? 'earned' : 'notYet'}
-          progress={percent}
+          progress={stagePercent(stageProgress)}
         />
       </span>
     </span>
@@ -182,20 +179,18 @@ export function LevelHero({
 export function LevelGoal({
   level,
   expBefore,
-  moving,
+  lateMs,
 }: {
   level: LevelView
   expBefore: number
-  moving: boolean
+  /** 점이 옮겨 가는 움직임을 늦게 온 만큼 당긴다(ms). `null`이면 움직이지 않는다 */
+  lateMs: number | null
 }) {
-  const unreachable = nextLevelReachable(level) ? null : unreachableLevelSentence(level)
+  const unreachable = unreachableNextLevelSentence(level)
   return (
     <div className={styles.goal}>
-      <LevelPathMove level={level} expBefore={expBefore} moving={moving} />
-      <p className={styles.goalText}>
-        경험치 <b>{level.exp.toLocaleString('ko-KR')}</b> · 다음 레벨까지{' '}
-        <b>{level.remainingToNext.toLocaleString('ko-KR')}</b>
-      </p>
+      <LevelPathMove level={level} expBefore={expBefore} lateMs={lateMs} />
+      <ExpLine level={level} className={styles.goalText} />
       {unreachable ? <p className={styles.goalNote}>{unreachable}</p> : null}
     </div>
   )
@@ -203,14 +198,16 @@ export function LevelGoal({
 
 /** 다음 목표의 배지 쪽: '다음 배지 · 읽은 글 5편 · 4/5'(T208, 화면 낭독기는 '5편 중 4편'). */
 export function NextBadgeLine({ badge }: { badge: BadgeView }) {
-  const percent =
-    badge.progress && badge.progress.target > 0
-      ? (badge.progress.current / badge.progress.target) * 100
-      : 0
   return (
     <p className={styles.next}>
       <span className={styles.nextArt} aria-hidden="true">
-        <BadgeMedal {...medalSpecOf(badge)} size={36} state="notYet" progress={percent} tier={2} />
+        <BadgeMedal
+          {...medalSpecOf(badge)}
+          size={36}
+          state="notYet"
+          progress={badgePercent(badge)}
+          tier={2}
+        />
       </span>
       <span>
         <b>다음 배지</b>
@@ -219,10 +216,7 @@ export function NextBadgeLine({ badge }: { badge: BadgeView }) {
           {badge.progress ? (
             <>
               {' · '}
-              <span aria-hidden="true">
-                {badge.progress.current}/{badge.progress.target}
-              </span>
-              <span className="sr-only">{progressSpoken(badge)}</span>
+              <ProgressFraction badge={badge} />
             </>
           ) : null}
         </span>

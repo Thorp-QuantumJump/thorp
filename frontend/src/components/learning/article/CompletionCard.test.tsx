@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -5,7 +8,11 @@ import { describe, expect, it } from 'vitest'
 import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import type { ComponentProps } from 'react'
 import { allDone, completedRecord, completionResult, learnerOverview, resumeNext } from '@/test/learningMeFixtures'
+import { GOAL_MOTION_WINDOW_MS } from '@/hooks/useCompletionFollowUp'
 import { CompletionCard } from './CompletionCard'
+
+/** `src` 폴더. 움직임 시간을 CSS 파일에서 읽는다. */
+const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 import {
   expLabel,
   gainedNotice,
@@ -438,8 +445,47 @@ describe('CompletionCard — 레벨 갈래 배지와 단계 완주 메달', () =
     expect(document.querySelector('[class*="moving"]')).not.toBeNull()
     unmount()
 
-    renderCard({ gained: [answered], overview: learnerOverview, animateGoal: false })
+    renderCard({ gained: [answered], overview: learnerOverview, goalLateMs: null })
     expect(document.querySelector('[class*="moving"]')).toBeNull()
+  })
+
+  it("'나의 학습'이 움직임 창 안에 늦게 오면 늦은 만큼 레벨 길의 움직임을 당긴다(design-notes §5)", () => {
+    const answered: GainedEntry = {
+      gained: { exp: [{ kind: 'ANSWER_CORRECT', points: 30 }], expTotal: 30, badges: [], levelBefore: 2, levelAfter: 2 },
+      receivedAt: '2026-11-20T03:12:00Z',
+      stageProgress: null,
+    }
+    renderCard({ gained: [answered], overview: learnerOverview, goalLateMs: 180 })
+    const path = document.querySelector('svg[class*="moving"]')!
+    expect(path.getAttribute('style')).toMatch(/--late:\s*180ms/)
+  })
+
+  it('완료 카드의 움직임은 받은 순간부터 세어 950ms 안에 끝난다. 늦게 그려지는 레벨 길도 같다(design-notes §5)', () => {
+    // 움직임 줄이기 설정이 아닐 때의 animation 선언에서 지속·지연을 읽는다. 레벨 길은 '나의 학습'을 받은 뒤(최대 움직임
+    // 창) 그려지고 지연을 그만큼 당기므로(`calc(… - var(--late))`), 끝나는 때는 늦게 그려져도 같다.
+    const ends: string[] = []
+    for (const css of [
+      'components/learning/article/CompletionScene.module.css',
+      'components/learning/me/LevelPath.module.css',
+      'components/learning/me/medals.module.css',
+      'components/learning/me/ArticleStamp.module.css',
+    ]) {
+      const text = readFileSync(resolve(sourceRoot, css), 'utf-8')
+      const start = text.indexOf('@media (prefers-reduced-motion: no-preference)')
+      const block = text.slice(start, text.indexOf('\n}\n', start))
+      for (const [declaration, value] of block.matchAll(/animation:\s*([^;]+);/g)) {
+        // 첫 시간 값이 지속, 둘째가 지연이다. 레벨 길은 늦게 그려진 만큼(late) 당기므로 받은 순간부터 끝까지는 늘
+        // 지연 + 지속이다.
+        const times = [...value.matchAll(/calc\((\d+)ms - var\(--late, 0ms\)\)|(\d+)ms/g)].map(
+          (time) => Number(time[1] ?? time[2]),
+        )
+        const [duration = 0, delay = 0] = times
+        if (delay + duration > 950) ends.push(`${css}: ${declaration}`)
+      }
+      expect(block).toMatch(/animation:/)
+    }
+    expect(ends).toEqual([])
+    expect(GOAL_MOTION_WINDOW_MS).toBeLessThanOrEqual(300)
   })
 
   it('좁은 화면에서는 칸을 한 줄씩 쌓고 큰 그림을 72px로 줄이며 도장 칸이 한 줄에 들어가게 줄어든다(design-notes §6)', () => {

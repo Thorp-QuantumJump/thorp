@@ -1,7 +1,17 @@
 import { useId } from 'react'
 import { stageHex } from '../stageColors'
 import { MaterialDefs } from './MaterialDefs'
-import { ProgressArc, Sweep, type MedalState } from './MedalParts'
+import {
+  FaceBevel,
+  FaceHighlight,
+  GroundShadow,
+  MedalOutline,
+  MedalSvg,
+  ProgressArc,
+  RimShade,
+  Sweep,
+  type MedalState,
+} from './MedalParts'
 import { paint, svgId } from './materials'
 import {
   medalPath,
@@ -50,29 +60,18 @@ export function StageMedal({
   const outer = medalPath('stage')
   const big = size >= 36
   const { fontSize, radius } = big ? stageNumberCircle(size) : { fontSize: 0, radius: 7 }
-  const classes = [styles.medal, state === 'earned' ? styles.earned : null, className]
-    .filter(Boolean)
-    .join(' ')
+  const frame = { size, state, className, mark: { 'data-medal': `stage-${state}` }, overflow: true }
 
   if (state === 'earned') {
     const inner = medalPath('stage', medalRim(size))
     const glass = glassTones(stageHex(stageNumber))
     const leadWidth = roundCoord(2.5 * unit)
     return (
-      <svg
-        className={classes}
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        aria-hidden="true"
-        focusable="false"
-        overflow="visible"
-        data-medal="stage-earned"
-      >
+      <MedalSvg {...frame}>
         <defs>
           <MaterialDefs
             prefix={prefix}
-            materials={['metal', 'glass', 'hl', 'pin', 'shadow', 'sweep']}
+            materials={['metal', 'glass', 'highlight', 'bevel', 'shadow', 'sweep']}
           />
           <clipPath id={`${prefix}-inner`}>
             <path d={inner} />
@@ -81,22 +80,16 @@ export function StageMedal({
             <path d={outer} />
           </clipPath>
         </defs>
-        <ellipse cx="50" cy="97" rx="31" ry="3.4" fill={paint(prefix, 'shadow')} />
+        <GroundShadow prefix={prefix} />
         <path d={outer} fill={paint(prefix, 'metal')} />
-        <path
-          d={outer}
-          fill="none"
-          stroke="#0b0d0c"
-          strokeOpacity={0.55}
-          strokeWidth={roundCoord(0.8 * unit)}
-        />
+        <RimShade d={outer} unit={unit} />
         <g clipPath={`url(#${prefix}-inner)`}>
-          <path d="M0 0H50V44.5L0 50Z" fill={glass.a} />
-          <path d="M50 0H100V50L50 44.5Z" fill={glass.d} />
-          <path d="M0 50L50 44.5V74L0 66Z" fill={glass.c} />
-          <path d="M50 44.5L100 50V66L50 74Z" fill={glass.b} />
-          <path d="M0 66L50 74V100H0Z" fill={glass.e} />
-          <path d="M50 74L100 66V100H50Z" fill={glass.a} />
+          <path d="M0 0H50V44.5L0 50Z" fill={glass.light} />
+          <path d="M50 0H100V50L50 44.5Z" fill={glass.soft} />
+          <path d="M0 50L50 44.5V74L0 66Z" fill={glass.deep} />
+          <path d="M50 44.5L100 50V66L50 74Z" fill={glass.base} />
+          <path d="M0 66L50 74V100H0Z" fill={glass.shade} />
+          <path d="M50 74L100 66V100H50Z" fill={glass.light} />
           <rect width="100" height="100" fill={paint(prefix, 'glass')} />
           <path
             d="M27 18L36 30M66 56L76 61M24 80L32 88"
@@ -117,7 +110,7 @@ export function StageMedal({
             cx="50"
             cy="41"
             r={radius}
-            fill={glass.f}
+            fill={glass.pale}
             strokeWidth={leadWidth}
           />
           {big ? (
@@ -134,34 +127,18 @@ export function StageMedal({
             </text>
           ) : null}
         </g>
-        <g clipPath={`url(#${prefix}-inner)`}>
-          <path d="M0 0H100V25L0 44Z" fill={paint(prefix, 'hl')} />
-        </g>
-        <path
-          d={inner}
-          fill="none"
-          stroke={paint(prefix, 'pin')}
-          strokeWidth={roundCoord(1.25 * unit)}
-        />
+        <FaceHighlight prefix={prefix} clipId={`${prefix}-inner`} />
+        <FaceBevel prefix={prefix} d={inner} unit={unit} />
         {shine ? <Sweep prefix={prefix} clipId={`${prefix}-outer`} /> : null}
-      </svg>
+      </MedalSvg>
     )
   }
 
   if (state === 'notYet') {
     return (
-      <svg
-        className={classes}
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        aria-hidden="true"
-        focusable="false"
-        overflow="visible"
-        data-medal="stage-notYet"
-      >
+      <MedalSvg {...frame}>
         <g className={styles.muted}>
-          <path className={styles.outline} d={outer} strokeWidth={roundCoord(1.5 * unit)} />
+          <MedalOutline d={outer} unit={unit} />
           <path
             d={stageLeadPath(big ? radius : 0)}
             fill="none"
@@ -201,29 +178,15 @@ export function StageMedal({
           progress={progress}
           animate={animate}
         />
-      </svg>
+      </MedalSvg>
     )
   }
 
   const dash = `${roundCoord(3 * unit)} ${roundCoord(3 * unit)}`
   return (
-    <svg
-      className={classes}
-      viewBox="0 0 100 100"
-      width={size}
-      height={size}
-      aria-hidden="true"
-      focusable="false"
-      overflow="visible"
-      data-medal="stage-preparing"
-    >
+    <MedalSvg {...frame}>
       <g className={styles.muted}>
-        <path
-          className={styles.outline}
-          d={outer}
-          strokeWidth={roundCoord(1.5 * unit)}
-          strokeDasharray={`${roundCoord(4 * unit)} ${roundCoord(3 * unit)}`}
-        />
+        <MedalOutline d={outer} unit={unit} dashed />
         {big ? (
           <>
             <path
@@ -258,22 +221,25 @@ export function StageMedal({
       >
         {stageNumber}
       </text>
-    </svg>
+    </MedalSvg>
   )
 }
 
-/** 단계 색을 흰색·짙은 색과 섞어 유리 조각 여섯 톤을 만든다(목업 `stained`). 단계 색이 없으면 옅은 회록이다. */
+/**
+ * 단계 색을 흰색·짙은 색과 섞어 유리 조각 여섯 톤을 만든다(목업 `stained`). 밝은 순서로 `pale`(번호 원) > `light` >
+ * `soft` > `base`(단계 색 그대로) > `shade` > `deep`이다. 단계 색이 없으면 옅은 회록이다.
+ */
 function glassTones(base: string | null) {
   const color = base ?? '#9AA6A0'
   const white = '#ffffff'
   const dark = '#0c0f0e'
   return {
-    a: mix(color, white, 0.3),
-    b: color,
-    c: mix(color, dark, 0.38),
-    d: mix(color, white, 0.1),
-    e: mix(color, dark, 0.2),
-    f: mix(color, white, 0.62),
+    pale: mix(color, white, 0.62),
+    light: mix(color, white, 0.3),
+    soft: mix(color, white, 0.1),
+    base: color,
+    shade: mix(color, dark, 0.2),
+    deep: mix(color, dark, 0.38),
   }
 }
 

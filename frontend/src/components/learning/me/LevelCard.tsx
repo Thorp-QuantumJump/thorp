@@ -1,8 +1,15 @@
 import { useId, type ReactNode } from 'react'
 import type { LearnerOverview } from '@/types/learningMe'
+import { ExpLine } from './ExpLine'
 import { LevelEmblem } from './LevelEmblem'
 import { LevelPath } from './LevelPath'
-import { medalPath, termCardGeometry, type MedalKind } from './medalShapes'
+import {
+  medalPath,
+  READ_GLYPH_PATH,
+  TERMS_GLYPH,
+  termFoldPath,
+  type MedalKind,
+} from './medalShapes'
 import { NewPill } from './NewPill'
 import { roundCoord } from './svgCoord'
 import styles from './LevelCard.module.css'
@@ -28,10 +35,7 @@ export function LevelCard({ overview }: { overview: LearnerOverview }) {
             레벨 {level.current}
             {level.isNew ? <NewPill spoken="새로 닿은 레벨" /> : null}
           </h2>
-          <p className={styles.sub}>
-            경험치 <b>{level.exp.toLocaleString('ko-KR')}</b> · 다음 레벨까지{' '}
-            <b>{level.remainingToNext.toLocaleString('ko-KR')}</b>
-          </p>
+          <ExpLine level={level} className={styles.sub} />
         </div>
       </div>
       <LevelPath level={level} />
@@ -103,7 +107,6 @@ function CountIcon({ kind }: { kind: 'read' | 'terms' | 'badges' }) {
       </svg>
     )
   }
-  const card = termCardGeometry(0)
   return (
     <svg className={styles.icon} viewBox="0 0 100 100" aria-hidden="true" focusable="false">
       <path
@@ -113,21 +116,13 @@ function CountIcon({ kind }: { kind: 'read' | 'terms' | 'badges' }) {
         strokeLinejoin="round"
       />
       {kind === 'read' ? (
-        <path
-          className={styles.iconLine}
-          d="M50 39C44 34.5 37 34 31 36V61C37 59 44 59.5 50 63.5C56 59.5 63 59 69 61V36C63 34 56 34.5 50 39ZM50 39V63.5"
-          strokeWidth="4"
-        />
+        <path className={styles.iconLine} d={READ_GLYPH_PATH} strokeWidth="4" />
       ) : (
         <>
-          <path
-            className={styles.iconLine}
-            d={`M${card.x1 - card.fold} ${card.y0}V${card.y0 + card.fold}H${card.x1}`}
-            strokeWidth="4"
-          />
-          <rect className={styles.iconMark} x="27" y="37" width="36" height="9" rx="2" />
-          <path className={styles.iconLine} d="M31 38H56" strokeWidth="6" />
-          <path className={styles.iconLine} d="M31 53H69M31 63H61" strokeWidth="4" />
+          <path className={styles.iconLine} d={termFoldPath(0)} strokeWidth="4" />
+          <rect className={styles.iconMark} {...TERMS_GLYPH.marker} />
+          <path className={styles.iconLine} d={TERMS_GLYPH.markedLine} strokeWidth="6" />
+          <path className={styles.iconLine} d={TERMS_GLYPH.lines} strokeWidth="4" />
         </>
       )}
     </svg>

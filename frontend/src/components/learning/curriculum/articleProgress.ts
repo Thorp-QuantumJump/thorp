@@ -75,6 +75,11 @@ export function stageProgressLabel({ completed, completedCount, publishedCount }
   return completed ? `완주 · ${publishedCount}편` : `${publishedCount}편 중 ${completedCount}편 읽음`
 }
 
+/** 단계에서 읽은 비율(0~100, 반올림). 공개된 글이 없으면 0이다. 단계 완주 메달의 진행 호가 쓴다. */
+export function stagePercent({ completedCount, publishedCount }: Pick<StageCount, 'completedCount' | 'publishedCount'>): number {
+  return publishedCount > 0 ? Math.round((completedCount / publishedCount) * 100) : 0
+}
+
 /** 글 도장의 모양. 상태를 모르면 중립 모양이다. */
 export function stampState(progress: ArticleProgress | undefined): ArticleStampState {
   if (!progress) return 'neutral'

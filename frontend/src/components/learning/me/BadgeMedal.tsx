@@ -1,10 +1,27 @@
 import { useId } from 'react'
+import type { MedalSpec, SpecialBadge } from './badgeRules'
 import { LevelEmblem } from './LevelEmblem'
 import { MaterialDefs } from './MaterialDefs'
-import { ProgressArc, Sweep, type MedalState } from './MedalParts'
+import {
+  FaceBevel,
+  FaceHighlight,
+  GroundShadow,
+  MedalOutline,
+  MedalSvg,
+  ProgressArc,
+  RimShade,
+  Sweep,
+  type MedalState,
+} from './MedalParts'
 import { paint, svgId, type Material } from './materials'
-import type { MedalSpec, SpecialBadge } from './meCopy'
-import { medalPath, medalRim, termCardGeometry, type MedalKind } from './medalShapes'
+import {
+  medalPath,
+  medalRim,
+  READ_GLYPH_PATH,
+  TERMS_GLYPH,
+  termFoldPath,
+  type MedalKind,
+} from './medalShapes'
 import { StageMedal } from './StageMedal'
 import { roundCoord } from './svgCoord'
 import styles from './medals.module.css'
@@ -85,37 +102,26 @@ function FamilyMedal({
   const prefix = svgId(useId())
   const unit = 100 / size
   const outer = medalPath(kind)
-  const classes = [styles.medal, state === 'earned' ? styles.earned : null, className]
-    .filter(Boolean)
-    .join(' ')
+  const frame = {
+    size,
+    state,
+    className,
+    mark: { 'data-medal': `${kind}-${state}` },
+    overflow: true,
+  }
 
   if (state === 'earned') {
     const rim = medalRim(size)
     const inner = medalPath(kind, rim)
     const enamel = `en-${kind}` as Material
-    const card = termCardGeometry(rim)
+    // 읽은 글 메달은 따뜻한 빛을 뺀 금속이다. 금·황동으로 읽히지 않게 한다(design-notes §3.3).
+    const metal: Material = kind === 'read' ? 'metalPlain' : 'metal'
     return (
-      <svg
-        className={classes}
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        aria-hidden="true"
-        focusable="false"
-        overflow="visible"
-        data-medal={`${kind}-earned`}
-      >
+      <MedalSvg {...frame}>
         <defs>
           <MaterialDefs
             prefix={prefix}
-            materials={[
-              kind === 'read' ? 'metal2' : 'metal',
-              enamel,
-              'hl',
-              'pin',
-              'shadow',
-              'sweep',
-            ]}
+            materials={[metal, enamel, 'highlight', 'bevel', 'shadow', 'sweep']}
           />
           <clipPath id={`${prefix}-inner`}>
             <path d={inner} />
@@ -124,19 +130,13 @@ function FamilyMedal({
             <path d={outer} />
           </clipPath>
         </defs>
-        <ellipse cx="50" cy="97" rx="31" ry="3.4" fill={paint(prefix, 'shadow')} />
-        <path d={outer} fill={paint(prefix, kind === 'read' ? 'metal2' : 'metal')} />
-        <path
-          d={outer}
-          fill="none"
-          stroke="#0b0d0c"
-          strokeOpacity={0.55}
-          strokeWidth={roundCoord(0.8 * unit)}
-        />
+        <GroundShadow prefix={prefix} />
+        <path d={outer} fill={paint(prefix, metal)} />
+        <RimShade d={outer} unit={unit} />
         <path d={inner} fill={paint(prefix, enamel)} />
         {kind === 'terms' ? (
           <path
-            d={`M${roundCoord(card.x1 - card.fold)} ${card.y0}V${roundCoord(card.y0 + card.fold)}H${card.x1}Z`}
+            d={termFoldPath(rim, true)}
             fill="#EAD9F7"
             stroke={INK}
             strokeOpacity={0.5}
@@ -147,38 +147,21 @@ function FamilyMedal({
         <g clipPath={`url(#${prefix}-inner)`} style={{ color: INK }}>
           <Glyph kind={kind} tier={tier} special={special} strokeWidth={2 * unit} tone="earned" />
         </g>
-        <g clipPath={`url(#${prefix}-inner)`}>
-          <path d="M0 0H100V25L0 44Z" fill={paint(prefix, 'hl')} />
-        </g>
-        <path
-          d={inner}
-          fill="none"
-          stroke={paint(prefix, 'pin')}
-          strokeWidth={roundCoord(1.25 * unit)}
-        />
+        <FaceHighlight prefix={prefix} clipId={`${prefix}-inner`} />
+        <FaceBevel prefix={prefix} d={inner} unit={unit} />
         {shine ? <Sweep prefix={prefix} clipId={`${prefix}-outer`} /> : null}
-      </svg>
+      </MedalSvg>
     )
   }
 
   if (state === 'notYet') {
-    const card = termCardGeometry(0)
     return (
-      <svg
-        className={classes}
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        aria-hidden="true"
-        focusable="false"
-        overflow="visible"
-        data-medal={`${kind}-notYet`}
-      >
+      <MedalSvg {...frame}>
         <g className={styles.muted}>
-          <path className={styles.outline} d={outer} strokeWidth={roundCoord(1.5 * unit)} />
+          <MedalOutline d={outer} unit={unit} />
           {kind === 'terms' ? (
             <path
-              d={`M${roundCoord(card.x1 - card.fold)} ${card.y0}V${roundCoord(card.y0 + card.fold)}H${card.x1}`}
+              d={termFoldPath(0)}
               fill="none"
               stroke="currentColor"
               strokeWidth={roundCoord(1.25 * unit)}
@@ -199,28 +182,14 @@ function FamilyMedal({
           progress={progress}
           animate={animate}
         />
-      </svg>
+      </MedalSvg>
     )
   }
 
   return (
-    <svg
-      className={classes}
-      viewBox="0 0 100 100"
-      width={size}
-      height={size}
-      aria-hidden="true"
-      focusable="false"
-      overflow="visible"
-      data-medal={`${kind}-preparing`}
-    >
-      <path
-        className={styles.outline}
-        d={outer}
-        strokeWidth={roundCoord(1.5 * unit)}
-        strokeDasharray={`${roundCoord(4 * unit)} ${roundCoord(3 * unit)}`}
-      />
-    </svg>
+    <MedalSvg {...frame}>
+      <MedalOutline d={outer} unit={unit} dashed />
+    </MedalSvg>
   )
 }
 
@@ -264,10 +233,7 @@ function Glyph({
       }
       return (
         <>
-          <path
-            {...line}
-            d="M50 39C44 34.5 37 34 31 36V61C37 59 44 59.5 50 63.5C56 59.5 63 59 69 61V36C63 34 56 34.5 50 39ZM50 39V63.5"
-          />
+          <path {...line} d={READ_GLYPH_PATH} />
           {pages}
         </>
       )
@@ -301,11 +267,7 @@ function Glyph({
       return (
         <>
           <rect
-            x="27"
-            y="37"
-            width="36"
-            height="9"
-            rx="2"
+            {...TERMS_GLYPH.marker}
             fill="currentColor"
             opacity={tone === 'earned' ? 0.26 : 0.3}
           />
@@ -314,9 +276,9 @@ function Glyph({
             stroke="currentColor"
             strokeWidth={roundCoord(strokeWidth * 1.5)}
             strokeLinecap="round"
-            d="M31 38H56"
+            d={TERMS_GLYPH.markedLine}
           />
-          <path {...line} d="M31 53H69M31 63H61" />
+          <path {...line} d={TERMS_GLYPH.lines} />
         </>
       )
     case 'special':

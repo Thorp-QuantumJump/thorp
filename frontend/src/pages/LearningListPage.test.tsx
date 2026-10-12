@@ -10,7 +10,7 @@ import {
   releasedCurriculum,
   stageOneReleased,
 } from '@/test/learningFixtures'
-import { cssMediaDeclarations } from '@/test/cssRule'
+import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import { learnerOverview } from '@/test/learningMeFixtures'
 import type { Curriculum } from '@/types/learning'
 import { LearningListPage } from './LearningListPage'
@@ -825,6 +825,41 @@ describe('LearningListPage — 나의 학습', () => {
     } finally {
       Element.prototype.scrollIntoView = original
     }
+  })
+
+  it('로그인 상태를 다시 확인하는 동안 글별 상태·단계 완료 수를 접지 않고 자리를 둔 채 숨긴다(T192, research R33)', async () => {
+    loaded(releasedCurriculum)
+    const view = renderList('/learn', signedInAuth)
+    const rerenderWith = (auth: AuthContextValue) =>
+      view.rerender(
+        <AuthContext.Provider value={auth}>
+          <MemoryRouter initialEntries={['/learn']}>
+            <Routes>
+              <Route path="/learn" element={<LearningListPage />} />
+              <Route path="*" element={<Probe />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthContext.Provider>,
+      )
+
+    await screen.findByRole('region', { name: '나의 학습' })
+    const marks = document.querySelectorAll('[data-learner-mark]').length
+    expect(marks).toBeGreaterThan(0)
+    expect(document.querySelector('[class*="learnerConcealed"]')).toBeNull()
+
+    rerenderWith({ ...signedInAuth, status: 'checking', user: null })
+    // 표시를 내리지 않고(같은 수가 그대로 있다) 감싼 자리가 숨기는 규칙을 받는다. 글자도 자리에 남는다.
+    expect(document.querySelectorAll('[data-learner-mark]')).toHaveLength(marks)
+    expect(document.querySelectorAll('[class*="learnerConcealed"] [data-learner-mark]').length).toBeGreaterThan(0)
+    expect(screen.getByText('완주 · 2편')).not.toBeNull()
+    expect(cssDeclarations('pages/LearningListPage.module.css', '.learnerConcealed [data-learner-mark]')).toMatch(
+      /visibility:\s*hidden/,
+    )
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
+
+    rerenderWith(signedInAuth)
+    expect(document.querySelector('[class*="learnerConcealed"]')).toBeNull()
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
   })
 
   it('비로그인에게는 나의 학습을 부르지 않는다', async () => {

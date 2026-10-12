@@ -58,30 +58,9 @@
   margin-top: 22px;
 }
 
+/* 기록을 받지 못했을 때의 실패 한 줄(RecordLoadFailure) 자리 */
 .failure {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: center;
   margin: 22px 0 0;
-  color: var(--thorp-copy);
-}
-
-.retry {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 8px);
-  background: transparent;
-  color: var(--thorp-foreground);
-  font: inherit;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.retry:focus-visible {
-  outline: 2px solid var(--thorp-brand-soft);
-  outline-offset: 3px;
 }
 
 .section {

@@ -1,6 +1,14 @@
 import { useId } from 'react'
 import { MaterialDefs } from './MaterialDefs'
-import { ProgressArc, Sweep, type MedalState } from './MedalParts'
+import {
+  FaceBevel,
+  MedalOutline,
+  MedalSvg,
+  ProgressArc,
+  RimShade,
+  Sweep,
+  type MedalState,
+} from './MedalParts'
 import { paint, svgId } from './materials'
 import { medalPath } from './medalShapes'
 import { roundCoord } from './svgCoord'
@@ -55,9 +63,7 @@ export function LevelEmblem({
   const rings = level >= 4 ? 3 : 2
   const tickCount = level >= 4 ? 24 : level >= 3 ? 12 : 0
   const fontSize = small ? roundCoord(Math.min(52, 12 * unit)) : 50
-  const classes = [styles.medal, state === 'earned' ? styles.earned : null, className]
-    .filter(Boolean)
-    .join(' ')
+  const frame = { size, state, className, mark: { 'data-emblem': state } }
 
   const ringPaths = (strokeWidth: number, opacity: number, stroke?: string) =>
     small
@@ -120,17 +126,9 @@ export function LevelEmblem({
 
   if (state === 'earned') {
     return (
-      <svg
-        className={classes}
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        aria-hidden="true"
-        focusable="false"
-        data-emblem="earned"
-      >
+      <MedalSvg {...frame}>
         <defs>
-          <MaterialDefs prefix={prefix} materials={['gmetal', 'gtext', 'face', 'pin', 'sweep']} />
+          <MaterialDefs prefix={prefix} materials={['gmetal', 'gtext', 'face', 'bevel', 'sweep']} />
           <clipPath id={`${prefix}-faceclip`}>
             <path d={face} />
           </clipPath>
@@ -139,13 +137,7 @@ export function LevelEmblem({
           </clipPath>
         </defs>
         <path d={outer} fill={paint(prefix, 'gmetal')} />
-        <path
-          d={outer}
-          fill="none"
-          stroke="#04140b"
-          strokeOpacity={0.55}
-          strokeWidth={roundCoord(0.8 * unit)}
-        />
+        <RimShade d={outer} unit={unit} color="#04140b" />
         <path d={face} fill={paint(prefix, 'face')} />
         {ringPaths(1.1 * unit, 0.7, paint(prefix, 'gmetal'))}
         {ticks(1.3 * unit, 0.85, '#7EF0B0', ticksClassName)}
@@ -153,30 +145,17 @@ export function LevelEmblem({
         <g clipPath={`url(#${prefix}-faceclip)`}>
           <path d="M0 0H100V24L0 42Z" fill="#fff" opacity={0.12} />
         </g>
-        <path
-          d={face}
-          fill="none"
-          stroke={paint(prefix, 'pin')}
-          strokeWidth={roundCoord(1.2 * unit)}
-        />
+        <FaceBevel prefix={prefix} d={face} unit={unit} width={1.2} />
         {shine ? <Sweep prefix={prefix} clipId={`${prefix}-outerclip`} /> : null}
-      </svg>
+      </MedalSvg>
     )
   }
 
   if (state === 'notYet') {
     return (
-      <svg
-        className={classes}
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        aria-hidden="true"
-        focusable="false"
-        data-emblem="notYet"
-      >
+      <MedalSvg {...frame}>
         <g className={styles.muted}>
-          <path className={styles.outline} d={outer} strokeWidth={roundCoord(1.5 * unit)} />
+          <MedalOutline d={outer} unit={unit} />
           {ringPaths(unit, 0.55)}
           {ticks(1.1 * unit, 0.6, 'currentColor')}
         </g>
@@ -187,27 +166,14 @@ export function LevelEmblem({
           progress={progress}
           animate={animate}
         />
-      </svg>
+      </MedalSvg>
     )
   }
 
   return (
-    <svg
-      className={classes}
-      viewBox="0 0 100 100"
-      width={size}
-      height={size}
-      aria-hidden="true"
-      focusable="false"
-      data-emblem="preparing"
-    >
-      <path
-        className={styles.outline}
-        d={outer}
-        strokeWidth={roundCoord(1.5 * unit)}
-        strokeDasharray={`${roundCoord(4 * unit)} ${roundCoord(3 * unit)}`}
-      />
+    <MedalSvg {...frame}>
+      <MedalOutline d={outer} unit={unit} dashed />
       {number(undefined, styles.preparingText)}
-    </svg>
+    </MedalSvg>
   )
 }

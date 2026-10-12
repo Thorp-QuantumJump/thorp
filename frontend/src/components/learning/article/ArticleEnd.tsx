@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useLoginReturn } from '@/auth/useLoginReturn'
+import { useCompletionFollowUp, type CompletionFollowUp } from '@/hooks/useCompletionFollowUp'
 import type { CurrentLearningArticle, LearningReturnState } from '@/types/learning'
-import type { LearnerOverview } from '@/types/learningMe'
 import { GuestSample } from '../me/GuestSample'
-import { nextGoalSentence } from '../me/meCopy'
-import { QuietNotice } from '../me/QuietNotice'
-import { useLearnerOverview } from '../me/useLearnerOverview'
+import { CompletionAnnouncement } from './CompletionAnnouncement'
 import { CompletionCard } from './CompletionCard'
-import { hasGainedNews, settledGainedNotice, type GainedEntry } from './completionText'
 import { QuizPanel } from './QuizPanel'
-import type { Announcement, useLearnerArticle } from './useLearnerArticle'
+import type { useLearnerArticle } from './useLearnerArticle'
 import { useRestoreFocusAfterConceal } from './useRestoreFocusAfterConceal'
 import { useSettledAuth } from './useSettledAuth'
 import styles from './ArticleEnd.module.css'
@@ -74,39 +71,27 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   const concealable = concealed ? styles.concealed : undefined
   const unrecorded = mode.kind === 'guest' || mode.kind === 'expired'
 
-  // 완료 카드의 다음 목표(레벨 길·다음 레벨까지·다음 배지)는 '나의 학습' 전체에서 읽는다(T204). 이 화면에서 완료·답으로
-  // 경험치·배지를 받을 때마다 한 번 받는다. 다시 연 완료 글에서는 부르지 않는다. 그 요청도 정산을 하는데(계약 §1) 카드에는
-  // 그 결과를 그릴 자리가 없어, 운영자 변경으로 생긴 배지가 알림 없이 지나가기 때문이다. 받지 못해도 카드의 글자는 그대로다.
+  // 완료 카드의 다음 목표(레벨 길·다음 레벨까지·다음 배지)와 단계 완주 메달의 배지는 '나의 학습' 전체에서 읽는다(T204,
+  // US6 시나리오 8). 그 요청의 정산으로 생긴 것은 카드에 잇고 알린다. 받지 못해도 카드의 글자는 그대로다.
   const { settled } = useSettledAuth()
   const learner = mode.kind === 'record' ? mode.learner : null
-  const gainedCount = learner?.gained.length ?? 0
-  const overview = useLearnerOverview({
+  const followUp = useCompletionFollowUp({
     auth: settled,
-    enabled: learner !== null && hasCompletionCard(learner) && gainedCount > 0,
-    refreshKey: learner ? `${learner.articleRevision}:${gainedCount}` : '',
+    enabled: learner !== null && hasCompletionCard(learner),
+    articleRevision: learner?.articleRevision ?? 0,
+    gainedCount: learner?.gained.length ?? 0,
   })
-  // 새 경험치를 반영한 응답일 때만 그린다. 다시 받다가 실패했으면 앞 응답으로 다음 목표를 그리지 않는다.
-  const learnerOverview =
-    overview.upToDate && overview.state.status === 'loaded' ? overview.state.overview : null
-  const followUp = useOverviewFollowUp(
-    learnerOverview,
-    gainedCount,
-    `${settled.kind === 'authenticated' ? settled.userId : settled.kind}|${learner?.articleRevision ?? ''}`,
-  )
-  const overviewNotice = useMemo(() => overviewNoticeOf(learnerOverview), [learnerOverview])
 
-  const card = learner
-    ? completionCard(article, learner, learningReturn, learnerOverview, followUp)
-    : null
+  const card = learner ? completionCard(article, learner, learningReturn, followUp) : null
 
   return (
     <div ref={endRef} className={styles.end}>
       {/* 새 배지·레벨 알림 영역. 완료 카드보다 먼저, 비어 있는 채로 둔다. 미리 있어야 바뀐 글자가 읽힌다(FR-030). */}
       {mode.kind === 'record' ? (
-        <LiveAnnouncement
+        <CompletionAnnouncement
           announcement={mode.learner.announcement}
-          overviewNotice={overviewNotice}
-          ready={overview.finished}
+          notice={followUp.notice}
+          ready={followUp.finished}
         />
       ) : null}
 
@@ -182,133 +167,6 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   )
 }
 
-/** 다음 목표를 받기를 기다리는 가장 긴 시간. 넘으면 다음 목표 없이 알린다. */
-const SUFFIX_WAIT_MS = 4000
-
-/**
- * 레벨 길의 점이 옮겨 가는 움직임을 주는 시간 창. 받은 것이 생긴 뒤 이 안에 '나의 학습'이 와야 카드의 다른 움직임과 한
- * 장면으로 950ms 안에 끝난다(design-notes §5). 늦게 오면 점을 옮기지 않고 최종 모습만 보인다.
- */
-const GOAL_MOTION_WINDOW_MS = 250
-
-type FollowUp = {
-  /** 이 기록이 속한 사용자와 글 판. 바뀌면 처음부터다 */
-  key: string
-  /** '나의 학습' 요청의 정산으로 이 화면에서 새로 생긴 것. 완료 카드의 받은 것에 잇는다 */
-  extra: GainedEntry[]
-  /** 마지막으로 반영한 응답 */
-  seen: LearnerOverview | null
-  /** 그 응답이 움직임 창 안에 왔는가 */
-  quick: boolean
-}
-
-/**
- * 완료 뒤 다시 받은 '나의 학습'을 완료 카드에 잇는다(T204).
- *
- * <p>그 요청도 정산을 하므로(계약 §1) 운영자의 게시 취소나 단계 이동으로 채워진 배지·단계 완주가 그 응답의 `gained`로
- * 올 수 있다. 버리면 알림 없이 지나가므로(FR-030) 받은 것에 잇는다. 같은 응답은 한 번만 잇는다.
- */
-function useOverviewFollowUp(overview: LearnerOverview | null, gainedCount: number, key: string) {
-  const [state, setState] = useState<FollowUp>({ key, extra: [], seen: null, quick: true })
-  const gainedAt = useRef(0)
-  const current = state.key === key ? state : { key, extra: [], seen: null, quick: true }
-  if (state.key !== key) setState(current)
-
-  // 받은 것이 생긴 때를 적어 둔다. 그 뒤 '나의 학습'이 오기까지 걸린 시간으로 움직임을 줄지 정한다.
-  useEffect(() => {
-    gainedAt.current = Date.now()
-  }, [gainedCount])
-
-  useEffect(() => {
-    if (!overview) return
-    const quick = Date.now() - gainedAt.current <= GOAL_MOTION_WINDOW_MS
-    setState((previous) => {
-      if (previous.key !== key || previous.seen === overview) return previous
-      const extra = hasGainedNews(overview.gained)
-        ? [
-            ...previous.extra,
-            { gained: overview.gained, receivedAt: new Date().toISOString(), stageProgress: null },
-          ]
-        : previous.extra
-      return { ...previous, seen: overview, quick, extra }
-    })
-  }, [overview, key])
-
-  return current
-}
-
-/** 완료 뒤 다시 받은 '나의 학습' 응답 하나가 알릴 것. 같은 응답이면 같은 값이다. */
-type OverviewNotice = {
-  /** 그 요청의 정산으로 새로 생긴 배지·레벨의 문장(계약 §4). 없으면 빈 문자열이다 */
-  news: string
-  /** 다음 목표 문장(T208). 없으면 빈 문자열이다 */
-  goal: string
-}
-
-function overviewNoticeOf(overview: LearnerOverview | null): OverviewNotice | null {
-  if (!overview) return null
-  return { news: settledGainedNotice(overview.gained), goal: nextGoalSentence(overview) }
-}
-
-/**
- * 새 배지·레벨의 조용한 알림(FR-030, 목업의 `#live`). 처음부터 비어 있는 영역(`QuietNotice`)에 방금 받은 것의 문장만
- * 넣는다. 앞서 알린 것을 다시 읽지 않고, 초점을 옮기지 않는다.
- *
- * <p>글 기록 응답의 알림(`announcement`) 끝에는 완료 뒤 다시 받은 '나의 학습'의 정산으로 새로 생긴 것과 다음 목표('다음
- * 레벨까지 240, 다음 배지(읽은 글 5편)까지 1편입니다.', T208)를 덧붙인다. 그 응답을 받아야 알므로 요청이 끝날 때까지
- * (`ready`) 기다리고, 받지 못했거나 4초를 넘기면 덧붙이지 않는다.
- *
- * <p>'나의 학습'의 정산으로 새로 생긴 배지·레벨은 덧붙일 알림이 없어도 알린다(계약 §4). 경험치만 받은 완료라 글 기록
- * 응답의 알림이 없었거나, 응답이 기다림을 넘겨 왔을 때다. 그때는 그것과 다음 목표를 따로 한 번 알린다. 한 알림과 한
- * 응답의 새 배지는 한 번만 읽힌다.
- */
-function LiveAnnouncement({
-  announcement,
-  overviewNotice,
-  ready,
-}: {
-  announcement: Announcement | null
-  overviewNotice: OverviewNotice | null
-  ready: boolean
-}) {
-  const [message, setMessage] = useState('')
-  const [waited, setWaited] = useState<number | null>(null)
-  const latest = useRef({ overviewNotice, ready })
-  latest.current = { overviewNotice, ready }
-  // 덧붙일 것을 기다리는 알림과, 이미 읽힌 '나의 학습' 응답.
-  const pending = useRef<number | null>(null)
-  const told = useRef<OverviewNotice | null>(null)
-
-  // 새 알림이 오면 비우고, 다음 목표를 기다리는 시간의 상한을 둔다.
-  useEffect(() => {
-    setMessage('')
-    setWaited(null)
-    pending.current = announcement?.id ?? null
-    if (!announcement) return
-    const timer = setTimeout(() => setWaited(announcement.id), SUFFIX_WAIT_MS)
-    return () => clearTimeout(timer)
-  }, [announcement])
-
-  const settledNow = ready || waited === announcement?.id
-  useEffect(() => {
-    if (!announcement || !settledNow || pending.current !== announcement.id) return
-    const { overviewNotice: notice, ready: done } = latest.current
-    pending.current = null
-    const extra = done && notice ? [notice.news, notice.goal] : []
-    if (done && notice) told.current = notice
-    setMessage([announcement.text, ...extra].filter(Boolean).join(' '))
-  }, [announcement, settledNow])
-
-  // 덧붙일 알림 없이 온 '나의 학습'의 새 배지·레벨은 따로 알린다.
-  useEffect(() => {
-    if (!overviewNotice?.news || told.current === overviewNotice || pending.current !== null) return
-    told.current = overviewNotice
-    setMessage([overviewNotice.news, overviewNotice.goal].filter(Boolean).join(' '))
-  }, [overviewNotice])
-
-  return <QuietNotice text={message} />
-}
-
 /** 완료 카드가 놓이는가. 기록을 받았고 완료한 글이다. */
 function hasCompletionCard(learner: LearnerEnd): boolean {
   if (learner.load.status !== 'loaded') return false
@@ -320,8 +178,7 @@ function completionCard(
   article: ArticleEndProps['article'],
   learner: LearnerEnd,
   learningReturn: LearningReturnState | undefined,
-  overview: LearnerOverview | null,
-  followUp: FollowUp,
+  followUp: CompletionFollowUp,
 ) {
   if (learner.load.status !== 'loaded' || !hasCompletionCard(learner)) return null
   const record = learner.load.record
@@ -339,10 +196,10 @@ function completionCard(
       mastered={record.quiz.mastered}
       next={article.next}
       learningReturn={learningReturn}
-      overview={overview}
+      overview={followUp.overview}
       // 이 화면에서 방금 완료했으면 마지막 도장이 찍히는 움직임을 준다. 다시 연 완료 글은 최종 모습 그대로다.
       freshCompletion={done !== null && !done.alreadyCompleted}
-      animateGoal={followUp.quick}
+      goalLateMs={followUp.lateMs}
       quiz={
         <QuizPanel
           // 글이나 기록을 다시 받으면 새 문제·새 첫 답으로 처음부터 그린다. 기록 중·실패 줄도 함께 비운다.

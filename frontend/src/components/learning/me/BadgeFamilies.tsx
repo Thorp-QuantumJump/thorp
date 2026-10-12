@@ -2,19 +2,18 @@ import { useId } from 'react'
 import type { BadgeView } from '@/types/learningMe'
 import { formatCompletedDate } from '../article/completionText'
 import { BadgeMedal } from './BadgeMedal'
-import { enamelColor } from './materials'
 import {
   BADGE_FAMILIES,
-  badgeRibbon,
+  badgePercent,
   familyName,
-  groupPreparing,
   isBadgeFamily,
   medalSpecOf,
-  preparingReasonText,
-  progressSpoken,
   type KnownBadgeFamily,
-} from './meCopy'
+} from './badgeRules'
+import { enamelColor } from './materials'
+import { badgeRibbon, preparingLines, preparingReasonText } from './meCopy'
 import { NewPill } from './NewPill'
+import { ProgressFraction } from './ProgressFraction'
 import styles from './BadgeFamilies.module.css'
 
 /**
@@ -53,7 +52,7 @@ function Family({ family, badges }: { family: KnownBadgeFamily; badges: BadgeVie
   const singles = family === 'STAGE' || family === 'SPECIAL'
   const cards = badges.filter((badge) => singles || badge.status !== 'PREPARING')
   const preparing = singles ? [] : badges.filter((badge) => badge.status === 'PREPARING')
-  const groups = groupPreparing(preparing)
+  const lines = preparingLines(preparing)
   const tierOf = (badge: BadgeView) => Math.min(3, badges.indexOf(badge) + 1)
 
   return (
@@ -77,19 +76,19 @@ function Family({ family, badges }: { family: KnownBadgeFamily; badges: BadgeVie
           ))}
         </ul>
       ) : null}
-      {groups.length > 0 ? (
+      {lines.length > 0 ? (
         <>
           <div className={styles.tokens} aria-hidden="true">
             {preparing.map((badge) => (
               <span key={badge.badgeKey} className={styles.token}>
                 <BadgeMedal {...medalSpecOf(badge)} size={32} state="preparing" />
-                <small>{badgeRibbon(badge.name)}</small>
+                <small>{badgeRibbon(badge)}</small>
               </span>
             ))}
           </div>
-          {groups.map((group) => (
-            <p key={group.line} className={styles.preparingLine}>
-              <span>{group.line}</span>
+          {lines.map((line) => (
+            <p key={line} className={styles.preparingLine}>
+              <span>{line}</span>
             </p>
           ))}
         </>
@@ -111,21 +110,17 @@ function BadgeCard({
   const { kind } = spec
   const state =
     badge.status === 'EARNED' ? 'earned' : badge.status === 'PREPARING' ? 'preparing' : 'notYet'
-  const percent =
-    badge.progress && badge.progress.target > 0
-      ? (badge.progress.current / badge.progress.target) * 100
-      : 0
   const ribbon =
     kind === 'level' || kind === 'stage' || kind === 'special' || state === 'preparing'
       ? null
-      : badgeRibbon(badge.name)
+      : badgeRibbon(badge)
   const medal = (size: number, className: string) => (
     <BadgeMedal
       {...spec}
       className={className}
       size={size}
       state={state}
-      progress={percent}
+      progress={badgePercent(badge)}
       tier={tier}
     />
   )
@@ -187,10 +182,7 @@ function BadgeStatus({ badge }: { badge: BadgeView }) {
   if (!badge.progress) return <span className={styles.chip}>아직 받지 않음</span>
   return (
     <span className={styles.chip}>
-      <span aria-hidden="true">
-        아직 받지 않음 · {badge.progress.current}/{badge.progress.target}
-      </span>
-      <span className="sr-only">아직 받지 않음, {progressSpoken(badge)}</span>
+      <ProgressFraction badge={badge} lead="아직 받지 않음" />
     </span>
   )
 }

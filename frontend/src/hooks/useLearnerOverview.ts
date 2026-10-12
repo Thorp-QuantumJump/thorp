@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchLearningMe } from '@/api/learningMe'
+import type { SettledAuth } from '@/components/learning/article/useSettledAuth'
 import type { LearnerOverview } from '@/types/learningMe'
-import type { SettledAuth } from '../article/useSettledAuth'
 
 /**
  * '나의 학습' 전체 조회의 상태.
@@ -19,14 +19,21 @@ export type OverviewState =
   | { status: 'loaded'; overview: LearnerOverview }
   | { status: 'failed' }
 
+/** 요청 한 번. 같은 사용자에게 다시 받는 까닭(`refreshKey`)과 '다시 시도'를 누른 횟수(`attempt`)로 가른다. */
+type RequestRound = { refreshKey: unknown; attempt: number }
+
+function isRound(round: RequestRound | null, refreshKey: unknown, attempt: number): boolean {
+  return round !== null && Object.is(round.refreshKey, refreshKey) && round.attempt === attempt
+}
+
 type Snapshot = {
   /** 이 상태가 속한 사용자. 바뀌면 처음부터다 */
   owner: string | null
   state: OverviewState
-  /** 마지막으로 끝난 요청이 어느 `refreshKey`의 것이었나 */
-  finishedFor: string | null
-  /** 마지막으로 성공한 요청이 어느 `refreshKey`의 것이었나. 다시 받다가 실패하면 앞 값이 남아 지금 키와 다르다 */
-  okFor: string | null
+  /** 마지막으로 끝난 요청 */
+  finished: RequestRound | null
+  /** 마지막으로 성공한 요청. 다시 받다가 실패하면 앞 요청이 남아 지금 요청과 다르다 */
+  succeeded: RequestRound | null
 }
 
 interface OverviewOptions {
@@ -35,14 +42,14 @@ interface OverviewOptions {
   /** 부를 수 있는 때인가. 첫 단계를 공개한 뒤(`isFirstStageReleased`)에만 참이다(research R33) */
   enabled: boolean
   /**
-   * 같은 사용자로 다시 받을 때 바꾸는 값. 글 끝 완료 카드가 새 경험치를 받을 때마다 레벨과 다음 배지를 다시 받는다
-   * (T204). 바뀌어도 받아 둔 값은 새 값이 올 때까지 그대로다
+   * 같은 사용자로 다시 받는 까닭. 값이 바뀌면(`Object.is`) 다시 받는다. 글 끝 완료 카드가 글을 다시 불러오거나 새
+   * 경험치를 받을 때마다 레벨과 다음 배지를 다시 받는다(T204). 바뀌어도 받아 둔 값은 새 값이 올 때까지 그대로다
    */
-  refreshKey?: string
+  refreshKey?: unknown
 }
 
 /**
- * '나의 학습' 전체(`GET /learning/me`, 013 FR-020, 계약 §1).
+ * '나의 학습' 전체(`GET /learning/me`, 013 FR-020, 계약 §1). 배우기 목록, '나의 학습' 화면, 글 끝 완료 카드가 함께 쓴다.
  *
  * <p><b>로그인 상태이고 첫 단계를 공개한 뒤에만 부른다.</b> 첫 단계 공개 전에는 서버가 409를 주므로 요청하지 않고
  * 나의 학습 요소를 그리지 않는다(research R33). 서버가 그래도 409 `LEARNING_NOT_RECORDABLE`을 주면 같은 모습(`off`)이다.
@@ -53,7 +60,7 @@ interface OverviewOptions {
  *
  * <p><b>조용히 재시도하지 않는다.</b> 실패는 실패로 두고, 사용자가 '다시 시도'를 누를 때 `retry`로 다시 부른다(계약 §0).
  */
-export function useLearnerOverview({ auth, enabled, refreshKey = '' }: OverviewOptions) {
+export function useLearnerOverview({ auth, enabled, refreshKey = null }: OverviewOptions) {
   const owner = enabled && auth.kind === 'authenticated' ? String(auth.userId) : null
   const [snapshot, setSnapshot] = useState<Snapshot>(() => initial(owner))
   const [attempt, setAttempt] = useState(0)
@@ -65,7 +72,7 @@ export function useLearnerOverview({ auth, enabled, refreshKey = '' }: OverviewO
   useEffect(() => {
     if (owner === null) return
     const forOwner = owner
-    const forKey = `${refreshKey}#${attempt}`
+    const round: RequestRound = { refreshKey, attempt }
     const controller = new AbortController()
     setSnapshot((previous) =>
       previous.owner !== forOwner || previous.state.status === 'loaded'
@@ -80,15 +87,15 @@ export function useLearnerOverview({ auth, enabled, refreshKey = '' }: OverviewO
           return {
             owner: forOwner,
             state: { status: 'loaded', overview: result.data },
-            finishedFor: forKey,
-            okFor: forKey,
+            finished: round,
+            succeeded: round,
           }
         }
         if (result.status === 'notRecordable')
-          return { ...previous, state: { status: 'off' }, finishedFor: forKey }
+          return { ...previous, state: { status: 'off' }, finished: round }
         // 다시 받다가 실패했으면 받아 둔 값을 지우지 않는다. 그 값은 여전히 이 사용자의 기록이다.
-        if (previous.state.status === 'loaded') return { ...previous, finishedFor: forKey }
-        return { ...previous, state: { status: 'failed' }, finishedFor: forKey }
+        if (previous.state.status === 'loaded') return { ...previous, finished: round }
+        return { ...previous, state: { status: 'failed' }, finished: round }
       })
     })
     return () => controller.abort()
@@ -97,16 +104,15 @@ export function useLearnerOverview({ auth, enabled, refreshKey = '' }: OverviewO
   /** 사용자가 '다시 시도'를 눌렀다. */
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
 
-  const key = `${refreshKey}#${attempt}`
   return {
     state: ownSnapshot.state,
-    /** 지금 `refreshKey`의 요청이 끝났는가(성공이든 실패든). 완료 순간의 알림이 다음 목표를 덧붙일지 기다리는 데 쓴다 */
-    finished: owner === null || ownSnapshot.finishedFor === key,
+    /** 지금 요청이 끝났는가(성공이든 실패든). 완료 순간의 알림이 다음 목표를 덧붙일지 기다리는 데 쓴다 */
+    finished: owner === null || isRound(ownSnapshot.finished, refreshKey, attempt),
     /**
-     * 지금 `refreshKey`의 요청이 성공해 `loaded`가 그 응답인가. 다시 받다가 실패하면 앞 응답이 남아 있어도 거짓이다.
-     * 새 경험치를 반영하지 않은 앞 응답으로 다음 목표를 그리지 않기 위해서다
+     * 지금 요청이 성공해 `loaded`가 그 응답인가. 다시 받다가 실패하면 앞 응답이 남아 있어도 거짓이다. 새 경험치를
+     * 반영하지 않은 앞 응답으로 다음 목표를 그리지 않기 위해서다
      */
-    upToDate: owner !== null && ownSnapshot.okFor === key,
+    upToDate: owner !== null && isRound(ownSnapshot.succeeded, refreshKey, attempt),
     retry,
   }
 }
@@ -115,7 +121,7 @@ function initial(owner: string | null): Snapshot {
   return {
     owner,
     state: owner === null ? { status: 'off' } : { status: 'loading' },
-    finishedFor: null,
-    okFor: null,
+    finished: null,
+    succeeded: null,
   }
 }

@@ -44,8 +44,9 @@
   color: var(--thorp-foreground);
 }
 
+/* 개편 뒤 생긴 토큰이라 classic에서 비면 예전 값으로 돌아간다(frontend/CLAUDE.md). */
 .dialog::backdrop {
-  background: var(--thorp-overlay);
+  background: var(--thorp-overlay, rgb(3 8 5 / 72%));
 }
 
 .dialogBody {

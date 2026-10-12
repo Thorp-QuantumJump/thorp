@@ -37,7 +37,7 @@ function definition(prefix: string, material: Material) {
         </radialGradient>
       )
     case 'metal':
-    case 'metal2':
+    case 'metalPlain':
       return (
         <linearGradient key={id} id={id} x1="0" y1="0" x2="1" y2="1">
           {material === 'metal' ? <stop offset="0" stopColor="#F3E7C0" /> : null}
@@ -56,7 +56,7 @@ function definition(prefix: string, material: Material) {
           <stop offset="1" stopColor="#000" stopOpacity="0.18" />
         </radialGradient>
       )
-    case 'pin':
+    case 'bevel':
       return (
         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#fff" stopOpacity="0.38" />
@@ -65,7 +65,7 @@ function definition(prefix: string, material: Material) {
           <stop offset="1" stopColor="#000" stopOpacity="0.5" />
         </linearGradient>
       )
-    case 'hl':
+    case 'highlight':
       return (
         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#fff" stopOpacity="0.26" />
