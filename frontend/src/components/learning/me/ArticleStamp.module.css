@@ -85,7 +85,7 @@
 
 .tipCore {
   fill: #eafff2;
-  filter: drop-shadow(0 0 4px rgb(47 220 122 / 80%));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--thorp-accent-soft) 80%, transparent));
 }
 
 /* 움직임은 줄이기 설정이 아닐 때만 더한다. 기본은 최종 모습이다(design-notes §5). */

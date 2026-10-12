@@ -466,8 +466,25 @@
   }
 }
 
-/* 강제 색 모드에서도 정거장 점의 상태 모양과 노선의 실선·점선이 남는다. */
+/*
+  강제 색 모드에서도 정거장 점의 상태 모양과 노선의 실선·점선이 남는다. 이 모드는 바탕색을 화면 바탕으로 바꾸고
+  그라디언트를 지우므로, 실선 노선은 시스템 색으로 칠하고 점선 노선은 테두리 점선으로 다시 그린다.
+*/
 @media (forced-colors: active) {
+  :is(.railTop, .railBottom):is([data-kind='neutral'], [data-kind='unread']) {
+    background: CanvasText;
+  }
+
+  :is(.railTop, .railBottom)[data-kind='read'] {
+    background: Highlight;
+  }
+
+  :is(.railTop, .railBottom)[data-kind='preparing'] {
+    width: 0;
+    border-left: 3px dashed CanvasText;
+    background: none;
+  }
+
   .dot[data-kind='reading'] circle:not(.dotArc),
   .dot[data-kind='unread'] circle,
   .groupMark[data-kind='open'] circle,

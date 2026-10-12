@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useRef } from 'react'
+import { useModalDialog } from '@/hooks/useModalDialog'
 import styles from './records.module.css'
 
 type Props = {
@@ -20,18 +21,8 @@ type Props = {
  */
 export function RecordDialog({ open, onClose, labelledBy, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const dialog = ref.current
-    if (!dialog) return
-    if (open && !dialog.open) {
-      // showModal 이라야 top layer 로 올라가 backdrop 이 생기고 뒤가 잠긴다. open 속성으로 여는
-      // 것과 다르다 — 그때는 제자리에 그냥 그려져 메뉴 같은 것과 겹친다.
-      if (typeof dialog.showModal === 'function') dialog.showModal()
-      else dialog.setAttribute('open', '') // jsdom 에는 showModal 이 없다
-    }
-    if (!open && dialog.open) dialog.close()
-  }, [open])
+  // showModal 이라야 top layer 로 올라가 backdrop 이 생기고 뒤가 잠긴다(useModalDialog).
+  useModalDialog(ref, open)
 
   return (
     <dialog

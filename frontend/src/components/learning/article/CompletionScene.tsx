@@ -1,16 +1,24 @@
+import type { CSSProperties } from 'react'
 import type { BadgeView, GainedBadge, LevelView, StageProgress } from '@/types/learningMe'
 import { ArticleStamp } from '../me/ArticleStamp'
 import { BadgeMedal } from '../me/BadgeMedal'
 import { LevelEmblem } from '../me/LevelEmblem'
 import { LevelPathMove } from '../me/LevelPath'
+import { cssLinearGradient, GTEXT_STOPS } from '../me/materials'
 import {
-  familyMedal,
+  medalSpecOf,
   nextLevelReachable,
   progressSpoken,
+  stageBadgeKey,
   unreachableLevelSentence,
 } from '../me/meCopy'
 import { StageMedal } from '../me/StageMedal'
 import styles from './CompletionScene.module.css'
+
+/** 넘어가는 레벨 숫자의 글자색. 레벨 표장의 숫자와 같은 초록 금속 단이다(`materials.ts`). */
+const ROLL_TEXT = {
+  ['--gtext' as string]: cssLinearGradient('180deg', GTEXT_STOPS),
+} as CSSProperties
 
 /**
  * 완료 카드의 그림 장면(013 design-notes §3.4·§5, 목업 '글 끝'의 `dcPath`·`heroArch`·`heroEmblem`·`mm2`).
@@ -82,32 +90,40 @@ export function StageStampPath({
 
 /**
  * 새 배지의 메달(96px). 단계 완주 배지는 실선 회색 아치가 접히고 색유리가 찬 메달이 펼쳐진다(움직임 줄이기 설정이
- * 아닐 때만). 단계 번호는 '나의 학습'의 같은 배지에서, 없으면 이름('2단계 완주')에서 읽는다.
+ * 아닐 때만).
+ *
+ * <p>완료 응답의 배지(계약 §4)에는 단계 번호가 없다. 그래서 단계 번호는 '나의 학습'의 같은 배지에서 읽고, 아직 받지
+ * 못했으면 이 글의 단계 완주 배지(`stage-{stageKey}`)일 때만 이 글의 단계 번호를 쓴다. 다른 단계의 배지인데 번호를
+ * 모르면 숫자를 지어내지 않고 특별 갈래의 마름모로 그린다(`medalSpecOf`).
  */
 export function BadgeHero({
   badge,
   overviewBadges,
+  articleStage,
 }: {
   badge: GainedBadge
   overviewBadges: readonly BadgeView[] | null
+  /** 이 글이 놓인 단계 */
+  articleStage: { stageKey: string; number: number }
 }) {
-  const kind = familyMedal(badge.family)
   const known = overviewBadges?.find((item) => item.badgeKey === badge.badgeKey)
-  if (kind === 'stage') {
-    const stageNumber = known?.stageNumber ?? Number(/(\d+)단계/.exec(badge.name)?.[1] ?? 0)
+  const ownStage =
+    badge.badgeKey === stageBadgeKey(articleStage.stageKey) ? articleStage.number : null
+  const medal = medalSpecOf({ ...badge, stageNumber: known?.stageNumber ?? ownStage })
+  if (medal.kind === 'stage') {
     return (
       <span className={styles.hero} aria-hidden="true">
         <span className={styles.flip}>
           <StageMedal
             className={styles.flipFrom}
-            stageNumber={stageNumber}
+            stageNumber={medal.stageNumber}
             size={96}
             state="notYet"
             progress={75}
           />
           <StageMedal
             className={styles.flipTo}
-            stageNumber={stageNumber}
+            stageNumber={medal.stageNumber}
             size={96}
             state="earned"
             shine
@@ -116,18 +132,9 @@ export function BadgeHero({
       </span>
     )
   }
-  const level = Number(/(\d+)$/.exec(badge.badgeKey)?.[1] ?? /(\d+)/.exec(badge.name)?.[1] ?? 1)
   return (
     <span className={styles.hero} aria-hidden="true">
-      <BadgeMedal
-        className={styles.rise}
-        kind={kind}
-        size={96}
-        state="earned"
-        level={level}
-        special={badge.badgeKey === 'exploration' ? 'exploration' : 'persistence'}
-        shine
-      />
+      <BadgeMedal {...medal} className={styles.rise} size={96} state="earned" shine />
     </span>
   )
 }
@@ -150,7 +157,7 @@ export function LevelHero({
           shine
           ticksClassName={styles.ticksIn}
         />
-        <span className={styles.rollWindow}>
+        <span className={styles.rollWindow} style={ROLL_TEXT}>
           <span
             className={
               levelBefore !== levelAfter
@@ -203,13 +210,7 @@ export function NextBadgeLine({ badge }: { badge: BadgeView }) {
   return (
     <p className={styles.next}>
       <span className={styles.nextArt} aria-hidden="true">
-        <BadgeMedal
-          kind={familyMedal(badge.family)}
-          size={36}
-          state="notYet"
-          progress={percent}
-          tier={2}
-        />
+        <BadgeMedal {...medalSpecOf(badge)} size={36} state="notYet" progress={percent} tier={2} />
       </span>
       <span>
         <b>다음 배지</b>

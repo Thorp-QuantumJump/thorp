@@ -1,12 +1,17 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '@/api/client'
+import type { CurriculumResult } from '@/api/learning'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { authenticatedUser } from '@/test/authFixtures'
+import { preReleaseCurriculum, releasedCurriculum } from '@/test/learningFixtures'
 import { AccountProfilePage } from './AccountProfilePage'
 import { AccountProfilePreviewPage } from './AccountProfilePreviewPage'
+
+const apiMocks = vi.hoisted(() => ({ fetchCurriculum: vi.fn() }))
+vi.mock('@/api/learning', () => apiMocks)
 
 function renderPage(updateNickname: AuthContextValue['updateNickname'] = vi.fn()) {
   return render(
@@ -27,6 +32,14 @@ function renderPage(updateNickname: AuthContextValue['updateNickname'] = vi.fn()
 }
 
 describe('AccountProfilePage', () => {
+  beforeEach(() => {
+    apiMocks.fetchCurriculum.mockReset()
+    apiMocks.fetchCurriculum.mockResolvedValue({
+      status: 'loaded',
+      curriculum: releasedCurriculum,
+    } satisfies CurriculumResult)
+  })
+
   it('개발용 미리보기는 로그인 없이 예시 정보를 보여 주고 저장하지 않는다', async () => {
     const user = userEvent.setup()
     render(
@@ -120,12 +133,40 @@ describe('AccountProfilePage', () => {
     expect(screen.queryByRole('status')).toBeNull()
   })
 
-  it("아래 '학습 기록' 구역에 학습 초기화가 있고, 누르기 전에는 확인 창이 없다(013 FR-025)", () => {
+  it("첫 단계를 공개한 뒤에는 아래 '학습 기록' 구역에 학습 초기화가 있고, 누르기 전에는 확인 창이 없다(013 FR-025)", async () => {
     renderPage()
 
-    const section = screen.getByRole('region', { name: '학습 기록' })
+    const section = await screen.findByRole('region', { name: '학습 기록' })
     expect(section.textContent).toContain('배우기의 나의 학습 기록을 모두 지웁니다.')
     expect(screen.getByRole('button', { name: '학습 초기화' })).toBeTruthy()
     expect(screen.queryByRole('dialog', { name: '학습 기록을 모두 지울까요?' })).toBeNull()
+  })
+
+  it("첫 단계 공개 전이나 커리큘럼을 받지 못하면 '학습 기록' 구역이 없다(013 FR-031)", async () => {
+    apiMocks.fetchCurriculum.mockResolvedValue({ status: 'loaded', curriculum: preReleaseCurriculum })
+    const { unmount } = renderPage()
+    await waitFor(() => expect(apiMocks.fetchCurriculum).toHaveBeenCalled())
+    // 받은 응답이 화면에 반영된 뒤를 본다.
+    await act(async () => {})
+    expect(screen.queryByRole('region', { name: '학습 기록' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '학습 초기화' })).toBeNull()
+    unmount()
+
+    apiMocks.fetchCurriculum.mockResolvedValue({ status: 'failed', kind: 'network', code: null, message: '' })
+    renderPage()
+    await waitFor(() => expect(apiMocks.fetchCurriculum).toHaveBeenCalledTimes(2))
+    await act(async () => {})
+    expect(screen.queryByRole('region', { name: '학습 기록' })).toBeNull()
+  })
+
+  it("개발용 미리보기는 커리큘럼을 부르지 않고 '학습 기록' 구역을 보인다", () => {
+    render(
+      <MemoryRouter>
+        <AccountProfilePreviewPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('region', { name: '학습 기록' })).toBeTruthy()
+    expect(apiMocks.fetchCurriculum).not.toHaveBeenCalled()
   })
 })

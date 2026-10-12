@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { stageHex } from '../stageColors'
+import { stageColor } from '../stageColors'
 import { MaterialDefs } from './MaterialDefs'
 import { paint, svgId, type Material } from './materials'
 import { medalPath, type MedalKind } from './medalShapes'
@@ -51,7 +51,7 @@ export function GainGrid() {
             x={128}
             y={50}
             scale={0.96}
-            fill={stageHex(1) ?? 'rgb(3 199 90 / 0.4)'}
+            fill={stageColor(1)}
           />
         </svg>
       ),
@@ -126,7 +126,10 @@ export function GainGrid() {
   )
 }
 
-/** 재질 기운만 남긴 실루엣. 숫자·글리프·윤곽선 없이 채움과 유리 광택만 있다. */
+/**
+ * 재질 기운만 남긴 실루엣. 숫자·글리프·윤곽선 없이 채움과 유리 광택만 있다. 채움은 재질(`url(#…)`)이나 CSS 색 값이라
+ * `style`로 칠한다. 표장의 안쪽 면은 바탕색 토큰을 반쯤 비친다.
+ */
 function Silhouette({
   prefix,
   kind,
@@ -147,8 +150,8 @@ function Silhouette({
   return (
     <g transform={`translate(${x} ${y}) scale(${scale}) translate(-50 -50)`}>
       <ellipse cx="50" cy="97" rx="31" ry="3.4" fill={paint(prefix, 'shadow')} />
-      <path d={medalPath(kind)} fill={fill} opacity={0.55} />
-      {face ? <path d={medalPath(kind, 7)} fill="rgb(13 15 14 / 0.45)" /> : null}
+      <path d={medalPath(kind)} style={{ fill }} opacity={0.55} />
+      {face ? <path className={styles.face} d={medalPath(kind, 7)} /> : null}
       <path d={medalPath(kind)} fill={paint(prefix, 'glass')} opacity={0.8} />
     </g>
   )

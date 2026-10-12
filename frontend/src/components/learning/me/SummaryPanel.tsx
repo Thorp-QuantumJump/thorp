@@ -1,7 +1,7 @@
 import { useId, useRef, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 import type { LearnerOverview } from '@/types/learningMe'
-import { gainedNotice } from '../article/completionText'
+import { settledGainedNotice } from '../article/completionText'
 import { useRestoreFocusAfterConceal } from '../article/useRestoreFocusAfterConceal'
 import { LEARN_ME_PATH } from '../learningPaths'
 import { ContinueCard } from './ContinueCard'
@@ -115,9 +115,7 @@ export function SummaryPanel({
         ) : null}
       </div>
       <NewBadgeRow overview={overview} />
-      <QuietNotice
-        text={gainedNotice([{ gained: overview.gained, receivedAt: '', stageProgress: null }])}
-      />
+      <QuietNotice text={settledGainedNotice(overview.gained)} />
     </section>
   )
 }

@@ -12,6 +12,7 @@ import { ListView } from '@/components/learning/curriculum/ListView'
 import { dismissNotices, readDismissedNotices } from '@/components/learning/curriculum/noticeStorage'
 import { ReleaseNotice } from '@/components/learning/curriculum/ReleaseNotice'
 import { moveToStage } from '@/components/learning/curriculum/stageAnchors'
+import { isFirstStageReleased } from '@/components/learning/curriculum/stages'
 import { ViewToggle } from '@/components/learning/curriculum/ViewToggle'
 import { readStoredView, type LearningView } from '@/components/learning/curriculum/viewStorage'
 import { articlePath, stageNumberFromHash } from '@/components/learning/learningPaths'
@@ -70,23 +71,31 @@ export function LearningListPage() {
   const retry = useCallback(() => setAttempt((count) => count + 1), [])
 
   // 공개 안내의 '○단계 보기'와 글 머리의 단계 연결(`/learn#stage-n`)이 가리키는 단계 자리로 옮기고 그 제목에 초점을
-  // 둔다. 같은 주소를 다시 눌러도 옮기도록 이동마다(`location.key`) 한 번 한다.
+  // 둔다. 같은 주소를 다시 눌러도 옮기도록 이동마다(`location.key`) 한다.
   //
   // 로그인 상태를 확인하는 동안에는 기다린다. 확인이 끝나 비로그인 견본이 목록 위에 들어오면 먼저 옮긴 자리가 그만큼
-  // 아래로 밀리기 때문이다. 같은 까닭으로 로그인 사용자의 요약 패널(또는 실패 한 줄)이 '나의 학습' 응답 뒤에 들어올
-  // 때까지도 기다린다(T206). 014는 탭이 다시 보일 때마다 상태를 `checking`으로 두므로, 같은 이동에서 두 번 옮기지 않게
-  // 옮긴 이동을 기억한다.
+  // 아래로 밀리기 때문이다. 로그인 사용자의 요약 패널(또는 실패 한 줄)은 '나의 학습' 응답 뒤에 목록 위로 들어와 옮긴
+  // 자리를 그 높이만큼 밀므로, 응답을 기다리지 않고 먼저 옮긴 뒤 응답이 오면 같은 이동에서 한 번만 다시 옮긴다(T206).
+  // 응답이 늦어도 단계 자리로 가는 것이 늦어지지 않는다. 014는 탭이 다시 보일 때마다 상태를 `checking`으로 두므로, 같은
+  // 이동에서 그 밖의 까닭으로 다시 옮기지 않게 옮긴 이동을 기억한다.
   const curriculum = state.status === 'loaded' ? state.curriculum : null
-  const released = curriculum !== null && curriculum.preReleaseArticles === null && curriculum.releasedStageCount > 0
-  const overview = useLearnerOverview({ settled, enabled: released })
+  const released = curriculum !== null && isFirstStageReleased(curriculum)
+  const overview = useLearnerOverview({ auth: settled, enabled: released })
 
   const loaded = state.status === 'loaded'
   const authChecking = authStatus === 'checking'
   const overviewPending = overview.state.status === 'loading'
-  const movedFor = useRef<string | null>(null)
+  const movedFor = useRef<{ key: string; beforeOverview: boolean } | null>(null)
   useEffect(() => {
-    if (!loaded || authChecking || overviewPending || movedFor.current === location.key) return
-    movedFor.current = location.key
+    if (!loaded || authChecking) return
+    const moved = movedFor.current
+    if (moved?.key === location.key) {
+      // 요약 패널이 들어와 먼저 옮긴 자리가 밀렸다. 같은 이동에서 한 번만 다시 옮긴다.
+      if (!moved.beforeOverview || overviewPending) return
+      movedFor.current = { key: location.key, beforeOverview: false }
+    } else {
+      movedFor.current = { key: location.key, beforeOverview: overviewPending }
+    }
     const stageNumber = stageNumberFromHash(location.hash)
     if (stageNumber === null) return
     moveToStage(stageNumber)
@@ -264,7 +273,7 @@ function ReleasedCurriculum({
         </p>
       </div>
 
-      {/* 로그인 상태를 다시 확인하는 동안 나의 학습 상태 표시(`data-learner-mark`)를 자리를 둔 채 숨긴다(research R33). */}
+      {/* 로그인 상태를 다시 확인하는 동안 나의 학습 상태 표시(`learnerMarkProps`)를 자리를 둔 채 숨긴다(research R33). */}
       <div className={concealed ? styles.learnerConcealed : undefined}>
         {view === 'curriculum' ? (
           <JourneyMap

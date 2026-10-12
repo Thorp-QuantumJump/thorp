@@ -4,6 +4,7 @@ import { LevelEmblem } from './LevelEmblem'
 import { LevelPath } from './LevelPath'
 import { medalPath, termCardGeometry, type MedalKind } from './medalShapes'
 import { NewPill } from './NewPill'
+import { roundCoord } from './svgCoord'
 import styles from './LevelCard.module.css'
 
 /**
@@ -89,7 +90,7 @@ function CountIcon({ kind }: { kind: 'read' | 'terms' | 'badges' }) {
         className={styles.iconShape}
         d={medalPath(shape)}
         transform={`translate(${x} ${y}) scale(${scale}) translate(-50 -50)`}
-        strokeWidth={round(4.5 / scale)}
+        strokeWidth={roundCoord(4.5 / scale)}
         strokeLinejoin="round"
         opacity={opacity}
       />
@@ -131,8 +132,4 @@ function CountIcon({ kind }: { kind: 'read' | 'terms' | 'badges' }) {
       )}
     </svg>
   )
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100
 }

@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 import type { StageView } from '@/types/learning'
 import { articlePath } from '../learningPaths'
 import { stageColor } from '../stageColors'
-import type { ArticleProgress, ArticleProgressMap, StageCount } from './articleProgress'
+import { stageProgressLabel, type ArticleProgress, type ArticleProgressMap, type StageCount } from './articleProgress'
 import { PREVIOUS_EDITION_NOTE, UNRELEASED_STAGE_NOTE, boundarySentence, preparingReason } from './curriculumCopy'
-import { stageAnchorProps, stageHeadingProps } from './stageAnchors'
+import { learnerMarkProps, stageAnchorProps, stageHeadingProps } from './stageAnchors'
 import { StageLandscape } from './StageLandscape'
 import { isReleased, stageMinutes } from './stages'
 import { ChipRow, PreparingChip, PreviousEditionChip, ProgressChip, ReadingMinutes, TermCount } from './StatusChips'
@@ -333,11 +333,11 @@ function railsOf(rows: Row[], progress: ArticleProgressMap | undefined): Rails[]
  */
 function Rail({ top, bottom }: Rails) {
   // 초록·회색 노선은 나의 학습 상태 표시다. 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(research R33).
-  const mark = (kind: RailKind) => (kind === 'read' || kind === 'unread' ? '' : undefined)
+  const mark = (kind: RailKind) => learnerMarkProps(kind === 'read' || kind === 'unread')
   return (
     <>
-      {top ? <span className={styles.railTop} data-kind={top} data-learner-mark={mark(top)} /> : null}
-      {bottom ? <span className={styles.railBottom} data-kind={bottom} data-learner-mark={mark(bottom)} /> : null}
+      {top ? <span className={styles.railTop} data-kind={top} {...mark(top)} /> : null}
+      {bottom ? <span className={styles.railBottom} data-kind={bottom} {...mark(bottom)} /> : null}
     </>
   )
 }
@@ -350,7 +350,7 @@ function GroupMark({ stage, tracked }: { stage: StageView; tracked: boolean }) {
   const preparing = stage.status !== 'OPEN'
   const kind = preparing ? 'preparing' : tracked ? 'open' : 'neutral'
   return (
-    <span className={styles.groupMark} data-kind={kind} data-learner-mark={kind === 'open' ? '' : undefined}>
+    <span className={styles.groupMark} data-kind={kind} {...learnerMarkProps(kind === 'open')}>
       <svg viewBox="0 0 24 24" focusable="false">
         {kind === 'neutral' ? (
           <circle cx="12" cy="12" r="12" />
@@ -370,7 +370,7 @@ function GroupMark({ stage, tracked }: { stage: StageView; tracked: boolean }) {
 function StationDot({ progress }: { progress?: ArticleProgress }) {
   const kind = progress ? (progress.state === 'done' ? 'done' : progress.state === 'reading' ? 'reading' : 'unread') : 'neutral'
   return (
-    <span className={styles.dot} data-kind={kind} data-learner-mark={progress ? '' : undefined}>
+    <span className={styles.dot} data-kind={kind} {...learnerMarkProps(progress !== undefined)}>
       <svg viewBox="0 0 14 14" focusable="false">
         {kind === 'neutral' ? <circle cx="7" cy="7" r="6.5" /> : null}
         {kind === 'done' ? (
@@ -438,13 +438,9 @@ function GroupText({ stage, count }: { stage: StageView; count?: StageCount }) {
         <StageLandscape stageNumber={stage.number} mini />
       </span>
       {name}
-      <span className={styles.groupProgress} data-learner-mark={count ? '' : undefined}>
+      <span className={styles.groupProgress} {...learnerMarkProps(count !== undefined)}>
         {separator}
-        {count
-          ? count.completed
-            ? `완주 · ${count.publishedCount}편`
-            : `${count.publishedCount}편 중 ${count.completedCount}편 읽음`
-          : `${stage.articles.length}편 · 약 ${stageMinutes(stage)}분`}
+        {count ? stageProgressLabel(count) : `${stage.articles.length}편 · 약 ${stageMinutes(stage)}분`}
       </span>
     </span>
   )

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CurriculumResult } from '@/api/learning'
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context'
 import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'
+import { cssDeclarations, cssMediaDeclarations } from '@/test/cssRule'
 import { preReleaseCurriculum, releasedCurriculum } from '@/test/learningFixtures'
 import { learnerOverview } from '@/test/learningMeFixtures'
 import { LearningMePage } from './LearningMePage'
@@ -112,6 +113,18 @@ describe('LearningMePage', () => {
     const link = screen.getByRole('link', { name: '1단계 커리큘럼에서 보기' })
     expect(link.getAttribute('href')).toBe('/learn#stage-1')
     expect(screen.getAllByText('준비 중').length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('정거장 사이의 실선과 준비 중으로 가는 점선은 강제 색 모드에서도 남는다', () => {
+    const css = 'components/learning/me/StageStations.module.css'
+    // 기본 모습은 바탕색·그라디언트로 그린 선이라 강제 색 모드에서 지워진다. 그 모드에서 다시 그린다.
+    expect(cssDeclarations(css, '.dashed::before')).toMatch(/repeating-linear-gradient/)
+    expect(cssMediaDeclarations(css, '(forced-colors: active)', '.station::before')).toMatch(
+      /background:\s*CanvasText/,
+    )
+    const dashed = cssMediaDeclarations(css, '(forced-colors: active)', '.dashed::before')
+    expect(dashed).toMatch(/border-top:\s*3px dashed CanvasText/)
+    expect(dashed).not.toMatch(/gradient/)
   })
 
   it('익힌 용어를 누르면 그 글로 간다', async () => {

@@ -1,5 +1,10 @@
-/* 떠 있는 '이어서 읽기'(목업 .fab). 초록 단추 모양이고 깜빡이거나 맥동하지 않는다. */
+/*
+  떠 있는 '이어서 읽기'(목업 .fab). 깜빡이거나 맥동하지 않는다. 초록 단추의 색·그림자·초점은 greenAction.module.css가
+  정하고, 여기서는 놓이는 자리와 떠 있는 그림자 한 겹을 더한다.
+*/
 .fab {
+  --action-lift: 0 14px 30px -10px rgb(0 0 0 / 80%);
+
   position: fixed;
   right: 24px;
   bottom: 24px;
@@ -10,21 +15,6 @@
   height: 48px;
   padding: 0 18px 0 12px;
   border-radius: 14px;
-  background: linear-gradient(180deg, #14d468, var(--thorp-accent));
-  box-shadow:
-    0 3px 0 #02813b,
-    inset 0 1px 0 rgb(255 255 255 / 30%),
-    0 14px 30px -10px rgb(0 0 0 / 80%);
-  color: var(--thorp-action-foreground);
-  font-size: 0.94rem;
-  font-weight: 750;
-  text-decoration: none;
-}
-
-/* 키보드 초점은 2px 초록 외곽선이다(design-notes §6). 단추 바깥 어두운 바탕 위에 놓인다. */
-.fab:focus-visible {
-  outline: 2px solid var(--thorp-brand-soft);
-  outline-offset: 3px;
 }
 
 /* 로그인 상태를 다시 확인하는 동안: 자리를 둔 채 보이지 않게만 한다(research R33). */
@@ -43,7 +33,7 @@
 }
 
 .track {
-  fill: rgb(1 23 10 / 18%);
+  fill: color-mix(in srgb, var(--thorp-action-foreground) 18%, transparent);
 }
 
 .arc {

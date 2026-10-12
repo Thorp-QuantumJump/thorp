@@ -114,6 +114,17 @@ describe('레벨 길', () => {
     expect(container.textContent).not.toMatch(/레벨 4\s*600|도착|최고/)
   })
 
+  it('강제 색 모드에서도 닿을 수 없는 구간이 점선으로 남는다(그라디언트는 그 모드에서 지워진다)', () => {
+    const css = 'components/learning/me/LevelPath.module.css'
+    const forced = cssMediaDeclarations(css, '(forced-colors: active)', '.preparing')
+    expect(forced).toMatch(/border-top:\s*3px dashed CanvasText/)
+    expect(forced).toMatch(/background:\s*none/)
+    expect(forced).not.toMatch(/gradient/)
+    expect(cssMediaDeclarations(css, '(forced-colors: active)', '.todo')).toMatch(
+      /background:\s*CanvasText/,
+    )
+  })
+
   it('완료 카드의 길은 받은 경험치만큼 점을 옮기고 그 움직임은 줄이기 설정이 아닐 때만 있다', () => {
     const { container } = render(
       <LevelPathMove level={learnerOverview.level} expBefore={180} moving />,

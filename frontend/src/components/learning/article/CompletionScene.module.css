@@ -80,7 +80,11 @@
   z-index: 0;
   width: 210px;
   height: 170px;
-  background: radial-gradient(closest-side, rgb(47 220 122 / 20%), transparent);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--thorp-brand-soft) 20%, transparent),
+    transparent
+  );
   content: '';
   pointer-events: none;
   transform: translate(-50%, -50%);
@@ -142,16 +146,11 @@
   transform: translateY(-50%);
 }
 
+/* 글자색은 레벨 표장 숫자와 같은 초록 금속 단이다. 단은 materials.ts 한 곳에 있고 부품이 --gtext로 넘긴다. */
 .rollStrip i {
   display: block;
   height: 1em;
-  background: linear-gradient(
-    180deg,
-    #effff5 0%,
-    #9df5c2 38%,
-    var(--thorp-brand-soft) 70%,
-    #0b8f45 100%
-  );
+  background: var(--gtext);
   background-clip: text;
   color: transparent;
   font-style: normal;

@@ -1,10 +1,10 @@
 import { useId } from 'react'
 import { MaterialDefs } from './MaterialDefs'
+import { ProgressArc, Sweep, type MedalState } from './MedalParts'
 import { paint, svgId } from './materials'
 import { medalPath } from './medalShapes'
+import { roundCoord } from './svgCoord'
 import styles from './medals.module.css'
-
-export type MedalState = 'earned' | 'notYet' | 'preparing'
 
 interface LevelEmblemProps {
   level: number
@@ -54,7 +54,7 @@ export function LevelEmblem({
   const face = medalPath('level', rim)
   const rings = level >= 4 ? 3 : 2
   const tickCount = level >= 4 ? 24 : level >= 3 ? 12 : 0
-  const fontSize = small ? round(Math.min(52, 12 * unit)) : 50
+  const fontSize = small ? roundCoord(Math.min(52, 12 * unit)) : 50
   const classes = [styles.medal, state === 'earned' ? styles.earned : null, className]
     .filter(Boolean)
     .join(' ')
@@ -68,7 +68,7 @@ export function LevelEmblem({
             d={medalPath('level', rim + 4.5 + i * 4.4)}
             fill="none"
             stroke={stroke ?? 'currentColor'}
-            strokeWidth={round(strokeWidth)}
+            strokeWidth={roundCoord(strokeWidth)}
             opacity={opacity}
           />
         ))
@@ -82,10 +82,10 @@ export function LevelEmblem({
       lines.push(
         <line
           key={i}
-          x1={round(50 + inner * Math.cos(angle))}
-          y1={round(51 + inner * Math.sin(angle))}
-          x2={round(50 + 27 * Math.cos(angle))}
-          y2={round(51 + 27 * Math.sin(angle))}
+          x1={roundCoord(50 + inner * Math.cos(angle))}
+          y1={roundCoord(51 + inner * Math.sin(angle))}
+          x2={roundCoord(50 + 27 * Math.cos(angle))}
+          y2={roundCoord(51 + 27 * Math.sin(angle))}
         />,
       )
     }
@@ -93,7 +93,7 @@ export function LevelEmblem({
       <g
         className={extraClass}
         stroke={color}
-        strokeWidth={round(strokeWidth)}
+        strokeWidth={roundCoord(strokeWidth)}
         strokeLinecap="round"
         opacity={opacity}
       >
@@ -144,7 +144,7 @@ export function LevelEmblem({
           fill="none"
           stroke="#04140b"
           strokeOpacity={0.55}
-          strokeWidth={round(0.8 * unit)}
+          strokeWidth={roundCoord(0.8 * unit)}
         />
         <path d={face} fill={paint(prefix, 'face')} />
         {ringPaths(1.1 * unit, 0.7, paint(prefix, 'gmetal'))}
@@ -153,7 +153,12 @@ export function LevelEmblem({
         <g clipPath={`url(#${prefix}-faceclip)`}>
           <path d="M0 0H100V24L0 42Z" fill="#fff" opacity={0.12} />
         </g>
-        <path d={face} fill="none" stroke={paint(prefix, 'pin')} strokeWidth={round(1.2 * unit)} />
+        <path
+          d={face}
+          fill="none"
+          stroke={paint(prefix, 'pin')}
+          strokeWidth={roundCoord(1.2 * unit)}
+        />
         {shine ? <Sweep prefix={prefix} clipId={`${prefix}-outerclip`} /> : null}
       </svg>
     )
@@ -171,21 +176,17 @@ export function LevelEmblem({
         data-emblem="notYet"
       >
         <g className={styles.muted}>
-          <path className={styles.outline} d={outer} strokeWidth={round(1.5 * unit)} />
+          <path className={styles.outline} d={outer} strokeWidth={roundCoord(1.5 * unit)} />
           {ringPaths(unit, 0.55)}
           {ticks(1.1 * unit, 0.6, 'currentColor')}
         </g>
         {number(undefined, styles.mutedText)}
-        {progress > 0 ? (
-          <path
-            className={animate ? `${styles.arc} ${styles.animateArc}` : styles.arc}
-            d={medalPath('level', -4.2 * unit)}
-            strokeWidth={round(3 * unit)}
-            strokeLinecap="round"
-            pathLength={100}
-            strokeDasharray={`${clampPercent(progress)} 100`}
-          />
-        ) : null}
+        <ProgressArc
+          d={medalPath('level', -4.2 * unit)}
+          unit={unit}
+          progress={progress}
+          animate={animate}
+        />
       </svg>
     )
   }
@@ -203,36 +204,10 @@ export function LevelEmblem({
       <path
         className={styles.outline}
         d={outer}
-        strokeWidth={round(1.5 * unit)}
-        strokeDasharray={`${round(4 * unit)} ${round(3 * unit)}`}
+        strokeWidth={roundCoord(1.5 * unit)}
+        strokeDasharray={`${roundCoord(4 * unit)} ${roundCoord(3 * unit)}`}
       />
       {number(undefined, styles.preparingText)}
     </svg>
   )
-}
-
-/** 받은 물건 위로 한 번 지나가는 흰 띠(목업 `sweep`). 움직임 줄이기 설정이면 윤곽 밖에 머물러 보이지 않는다. */
-export function Sweep({ prefix, clipId }: { prefix: string; clipId: string }) {
-  return (
-    <g clipPath={`url(#${clipId})`}>
-      <g transform="rotate(25 50 50)">
-        <rect
-          className={styles.sweep}
-          x="-84"
-          y="-40"
-          width="46"
-          height="180"
-          fill={paint(prefix, 'sweep')}
-        />
-      </g>
-    </g>
-  )
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100
-}
-
-function clampPercent(value: number): number {
-  return Math.max(0, Math.min(100, Math.round(value)))
 }

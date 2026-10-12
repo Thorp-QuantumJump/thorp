@@ -7,7 +7,12 @@
   border: 1px solid var(--thorp-line);
   border-radius: 16px;
   background:
-    radial-gradient(80% 140% at 0% 0%, rgb(3 199 90 / 7%), transparent 55%), var(--thorp-surface);
+    radial-gradient(
+      80% 140% at 0% 0%,
+      color-mix(in srgb, var(--thorp-accent) 7%, transparent),
+      transparent 55%
+    ),
+    var(--thorp-surface);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
 }
 
@@ -92,7 +97,7 @@
 }
 
 .iconFill {
-  fill: rgb(3 199 90 / 10%);
+  fill: color-mix(in srgb, var(--thorp-accent) 10%, transparent);
 }
 
 .iconLine {

@@ -68,10 +68,14 @@
   position: absolute;
   inset: -1px;
   z-index: -1;
-  border: 1px solid rgb(3 199 90 / 45%);
+  border: 1px solid color-mix(in srgb, var(--thorp-accent) 45%, transparent);
   border-radius: inherit;
-  background: linear-gradient(90deg, rgb(3 199 90 / 8%), transparent 70%);
-  box-shadow: 0 0 0 4px rgb(3 199 90 / 6%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--thorp-accent) 8%, transparent),
+    transparent 70%
+  );
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--thorp-accent) 6%, transparent);
   pointer-events: none;
 }
 

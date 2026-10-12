@@ -119,8 +119,8 @@
   border-radius: 50%;
   background: var(--thorp-brand-soft);
   box-shadow:
-    0 0 0 4px rgb(3 199 90 / 20%),
-    0 0 14px rgb(47 220 122 / 45%);
+    0 0 0 4px color-mix(in srgb, var(--thorp-accent) 20%, transparent),
+    0 0 14px color-mix(in srgb, var(--thorp-brand-soft) 45%, transparent);
 }
 
 .bubble {
@@ -268,7 +268,13 @@
     background: CanvasText;
   }
 
+  /*
+    강제 색 모드는 url()이 아닌 배경 그림(그라디언트)을 지운다. 점선 구간은 테두리 점선으로 다시 그린다. 테두리 모양은
+    이 모드에서도 남는다.
+  */
   .preparing {
-    background: repeating-linear-gradient(to right, CanvasText 0 6px, transparent 6px 12px);
+    height: 0 !important;
+    border-top: 3px dashed CanvasText;
+    background: none;
   }
 }

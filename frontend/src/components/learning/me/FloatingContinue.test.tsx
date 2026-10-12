@@ -63,6 +63,7 @@ function Harness({
 }
 
 const CSS = 'components/learning/me/FloatingContinue.module.css'
+const ACTION_CSS = 'components/learning/me/greenAction.module.css'
 
 function RoutedHarness() {
   const ref = useRef<HTMLAnchorElement>(null)
@@ -149,9 +150,15 @@ describe('FloatingContinue', () => {
   })
 
   it('초점 외곽선은 초록이고, 단추가 있는 동안 아래 스크롤 여백을 두며, 좁은 화면에서는 가로 막대다', () => {
-    expect(cssDeclarations(CSS, '.fab:focus-visible')).toMatch(
+    // 초록 단추의 색·그림자·초점은 이어서 읽기 칸과 같은 규칙이다. 떠 있는 단추는 그림자 한 겹만 더한다.
+    render(<Harness continueReading={learnerOverview.continueReading} />)
+    report(false)
+    const link = screen.getByRole('link', { name: '이어서 읽기 2-1' })
+    expect(link.className).toMatch(/action/)
+    expect(cssDeclarations(ACTION_CSS, '.action:focus-visible')).toMatch(
       /outline:\s*2px solid var\(--thorp-brand-soft\)/,
     )
+    expect(cssDeclarations(CSS, '.fab')).toMatch(/--action-lift:/)
     expect(cssDeclarations(CSS, ':global(html):has(.fab)')).toMatch(/scroll-padding-bottom:\s*88px/)
     expect(cssMediaDeclarations(CSS, '(max-width: 719px)', '.fab')).toMatch(/left:\s*16px/)
   })

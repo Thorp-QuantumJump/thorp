@@ -881,6 +881,73 @@ describe('LearningArticlePage — 로그인 기록', () => {
     expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
   })
 
+  /** 운영자의 변경으로 채워져 '나의 학습' 요청의 정산에서 생긴 배지(계약 §4). */
+  const settledPersistence = {
+    ...learnerOverview,
+    gained: {
+      exp: [],
+      expTotal: 0,
+      badges: [{ badgeKey: 'persistence', family: 'SPECIAL', name: '끈기' }],
+      levelBefore: 3,
+      levelAfter: 3,
+    },
+  }
+  const lateNotice = '새 배지: 끈기. 다음 레벨까지 50, 다음 배지(모두 맞힘 1편)까지 1편입니다.'
+
+  it("경험치만 받은 완료라 덧붙일 알림이 없어도 '나의 학습'의 정산으로 생긴 배지는 알린다(계약 §4)", async () => {
+    meMocks.completeArticle.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...completionResult,
+        stageProgress: { ...completionResult.stageProgress, completedCount: 3, stageCompleted: false },
+        gained: {
+          exp: [{ kind: 'ARTICLE_COMPLETED', points: 20 }],
+          expTotal: 20,
+          badges: [],
+          levelBefore: 2,
+          levelAfter: 2,
+        },
+      },
+    })
+    meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: settledPersistence })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    reachArticleEnd()
+
+    expect(await within(screen.getByRole('status')).findByText(lateNotice)).not.toBeNull()
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
+  })
+
+  it("'나의 학습'이 기다림(4초)을 넘겨 오면 받은 것만 먼저 읽히고, 그 정산으로 생긴 배지는 따로 한 번 알린다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      let resolveMe: (value: unknown) => void = () => {}
+      meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+      meMocks.fetchLearningMe.mockReturnValue(new Promise((resolve) => (resolveMe = resolve)))
+      loaded(quickArticle)
+
+      renderArticle('/learn/swell-reading', signedInAuth)
+      await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+      reachArticleEnd()
+      await waitFor(() => expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1))
+
+      await act(async () => {
+        vi.advanceTimersByTime(4100)
+      })
+      const first = '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다.'
+      expect(await within(screen.getByRole('status')).findByText(first)).not.toBeNull()
+
+      await act(async () => resolveMe({ status: 'ok', data: settledPersistence }))
+      expect(await within(screen.getByRole('status')).findByText(lateNotice)).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('알림 영역은 완료 전부터 비어 있는 채로 있고, 뒤에 받은 것은 그것만 알린다', async () => {
     const user = userEvent.setup()
     const allWrong = {

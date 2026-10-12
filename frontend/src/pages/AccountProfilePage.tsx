@@ -1,9 +1,11 @@
 import { BookOpenCheck, CircleCheck, UserRound } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { normalizeApiError } from '@/api/client'
+import { fetchCurriculum } from '@/api/learning'
 import { useAuth } from '@/auth/auth-context'
 import { AppHeader } from '@/components/navigation/AppHeader'
 import { AuthField } from '@/components/auth/AuthField'
+import { isFirstStageReleased } from '@/components/learning/curriculum/stages'
 import { LearningResetSection } from '@/components/learning/me/LearningResetSection'
 import heading from '@/components/common/PageHeading.module.css'
 import { Button } from '@/components/ui/button'
@@ -15,8 +17,9 @@ const nicknameRuleMessage = '닉네임은 2~20자로 입력해 주세요.'
  * 회원정보 수정 화면. 이메일은 보기만 하고 닉네임 하나를 바꾼다(`PATCH /accounts/me`).
  *
  * 저장에 성공하면 로그인 상태의 사용자가 바뀐 값으로 갈아 끼워져 머리 메뉴의 닉네임도 함께 바뀐다.
- * 아래 '학습 기록' 구역에서 배우기의 나의 학습 기록 전체를 지운다(013 FR-025).
- * 개발용 미리보기(`preview`)는 서버를 부르지 않는다.
+ * 아래 '학습 기록' 구역에서 배우기의 나의 학습 기록 전체를 지운다(013 FR-025). 나의 학습은 첫 단계를 공개할 때
+ * 켜므로(FR-031) 이 구역도 커리큘럼으로 공개를 확인한 뒤에만 보인다. 확인하지 못하면 보이지 않는다.
+ * 개발용 미리보기(`preview`)는 서버를 부르지 않고 구역을 늘 보인다.
  */
 export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
   const { user, updateNickname } = useAuth()
@@ -25,6 +28,7 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
+  const learningOn = useLearningRecordsOn(preview)
 
   // 저장 성공 안내는 지우지 않는다. 저장이 성공하면 바로 이 값이 바뀌어 여기가 다시 돈다.
   useEffect(() => {
@@ -152,22 +156,42 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
           </form>
         </section>
 
-        <section className={styles.section} aria-labelledby="learning-section-title">
-          <div className={styles.sectionHeading}>
-            <span className={`${styles.sectionIndex} ${heading.classicOnly}`}>02</span>
-            <span className={styles.sectionIcon} aria-hidden="true">
-              <BookOpenCheck size={18} />
-            </span>
-            <div>
-              <h2 id="learning-section-title">학습 기록</h2>
-              <p>배우기에서 읽은 글과 확인 문제의 기록입니다.</p>
+        {learningOn ? (
+          <section className={styles.section} aria-labelledby="learning-section-title">
+            <div className={styles.sectionHeading}>
+              <span className={`${styles.sectionIndex} ${heading.classicOnly}`}>02</span>
+              <span className={styles.sectionIcon} aria-hidden="true">
+                <BookOpenCheck size={18} />
+              </span>
+              <div>
+                <h2 id="learning-section-title">학습 기록</h2>
+                <p>배우기에서 읽은 글과 확인 문제의 기록입니다.</p>
+              </div>
             </div>
-          </div>
-          <div className={styles.form}>
-            <LearningResetSection preview={preview} />
-          </div>
-        </section>
+            <div className={styles.form}>
+              <LearningResetSection preview={preview} />
+            </div>
+          </section>
+        ) : null}
       </main>
     </div>
   )
+}
+
+/**
+ * '학습 기록' 구역을 켜는가. 커리큘럼을 받아 첫 단계를 공개했을 때만 참이다(013 FR-031). 받는 동안과 받지 못했을 때는
+ * 거짓이다. 미리보기는 서버를 부르지 않고 참이다.
+ */
+function useLearningRecordsOn(preview: boolean): boolean {
+  const [on, setOn] = useState(preview)
+  useEffect(() => {
+    if (preview) return
+    const controller = new AbortController()
+    void fetchCurriculum(controller.signal).then((result) => {
+      if (controller.signal.aborted) return
+      setOn(result.status === 'loaded' && isFirstStageReleased(result.curriculum))
+    })
+    return () => controller.abort()
+  }, [preview])
+  return on
 }

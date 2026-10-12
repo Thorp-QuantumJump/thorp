@@ -49,6 +49,11 @@
   overflow: visible;
 }
 
+/* 레벨 표장 실루엣의 안쪽 면. 바탕색이 반쯤 비쳐 금속 테두리와 면이 갈린다. */
+.face {
+  fill: color-mix(in srgb, var(--thorp-background) 45%, transparent);
+}
+
 .text {
   display: block;
 }

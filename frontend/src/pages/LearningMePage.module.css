@@ -105,9 +105,15 @@
 .continue {
   margin-top: 22px;
   padding: 16px 18px;
-  border: 1px solid rgb(3 199 90 / 22%);
+  border: 1px solid color-mix(in srgb, var(--thorp-accent) 22%, transparent);
   border-radius: 14px;
-  background: linear-gradient(90deg, rgb(3 199 90 / 6%), transparent 60%), var(--thorp-surface);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--thorp-accent) 6%, transparent),
+      transparent 60%
+    ),
+    var(--thorp-surface);
 }
 
 .terms {

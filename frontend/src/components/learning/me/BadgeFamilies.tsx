@@ -6,13 +6,13 @@ import { enamelColor } from './materials'
 import {
   BADGE_FAMILIES,
   badgeRibbon,
-  familyMedal,
   familyName,
   groupPreparing,
   isBadgeFamily,
+  medalSpecOf,
   preparingReasonText,
   progressSpoken,
-  type BadgeFamily,
+  type KnownBadgeFamily,
 } from './meCopy'
 import { NewPill } from './NewPill'
 import styles from './BadgeFamilies.module.css'
@@ -34,7 +34,7 @@ import styles from './BadgeFamilies.module.css'
  * §5, §2 화려함의 상한).
  */
 export function BadgeFamilies({ badges }: { badges: readonly BadgeView[] }) {
-  const families = new Map<BadgeFamily, BadgeView[]>()
+  const families = new Map<KnownBadgeFamily, BadgeView[]>()
   for (const badge of badges) {
     const family = isBadgeFamily(badge.family) ? badge.family : 'SPECIAL'
     families.set(family, [...(families.get(family) ?? []), badge])
@@ -48,7 +48,7 @@ export function BadgeFamilies({ badges }: { badges: readonly BadgeView[] }) {
   )
 }
 
-function Family({ family, badges }: { family: BadgeFamily; badges: BadgeView[] }) {
+function Family({ family, badges }: { family: KnownBadgeFamily; badges: BadgeView[] }) {
   const headingId = useId()
   const singles = family === 'STAGE' || family === 'SPECIAL'
   const cards = badges.filter((badge) => singles || badge.status !== 'PREPARING')
@@ -82,13 +82,7 @@ function Family({ family, badges }: { family: BadgeFamily; badges: BadgeView[] }
           <div className={styles.tokens} aria-hidden="true">
             {preparing.map((badge) => (
               <span key={badge.badgeKey} className={styles.token}>
-                <BadgeMedal
-                  kind={familyMedal(badge.family)}
-                  size={32}
-                  state="preparing"
-                  level={levelOf(badge)}
-                  stageNumber={badge.stageNumber ?? undefined}
-                />
+                <BadgeMedal {...medalSpecOf(badge)} size={32} state="preparing" />
                 <small>{badgeRibbon(badge.name)}</small>
               </span>
             ))}
@@ -113,7 +107,8 @@ function BadgeCard({
   tier: number
   link: 'earned' | 'open' | null
 }) {
-  const kind = familyMedal(badge.family)
+  const spec = medalSpecOf(badge)
+  const { kind } = spec
   const state =
     badge.status === 'EARNED' ? 'earned' : badge.status === 'PREPARING' ? 'preparing' : 'notYet'
   const percent =
@@ -126,15 +121,12 @@ function BadgeCard({
       : badgeRibbon(badge.name)
   const medal = (size: number, className: string) => (
     <BadgeMedal
+      {...spec}
       className={className}
-      kind={kind}
       size={size}
       state={state}
       progress={percent}
       tier={tier}
-      level={levelOf(badge)}
-      stageNumber={badge.stageNumber ?? undefined}
-      special={badge.badgeKey === 'exploration' ? 'exploration' : 'persistence'}
     />
   )
   const reason = state === 'preparing' ? preparingReasonText(badge) : null
@@ -201,10 +193,4 @@ function BadgeStatus({ badge }: { badge: BadgeView }) {
       <span className="sr-only">아직 받지 않음, {progressSpoken(badge)}</span>
     </span>
   )
-}
-
-/** 레벨 갈래 배지의 레벨(`level-3` → 3). */
-function levelOf(badge: BadgeView): number | undefined {
-  const match = /(\d+)$/.exec(badge.badgeKey) ?? /(\d+)/.exec(badge.name)
-  return match ? Number(match[1]) : undefined
 }

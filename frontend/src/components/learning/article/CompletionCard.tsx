@@ -2,7 +2,13 @@ import { ChevronRight } from 'lucide-react'
 import { useId, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArticleNext, LearningReturnState } from '@/types/learning'
-import type { ContinueReading, LearnerOverview, LearningResumeState, StageProgress } from '@/types/learningMe'
+import type {
+  ContinueReading,
+  LearnerOverview,
+  LearningResumeState,
+  StageProgress,
+} from '@/types/learningMe'
+import { stageProgressLabel } from '../curriculum/articleProgress'
 import { earnedStageNumbers, nextBadge, nextGoalSentence } from '../me/meCopy'
 import { stageColor } from '../stageColors'
 import {
@@ -19,6 +25,8 @@ import styles from './CompletionCard.module.css'
 interface CompletionCardProps {
   /** 완료 시각(ISO 8601). 서울 날짜로 보인다 */
   completedAt: string
+  /** 이 글이 놓인 단계의 키. 새 단계 완주 배지가 이 단계의 것인지 배지 키(`stage-{stageKey}`)로 가른다 */
+  stageKey: string
   stageProgress: StageProgress
   /** 읽는 순서상 다음 공개된 글이 없을 때 '이어서 읽기'와 '모두 읽었습니다'를 가른다(FR-021) */
   continueReading: ContinueReading
@@ -65,6 +73,7 @@ interface CompletionCardProps {
  */
 export function CompletionCard({
   completedAt,
+  stageKey,
   stageProgress,
   continueReading,
   gained,
@@ -81,6 +90,11 @@ export function CompletionCard({
   const xpId = useId()
   const goalId = useId()
   const { stageNumber, completedCount, publishedCount, stageCompleted } = stageProgress
+  const progressText = `${stageNumber}단계 · ${stageProgressLabel({
+    completed: stageCompleted,
+    completedCount,
+    publishedCount,
+  })}`
 
   // 레벨이 오른 응답의 레벨 갈래 배지는 레벨 칸이 말하므로 새 배지에 넣지 않는다. 단계 완주 배지를 앞에 둔다. 이 카드의
   // 핵심 장면이 단계 완주 메달에 색유리가 차는 순간이기 때문이다(design-notes §3.4).
@@ -107,7 +121,8 @@ export function CompletionCard({
   const stageBadgeEarned =
     stageCompleted || (overview !== null && earnedStageNumbers(overview.badges).has(stageNumber))
   // 레벨 칸이나 새 배지 칸이 없으면 다음 목표를 따로 한 칸에 둔다.
-  const goalColumn = overview !== null && (level === null || (badges.length === 0 && upcoming !== null))
+  const goalColumn =
+    overview !== null && (level === null || (badges.length === 0 && upcoming !== null))
   const glow = { ['--stage' as string]: stageColor(stageNumber) } as CSSProperties
 
   return (
@@ -122,11 +137,7 @@ export function CompletionCard({
             freshStamp={freshCompletion}
             badgeEarned={stageBadgeEarned}
           />
-          <p className={styles.progress}>
-            {stageCompleted
-              ? `${stageNumber}단계 · 완주 · ${publishedCount}편`
-              : `${stageNumber}단계 · ${publishedCount}편 중 ${completedCount}편 읽음`}
-          </p>
+          <p className={styles.progress}>{progressText}</p>
         </div>
       </div>
 
@@ -139,7 +150,13 @@ export function CompletionCard({
                 {badges.map((badge, index) => (
                   <div key={badge.badgeKey} className={styles.gainedItem}>
                     {/* 메달 그림은 첫 배지(단계 완주가 있으면 그것)에만 둔다. 이 카드에서 빛나는 곳은 두 곳까지다(design-notes §2). */}
-                    {index === 0 ? <BadgeHero badge={badge} overviewBadges={overview?.badges ?? null} /> : null}
+                    {index === 0 ? (
+                      <BadgeHero
+                        badge={badge}
+                        overviewBadges={overview?.badges ?? null}
+                        articleStage={{ stageKey, number: stageNumber }}
+                      />
+                    ) : null}
                     <b className={styles.big}>{badge.name}</b>
                     <ReceivedRow receivedAt={badge.receivedAt} />
                   </div>
@@ -151,7 +168,10 @@ export function CompletionCard({
               <div className={styles.column}>
                 <span className={styles.label}>레벨</span>
                 <div className={styles.gainedItem}>
-                  <LevelHero levelBefore={level.gained.levelBefore} levelAfter={level.gained.levelAfter} />
+                  <LevelHero
+                    levelBefore={level.gained.levelBefore}
+                    levelAfter={level.gained.levelAfter}
+                  />
                   <b className={styles.big}>레벨 {level.gained.levelAfter}</b>
                   <ReceivedRow receivedAt={level.receivedAt} />
                 </div>

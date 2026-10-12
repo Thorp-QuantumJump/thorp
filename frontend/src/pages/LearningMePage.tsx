@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { fetchCurriculum, type CurriculumResult } from '@/api/learning'
-import { gainedNotice } from '@/components/learning/article/completionText'
+import { settledGainedNotice } from '@/components/learning/article/completionText'
 import { useRestoreFocusAfterConceal } from '@/components/learning/article/useRestoreFocusAfterConceal'
 import { useSettledAuth } from '@/components/learning/article/useSettledAuth'
 import { stageCountsOf } from '@/components/learning/curriculum/articleProgress'
 import { ChangeLog } from '@/components/learning/curriculum/ChangeLog'
+import { isFirstStageReleased } from '@/components/learning/curriculum/stages'
 import { LEARN_PATH, articlePath } from '@/components/learning/learningPaths'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { BadgeFamilies } from '@/components/learning/me/BadgeFamilies'
@@ -65,11 +66,8 @@ export function LearningMePage() {
   const retryCurriculum = useCallback(() => setAttempt((count) => count + 1), [])
 
   const curriculum = curriculumState.status === 'loaded' ? curriculumState.curriculum : null
-  const released =
-    curriculum !== null &&
-    curriculum.preReleaseArticles === null &&
-    curriculum.releasedStageCount > 0
-  const overview = useLearnerOverview({ settled, enabled: released })
+  const released = curriculum !== null && isFirstStageReleased(curriculum)
+  const overview = useLearnerOverview({ auth: settled, enabled: released })
   const recordRef = useRef<HTMLDivElement>(null)
   useRestoreFocusAfterConceal(recordRef, concealed)
 
@@ -158,9 +156,7 @@ function Journal({ overview, curriculum, linkState }: JournalProps) {
 
   return (
     <>
-      <QuietNotice
-        text={gainedNotice([{ gained: overview.gained, receivedAt: '', stageProgress: null }])}
-      />
+      <QuietNotice text={settledGainedNotice(overview.gained)} />
       <LevelCard overview={overview} />
 
       <section aria-labelledby={stationsId}>

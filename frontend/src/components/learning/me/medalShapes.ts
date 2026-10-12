@@ -1,3 +1,5 @@
+import { roundCoord } from './svgCoord'
+
 /**
  * 배지 일곱 갈래의 메달 실루엣 경로(013 design-notes §3.3 표).
  *
@@ -14,12 +16,8 @@ export type MedalKind = 'level' | 'read' | 'first' | 'all' | 'stage' | 'terms' |
 
 type Point = readonly [number, number]
 
-function round(value: number): number {
-  return Math.round(value * 100) / 100
-}
-
 function point(p: Point): string {
-  return `${round(p[0])} ${round(p[1])}`
+  return `${roundCoord(p[0])} ${roundCoord(p[1])}`
 }
 
 function lerp(a: Point, b: Point, t: number): Point {
@@ -66,7 +64,7 @@ function rosette(inset: number): string {
     points.push([50 + radius * Math.cos(angle), 50 + radius * Math.sin(angle)])
   }
   const chord = 2 * radius * Math.sin(Math.PI / petals)
-  const arc = round((chord / 2) * 1.001)
+  const arc = roundCoord((chord / 2) * 1.001)
   let d = `M${point(points[0])}`
   for (let i = 1; i <= petals; i += 1) d += `A${arc} ${arc} 0 0 1 ${point(points[i % petals])}`
   return `${d}Z`
@@ -74,52 +72,61 @@ function rosette(inset: number): string {
 
 /** 아래가 V로 갈라진 책갈피 방패. */
 function bookmark(inset: number): string {
-  const x0 = round(17 + inset)
-  const x1 = round(83 - inset)
-  const y0 = round(7 + inset)
-  const bottom = round(93 - inset)
-  const notch = round(76.5 - inset * 1.25)
-  const r = round(Math.max(9 - inset * 0.6, 2))
-  return `M50 ${y0}H${round(x1 - r)}Q${x1} ${y0} ${x1} ${round(y0 + r)}V${bottom}L50 ${notch}L${x0} ${bottom}V${round(y0 + r)}Q${x0} ${y0} ${round(x0 + r)} ${y0}Z`
+  const x0 = roundCoord(17 + inset)
+  const x1 = roundCoord(83 - inset)
+  const y0 = roundCoord(7 + inset)
+  const bottom = roundCoord(93 - inset)
+  const notch = roundCoord(76.5 - inset * 1.25)
+  const r = roundCoord(Math.max(9 - inset * 0.6, 2))
+  return `M50 ${y0}H${roundCoord(x1 - r)}Q${x1} ${y0} ${x1} ${roundCoord(y0 + r)}V${bottom}L50 ${notch}L${x0} ${bottom}V${roundCoord(y0 + r)}Q${x0} ${y0} ${roundCoord(x0 + r)} ${y0}Z`
 }
 
 /** 고딕 뾰족 아치 창. 안쪽 면(`inset > 0`)은 창 몸통만, 바깥 윤곽은 창턱까지 그린다. */
 function arch(inset: number): string {
-  const x0 = round(18 + inset)
-  const x1 = round(82 - inset)
+  const x0 = roundCoord(18 + inset)
+  const x1 = roundCoord(82 - inset)
   const ya = 46
-  const yt = round(6 + inset * 1.35)
+  const yt = roundCoord(6 + inset * 1.35)
   const hw = 50 - x0
   const h = ya - yt
-  const left = `C${x0} ${round(ya - 0.49 * h)} ${round(50 - 0.54 * hw)} ${round(yt + 0.18 * h)} 50 ${yt}`
-  const right = `C${round(50 + 0.54 * hw)} ${round(yt + 0.18 * h)} ${x1} ${round(ya - 0.49 * h)} ${x1} ${ya}`
+  const left = `C${x0} ${roundCoord(ya - 0.49 * h)} ${roundCoord(50 - 0.54 * hw)} ${roundCoord(yt + 0.18 * h)} 50 ${yt}`
+  const right = `C${roundCoord(50 + 0.54 * hw)} ${roundCoord(yt + 0.18 * h)} ${x1} ${roundCoord(ya - 0.49 * h)} ${x1} ${ya}`
   if (inset > 0) {
-    const yb = round(88 - inset)
+    const yb = roundCoord(88 - inset)
     return `M${x0} ${yb}V${ya}${left}${right}V${yb}Z`
   }
-  const sill = round(88 + inset * 0.5)
-  const sx0 = round(10 + inset)
-  const sx1 = round(90 - inset)
-  const sb = round(95 - inset * 0.8)
+  const sill = roundCoord(88 + inset * 0.5)
+  const sx0 = roundCoord(10 + inset)
+  const sx1 = roundCoord(90 - inset)
+  const sb = roundCoord(95 - inset * 0.8)
   const q = 1.6
-  return `M${x0} ${sill}V${ya}${left}${right}V${sill}H${round(sx1 - q)}Q${sx1} ${sill} ${sx1} ${round(sill + q)}V${round(sb - q)}Q${sx1} ${sb} ${round(sx1 - q)} ${sb}H${round(sx0 + q)}Q${sx0} ${sb} ${sx0} ${round(sb - q)}V${round(sill + q)}Q${sx0} ${sill} ${round(sx0 + q)} ${sill}Z`
+  return `M${x0} ${sill}V${ya}${left}${right}V${sill}H${roundCoord(sx1 - q)}Q${sx1} ${sill} ${sx1} ${roundCoord(sill + q)}V${roundCoord(sb - q)}Q${sx1} ${sb} ${roundCoord(sx1 - q)} ${sb}H${roundCoord(sx0 + q)}Q${sx0} ${sb} ${sx0} ${roundCoord(sb - q)}V${roundCoord(sill + q)}Q${sx0} ${sill} ${roundCoord(sx0 + q)} ${sill}Z`
+}
+
+/**
+ * 받은 메달의 은록 금속 테두리 두께(그림판 단위). 화면에서 96px 이상은 5px, 72px 이상은 4px, 48px 이상은 3px, 그보다
+ * 작으면 2px이다. 단계 완주 메달과 갈래 메달이 같다. 레벨 표장은 테두리가 더 두꺼워 표장이 따로 정한다.
+ */
+export function medalRim(size: number): number {
+  const pixels = size >= 96 ? 5 : size >= 72 ? 4 : size >= 48 ? 3 : 2
+  return pixels * (100 / size)
 }
 
 /** 모서리 접힌 낱말 카드의 치수. 접힌 모서리를 따로 그릴 때도 쓴다. */
 export function termCardGeometry(inset: number) {
   return {
-    x0: round(15 + inset),
-    x1: round(85 - inset),
-    y0: round(11 + inset),
-    y1: round(89 - inset),
-    fold: round(20 - inset * 0.41),
-    r: round(Math.max(7 - inset * 0.5, 2)),
+    x0: roundCoord(15 + inset),
+    x1: roundCoord(85 - inset),
+    y0: roundCoord(11 + inset),
+    y1: roundCoord(89 - inset),
+    fold: roundCoord(20 - inset * 0.41),
+    r: roundCoord(Math.max(7 - inset * 0.5, 2)),
   }
 }
 
 function termCard(inset: number): string {
   const g = termCardGeometry(inset)
-  return `M50 ${g.y0}H${round(g.x1 - g.fold)}L${g.x1} ${round(g.y0 + g.fold)}V${round(g.y1 - g.r)}Q${g.x1} ${g.y1} ${round(g.x1 - g.r)} ${g.y1}H${round(g.x0 + g.r)}Q${g.x0} ${g.y1} ${g.x0} ${round(g.y1 - g.r)}V${round(g.y0 + g.r)}Q${g.x0} ${g.y0} ${round(g.x0 + g.r)} ${g.y0}Z`
+  return `M50 ${g.y0}H${roundCoord(g.x1 - g.fold)}L${g.x1} ${roundCoord(g.y0 + g.fold)}V${roundCoord(g.y1 - g.r)}Q${g.x1} ${g.y1} ${roundCoord(g.x1 - g.r)} ${g.y1}H${roundCoord(g.x0 + g.r)}Q${g.x0} ${g.y1} ${g.x0} ${roundCoord(g.y1 - g.r)}V${roundCoord(g.y0 + g.r)}Q${g.x0} ${g.y0} ${roundCoord(g.x0 + g.r)} ${g.y0}Z`
 }
 
 /** 갈래의 실루엣 경로. */
@@ -147,14 +154,14 @@ export function medalPath(kind: MedalKind, inset = 0): string {
  * 나오는 갈고리가 생기지 않게 하려는 것이다.
  */
 export function stageArchProgressPath(inset: number): string {
-  const x0 = round(18 + inset)
-  const x1 = round(82 - inset)
+  const x0 = roundCoord(18 + inset)
+  const x1 = roundCoord(82 - inset)
   const ya = 46
-  const yt = round(6 + inset * 1.35)
+  const yt = roundCoord(6 + inset * 1.35)
   const hw = 50 - x0
   const h = ya - yt
-  const sill = round(88 + inset * 0.5)
-  return `M${x0} ${sill}V${ya}C${x0} ${round(ya - 0.49 * h)} ${round(50 - 0.54 * hw)} ${round(yt + 0.18 * h)} 50 ${yt}C${round(50 + 0.54 * hw)} ${round(yt + 0.18 * h)} ${x1} ${round(ya - 0.49 * h)} ${x1} ${ya}V${sill}`
+  const sill = roundCoord(88 + inset * 0.5)
+  return `M${x0} ${sill}V${ya}C${x0} ${roundCoord(ya - 0.49 * h)} ${roundCoord(50 - 0.54 * hw)} ${roundCoord(yt + 0.18 * h)} 50 ${yt}C${roundCoord(50 + 0.54 * hw)} ${roundCoord(yt + 0.18 * h)} ${x1} ${roundCoord(ya - 0.49 * h)} ${x1} ${ya}V${sill}`
 }
 
 /** 단계 완주 아치의 납선(번호 원이 없는 모양). 스테인드글라스 조각을 나누는 선이다. */
@@ -165,8 +172,8 @@ export const STAGE_LEAD_PATH = 'M50 6V28M50 54V88M18 50L37.5 44.5M62.5 44.5L82 5
  * 작을수록 원과 글자를 키운다(목업 `archNum`). 화면 36px 미만이면 번호를 그리지 않는다.
  */
 export function stageNumberCircle(size: number): { fontSize: number; radius: number } {
-  const fontSize = round(Math.max(17, 1200 / size))
-  return { fontSize, radius: round((13 * fontSize) / 17) }
+  const fontSize = roundCoord(Math.max(17, 1200 / size))
+  return { fontSize, radius: roundCoord((13 * fontSize) / 17) }
 }
 
 /**
@@ -180,6 +187,6 @@ export function stageLeadPath(radius: number, x0 = 18, x1 = 82, y0 = 6, y1 = 88)
     const length = Math.hypot(dx, dy)
     return point([50 + (radius * dx) / length, 41 + (radius * dy) / length])
   }
-  const vertical = radius > 0 ? `M50 ${y0}V${round(41 - radius)}M50 ${round(41 + radius)}V${y1}` : `M50 ${y0}V${y1}`
+  const vertical = radius > 0 ? `M50 ${y0}V${roundCoord(41 - radius)}M50 ${roundCoord(41 + radius)}V${y1}` : `M50 ${y0}V${y1}`
   return `${vertical}M${x0} 50L${toCircle(x0)}M${toCircle(x1)}L${x1} 50M${x0} 66L50 74L${x1} 66`
 }

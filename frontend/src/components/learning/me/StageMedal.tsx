@@ -1,10 +1,16 @@
 import { useId } from 'react'
 import { stageHex } from '../stageColors'
-import type { MedalState } from './LevelEmblem'
-import { Sweep } from './LevelEmblem'
 import { MaterialDefs } from './MaterialDefs'
+import { ProgressArc, Sweep, type MedalState } from './MedalParts'
 import { paint, svgId } from './materials'
-import { medalPath, stageArchProgressPath, stageLeadPath, stageNumberCircle } from './medalShapes'
+import {
+  medalPath,
+  medalRim,
+  stageArchProgressPath,
+  stageLeadPath,
+  stageNumberCircle,
+} from './medalShapes'
+import { roundCoord } from './svgCoord'
 import styles from './medals.module.css'
 
 interface StageMedalProps {
@@ -20,15 +26,13 @@ interface StageMedalProps {
   className?: string
 }
 
-/** 색유리를 나누는 납선과 둘레의 색. 의미 토큰(바탕색)과 같은 값을 쓰지 않으려고 아주 조금 다르게 둔다. */
-const LEAD = '#0C0E0D'
-
 /**
  * 단계 완주 메달(013 design-notes §3.3·§4, 목업 `medalSVG('stage')`·`stained`). 고딕 아치 창 실루엣이다.
  *
  * <p>받은 메달은 은록 금속 테두리 안에 그 단계의 장식 색으로 밝기를 달리한 유리 조각 여섯 장과 납선, 가운데 번호 원을
- * 둔다. 아직 받지 않은 메달은 실선 회색 아치와 초록 진행 호(창턱을 빼고 옆면과 꼭대기만 따라간다), 준비 중이면 점선
- * 아치와 점선 납선이다. 단계 장식 색은 꾸밈이고 상태는 윤곽 모양이 나른다. 36px 미만이면 번호 원 없이 그린다.
+ * 둔다. 납선은 바탕색 토큰이라 디자인 전환을 함께 따른다. 아직 받지 않은 메달은 실선 회색 아치와 초록 진행 호(창턱을
+ * 빼고 옆면과 꼭대기만 따라간다), 준비 중이면 점선 아치와 점선 납선이다. 단계 장식 색은 꾸밈이고 상태는 윤곽 모양이
+ * 나른다. 36px 미만이면 번호 원 없이 그린다.
  *
  * <p>그림이라 보조 기술에 읽히지 않는다(`aria-hidden`). 상태는 옆의 글자('완주 · 4편', '4편 중 3편 읽음')가 원본이다.
  */
@@ -51,10 +55,9 @@ export function StageMedal({
     .join(' ')
 
   if (state === 'earned') {
-    const rim = (size >= 96 ? 5 : size >= 72 ? 4 : size >= 48 ? 3 : 2) * unit
-    const inner = medalPath('stage', rim)
+    const inner = medalPath('stage', medalRim(size))
     const glass = glassTones(stageHex(stageNumber))
-    const leadWidth = round(2.5 * unit)
+    const leadWidth = roundCoord(2.5 * unit)
     return (
       <svg
         className={classes}
@@ -85,7 +88,7 @@ export function StageMedal({
           fill="none"
           stroke="#0b0d0c"
           strokeOpacity={0.55}
-          strokeWidth={round(0.8 * unit)}
+          strokeWidth={roundCoord(0.8 * unit)}
         />
         <g clipPath={`url(#${prefix}-inner)`}>
           <path d="M0 0H50V44.5L0 50Z" fill={glass.a} />
@@ -99,17 +102,24 @@ export function StageMedal({
             d="M27 18L36 30M66 56L76 61M24 80L32 88"
             stroke="#fff"
             strokeOpacity={0.35}
-            strokeWidth={round(1.2 * unit)}
+            strokeWidth={roundCoord(1.2 * unit)}
             strokeLinecap="round"
           />
           <path
+            className={styles.lead}
             d={stageLeadPath(radius, 0, 100, 0, 100)}
             fill="none"
-            stroke={LEAD}
             strokeWidth={leadWidth}
             strokeLinejoin="round"
           />
-          <circle cx="50" cy="41" r={radius} fill={glass.f} stroke={LEAD} strokeWidth={leadWidth} />
+          <circle
+            className={styles.lead}
+            cx="50"
+            cy="41"
+            r={radius}
+            fill={glass.f}
+            strokeWidth={leadWidth}
+          />
           {big ? (
             <text
               x="50"
@@ -131,7 +141,7 @@ export function StageMedal({
           d={inner}
           fill="none"
           stroke={paint(prefix, 'pin')}
-          strokeWidth={round(1.25 * unit)}
+          strokeWidth={roundCoord(1.25 * unit)}
         />
         {shine ? <Sweep prefix={prefix} clipId={`${prefix}-outer`} /> : null}
       </svg>
@@ -151,12 +161,12 @@ export function StageMedal({
         data-medal="stage-notYet"
       >
         <g className={styles.muted}>
-          <path className={styles.outline} d={outer} strokeWidth={round(1.5 * unit)} />
+          <path className={styles.outline} d={outer} strokeWidth={roundCoord(1.5 * unit)} />
           <path
             d={stageLeadPath(big ? radius : 0)}
             fill="none"
             stroke="currentColor"
-            strokeWidth={round(1.25 * unit)}
+            strokeWidth={roundCoord(1.25 * unit)}
             strokeLinecap="round"
             strokeLinejoin="round"
             opacity={0.6}
@@ -168,7 +178,7 @@ export function StageMedal({
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth={round(1.25 * unit)}
+              strokeWidth={roundCoord(1.25 * unit)}
             />
           ) : null}
         </g>
@@ -185,21 +195,17 @@ export function StageMedal({
             {stageNumber}
           </text>
         ) : null}
-        {progress > 0 ? (
-          <path
-            className={animate ? `${styles.arc} ${styles.animateArc}` : styles.arc}
-            d={stageArchProgressPath(-4.2 * unit)}
-            strokeWidth={round(3 * unit)}
-            strokeLinecap="round"
-            pathLength={100}
-            strokeDasharray={`${Math.max(0, Math.min(100, Math.round(progress)))} 100`}
-          />
-        ) : null}
+        <ProgressArc
+          d={stageArchProgressPath(-4.2 * unit)}
+          unit={unit}
+          progress={progress}
+          animate={animate}
+        />
       </svg>
     )
   }
 
-  const dash = `${round(3 * unit)} ${round(3 * unit)}`
+  const dash = `${roundCoord(3 * unit)} ${roundCoord(3 * unit)}`
   return (
     <svg
       className={classes}
@@ -215,8 +221,8 @@ export function StageMedal({
         <path
           className={styles.outline}
           d={outer}
-          strokeWidth={round(1.5 * unit)}
-          strokeDasharray={`${round(4 * unit)} ${round(3 * unit)}`}
+          strokeWidth={roundCoord(1.5 * unit)}
+          strokeDasharray={`${roundCoord(4 * unit)} ${roundCoord(3 * unit)}`}
         />
         {big ? (
           <>
@@ -224,7 +230,7 @@ export function StageMedal({
               d={stageLeadPath(radius)}
               fill="none"
               stroke="currentColor"
-              strokeWidth={round(unit)}
+              strokeWidth={roundCoord(unit)}
               strokeOpacity={0.55}
               strokeDasharray={dash}
             />
@@ -234,7 +240,7 @@ export function StageMedal({
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth={round(unit)}
+              strokeWidth={roundCoord(unit)}
               strokeOpacity={0.75}
               strokeDasharray={dash}
             />
@@ -285,8 +291,4 @@ function mix(a: string, b: string, t: number): string {
       .toString(16)
       .padStart(2, '0')
   return `#${channel(ar, br)}${channel(ag, bg)}${channel(ab, bb)}`
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100
 }

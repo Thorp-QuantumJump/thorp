@@ -1,4 +1,4 @@
-import { ENAMEL, type Material } from './materials'
+import { ENAMEL, GTEXT_STOPS, type Material } from './materials'
 import styles from './materials.module.css'
 
 /** 재질 그라디언트 정의 하나. 식별자는 `{앞머리}-{재질}`이다(`materials.ts`의 `paint`가 가리킨다). */
@@ -19,10 +19,13 @@ function definition(prefix: string, material: Material) {
     case 'gtext':
       return (
         <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#EFFFF5" />
-          <stop offset="0.38" stopColor="#9DF5C2" />
-          <stop className={styles.brandSoft} offset="0.7" />
-          <stop offset="1" stopColor="#0B8F45" />
+          {GTEXT_STOPS.map((stop) =>
+            'token' in stop ? (
+              <stop key={stop.offset} className={styles[stop.token]} offset={stop.offset} />
+            ) : (
+              <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+            ),
+          )}
         </linearGradient>
       )
     case 'face':

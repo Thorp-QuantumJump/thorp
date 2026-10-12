@@ -5,6 +5,7 @@ import { articlePath } from '../learningPaths'
 import { ArticleStamp } from './ArticleStamp'
 import { continueLinkState, stageOfNumber } from './continueLink'
 import styles from './ContinueCard.module.css'
+import action from './greenAction.module.css'
 
 interface ContinueCardProps {
   continueReading: ContinueReading
@@ -63,7 +64,7 @@ export function ContinueCard({
       </div>
       <Link
         ref={linkRef}
-        className={styles.go}
+        className={`${action.action} ${styles.go}`}
         to={articlePath(articleId)}
         state={continueLinkState(kind, linkState)}
       >
