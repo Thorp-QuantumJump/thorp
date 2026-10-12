@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { learnerOverview } from '@/test/learningMeFixtures'
 import type { BadgeView } from '@/types/learningMe'
 import {
+  badgeLevel,
   earnedStageNumbers,
   groupPreparing,
   joinNames,
+  medalSpecOf,
   newBadgeLine,
   nextBadge,
   nextGoalSentence,
   preparingReasonText,
   progressSpoken,
+  specialBadgeOf,
+  stageBadgeKey,
   unreachableLevelSentence,
 } from './meCopy'
 
@@ -150,5 +154,50 @@ describe('닿을 수 없는 다음 레벨과 받은 단계 완주 배지', () =>
 
   it('단계 완주 배지를 받은 단계 번호를 모은다', () => {
     expect([...earnedStageNumbers(learnerOverview.badges)]).toEqual([1])
+  })
+})
+
+describe('배지의 메달', () => {
+  it('레벨은 배지 키(level-n)에서 읽고 화면에 보이는 이름에서는 읽지 않는다', () => {
+    expect(badgeLevel('level-3')).toBe(3)
+    expect(badgeLevel('level-x')).toBeNull()
+    expect(medalSpecOf({ badgeKey: 'level-4', family: 'LEVEL', stageNumber: null })).toEqual({
+      kind: 'level',
+      level: 4,
+    })
+    // 이름에 숫자가 있어도 키가 카탈로그 모양이 아니면 레벨을 지어내지 않고 특별 갈래 모양이다.
+    expect(medalSpecOf({ badgeKey: 'level-next', family: 'LEVEL', stageNumber: null })).toEqual({
+      kind: 'special',
+    })
+  })
+
+  it('단계 완주는 응답의 단계 번호로 그리고, 없으면 번호를 지어내지 않는다', () => {
+    expect(
+      medalSpecOf({ badgeKey: 'stage-harbor-basics', family: 'STAGE', stageNumber: 1 }),
+    ).toEqual({ kind: 'stage', stageNumber: 1 })
+    expect(
+      medalSpecOf({ badgeKey: 'stage-harbor-basics', family: 'STAGE', stageNumber: null }),
+    ).toEqual({ kind: 'special' })
+    expect(stageBadgeKey('harbor-basics')).toBe('stage-harbor-basics')
+  })
+
+  it('특별 갈래는 끈기·탐험의 글리프를 고르고, 모르는 배지와 모르는 갈래는 글리프 없이 그린다', () => {
+    expect(specialBadgeOf('exploration')).toBe('exploration')
+    expect(specialBadgeOf('mystery')).toBeNull()
+    expect(medalSpecOf({ badgeKey: 'persistence', family: 'SPECIAL', stageNumber: null })).toEqual({
+      kind: 'special',
+      special: 'persistence',
+    })
+    expect(medalSpecOf({ badgeKey: 'mystery', family: 'SPECIAL', stageNumber: null })).toEqual({
+      kind: 'special',
+      special: undefined,
+    })
+    expect(medalSpecOf({ badgeKey: 'new-1', family: 'NEW_FAMILY', stageNumber: null })).toEqual({
+      kind: 'special',
+      special: undefined,
+    })
+    expect(medalSpecOf({ badgeKey: 'read-5', family: 'READ', stageNumber: null })).toEqual({
+      kind: 'read',
+    })
   })
 })

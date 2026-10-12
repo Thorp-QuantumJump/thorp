@@ -4,7 +4,7 @@ import { ArticleNode } from './ArticleNode'
 import { stageMarker, type ArticleProgressMap, type RoadKind } from './articleProgress'
 import { PreviousEditionCards } from './PreviousEditionCards'
 import { ReleaseBoundary } from './ReleaseBoundary'
-import { readRoadPoints, roadPointProps, stageAnchorProps } from './stageAnchors'
+import { learnerMarkProps, readRoadPoints, roadPointProps, stageAnchorProps } from './stageAnchors'
 import { StageBand } from './StageBand'
 import { isReleased } from './stages'
 import styles from './JourneyMap.module.css'
@@ -199,7 +199,7 @@ function RoadLayer({ road, tracked }: { road: Road | null; tracked: boolean }) {
   return (
     <svg
       // 나의 학습 상태로 칠한 길이면 상태 표시다. 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(research R33).
-      data-learner-mark={tracked ? '' : undefined}
+      {...learnerMarkProps(tracked)}
       className={styles.road}
       width={road.width}
       height={road.height}

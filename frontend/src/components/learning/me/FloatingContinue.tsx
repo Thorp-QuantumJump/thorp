@@ -5,6 +5,7 @@ import { useRestoreFocusAfterConceal } from '../article/useRestoreFocusAfterConc
 import { articlePath } from '../learningPaths'
 import { continueLinkState } from './continueLink'
 import styles from './FloatingContinue.module.css'
+import action from './greenAction.module.css'
 
 interface FloatingContinueProps {
   continueReading: ContinueReading
@@ -43,7 +44,9 @@ export function FloatingContinue({
   return (
     <Link
       ref={linkRef}
-      className={concealed ? `${styles.fab} ${styles.concealed}` : styles.fab}
+      className={[action.action, styles.fab, concealed ? styles.concealed : null]
+        .filter(Boolean)
+        .join(' ')}
       to={articlePath(articleId)}
       state={continueLinkState(kind, linkState)}
     >

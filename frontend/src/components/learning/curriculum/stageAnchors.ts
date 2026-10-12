@@ -1,12 +1,22 @@
 import type { RoadPointKind } from './articleProgress'
 
 /**
- * 커리큘럼 화면의 DOM 표지 규약(013 T137·T139·T203).
+ * 커리큘럼 화면의 DOM 표지 규약(013 T137·T139·T203, research R33).
  *
- * <p>단계 자리, 그 자리에서 초점을 받는 제목, 짚을 띠, 길이 지나는 점을 이 모듈만 안다. 부품은 아래 함수가 돌려주는
- * 속성을 펼쳐 붙이고, 지도는 `readRoadPoints`로 길 점을 읽고, 화면은 `moveToStage`로 단계 자리에 옮긴다. 표지 이름을
- * 바꿀 때는 이 파일과, 띠를 짚는 모습을 그리는 `StageBand.module.css`의 `[data-flash]` 규칙만 고친다.
+ * <p>단계 자리, 그 자리에서 초점을 받는 제목, 짚을 띠, 길이 지나는 점, 나의 학습 상태 표시를 이 모듈만 안다. 부품은
+ * 아래 함수가 돌려주는 속성을 펼쳐 붙이고, 지도는 `readRoadPoints`로 길 점을 읽고, 화면은 `moveToStage`로 단계 자리에
+ * 옮긴다. 표지 이름을 바꿀 때는 이 파일과, 띠를 짚는 모습을 그리는 `StageBand.module.css`의 `[data-flash]` 규칙,
+ * 상태 표시를 숨기는 `LearningListPage.module.css`의 `[data-learner-mark]` 규칙만 고친다.
  */
+
+/**
+ * 나의 학습 상태를 나르는 표시(글별 상태 꼬리표·도장, 익힌 용어 수, 단계 완료 수·표식, 상태로 칠한 길과 노선, 지금 이어
+ * 읽을 글의 빛). 로그인 상태를 다시 확인하는 동안 배우기 목록이 이 표시들을 자리를 둔 채 숨긴다(research R33).
+ * `marked`가 거짓이면 아무 속성도 붙이지 않는다. 상태를 모르는 중립 모양은 숨길 것이 없기 때문이다.
+ */
+export function learnerMarkProps(marked = true): { 'data-learner-mark'?: '' } {
+  return marked ? { 'data-learner-mark': '' } : {}
+}
 
 /**
  * 단계 자리. 커리큘럼 보기의 단계 구역과 목록 보기의 단계 묶음(표의 `tbody`, 좁은 화면 목록의 항목)에 붙인다. 두

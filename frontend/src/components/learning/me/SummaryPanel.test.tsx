@@ -46,7 +46,7 @@ function Probe() {
 
 function Harness({ enabled = true }: { enabled?: boolean }) {
   const { settled, concealed } = useSettledAuth()
-  const overview = useLearnerOverview({ settled, enabled })
+  const overview = useLearnerOverview({ auth: settled, enabled })
   return <SummaryPanel state={overview.state} concealed={concealed} onRetry={overview.retry} />
 }
 

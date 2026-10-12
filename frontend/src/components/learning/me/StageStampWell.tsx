@@ -1,5 +1,11 @@
 import type { StageView } from '@/types/learning'
-import { stampState, type ArticleProgressMap, type StageCount } from '../curriculum/articleProgress'
+import {
+  stageProgressLabel,
+  stampState,
+  type ArticleProgressMap,
+  type StageCount,
+} from '../curriculum/articleProgress'
+import { learnerMarkProps } from '../curriculum/stageAnchors'
 import { ArticleStamp } from './ArticleStamp'
 import { StageMedal } from './StageMedal'
 import styles from './StageStampWell.module.css'
@@ -42,7 +48,7 @@ export function StageStampWell({
   )
 
   return (
-    <div className={styles.well} data-stage-well={stage.number} data-learner-mark="">
+    <div className={styles.well} data-stage-well={stage.number} {...learnerMarkProps()}>
       <div className={styles.art} aria-hidden="true">
         <span className={styles.cells}>
           {stage.articles.map((article, index) => {
@@ -72,11 +78,7 @@ export function StageStampWell({
         </span>
       </div>
       <p className={styles.caption}>
-        <b>
-          {completed
-            ? `완주 · ${publishedCount}편`
-            : `${publishedCount}편 중 ${completedCount}편 읽음`}
-        </b>
+        <b>{stageProgressLabel(count)}</b>
         {/* 배지까지 남은 진행은 아직 배지를 받지 않았을 때만 말한다. */}
         {completed || badgeEarned ? null : (
           <>

@@ -3,6 +3,7 @@ import type { LevelView } from '@/types/learningMe'
 import { nextLevelReachable, unreachableLevelSentence } from './meCopy'
 import { MaterialDefs } from './MaterialDefs'
 import { paint, svgId } from './materials'
+import { roundCoord } from './svgCoord'
 import styles from './LevelPath.module.css'
 
 type Milestone = LevelView['milestones'][number]
@@ -30,10 +31,6 @@ function labelledLevels(positions: readonly { level: number; at: number }[]): Re
   return chosen
 }
 
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000
-}
-
 function thresholdOf(milestones: readonly Milestone[], level: number): number | null {
   return milestones.find((item) => item.level === level)?.threshold ?? null
 }
@@ -56,7 +53,7 @@ export function LevelPath({ level }: { level: LevelView }) {
     thresholdOf(level.milestones, level.unreachableFrom) ||
     100
   const scale = top / VISIBLE_SHARE
-  const percentAt = (value: number) => round((Math.min(value, scale) / scale) * 100)
+  const percentAt = (value: number) => roundCoord((Math.min(value, scale) / scale) * 100)
   const at = (value: number) => `${percentAt(value)}%`
   const sentence = unreachableLevelSentence(level)
   const labelled = labelledLevels(
@@ -140,7 +137,7 @@ export function LevelPathMini({ level }: { level: LevelView }) {
   const span = level.nextThreshold - level.currentThreshold
   const fraction =
     span > 0 ? Math.max(0, Math.min(1, (level.exp - level.currentThreshold) / span)) : 0
-  const x = round(x0 + (x1 - x0) * fraction)
+  const x = roundCoord(x0 + (x1 - x0) * fraction)
   const blocked = !nextLevelReachable(level)
   return (
     <svg className={styles.mini} viewBox="0 0 220 30" aria-hidden="true" focusable="false">
@@ -213,7 +210,7 @@ export function LevelPathMove({ level, expBefore, moving }: LevelPathMoveProps) 
   const right = 230
   const span = Math.max(1, endThreshold - startThreshold)
   const x = (value: number) =>
-    round(
+    roundCoord(
       left +
         ((Math.max(startThreshold, Math.min(value, endThreshold)) - startThreshold) / span) *
           (right - left),
@@ -225,8 +222,8 @@ export function LevelPathMove({ level, expBefore, moving }: LevelPathMoveProps) 
       ? x(thresholdOf(level.milestones, level.visibleMax) ?? endThreshold)
       : null
   const style = {
-    ['--from' as string]: `${round(from - to)}px`,
-    ['--sx' as string]: String(round((from - left) / Math.max(1, to - left))),
+    ['--from' as string]: `${roundCoord(from - to)}px`,
+    ['--sx' as string]: String(roundCoord((from - left) / Math.max(1, to - left))),
   } as CSSProperties
 
   return (

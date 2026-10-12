@@ -715,6 +715,19 @@ describe('LearningListPage — 나의 학습', () => {
     ).toMatch(/grid-column:\s*1 \/ -1[\s\S]*justify-self:\s*end/)
   })
 
+  it('목록 보기의 노선은 강제 색 모드에서도 실선과 점선이 남는다', () => {
+    const css = 'components/learning/curriculum/ListView.module.css'
+    const forced = (selector: string) => cssMediaDeclarations(css, '(forced-colors: active)', selector)
+    // 기본 노선은 바탕색으로 칠해 강제 색 모드에서 화면 바탕이 된다. 그 모드에서 시스템 색과 테두리 점선으로 다시 그린다.
+    expect(forced(":is(.railTop, .railBottom)[data-kind='read']")).toMatch(/background:\s*Highlight/)
+    expect(forced(":is(.railTop, .railBottom):is([data-kind='neutral'], [data-kind='unread'])")).toMatch(
+      /background:\s*CanvasText/,
+    )
+    const preparing = forced(":is(.railTop, .railBottom)[data-kind='preparing']")
+    expect(preparing).toMatch(/border-left:\s*3px dashed CanvasText/)
+    expect(preparing).not.toMatch(/gradient/)
+  })
+
   it("목록 보기는 상태 열과 'n편 중 m편 읽음'·'완주 · n편', 익힌 용어 'm/n'을 보이고 떠 있는 단추가 없다", async () => {
     const user = userEvent.setup()
     loaded(releasedCurriculum)
@@ -769,19 +782,49 @@ describe('LearningListPage — 나의 학습', () => {
     expect(within(screen.getByRole('list', { name: '2단계 글' })).getByText('62% 읽는 중')).not.toBeNull()
   })
 
-  it('요약 패널이 늦게 들어와도 단계 자리로 옮긴 위치가 밀리지 않게 응답 뒤에 한 번 옮긴다(T206)', async () => {
-    let resolveMe: (value: unknown) => void = () => {}
-    meMocks.fetchLearningMe.mockReturnValue(new Promise((resolve) => (resolveMe = resolve)))
-    loaded(releasedCurriculum)
-    renderList('/learn#stage-2', signedInAuth)
+  it('요약 패널이 늦게 들어와도 응답을 기다리지 않고 먼저 옮기고, 응답 뒤 같은 이동에서 한 번만 다시 옮긴다(T206)', async () => {
+    const original = Element.prototype.scrollIntoView
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    try {
+      let resolveMe: (value: unknown) => void = () => {}
+      meMocks.fetchLearningMe.mockReturnValue(new Promise((resolve) => (resolveMe = resolve)))
+      loaded(releasedCurriculum)
+      const view = renderList('/learn#stage-2', signedInAuth)
+      const rerenderWith = (auth: AuthContextValue) =>
+        view.rerender(
+          <AuthContext.Provider value={auth}>
+            <MemoryRouter initialEntries={['/learn#stage-2']}>
+              <Routes>
+                <Route path="/learn" element={<LearningListPage />} />
+                <Route path="*" element={<Probe />} />
+              </Routes>
+            </MemoryRouter>
+          </AuthContext.Provider>,
+        )
 
-    const heading = await screen.findByRole('heading', { level: 3, name: /너울과 위험/ })
-    // 패널이 들어오기 전에는 옮기지 않는다. 먼저 옮기면 패널 높이만큼 아래로 밀린다.
-    expect(document.activeElement).not.toBe(heading)
+      // 응답이 오기 전에 이미 단계 자리로 옮겨 제목에 초점이 있다. 응답이 늦어도 단계 자리로 가는 것이 늦어지지 않는다.
+      const heading = await screen.findByRole('heading', { level: 3, name: /너울과 위험/ })
+      await waitFor(() => expect(document.activeElement).toBe(heading))
+      expect(scrolled).toHaveBeenCalledTimes(1)
+      heading.blur()
 
-    await act(async () => resolveMe({ status: 'ok', data: learnerOverview }))
-    expect(await screen.findByRole('region', { name: '나의 학습' })).not.toBeNull()
-    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: /너울과 위험/ }))
+      // 패널이 들어와 먼저 옮긴 자리가 밀렸다. 같은 이동에서 한 번 더 옮겨 2단계 제목에 초점이 다시 간다.
+      await act(async () => resolveMe({ status: 'ok', data: learnerOverview }))
+      expect(await screen.findByRole('region', { name: '나의 학습' })).not.toBeNull()
+      await waitFor(() =>
+        expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: /너울과 위험/ })),
+      )
+      expect(scrolled).toHaveBeenCalledTimes(2)
+
+      // 로그인 상태를 다시 확인했다가 돌아와도 같은 이동에서 더 옮기지 않는다.
+      rerenderWith({ ...signedInAuth, status: 'checking', user: null })
+      rerenderWith(signedInAuth)
+      await act(async () => {})
+      expect(scrolled).toHaveBeenCalledTimes(2)
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
   })
 
   it('비로그인에게는 나의 학습을 부르지 않는다', async () => {

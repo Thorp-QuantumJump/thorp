@@ -53,7 +53,10 @@
   font-weight: 650;
 }
 
-/* 초록 단추 모양의 연결. 누르는 곳은 44px 이상이다(design-notes §6). */
+/*
+  초록 단추 모양의 연결. 색·그림자·초점은 greenAction.module.css가 정하고, 여기서는 크기와 모서리를 둔다. 누르는 곳은
+  44px 이상이다(design-notes §6).
+*/
 .go {
   display: inline-flex;
   align-items: center;
@@ -62,20 +65,7 @@
   height: 44px;
   padding: 0 16px;
   border-radius: 10px;
-  background: linear-gradient(180deg, #14d468, var(--thorp-accent));
-  box-shadow:
-    0 3px 0 #02813b,
-    inset 0 1px 0 rgb(255 255 255 / 30%);
-  color: var(--thorp-action-foreground);
-  font-size: 0.94rem;
-  font-weight: 750;
-  text-decoration: none;
   white-space: nowrap;
-}
-
-.go:focus-visible {
-  outline: 2px solid var(--thorp-brand-soft);
-  outline-offset: 3px;
 }
 
 .allDone {

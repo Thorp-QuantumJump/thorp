@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
 import type { ArticleProgress } from './articleProgress'
 import { progressLabel } from './articleProgress'
+import { learnerMarkProps } from './stageAnchors'
 import styles from './StatusChips.module.css'
 
 /**
  * 커리큘럼 보기·목록 보기가 함께 쓰는 작은 표시들(design-notes §4 상태 문법).
  *
- * <p>나의 학습 상태를 나르는 표시에는 `data-learner-mark`를 붙인다. 로그인 상태를 다시 확인하는 동안 화면이 이 표시들을
+ * <p>나의 학습 상태를 나르는 표시에는 `learnerMarkProps`를 붙인다. 로그인 상태를 다시 확인하는 동안 화면이 이 표시들을
  * 자리를 둔 채 숨긴다(research R33).
  *
  * <p>상태마다 모양이 다르다. 완료는 초록 채움과 체크, 읽는 중은 실선 윤곽과 진행 호, 안 읽음은 실선 윤곽, 준비 중은
@@ -18,7 +19,7 @@ export function ProgressChip({ progress }: { progress: ArticleProgress }) {
   const label = progressLabel(progress)
   if (progress.state === 'done') {
     return (
-      <span className={`${styles.chip} ${styles.done}`} data-learner-mark="">
+      <span className={`${styles.chip} ${styles.done}`} {...learnerMarkProps()}>
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
           <path d="M2.4 6.3 L5 8.8 L9.6 3.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -28,7 +29,7 @@ export function ProgressChip({ progress }: { progress: ArticleProgress }) {
   }
   if (progress.state === 'reading') {
     return (
-      <span className={`${styles.chip} ${styles.outlined}`} data-learner-mark="">
+      <span className={`${styles.chip} ${styles.outlined}`} {...learnerMarkProps()}>
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
           <circle className={styles.arcTrack} cx="6" cy="6" r="4.6" strokeWidth="1.4" />
           <circle className={styles.arc} cx="6" cy="6" r="4.6" strokeWidth="2" pathLength={100} strokeDasharray={`${progress.percent} 100`} transform="rotate(-90 6 6)" strokeLinecap="round" />
@@ -38,7 +39,7 @@ export function ProgressChip({ progress }: { progress: ArticleProgress }) {
     )
   }
   return (
-    <span className={`${styles.chip} ${styles.outlined} ${styles.quiet}`} data-learner-mark="">
+    <span className={`${styles.chip} ${styles.outlined} ${styles.quiet}`} {...learnerMarkProps()}>
       {label}
     </span>
   )
@@ -87,7 +88,7 @@ export function TermCount({ termCount, progress, withLabel = true }: TermCountPr
     )
   }
   return (
-    <span className={styles.meta} data-learner-mark="">
+    <span className={styles.meta} {...learnerMarkProps()}>
       <span aria-hidden="true">
         {prefix}
         {progress.masteredTermCount}/{termCount}

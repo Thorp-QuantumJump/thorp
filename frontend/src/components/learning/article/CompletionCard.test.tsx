@@ -37,6 +37,8 @@ const completionEntry: GainedEntry = {
 
 const baseProps: CardProps = {
   completedAt: completedRecord.completedAt!,
+  // 2단계(너울과 위험)의 글이다. 그 단계의 단계 완주 배지 키는 `stage-swell-and-risk`다.
+  stageKey: 'swell-and-risk',
   stageProgress: completedRecord.stageProgress,
   continueReading: resumeNext,
   gained: [],
@@ -357,6 +359,35 @@ describe('CompletionCard — 레벨 갈래 배지와 단계 완주 메달', () =
         '2단계 글 4편을 모두 읽었습니다. 새 배지: 읽은 글 5편. 새 배지: 2단계 완주. 레벨 3이 되었습니다.',
       ),
     ).not.toBeNull()
+  })
+
+  it('다른 단계의 단계 완주 배지는 번호를 알 때만 그 단계 메달로 그리고, 이름에서 번호를 읽지 않는다', () => {
+    // 운영자의 게시 취소로 1단계가 채워져 2단계 글의 완료 응답에 1단계 완주 배지가 함께 왔다.
+    const entry: GainedEntry = {
+      gained: {
+        ...completionResult.gained,
+        badges: [{ badgeKey: 'stage-harbor-basics', family: 'STAGE', name: '1단계 완주' }],
+        levelAfter: completionResult.gained.levelBefore,
+      },
+      receivedAt: '2026-11-20T03:10:00Z',
+      stageProgress: completionResult.stageProgress,
+    }
+    const { unmount } = renderCard({ gained: [entry], stageProgress: completionResult.stageProgress })
+    const column = () => screen.getByText('새 배지').parentElement!
+    // '나의 학습'을 받기 전에는 이 글의 단계(2) 배지가 아니라 번호를 모른다. 지어내지 않고 단계 메달을 그리지 않는다.
+    expect(column().querySelector('[data-medal^="stage-"]')).toBeNull()
+    expect(column().querySelector('[data-medal="special-earned"]')).not.toBeNull()
+    unmount()
+
+    renderCard({
+      gained: [entry],
+      stageProgress: completionResult.stageProgress,
+      overview: learnerOverview,
+    })
+    // '나의 학습'의 같은 배지가 1단계라고 알려 주면 1단계 색의 메달이다.
+    const medal = column().querySelector('[data-medal="stage-earned"]')
+    expect(medal).not.toBeNull()
+    expect(medal?.textContent).toBe('1')
   })
 
   it('단계 완주 배지를 받은 단계면 지금 다 읽지 않았어도 메달은 받은 모습이다(US6 시나리오 8)', () => {

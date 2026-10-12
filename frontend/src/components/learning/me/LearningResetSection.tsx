@@ -1,7 +1,8 @@
 import { CircleCheck } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { resetLearning } from '@/api/learningMe'
 import { Button } from '@/components/ui/button'
+import { useModalDialog } from '@/hooks/useModalDialog'
 import styles from './LearningResetSection.module.css'
 
 /**
@@ -21,20 +22,7 @@ export function LearningResetSection({ preview = false }: { preview?: boolean })
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (open && !dialog.open) {
-      // showModal이라야 초점 가두기·Esc 닫기·배경 비활성을 브라우저가 해 준다.
-      if (typeof dialog.showModal === 'function') dialog.showModal()
-      else dialog.setAttribute('open', '')
-    }
-    if (!open && dialog.open) {
-      if (typeof dialog.close === 'function') dialog.close()
-      else dialog.removeAttribute('open')
-    }
-  }, [open])
+  useModalDialog(dialogRef, open)
 
   const close = () => {
     if (pending) return

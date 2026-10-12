@@ -67,6 +67,14 @@ export function progressLabel(progress: ArticleProgress): string {
   }
 }
 
+/**
+ * 단계 진행 글자(design-notes §3.1·§3.3). 다 읽었으면 '완주 · 4편', 아니면 '4편 중 3편 읽음'이다. 단계 띠·목록 보기의
+ * 단계 구분 줄·'나의 학습'의 정거장·완료 카드가 같은 글자를 쓴다.
+ */
+export function stageProgressLabel({ completed, completedCount, publishedCount }: StageCount): string {
+  return completed ? `완주 · ${publishedCount}편` : `${publishedCount}편 중 ${completedCount}편 읽음`
+}
+
 /** 글 도장의 모양. 상태를 모르면 중립 모양이다. */
 export function stampState(progress: ArticleProgress | undefined): ArticleStampState {
   if (!progress) return 'neutral'

@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import type { StageView } from '@/types/learning'
-import type { StageCount } from '../curriculum/articleProgress'
+import { stageProgressLabel, type StageCount } from '../curriculum/articleProgress'
 import { StageLandscape } from '../curriculum/StageLandscape'
 import { stageLocation } from '../learningPaths'
 import { stageColor } from '../stageColors'
+import { roundCoord } from './svgCoord'
 import styles from './StageStations.module.css'
 
 interface StageStationsProps {
@@ -48,11 +49,7 @@ export function StageStations({ stages, counts, linkState }: StageStationsProps)
             <span className={styles.kicker}>{stage.number}단계</span>
             <b className={styles.name}>{stage.name}</b>
             {count ? (
-              <span className={styles.progress}>
-                {count.completed
-                  ? `완주 · ${count.publishedCount}편`
-                  : `${count.publishedCount}편 중 ${count.completedCount}편 읽음`}
-              </span>
+              <span className={styles.progress}>{stageProgressLabel(count)}</span>
             ) : (
               <span className={styles.preparing}>준비 중</span>
             )}
@@ -91,8 +88,8 @@ function StationRing({ stageNumber, count }: { stageNumber: number; count?: Stag
                 strokeWidth="3"
                 strokeLinecap="round"
                 pathLength={100}
-                strokeDasharray={`${round(length)} ${round(100 - length)}`}
-                strokeDashoffset={round(-((100 / segments) * k + gap / 2))}
+                strokeDasharray={`${roundCoord(length)} ${roundCoord(100 - length)}`}
+                strokeDashoffset={roundCoord(-((100 / segments) * k + gap / 2))}
                 transform="rotate(-90 32 32)"
               />
             ))}
@@ -123,8 +120,4 @@ function StationRing({ stageNumber, count }: { stageNumber: number; count?: Stag
       </span>
     </>
   )
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100
 }

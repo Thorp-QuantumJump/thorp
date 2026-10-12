@@ -25,6 +25,35 @@ export type Material =
   | 'glow'
   | `en-${Exclude<MedalKind, 'level' | 'stage'>}`
 
+/** 그라디언트의 한 단. 의미 토큰과 같은 색은 값 대신 토큰 이름으로 둔다(`materials.module.css`가 칠한다). */
+export type GradientStop =
+  { offset: number; color: string } | { offset: number; token: 'brandSoft' | 'brand' }
+
+/**
+ * 레벨 숫자의 초록 금속 글자색(목업 `b-gtext`). 위의 밝은 민트에서 아래의 짙은 초록으로 간다. 레벨 표장의 숫자(SVG)와
+ * 완료 카드의 넘어가는 숫자(HTML 글자, `cssLinearGradient`)가 같은 단을 쓴다.
+ */
+export const GTEXT_STOPS: readonly GradientStop[] = [
+  { offset: 0, color: '#EFFFF5' },
+  { offset: 0.38, color: '#9DF5C2' },
+  { offset: 0.7, token: 'brandSoft' },
+  { offset: 1, color: '#0B8F45' },
+]
+
+const TOKEN_COLORS = {
+  brandSoft: 'var(--thorp-brand-soft)',
+  brand: 'var(--thorp-brand-primary)',
+} as const
+
+/** 그라디언트 단을 CSS `linear-gradient`로 옮긴다. HTML 글자에 같은 재질을 칠할 때 쓴다. */
+export function cssLinearGradient(angle: string, stops: readonly GradientStop[]): string {
+  const parts = stops.map((stop) => {
+    const color = 'token' in stop ? TOKEN_COLORS[stop.token] : stop.color
+    return `${color} ${Math.round(stop.offset * 100)}%`
+  })
+  return `linear-gradient(${angle}, ${parts.join(', ')})`
+}
+
 /** 그림 안에서 재질을 가리키는 `url(#…)`. */
 export function paint(prefix: string, material: Material): string {
   return `url(#${prefix}-${material})`

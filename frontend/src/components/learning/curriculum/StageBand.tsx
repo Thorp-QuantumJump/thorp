@@ -4,7 +4,7 @@ import { mutedStageColor, stageColor } from '../stageColors'
 import { ArticleStamp, type ArticleStampState } from '../me/ArticleStamp'
 import type { RoadKind } from './articleProgress'
 import { UNRELEASED_STAGE_NOTE, preparingReason } from './curriculumCopy'
-import { roadPointProps, stageBandProps, stageHeadingProps } from './stageAnchors'
+import { learnerMarkProps, roadPointProps, stageBandProps, stageHeadingProps } from './stageAnchors'
 import { StageLandscape } from './StageLandscape'
 import { stageMinutes } from './stages'
 import { PreparingChip } from './StatusChips'
@@ -82,7 +82,7 @@ export function StageBand({ stage, headingId, first = false, markerState = 'neut
       {/* 나의 학습 상태로 그린 표식(실선 칸·체크)은 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(research R33). */}
       <span
         className={markerState === 'unread' ? `${styles.marker} ${styles.markerTracked}` : styles.marker}
-        data-learner-mark={markerState === 'neutral' ? undefined : ''}
+        {...learnerMarkProps(markerState !== 'neutral')}
         aria-hidden="true"
       >
         <Marker state={markerState} stageNumber={stage.number} />

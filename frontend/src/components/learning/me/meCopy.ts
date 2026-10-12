@@ -1,4 +1,4 @@
-import type { BadgeView, LearnerOverview, LevelView } from '@/types/learningMe'
+import type { BadgeFamily, BadgeView, LearnerOverview, LevelView } from '@/types/learningMe'
 import type { MedalKind } from './medalShapes'
 
 /**
@@ -8,7 +8,7 @@ import type { MedalKind } from './medalShapes'
  * '열립니다'·'공개 예정'), 실력·순위로 읽히는 낱말을 쓰지 않는다(FR-024, FR-030, FR-031 표시 규칙).
  */
 
-/** 배지 갈래. 응답의 `badges`가 이 순서로 온다(계약 §1). */
+/** 화면이 이름과 메달을 아는 배지 갈래. 응답의 `badges`가 이 순서로 온다(계약 §1). */
 export const BADGE_FAMILIES = [
   'LEVEL',
   'READ',
@@ -17,11 +17,11 @@ export const BADGE_FAMILIES = [
   'STAGE',
   'TERMS',
   'SPECIAL',
-] as const
+] as const satisfies readonly BadgeFamily[]
 
-export type BadgeFamily = (typeof BADGE_FAMILIES)[number]
+export type KnownBadgeFamily = (typeof BADGE_FAMILIES)[number]
 
-const FAMILY_NAMES: Record<BadgeFamily, string> = {
+const FAMILY_NAMES: Record<KnownBadgeFamily, string> = {
   LEVEL: '레벨',
   READ: '읽은 글',
   CORRECT: '첫 답 정답',
@@ -31,7 +31,7 @@ const FAMILY_NAMES: Record<BadgeFamily, string> = {
   SPECIAL: '특별',
 }
 
-const FAMILY_MEDALS: Record<BadgeFamily, MedalKind> = {
+const FAMILY_MEDALS: Record<KnownBadgeFamily, MedalKind> = {
   LEVEL: 'level',
   READ: 'read',
   CORRECT: 'first',
@@ -41,21 +41,70 @@ const FAMILY_MEDALS: Record<BadgeFamily, MedalKind> = {
   SPECIAL: 'special',
 }
 
-export function isBadgeFamily(value: string): value is BadgeFamily {
+export function isBadgeFamily(value: BadgeFamily): value is KnownBadgeFamily {
   return (BADGE_FAMILIES as readonly string[]).includes(value)
 }
 
-export function familyName(family: BadgeFamily): string {
+export function familyName(family: KnownBadgeFamily): string {
   return FAMILY_NAMES[family]
 }
 
 /** 갈래의 메달 실루엣. 모르는 갈래는 특별 갈래의 마름모로 그린다. */
-export function familyMedal(family: string): MedalKind {
+export function familyMedal(family: BadgeFamily): MedalKind {
   return isBadgeFamily(family) ? FAMILY_MEDALS[family] : 'special'
 }
 
+/** 특별 갈래의 배지(data-model §12-4). 글리프가 서로 다르다. */
+export type SpecialBadge = 'persistence' | 'exploration'
+
+/** 특별 갈래의 어느 배지인가. 키가 카탈로그의 `persistence`·`exploration`이 아니면 `null`이다. */
+export function specialBadgeOf(badgeKey: string): SpecialBadge | null {
+  return badgeKey === 'persistence' || badgeKey === 'exploration' ? badgeKey : null
+}
+
+/**
+ * 레벨 갈래 배지의 레벨. 배지 키는 바뀌지 않는 카탈로그 값이고 레벨 배지는 `level-{n}`이다(data-model §2·§12-4). 그
+ * 모양이 아니면 `null`이다. 화면에 보이는 이름('레벨 3')에서는 읽지 않는다.
+ */
+export function badgeLevel(badgeKey: string): number | null {
+  const match = /^level-(\d+)$/.exec(badgeKey)
+  return match ? Number(match[1]) : null
+}
+
+/** 그 단계의 단계 완주 배지 키(`stage-{stageKey}`, data-model §12-4). */
+export function stageBadgeKey(stageKey: string): string {
+  return `stage-${stageKey}`
+}
+
+/** 메달 그림이 갈래마다 받는 값. 레벨 표장은 레벨이, 단계 완주 메달은 단계 번호가 있어야 그린다. */
+export type MedalSpec =
+  | { kind: 'level'; level: number }
+  | { kind: 'stage'; stageNumber: number }
+  | { kind: Exclude<MedalKind, 'level' | 'stage'>; special?: SpecialBadge }
+
+/**
+ * 배지 하나의 메달(design-notes §3.3). 레벨은 배지 키에서, 단계 번호는 응답의 `stageNumber`에서 읽는다. 그 값이 없거나
+ * 갈래를 모르면 숫자를 지어내지 않고 특별 갈래의 마름모로 그린다(원칙 VI). 모르는 특별 배지는 글리프 없이 그린다.
+ */
+export function medalSpecOf(
+  badge: Pick<BadgeView, 'badgeKey' | 'family' | 'stageNumber'>,
+): MedalSpec {
+  const kind = familyMedal(badge.family)
+  if (kind === 'level') {
+    const level = badgeLevel(badge.badgeKey)
+    return level === null ? { kind: 'special' } : { kind, level }
+  }
+  if (kind === 'stage') {
+    return badge.stageNumber === null
+      ? { kind: 'special' }
+      : { kind, stageNumber: badge.stageNumber }
+  }
+  if (kind === 'special') return { kind, special: specialBadgeOf(badge.badgeKey) ?? undefined }
+  return { kind }
+}
+
 /** 진행을 세는 단위. 레벨은 경험치로 센다. */
-function unitOf(family: string): '편' | '개' | 'exp' | '' {
+function unitOf(family: BadgeFamily): '편' | '개' | 'exp' | '' {
   switch (family) {
     case 'READ':
     case 'PERFECT':

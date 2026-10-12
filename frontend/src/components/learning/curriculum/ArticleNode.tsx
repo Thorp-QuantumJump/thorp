@@ -3,7 +3,7 @@ import type { CurriculumArticle } from '@/types/learning'
 import { articlePath } from '../learningPaths'
 import { ArticleStamp } from '../me/ArticleStamp'
 import { roadKind, stampState, type ArticleProgress } from './articleProgress'
-import { roadPointProps } from './stageAnchors'
+import { learnerMarkProps, roadPointProps } from './stageAnchors'
 import { ChipRow, ProgressChip, ReadingMinutes, TermCount } from './StatusChips'
 import styles from './ArticleNode.module.css'
 
@@ -35,7 +35,7 @@ const OFFSETS = [0, 64, 96, 64]
  * <p>지금 이어 읽을 글(`current`)은 이 화면에서 빛나는 곳 하나다. 카드 뒤의 빛과 '이어서 읽기 →' 글자는 그 글이 다음에
  * 읽을 글이라는 표시일 뿐이고, 카드를 누르면 다른 글처럼 맨 위에서 연다. 목록에서 '읽는 중' 글을 열면 맨 위에서 열고
  * '62%까지 읽었습니다 · 이어서 읽기' 한 줄을 보이기 때문이다(FR-020, data-model §15). 빛과 글자는 나의 학습 상태
- * 표시라 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(`data-learner-mark`, research R33).
+ * 표시라 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(`learnerMarkProps`, research R33).
  */
 export function ArticleNode({ article, stageNumber, index, progress, current = false, linkState }: ArticleNodeProps) {
   const state = stampState(progress)
@@ -62,14 +62,14 @@ export function ArticleNode({ article, stageNumber, index, progress, current = f
         <span
           className={styles.node}
           {...roadPointProps(roadKind(progress))}
-          data-learner-mark={progress ? '' : undefined}
+          {...learnerMarkProps(progress !== undefined)}
           aria-hidden="true"
         >
           {stamp(48, styles.wide)}
           {stamp(40, styles.narrow)}
         </span>
         <span className={styles.card}>
-          {current ? <span className={styles.glow} data-learner-mark="" aria-hidden="true" /> : null}
+          {current ? <span className={styles.glow} {...learnerMarkProps()} aria-hidden="true" /> : null}
           <span className={styles.main}>
             <span className={styles.number}>{article.number}</span>
             <span className={styles.title}>{article.title}</span>
@@ -80,7 +80,7 @@ export function ArticleNode({ article, stageNumber, index, progress, current = f
             <ReadingMinutes minutes={article.readingMinutes} />
             <TermCount termCount={article.termCount} progress={progress} />
             {current ? (
-              <span className={styles.goHint} data-learner-mark="">
+              <span className={styles.goHint} {...learnerMarkProps()}>
                 이어서 읽기 <span aria-hidden="true">→</span>
               </span>
             ) : null}
