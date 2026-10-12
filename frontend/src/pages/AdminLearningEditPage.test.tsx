@@ -441,6 +441,57 @@ describe('AdminLearningEditPage', () => {
     expect(screen.getByRole('button', { name: '새로 불러오기' })).not.toBeNull()
   })
 
+  it('(2판) 게시 뒤 다시 읽기가 401이면 게시 안내를 남기고 다시 로그인해 새로 불러오라고 알린다', async () => {
+    apiMocks.fetchAdminArticle
+      .mockResolvedValueOnce({ status: 'loaded', article: adminV2Article })
+      .mockResolvedValueOnce({ status: 'unauthenticated' })
+    apiMocks.publishArticle.mockResolvedValue({
+      status: 'published',
+      result: {
+        articleId: 'channel-depth',
+        status: 'PUBLISHED',
+        revisionNo: 3,
+        checkVersion: 'learning-publish-checks-v2',
+        sectorMapVersion: 'NOT_CHECKED',
+        publishedAt: '2026-11-20T01:00:00Z',
+        edition: 'CURRENT',
+        renamedQuestions: [{ from: 'q4', to: 'q7' }],
+        transferredTerms: [],
+      },
+    })
+    const user = userEvent.setup()
+    renderEdit('channel-depth')
+
+    await user.click(await screen.findByRole('button', { name: '게시' }))
+
+    // 게시는 끝났다. 화면 전체를 로그인 안내로 바꾸면 새 판 번호와 바뀐 식별자를 보지 못한다.
+    expect(
+      await screen.findByText(/로그인이 풀려 게시한 초안을 다시 읽지 못했습니다/),
+    ).not.toBeNull()
+    expect(screen.getByText(/3판\(CURRENT\)으로 게시했습니다/)).not.toBeNull()
+    expect(screen.getByText(/q4 → q7/)).not.toBeNull()
+    expect(screen.queryByRole('heading', { name: '다시 로그인해 주세요' })).toBeNull()
+  })
+
+  it('(2판) V1로 되돌리기는 9월 판을 공개한 적이 있는 글에만 있다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({
+      status: 'loaded',
+      article: { ...adminV2Article, hasLegacyRevision: true },
+    })
+    renderEdit('channel-depth')
+
+    // 지금 공개 중인 판은 새 기준 판이지만, 9월 판 이력이 있으면 서버가 V1 저장을 받는다(계약 §5).
+    expect(await screen.findByRole('button', { name: 'V1 형식으로 되돌리기' })).not.toBeNull()
+  })
+
+  it('(2판) 9월 판 이력이 없는 V2 글에는 V1로 되돌리기가 없다', async () => {
+    apiMocks.fetchAdminArticle.mockResolvedValue({ status: 'loaded', article: adminV2Article })
+    renderEdit('channel-depth')
+
+    await screen.findByRole('heading', { name: 'channel-depth 편집' })
+    expect(screen.queryByRole('button', { name: 'V1 형식으로 되돌리기' })).toBeNull()
+  })
+
   it('(2판) 다른 글이 쓰는 용어면 이 글로 넘겨받기를 제안하고, 고르면 다음 저장에 transferFrom이 실린다', async () => {
     const v2Draft = adminV2Article.draft as AdminLearningDraftV2
     const withoutTransfer: AdminLearningArticle = {

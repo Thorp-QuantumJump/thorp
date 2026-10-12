@@ -9,6 +9,7 @@ import {
   type AdminArticleListResult,
   type StageListResult,
 } from '@/api/learningAdmin'
+import { formatAdminTime } from '@/components/learning/admin/adminTime'
 import { StageReleasePanel } from '@/components/learning/admin/StageReleasePanel'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import type { AdminLearningArticleSummary } from '@/types/learningAdmin'
@@ -60,11 +61,6 @@ function describeReview(value: boolean | null): string {
 function describeStage(article: AdminLearningArticleSummary): string {
   const released = article.stage.released ? ' (공개됨)' : ''
   return `${article.stage.number}단계 ${article.stagePosition}번째${released}`
-}
-
-function formatOccurredAt(value: string): string {
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString('ko-KR')
 }
 
 export function AdminLearningListPage() {
@@ -274,7 +270,7 @@ export function AdminLearningListPage() {
                       ? '기록 없음'
                       : `${article.lastPublication.action} ${
                           article.lastPublication.revisionNo ?? '-'
-                        }판 · 사용자 ${article.lastPublication.actorUserId} · ${formatOccurredAt(
+                        }판 · 사용자 ${article.lastPublication.actorUserId} · ${formatAdminTime(
                           article.lastPublication.occurredAt,
                         )}`}
                   </td>

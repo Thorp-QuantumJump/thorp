@@ -1,5 +1,6 @@
 import { useId, useState, type ChangeEvent } from 'react'
-import type { EditableDraft, PublishedEdition } from '@/types/learningAdmin'
+import type { PublishedEdition } from '@/types/learningAdmin'
+import type { EditableDraft } from './editableDraft'
 import {
   readManuscript,
   writeManuscript,
@@ -7,6 +8,7 @@ import {
   type ManuscriptIdSummary,
   type ManuscriptIssue,
 } from './manuscript'
+import { describePosition } from './richTextSyntax'
 import styles from './AdminEditor.module.css'
 
 /**
@@ -40,13 +42,17 @@ type ImportState =
   | { kind: 'idle' }
   | { kind: 'imported'; fileName: string; ids: ManuscriptIdSummary }
   | { kind: 'rejected'; fileName: string; issues: ManuscriptIssue[] }
+  | { kind: 'exportFailed' }
 
 function describeIssue(issue: ManuscriptIssue): string {
-  const position = issue.line === undefined ? '' : ` ${issue.line}줄 ${issue.column}칸`
+  const position =
+    issue.line === undefined || issue.column === undefined
+      ? ''
+      : ` ${describePosition({ line: issue.line, column: issue.column })}`
   return `${issue.where}${position}: ${issue.message}`
 }
 
-/** 브라우저가 파일로 받게 한다. 내려받기를 지원하지 않는 환경이면 아무것도 하지 않는다. */
+/** 브라우저가 파일로 받게 한다. 내려받기를 지원하지 않는 환경이면 `false`를 돌려주고, 화면이 그 사실을 알린다. */
 function download(fileName: string, content: string): boolean {
   if (typeof URL.createObjectURL !== 'function') return false
   const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }))
@@ -110,7 +116,13 @@ export function ManuscriptTransfer({
         </label>
         <button
           type="button"
-          onClick={() => download(`${articleId}.json`, writeManuscript(articleId, draft))}
+          onClick={() =>
+            setState(
+              download(`${articleId}.json`, writeManuscript(articleId, draft))
+                ? { kind: 'idle' }
+                : { kind: 'exportFailed' },
+            )
+          }
         >
           원고 내보내기
         </button>
@@ -123,6 +135,11 @@ export function ManuscriptTransfer({
           </p>
           <ImportedIds ids={state.ids} publishedEdition={publishedEdition} />
         </div>
+      ) : null}
+      {state.kind === 'exportFailed' ? (
+        <p role="alert" className={styles.notice}>
+          이 브라우저에서는 원고를 파일로 내려받을 수 없습니다. 다른 브라우저에서 내보내 주세요.
+        </p>
       ) : null}
       {state.kind === 'rejected' ? (
         <div role="alert">

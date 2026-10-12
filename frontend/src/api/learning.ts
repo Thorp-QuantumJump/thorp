@@ -4,7 +4,6 @@ import type {
   ArticleNext,
   ArticleStage,
   CurrentArticleBlock,
-  CurrentLearningArticle,
   Curriculum,
   CurriculumArticle,
   DiagramSeries,
@@ -14,7 +13,7 @@ import type {
   LearningExampleSector,
   LearningSource,
   LegacyArticleBlock,
-  LegacyLearningArticle,
+  LearningArticleContent,
   NoteSource,
   PreviousEditionArticle,
   QuizChoice,
@@ -57,17 +56,6 @@ export type LearningArticleResult =
   | LoadFailure
 
 const UNREADABLE_RESPONSE_MESSAGE = '배우기 글을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
-
-/**
- * 게시 시각을 뺀 글이다. 관리 미리 보기(관리 계약 §8)가 같은 모양에 게시 전이라 `publishedAt`이 `null`인
- * 응답을 주므로, 해석은 같은 함수로 하고 게시 시각만 따로 읽는다.
- *
- * 미리 보기는 예시 없는 V1 초안을 9월 판 모양에 `example: null`로 보낸다. 그래서 이 타입의 9월 판 예시는
- * 비어 있을 수 있다. 공개 글(`LearningArticle`)의 9월 판에는 늘 예시가 있다.
- */
-export type LearningArticleContent =
-  | (Omit<LegacyLearningArticle, 'publishedAt' | 'example'> & { example: LearningExample | null })
-  | Omit<CurrentLearningArticle, 'publishedAt'>
 
 export type ArticleContentOptions = {
   /**

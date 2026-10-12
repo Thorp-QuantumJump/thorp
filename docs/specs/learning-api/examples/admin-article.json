@@ -27,5 +27,6 @@
     "quiz": []
   },
   "publishedRevisionNo": 3,
-  "publishedEdition": "LEGACY"
+  "publishedEdition": "LEGACY",
+  "hasLegacyRevision": true
 }

@@ -26,6 +26,11 @@ import type { DraftRun } from '@/types/learningAdmin'
 /** 오류 위치. 줄과 열은 1부터 센다. */
 export type RichTextIssue = { line: number; column: number; message: string }
 
+/** 오류 위치를 사람이 읽는 말로 쓴다. 편집 칸·원고·저장 거절이 같은 표기를 쓴다. */
+export function describePosition(position: { line: number; column: number }): string {
+  return `${position.line}줄 ${position.column}칸`
+}
+
 /** 이 칸이 허용하는 조각(data-model §5-3 '조각' 열). 글자 조각은 늘 허용한다. */
 export type AllowedRuns = { term: boolean; source: boolean }
 

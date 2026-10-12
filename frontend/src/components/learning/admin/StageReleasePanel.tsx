@@ -7,15 +7,20 @@ import {
 } from '@/api/learningAdmin'
 import type { StageAdminArticle, StageAdminView, StageBlocker } from '@/types/learningAdmin'
 import { applyPublishToUnsentDraft } from './adminDraftStorage'
+import { formatAdminTime } from './adminTime'
 import { PublishCheckResultList } from './PublishCheckResultList'
+import { PublishedChanges } from './PublishedChanges'
 import styles from './AdminEditor.module.css'
 
 /**
  * 단계 목록과 단계 공개(013 FR-031, contracts/learning-admin-api §9~§11, research R23, T173).
  *
- * <p><b>미리 검사와 공개를 나눈다.</b> 미리 검사는 아무것도 쓰지 않는다. 공개는 되돌릴 수 없으므로 미리 검사를
- * 통과한 단계에서만 누를 수 있고, 공개될 글 목록을 보인 확인 창에서 확인할 때만 요청한다. 취소하면 요청하지
- * 않는다.
+ * <p><b>미리 검사와 공개를 나눈다.</b> 미리 검사는 아무것도 쓰지 않는다. 공개는 미리 검사를 받은 뒤에만 누를 수
+ * 있고, 공개될 글 목록을 보인 확인 창에서 확인할 때만 요청한다. 취소하면 요청하지 않는다.
+ *
+ * <p><b>미리 검사에 걸린 것이 있어도 공개 단추를 막지 않는다.</b> 판정은 서버가 공개 요청에서 다시 한다. 화면이
+ * 막으면 서버가 무엇으로 거절하는지(422 검사 항목, 409 막는 것) 운영자가 볼 수 없다(quickstart 8-1·8-3). 대신
+ * 확인 창이 걸린 것이 있어 서버가 거절한다고 먼저 알린다.
  *
  * <p><b>요청의 글 목록은 미리 검사가 돌려준 목록과 초안 번호 그대로다.</b> 그사이 서버가 바뀌었으면 409
  * `LEARNING_STAGE_CHANGED`가 오고, 화면은 미리 검사를 다시 하게 할 뿐 서버가 알려 준 목록으로 다시 보내지
@@ -42,11 +47,6 @@ const BLOCKER_TEXT: Record<string, string> = {
 
 function describeBlocker(blocker: StageBlocker): string {
   return BLOCKER_TEXT[blocker] ?? blocker
-}
-
-function formatTime(value: string): string {
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString('ko-KR')
 }
 
 export function StageReleasePanel({
@@ -85,8 +85,8 @@ interface StageCardProps {
 }
 
 function StageCard({ stage, onReleased, onUnauthenticated }: StageCardProps) {
-  const [readiness, setReadiness] = useState<ReadinessState>({ status: 'idle' })
-  const [release, setRelease] = useState<ReleaseState>({ status: 'idle' })
+  const [readinessState, setReadinessState] = useState<ReadinessState>({ status: 'idle' })
+  const [releaseState, setReleaseState] = useState<ReleaseState>({ status: 'idle' })
 
   const titles = new Map<string, string>(
     [...stage.articles, ...stage.placementOnlyArticles].map((article) => [
@@ -96,55 +96,58 @@ function StageCard({ stage, onReleased, onUnauthenticated }: StageCardProps) {
   )
   const titleOf = (articleId: string) => titles.get(articleId) ?? articleId
   const released = stage.releasedAt !== null
-  const busy = readiness.status === 'loading' || release.status === 'sending'
+  const busy = readinessState.status === 'loading' || releaseState.status === 'sending'
 
   const check = async () => {
-    setRelease({ status: 'idle' })
-    setReadiness({ status: 'loading' })
+    setReleaseState({ status: 'idle' })
+    setReadinessState({ status: 'loading' })
     const result = await fetchStageReadiness(stage.stageKey)
     if (result.status === 'unauthenticated') {
       onUnauthenticated()
       return
     }
-    setReadiness(result)
+    setReadinessState(result)
   }
 
-  const ready = readiness.status === 'loaded' && readiness.readiness.ready
-  const releaseArticles = readiness.status === 'loaded' ? readiness.readiness.articles : []
+  const checked = readinessState.status === 'loaded' ? readinessState.readiness : null
 
   const confirmAndRelease = async () => {
-    if (!ready || busy) return
+    if (checked === null || busy) return
+    const releaseArticles = checked.articles
     const list = releaseArticles.map((article) => `- ${titleOf(article.articleId)}`).join('\n')
+    const warning = checked.ready
+      ? ''
+      : '미리 검사에 걸린 것이 있어 서버가 공개를 거절할 것입니다. 거절되면 아무 글도 게시되지 않습니다.\n\n'
     const confirmed = window.confirm(
-      `${stage.number}단계 '${stage.name}'를 공개합니다. 아래 글 ${releaseArticles.length}편이 함께 게시되며 되돌릴 수 없습니다.\n\n${list}\n\n공개할까요?`,
+      `${warning}${stage.number}단계 '${stage.name}'를 공개합니다. 아래 글 ${releaseArticles.length}편이 함께 게시되며 되돌릴 수 없습니다.\n\n${list}\n\n공개할까요?`,
     )
     if (!confirmed) return
 
-    setRelease({ status: 'sending' })
-    const result = await releaseStage(stage.stageKey, releaseArticles)
-    if (result.status === 'unauthenticated') {
+    setReleaseState({ status: 'sending' })
+    const outcome = await releaseStage(stage.stageKey, releaseArticles)
+    if (outcome.status === 'unauthenticated') {
       onUnauthenticated()
       return
     }
-    setRelease(result)
-    if (result.status === 'released') {
-      for (const published of result.result.published) {
+    setReleaseState(outcome)
+    if (outcome.status === 'released') {
+      for (const published of outcome.result.published) {
         applyPublishToUnsentDraft(
           published.articleId,
           published.renamedQuestions,
-          result.result.transferredTerms,
+          outcome.result.transferredTerms,
         )
       }
-      setReadiness({ status: 'idle' })
+      setReadinessState({ status: 'idle' })
       onReleased()
     }
     if (
-      result.status === 'changed' ||
-      result.status === 'checkFailed' ||
-      result.status === 'rejected'
+      outcome.status === 'changed' ||
+      outcome.status === 'checkFailed' ||
+      outcome.status === 'rejected'
     ) {
       // 미리 검사 결과가 낡았다. 다시 하기 전에는 공개 단추를 열지 않는다.
-      setReadiness({ status: 'idle' })
+      setReadinessState({ status: 'idle' })
     }
   }
 
@@ -156,7 +159,7 @@ function StageCard({ stage, onReleased, onUnauthenticated }: StageCardProps) {
         </h3>
         <span className={styles.hint}>
           {released
-            ? `공개됨 · ${formatTime(stage.releasedAt ?? '')}${
+            ? `공개됨 · ${formatAdminTime(stage.releasedAt ?? '')}${
                 stage.releasedByUserId === null ? '' : ` · 사용자 ${stage.releasedByUserId}`
               }`
             : stage.releasable
@@ -184,21 +187,21 @@ function StageCard({ stage, onReleased, onUnauthenticated }: StageCardProps) {
           <button
             type="button"
             onClick={() => void confirmAndRelease()}
-            disabled={!ready || busy}
-            aria-describedby={ready ? undefined : `stage-release-hint-${stage.stageKey}`}
+            disabled={checked === null || busy}
+            aria-describedby={checked === null ? `stage-release-hint-${stage.stageKey}` : undefined}
           >
             {stage.number}단계 공개
           </button>
         </div>
       )}
-      {released || ready ? null : (
+      {released || checked !== null ? null : (
         <p id={`stage-release-hint-${stage.stageKey}`} className={styles.hint}>
-          미리 검사를 통과해야 공개할 수 있습니다.
+          미리 검사를 한 뒤에 공개할 수 있습니다.
         </p>
       )}
 
-      <ReadinessView readiness={readiness} titleOf={titleOf} />
-      <ReleaseView release={release} stageNumber={stage.number} titleOf={titleOf} />
+      <ReadinessView state={readinessState} titleOf={titleOf} />
+      <ReleaseView state={releaseState} stageNumber={stage.number} titleOf={titleOf} />
     </li>
   )
 }
@@ -220,24 +223,24 @@ function StageArticleList({ articles }: { articles: readonly StageAdminArticle[]
 }
 
 function ReadinessView({
-  readiness,
+  state,
   titleOf,
 }: {
-  readiness: ReadinessState
+  state: ReadinessState
   titleOf: (articleId: string) => string
 }) {
-  switch (readiness.status) {
+  switch (state.status) {
     case 'idle':
       return null
     case 'loading':
       return <p role="status">미리 검사하는 중입니다.</p>
     case 'stageNotFound':
     case 'failed':
-      return <p role="alert">{readiness.message}</p>
+      return <p role="alert">{state.message}</p>
     case 'unauthenticated':
       return null
     case 'loaded': {
-      const { blockers, articles, ready, checkVersion } = readiness.readiness
+      const { blockers, articles, ready, checkVersion } = state.readiness
       const failing = articles.filter((article) => article.failures.length > 0)
       return (
         <div>
@@ -269,46 +272,36 @@ function ReadinessView({
 }
 
 function ReleaseView({
-  release,
+  state,
   stageNumber,
   titleOf,
 }: {
-  release: ReleaseState
+  state: ReleaseState
   stageNumber: number
   titleOf: (articleId: string) => string
 }) {
-  switch (release.status) {
+  switch (state.status) {
     case 'idle':
     case 'unauthenticated':
       return null
     case 'sending':
       return <p role="status">단계를 공개하는 중입니다.</p>
     case 'released': {
-      const renamed = release.result.published.filter(
-        (article) => article.renamedQuestions.length > 0,
-      )
+      const { published, releasedAt, transferredTerms } = state.result
       return (
         <div role="status">
           <p className={styles.notice}>
-            {stageNumber}단계를 공개했습니다(
-            {formatTime(release.result.releasedAt)}). 글 {release.result.published.length}편을
-            게시했습니다.
+            {stageNumber}단계를 공개했습니다({formatAdminTime(releasedAt)}). 글 {published.length}
+            편을 게시했습니다.
           </p>
-          {renamed.map((article) => (
-            <p key={article.articleId} className={styles.hint}>
-              {titleOf(article.articleId)}: 이 문제는 이미 답한 사용자에게도 새 문제로 보입니다(
-              {article.renamedQuestions.map((rename) => `${rename.from} → ${rename.to}`).join(', ')}
-              ).
-            </p>
-          ))}
-          {release.result.transferredTerms.length > 0 ? (
-            <p className={styles.hint}>
-              넘겨받은 용어:{' '}
-              {release.result.transferredTerms
-                .map((term) => `${term.termId}(${term.fromArticleId} → ${term.toArticleId})`)
-                .join(', ')}
-            </p>
-          ) : null}
+          <PublishedChanges
+            renamed={published.map((article) => ({
+              title: titleOf(article.articleId),
+              articleId: article.articleId,
+              renamedQuestions: article.renamedQuestions,
+            }))}
+            transferredTerms={transferredTerms}
+          />
         </div>
       )
     }
@@ -316,14 +309,14 @@ function ReleaseView({
       return (
         <div>
           <p role="alert" className={styles.notice}>
-            {release.message} 아무 글도 게시하지 않았습니다.
+            {state.message} 아무 글도 게시하지 않았습니다.
           </p>
-          {release.articles.map((article) => (
+          {state.articles.map((article) => (
             <PublishCheckResultList
               key={article.articleId}
               title={`${titleOf(article.articleId)} (${article.articleId})`}
               failures={article.failures}
-              checkVersion={release.checkVersion}
+              checkVersion={state.checkVersion}
               announce={false}
             />
           ))}
@@ -333,13 +326,13 @@ function ReleaseView({
       return (
         <div role="alert">
           <p className={styles.notice}>
-            {release.message} 그사이 글 목록이나 초안이 바뀌었습니다. 미리 검사를 다시 한 뒤
+            {state.message} 그사이 글 목록이나 초안이 바뀌었습니다. 미리 검사를 다시 한 뒤
             공개하세요.
           </p>
           {/* 서버가 읽은 공개 집합이다(계약 §11). 어느 글이 바뀌었는지 보이기만 하고 이 목록으로 다시 보내지 않는다. */}
-          {release.articles.length > 0 ? (
+          {state.articles.length > 0 ? (
             <ul className={styles.issues} aria-label="서버가 읽은 공개 글">
-              {release.articles.map((article) => (
+              {state.articles.map((article) => (
                 <li key={article.articleId}>
                   {titleOf(article.articleId)} ({article.articleId}) · 초안 {article.draftVersion}번
                 </li>
@@ -353,15 +346,15 @@ function ReleaseView({
     case 'failed':
       return (
         <p role="alert" className={styles.notice}>
-          {release.message}
+          {state.message}
         </p>
       )
     case 'invalid':
       return (
         <div role="alert">
-          <p className={styles.notice}>{release.message}</p>
+          <p className={styles.notice}>{state.message}</p>
           <ul className={styles.issues}>
-            {release.fields.map((field) => (
+            {state.fields.map((field) => (
               <li key={`${field.field}:${field.message}`}>
                 {field.field}: {field.message}
               </li>

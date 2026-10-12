@@ -1,0 +1,100 @@
+/* 글 화면의 예시 카드다. 독자 화면(`LearningArticlePage`)과 관리 미리 보기가 함께 쓴다. */
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: var(--thorp-text-heading, 1.05rem);
+}
+
+.example {
+  padding: var(--thorp-pad-card, 20px 22px);
+  border: 1px solid var(--thorp-line);
+  border-radius: var(--thorp-radius-card, 14px);
+  background: var(--thorp-surface);
+}
+
+.exampleList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exampleList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: var(--thorp-text-body, 0.95rem);
+}
+
+.weight {
+  font-family: var(--thorp-font-number, var(--thorp-font-mono));
+  font-variant-numeric: tabular-nums;
+}
+
+.disclaimer {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.82rem);
+}
+
+@media (max-width: 600px) {
+  .example {
+    padding: var(--thorp-pad-card, 16px);
+  }
+}
+
+/* 새 디자인: 섹터 줄을 선으로 나누고, 비중은 첫 화면 숫자처럼 굵게 둔다. */
+:global(:root:not([data-design='classic'])) .exampleList li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--thorp-line);
+}
+
+:global(:root:not([data-design='classic'])) .exampleList li:last-child {
+  border-bottom: 0;
+}
+
+:global(:root:not([data-design='classic'])) .weight {
+  font-weight: var(--thorp-number-weight);
+}
+
+/*
+  예시 카드: [예시 | 섹터·비중 | 시작 버튼] 세 칸을 세로 가운데로 맞춘다. '예시'가 섹터 줄들 사이 높이에 서서
+  카드가 한 줄의 문장처럼 읽힌다. 섹터 칸이 가장 넓고, 버튼은 제 칸의 가운데에 선다. 안내 문장은 카드 오른쪽 아래다.
+*/
+.example {
+  display: grid;
+  grid-template-columns: minmax(56px, auto) minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px 40px;
+}
+
+.example .sectionTitle {
+  margin: 0;
+}
+
+.example .disclaimer {
+  grid-column: 1 / -1;
+  text-align: right;
+}
+
+.exampleSectors {
+  min-width: 0;
+}
+
+.exampleAction {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .example {
+    grid-template-columns: 1fr;
+  }
+
+  .exampleAction {
+    justify-content: stretch;
+  }
+}
