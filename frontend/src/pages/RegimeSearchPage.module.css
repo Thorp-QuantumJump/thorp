@@ -35,6 +35,6 @@
 /* 사례 상세의 '이 기간으로 전략 비교'(S15P21E205-450). 이동이라 링크이지만 눈에 띄는 버튼 모양으로 둔다. */
 .caseActionRow { margin: 16px 0 0; }
 .caseAction { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-accent); color: var(--thorp-background); font-weight: 700; text-decoration: none; }
-.caseAction:hover { background: var(--thorp-accent-hover); }
+.caseAction:hover { background: var(--thorp-accent-hover, var(--thorp-accent-soft)); }
 .caseAction:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 
