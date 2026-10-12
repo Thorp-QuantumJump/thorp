@@ -21,6 +21,7 @@ import {
   readingRecord,
   retryResult,
   unreadRecord,
+  learnerOverview,
 } from '@/test/learningMeFixtures'
 import { LearningArticlePage } from './LearningArticlePage'
 
@@ -32,12 +33,16 @@ import { LearningArticlePage } from './LearningArticlePage'
  * 나의 학습 통로는 대역으로 바꾼다. 기본 글 기록은 연 적이 없는 글이다(T190).
  */
 
+/** '나의 학습' 전체를 받지 못한 결과. 완료 카드는 그림과 다음 목표 없이 B12의 글자만 보인다. */
+const overviewFailure = { status: 'failed', kind: 'network', code: null, message: '연결하지 못했습니다.' } as const
+
 const apiMocks = vi.hoisted(() => ({
   fetchLearningArticle: vi.fn(),
 }))
 const glossaryMocks = vi.hoisted(() => ({ fetchGlossaryEntry: vi.fn() }))
 const meMocks = vi.hoisted(() => ({
   fetchLearnerArticle: vi.fn(),
+  fetchLearningMe: vi.fn(),
   completeArticle: vi.fn(),
   answerQuestion: vi.fn(),
   retryAnswer: vi.fn(),
@@ -131,6 +136,9 @@ describe('LearningArticlePage', () => {
     glossaryMocks.fetchGlossaryEntry.mockReset()
     meMocks.fetchLearnerArticle.mockReset()
     meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: unreadRecord })
+    // 완료 카드의 다음 목표(T204)는 따로 확인한다. 여기서는 받지 못한 것으로 두어 B12의 글자만 본다.
+    meMocks.fetchLearningMe.mockReset()
+    meMocks.fetchLearningMe.mockResolvedValue(overviewFailure)
     probedState = undefined
   })
 
@@ -731,6 +739,7 @@ describe('LearningArticlePage — 로그인 기록', () => {
     apiMocks.fetchLearningArticle.mockReset()
     for (const mock of Object.values(meMocks)) mock.mockReset()
     meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: unreadRecord })
+    meMocks.fetchLearningMe.mockResolvedValue(overviewFailure)
     recheck.mockReset()
     recheck.mockResolvedValue({ status: 'expired', user: null })
     FakeIntersectionObserver.instances = []
@@ -805,6 +814,154 @@ describe('LearningArticlePage — 로그인 기록', () => {
     expect(await within(screen.getByRole('status')).findByText(notice)).not.toBeNull()
     reachArticleEnd()
     expect(meMocks.completeArticle).toHaveBeenCalledTimes(1)
+  })
+
+  it("완료 뒤 '나의 학습'을 다시 받아 알림과 카드 끝에 다음 목표를 덧붙인다(T204·T208)", async () => {
+    meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+    meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: learnerOverview })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    // 완료 카드가 놓이기 전에는 부르지 않는다.
+    expect(meMocks.fetchLearningMe).not.toHaveBeenCalled()
+
+    reachArticleEnd()
+
+    const goal = '다음 레벨까지 50, 다음 배지(모두 맞힘 1편)까지 1편입니다.'
+    const notice = `2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다. ${goal}`
+    expect(await within(screen.getByRole('status')).findByText(notice)).not.toBeNull()
+    const card = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+    expect(within(card).getByText(notice)).not.toBeNull()
+    expect(within(card).getByText('다음 배지')).not.toBeNull()
+  })
+
+  it("다시 연 완료 글도 '나의 학습'을 받아 단계 완주 메달을 배지로 그린다(US6 시나리오 8, T204)", async () => {
+    // 2단계 완주 배지를 받은 뒤 그 단계에 글이 더해져, 지금은 4편 중 2편만 읽은 상태다.
+    meMocks.fetchLearnerArticle.mockResolvedValue({ status: 'ok', data: completedRecord })
+    meMocks.fetchLearningMe.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...learnerOverview,
+        badges: learnerOverview.badges.map((item) =>
+          item.badgeKey === 'stage-swell-and-risk'
+            ? { ...item, status: 'EARNED', earnedAt: '2026-11-18T00:00:00Z', progress: null }
+            : item,
+        ),
+      },
+    })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+
+    const card = await screen.findByRole('region', { name: '완료 · 2026-11-20' })
+    expect(within(card).getByText('2단계 · 4편 중 2편 읽음')).not.toBeNull()
+    await waitFor(() => expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(card.querySelector('[data-medal="stage-earned"]')).not.toBeNull())
+    expect(card.querySelector('[data-medal="stage-notYet"]')).toBeNull()
+    // 이 화면에서 받은 것이 없으므로 받은 것 칸과 알림은 그대로 비어 있다.
+    expect(within(card).queryByText('이번에 받은 경험치')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it("완료 뒤 '나의 학습' 요청의 정산으로 생긴 배지도 완료 카드와 알림에 더한다(FR-030)", async () => {
+    meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+    meMocks.fetchLearningMe.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...learnerOverview,
+        gained: {
+          exp: [],
+          expTotal: 0,
+          badges: [{ badgeKey: 'persistence', family: 'SPECIAL', name: '끈기' }],
+          levelBefore: 3,
+          levelAfter: 3,
+        },
+      },
+    })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    reachArticleEnd()
+
+    const notice =
+      '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다. 새 배지: 끈기. ' +
+      '다음 레벨까지 50, 다음 배지(모두 맞힘 1편)까지 1편입니다.'
+    expect(await within(screen.getByRole('status')).findByText(notice)).not.toBeNull()
+    const card = screen.getByRole('region', { name: '완료 · 2026-11-20' })
+    const badgeColumn = within(card).getByText('새 배지').parentElement!
+    expect(badgeColumn.textContent).toContain('끈기')
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
+  })
+
+  /** 운영자의 변경으로 채워져 '나의 학습' 요청의 정산에서 생긴 배지(계약 §4). */
+  const settledPersistence = {
+    ...learnerOverview,
+    gained: {
+      exp: [],
+      expTotal: 0,
+      badges: [{ badgeKey: 'persistence', family: 'SPECIAL', name: '끈기' }],
+      levelBefore: 3,
+      levelAfter: 3,
+    },
+  }
+  const lateNotice = '새 배지: 끈기. 다음 레벨까지 50, 다음 배지(모두 맞힘 1편)까지 1편입니다.'
+
+  it("경험치만 받은 완료라 덧붙일 알림이 없어도 '나의 학습'의 정산으로 생긴 배지는 알린다(계약 §4)", async () => {
+    meMocks.completeArticle.mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...completionResult,
+        stageProgress: { ...completionResult.stageProgress, completedCount: 3, stageCompleted: false },
+        gained: {
+          exp: [{ kind: 'ARTICLE_COMPLETED', points: 20 }],
+          expTotal: 20,
+          badges: [],
+          levelBefore: 2,
+          levelAfter: 2,
+        },
+      },
+    })
+    meMocks.fetchLearningMe.mockResolvedValue({ status: 'ok', data: settledPersistence })
+    loaded(quickArticle)
+
+    renderArticle('/learn/swell-reading', signedInAuth)
+    await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+    reachArticleEnd()
+
+    expect(await within(screen.getByRole('status')).findByText(lateNotice)).not.toBeNull()
+    expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1)
+  })
+
+  it("'나의 학습'이 기다림(4초)을 넘겨 오면 받은 것만 먼저 읽히고, 그 정산으로 생긴 배지는 따로 한 번 알린다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      let resolveMe: (value: unknown) => void = () => {}
+      meMocks.completeArticle.mockResolvedValue({ status: 'ok', data: completionResult })
+      meMocks.fetchLearningMe.mockReturnValue(new Promise((resolve) => (resolveMe = resolve)))
+      loaded(quickArticle)
+
+      renderArticle('/learn/swell-reading', signedInAuth)
+      await screen.findByRole('heading', { level: 1, name: '너울 읽기' })
+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())
+      reachArticleEnd()
+      await waitFor(() => expect(meMocks.fetchLearningMe).toHaveBeenCalledTimes(1))
+
+      await act(async () => {
+        vi.advanceTimersByTime(4100)
+      })
+      const first = '2단계 글 4편을 모두 읽었습니다. 새 배지: 2단계 완주. 레벨 3이 되었습니다.'
+      expect(await within(screen.getByRole('status')).findByText(first)).not.toBeNull()
+
+      await act(async () => resolveMe({ status: 'ok', data: settledPersistence }))
+      expect(await within(screen.getByRole('status')).findByText(lateNotice)).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('알림 영역은 완료 전부터 비어 있는 채로 있고, 뒤에 받은 것은 그것만 알린다', async () => {
@@ -903,6 +1060,10 @@ describe('LearningArticlePage — 로그인 기록', () => {
     renderArticle('/learn/swell-reading', signedInAuth)
 
     expect(await screen.findByText('62%까지 읽었습니다')).not.toBeNull()
+    // 앞에 그 글 단계 색의 '읽는 중' 도장을 작게 둔다. 진행 호가 기록된 비율만큼 찬다(T209).
+    const resumeStamp = screen.getByText('62%까지 읽었습니다').closest('p')!.querySelector('[data-stamp="reading"]')!
+    expect(resumeStamp.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(resumeStamp.querySelector('[data-part="progress"]')?.getAttribute('stroke-dasharray')).toBe('62 100')
     expect(scrollTo).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: '이어서 읽기' }))
     expect(scrollTo).toHaveBeenCalledTimes(1)

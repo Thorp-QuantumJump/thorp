@@ -190,3 +190,8 @@
     gap: 12px;
   }
 }
+
+/* 로그인 상태를 다시 확인하는 동안 나의 학습 상태 표시를 자리를 둔 채 숨긴다(research R33). */
+.learnerConcealed [data-learner-mark] {
+  visibility: hidden;
+}

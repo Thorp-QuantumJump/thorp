@@ -8,7 +8,9 @@
   padding: 22px 24px;
   border: 1.5px solid var(--thorp-line-strong);
   border-radius: 16px;
-  background: linear-gradient(120deg, rgb(3 199 90 / 4%), transparent 55%), var(--thorp-surface);
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--thorp-accent) 4%, transparent), transparent 55%),
+    var(--thorp-surface);
 }
 
 .tall {
@@ -16,8 +18,12 @@
   min-height: 230px;
   padding: 28px;
   background:
-    radial-gradient(80% 120% at 90% 10%, rgb(3 199 90 / 6%), transparent 60%),
-    linear-gradient(120deg, rgb(3 199 90 / 4%), transparent 55%),
+    radial-gradient(
+      80% 120% at 90% 10%,
+      color-mix(in srgb, var(--thorp-accent) 6%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(120deg, color-mix(in srgb, var(--thorp-accent) 4%, transparent), transparent 55%),
     var(--thorp-surface);
 }
 
