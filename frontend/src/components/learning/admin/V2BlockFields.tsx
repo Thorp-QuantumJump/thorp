@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import type { AdminDraftBlockV2, DraftSourceRef } from '@/types/learningAdmin'
-import { FIELD_RUNS } from './editableDraft'
+import type { DraftSourceRef } from '@/types/learningAdmin'
+import { FIELD_RUNS, type EditableBlockV2 } from './editableDraft'
 import { NumberField } from './NumberField'
 import { RichTextField } from './RichTextField'
 import styles from './AdminEditor.module.css'
@@ -13,7 +13,7 @@ import styles from './AdminEditor.module.css'
  * 저장에서 반드시 거절되므로 만들 이유가 없다.
  */
 
-type EditableBlock = AdminDraftBlockV2<string>
+type EditableBlock = EditableBlockV2
 
 export type TermOption = { termId: string; label: string }
 

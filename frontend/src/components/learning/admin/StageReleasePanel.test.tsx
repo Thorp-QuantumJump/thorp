@@ -2,14 +2,15 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { adminReadyReadiness, adminStages, adminV2Article } from '@/test/learningFixtures'
-import { adminDraftKey, loadUnsentDraft, saveUnsentDraft } from './adminDraftStorage'
+import { adminDraftKey, readUnsentDraft, saveUnsentDraft } from './adminDraftStorage'
 import { toEditableDraft } from './editableDraft'
 import { StageReleasePanel } from './StageReleasePanel'
 
 /**
  * 013 T174. 단계 공개(FR-031, 계약 §10·§11, research R23, quickstart 8-2·8-3).
  *
- * - 미리 검사를 통과하기 전과 확인 창에서 취소했을 때는 공개 요청이 없다
+ * - 미리 검사를 받기 전과 확인 창에서 취소했을 때는 공개 요청이 없다
+ * - 미리 검사에 걸린 것이 있어도 공개는 누를 수 있고, 확인 창이 서버가 거절한다고 먼저 알린다(quickstart 8-1·8-3)
  * - 걸린 항목은 서버 문장 그대로 글마다 보인다
  * - 공개에 성공하면 게시된 글의 탭 보관본이 게시 결과대로 고쳐지고 초안 번호는 그대로다
  */
@@ -44,7 +45,7 @@ afterEach(() => {
 })
 
 describe('StageReleasePanel', () => {
-  it('미리 검사를 통과하기 전에는 공개할 수 없고, 확인 창에서 취소하면 요청하지 않는다', async () => {
+  it('미리 검사를 받기 전에는 공개할 수 없고, 확인 창에서 취소하면 요청하지 않는다', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderPanel()
     const user = userEvent.setup()
@@ -63,10 +64,12 @@ describe('StageReleasePanel', () => {
     expect(confirm.mock.calls[0][0]).toContain('물때 읽기')
     expect(confirm.mock.calls[0][0]).toContain('물길 깊이 재기')
     expect(confirm.mock.calls[0][0]).toContain('되돌릴 수 없습니다')
+    expect(confirm.mock.calls[0][0]).not.toContain('거절')
     expect(apiMocks.releaseStage).not.toHaveBeenCalled()
   })
 
-  it('미리 검사에 걸린 글과 막는 것을 서버 문장 그대로 보이고 공개를 열지 않는다', async () => {
+  it('미리 검사에 걸린 글과 막는 것을 서버 문장 그대로 보이고, 공개 확인 창이 거절될 것을 알린다', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     apiMocks.fetchStageReadiness.mockResolvedValue({
       status: 'loaded',
       readiness: {
@@ -97,7 +100,14 @@ describe('StageReleasePanel', () => {
     const list = screen.getByRole('region', { name: '물길 깊이 재기 (channel-depth)' })
     expect(within(list).getByText('글 맨 위에 세 줄 핵심 요약이 있어야 합니다.')).not.toBeNull()
     expect(within(list).getByText('본문 1번째 블록 · 2번째 줄')).not.toBeNull()
-    expect(screen.getByRole('button', { name: '1단계 공개' })).toHaveProperty('disabled', true)
+
+    // 판정은 서버가 공개 요청에서 다시 한다. 화면은 막지 않고 확인 창에서 먼저 알린다.
+    const release = screen.getByRole('button', { name: '1단계 공개' })
+    expect(release).toHaveProperty('disabled', false)
+    await user.click(release)
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(confirm.mock.calls[0][0]).toContain('서버가 공개를 거절할 것입니다')
+    expect(apiMocks.releaseStage).not.toHaveBeenCalled()
   })
 
   it('공개 422는 글마다 걸린 항목을 그대로 보이고 아무 글도 게시하지 않았다고 알린다', async () => {
@@ -171,7 +181,7 @@ describe('StageReleasePanel', () => {
     expect(screen.getByText(/q4 → q7/)).not.toBeNull()
     expect(onReleased).toHaveBeenCalledTimes(1)
 
-    const lookup = loadUnsentDraft('channel-depth')
+    const lookup = readUnsentDraft('channel-depth')
     expect(lookup.status).toBe('found')
     if (lookup.status !== 'found') return
     expect(lookup.unsent.draftVersion).toBe(4)

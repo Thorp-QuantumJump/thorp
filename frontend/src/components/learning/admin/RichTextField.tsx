@@ -1,5 +1,11 @@
 import { useId } from 'react'
-import { ALL_RUNS, parseRichText, richTextLength, type AllowedRuns } from './richTextSyntax'
+import {
+  ALL_RUNS,
+  describePosition,
+  parseRichText,
+  richTextLength,
+  type AllowedRuns,
+} from './richTextSyntax'
 import styles from './AdminEditor.module.css'
 
 /**
@@ -65,7 +71,7 @@ export function RichTextField({
         <ul id={issuesId} className={styles.issues}>
           {parsed.issues.map((issue, index) => (
             <li key={index}>
-              {issue.line}줄 {issue.column}칸: {issue.message}
+              {describePosition(issue)}: {issue.message}
             </li>
           ))}
         </ul>

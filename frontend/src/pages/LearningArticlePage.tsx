@@ -1,10 +1,12 @@
-import { ArrowLeft, ArrowUpRight } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchLearningArticle, type LearningArticleResult } from '@/api/learning'
 import { useAuth } from '@/auth/auth-context'
 import { ArticleBody } from '@/components/learning/article/ArticleBody'
 import { ArticleEnd, type ArticleEndMode } from '@/components/learning/article/ArticleEnd'
+import { ArticleExample } from '@/components/learning/article/ArticleExample'
+import { ArticleSourceList } from '@/components/learning/article/ArticleSourceList'
 import { EditionNotice } from '@/components/learning/article/EditionNotice'
 import { ResumeLine } from '@/components/learning/article/ResumeLine'
 import { useArticleCompletion } from '@/components/learning/article/useArticleCompletion'
@@ -16,13 +18,12 @@ import {
 } from '@/components/learning/article/useReadingPosition'
 import { useRestoreFocusAfterConceal } from '@/components/learning/article/useRestoreFocusAfterConceal'
 import { useSettledAuth, type SettledAuth } from '@/components/learning/article/useSettledAuth'
-import { ExampleEntry } from '@/components/learning/ExampleEntry'
 import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import { stageLocation } from '@/components/learning/learningPaths'
 import { ReturnLink } from '@/components/learning/ReturnLink'
 import { carriedLearningReturn } from '@/components/learning/returnTargets'
 import { AppHeader } from '@/components/navigation/AppHeader'
-import type { LearningArticle, LearningExample, LearningReturnState } from '@/types/learning'
+import type { LearningArticle, LearningReturnState } from '@/types/learning'
 import heading from '@/components/common/PageHeading.module.css'
 import styles from './LearningArticlePage.module.css'
 
@@ -319,7 +320,7 @@ function ArticleView({
 
       {/* 예시는 본문 끝 표지 뒤, 글 끝 자리 앞이다(FR-021). 예시가 없는 새 기준 글은 구역 전체가 없다(FR-003). */}
       {article.example ? (
-        <ExampleSection articleId={article.articleId} example={article.example} />
+        <ArticleExample articleId={article.articleId} example={article.example} headingLevel={2} />
       ) : null}
 
       {article.edition === 'CURRENT' ? (
@@ -338,7 +339,7 @@ function ArticleView({
       {article.edition === 'PRE_RELEASE' ? (
         <div className={styles.articleFooter}>
           {listLink}
-          <SourceList article={article} />
+          <ArticleSourceList sources={article.sources} headingLevel={2} />
         </div>
       ) : null}
 
@@ -390,60 +391,4 @@ function ArticleHeadLine({
       ) : null}
     </>
   )
-}
-
-function ExampleSection({ articleId, example }: { articleId: string; example: LearningExample }) {
-  return (
-    <section className={styles.example} aria-labelledby="learning-example-title">
-      {/* 왼쪽 절반은 예시 섹터와 비중, 오른쪽 절반은 그 예시로 시작하는 행동이다. */}
-      <h2 id="learning-example-title" className={styles.sectionTitle}>
-        예시
-      </h2>
-      <div className={styles.exampleSectors}>
-        <ul className={styles.exampleList}>
-          {example.sectors.map((sector) => (
-            <li key={sector.code}>
-              <span>{sector.name ?? sector.code}</span>
-              <span className={styles.weight}>{formatWeight(sector.weightTenths)}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className={styles.exampleAction}>
-        <ExampleEntry articleId={articleId} example={example} />
-      </div>
-      <p className={styles.disclaimer}>설명을 위한 예시이며 투자 권고가 아닙니다.</p>
-    </section>
-  )
-}
-
-function SourceList({ article }: { article: LearningArticle }) {
-  if (article.sources.length === 0) return null
-  return (
-    <section className={styles.sources} aria-labelledby="learning-sources-title">
-      {/* '출처'와 기관 이름을 한 줄에 잇는다. 주소가 있으면 밑줄과 화살표로 링크임을 보인다. */}
-      <h2 id="learning-sources-title" className={styles.sourcesLabel}>
-        출처
-      </h2>
-      <ul>
-        {article.sources.map((source, index) => (
-          <li key={index}>
-            {source.url ? (
-              <a href={source.url} target="_blank" rel="noopener noreferrer">
-                {source.label}
-                <ArrowUpRight size={14} aria-hidden="true" />
-              </a>
-            ) : (
-              source.label
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-/** 0.1%p 정수를 소수 한 자리 %로 보인다. 1000이 100%다. */
-function formatWeight(weightTenths: number): string {
-  return `${(weightTenths / 10).toFixed(1)}%`
 }

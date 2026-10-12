@@ -1,0 +1,49 @@
+/* 9월 판 글 끝 출처 목록이다. 독자 화면(`LearningArticlePage`)과 관리 미리 보기가 함께 쓴다. */
+
+/* 출처: '출처'와 기관 이름을 한 줄에 잇는다. 링크는 흰 글자·밑줄·화살표다. */
+.sources {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px 10px;
+  text-align: right;
+}
+
+.sourcesLabel {
+  margin: 0;
+  color: var(--thorp-muted);
+  font-size: var(--thorp-text-small, 0.82rem);
+  font-weight: 500;
+}
+
+.sources ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.sources a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 44px;
+  color: var(--thorp-foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--thorp-line-control);
+  text-underline-offset: 3px;
+}
+
+.sources a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* 키보드 초점은 2px 초록 외곽선이다(design-notes §6). */
+.sources a:focus-visible {
+  outline: var(--thorp-focus-outline-compact);
+  outline-offset: var(--thorp-focus-offset-compact);
+}
