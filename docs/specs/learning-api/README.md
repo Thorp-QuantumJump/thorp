@@ -25,7 +25,6 @@
 | 요청 | 200 `data` | 실패 |
 |---|---|---|
 | `GET /learning/curriculum` | 첫 단계를 공개한 뒤: [`curriculum.json`](examples/curriculum.json)(1·2단계 공개), 공개하기 전: [`curriculum-pre-release.json`](examples/curriculum-pre-release.json). 게시된 글이 없어도 200 | 5xx는 빈 배열로 대신하지 않는다 |
-| `GET /learning/articles` | [`articles-list.json`](examples/articles-list.json). 게시된 글이 없으면 `articles: []` | 5xx는 빈 배열로 대신하지 않는다 |
 | `GET /learning/articles/{articleId}` | `edition`마다 하나: [`article-current.json`](examples/article-current.json)(`CURRENT`), [`article-previous.json`](examples/article-previous.json)(`PREVIOUS`), [`article-pre-release.json`](examples/article-pre-release.json)(`PRE_RELEASE`). [`article.json`](examples/article.json)은 9월 판 필드의 기준이다 | 404 `LEARNING_ARTICLE_UNAVAILABLE` (없음·초안·게시 취소·형식 오류를 가르지 않는다) |
 | `GET /learning/terms/{termId}` | [`term.json`](examples/term.json) | 404 `LEARNING_TERM_NOT_READY` (초안뿐·게시 취소·없음·형식 오류를 가르지 않는다) |
 
@@ -33,7 +32,7 @@
 |---|---|
 | `curriculum-pre-release.json` | JSON 동치(실제 요청) |
 | `curriculum.json` | JSON 동치. `notices`가 지금 시각에 따라 달라지므로 시계를 2026-11-20T00:00:00Z로 고정한 조회 결과와 비교한다. 실제 요청은 `notices` 밖의 값을 같은지 본다. 변경 기록에는 두 종류(`STAGE_RELEASED`·`ARTICLE_ADDED`)가 모두 있고, 7일 안의 공개 안내가 두 줄이다 |
-| `articles-list.json`, `term.json` | JSON 동치 |
+| `term.json` | JSON 동치 |
 | `article.json` | 응답 가운데 이 파일에 있는 키만 JSON 동치(9월 판 필드) |
 | `article-current.json`, `article-previous.json`, `article-pre-release.json` | JSON 동치 |
 

@@ -117,7 +117,7 @@ public record CurriculumResponse(
     public record PreviousEditionArticle(
             String articleId, String title, String question, int readingMinutes) {}
 
-    /** 9월 판 목록(learning-public-api §2)의 한 줄과 같은 모양이다. */
+    /** B16에서 지운 9월 판 목록(learning-public-api §2)의 한 줄과 같은 모양이다. */
     public record PreReleaseArticle(
             String articleId, String title, String question, int readingOrder) {}
 

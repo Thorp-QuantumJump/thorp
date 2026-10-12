@@ -87,10 +87,11 @@ public class LearningQueryService {
     }
 
     /**
-     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로가 쓴다
-     * (learning-public-api §2). 017의 글 열거도 이 조회를 쓴다.
+     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로를 지운
+     * 뒤(learning-public-api §2) 지금 부르는 곳은 없다. 017 plan '근거 팩과 도구'의 {@code readArticle}이 게시 글 열거에 쓸
+     * 조회라 017 구현 전에도 남긴다(tasks ⑧·T197).
      *
-     * @return 게시된 글이 없으면 빈 목록. 빈 목록은 정상 화면이다(spec Edge Cases)
+     * @return 게시된 글이 없으면 빈 목록
      */
     public List<LearningArticleSummaryResult> listPublished() {
         return articleRepository.findPublishedOrdered();

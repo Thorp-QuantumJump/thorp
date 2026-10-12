@@ -3,7 +3,6 @@ package com.ssafy.thorp.learning.presentation.controller;
 import com.ssafy.thorp.common.web.response.ApiResponse;
 import com.ssafy.thorp.learning.application.service.LearningQueryService;
 import com.ssafy.thorp.learning.presentation.response.CurriculumResponse;
-import com.ssafy.thorp.learning.presentation.response.LearningArticleListResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningArticleResponse;
 import com.ssafy.thorp.learning.presentation.response.LearningTermResponse;
 import org.springframework.http.ResponseEntity;
@@ -36,14 +35,6 @@ public class LearningController {
     public ResponseEntity<ApiResponse<CurriculumResponse>> curriculum() {
         return ResponseEntity.ok(
                 ApiResponse.ok(CurriculumResponse.from(learningQueryService.curriculum())));
-    }
-
-    /** 공개 중인 글 목록. 게시된 글이 없으면 {@code articles: []}로 200이다. */
-    @GetMapping("/articles")
-    public ResponseEntity<ApiResponse<LearningArticleListResponse>> listArticles() {
-        return ResponseEntity.ok(
-                ApiResponse.ok(
-                        LearningArticleListResponse.from(learningQueryService.listPublished())));
     }
 
     /** 공개 중인 글 하나. 볼 수 없는 글은 404 {@code LEARNING_ARTICLE_UNAVAILABLE}이다. */

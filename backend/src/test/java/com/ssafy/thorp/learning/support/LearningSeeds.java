@@ -377,7 +377,7 @@ public final class LearningSeeds {
     }
 
     /**
-     * 목록 항목({@code articles-list.json}의 한 줄)만으로 최소 LEGACY 판을 심는다. 본문은 문단 하나, 예시는 두 섹터다.
+     * 목록 항목(커리큘럼 {@code preReleaseArticles}의 한 줄)만으로 최소 LEGACY 판을 심는다. 본문은 문단 하나, 예시는 두 섹터다.
      *
      * @return 심은 판의 대리키
      */
