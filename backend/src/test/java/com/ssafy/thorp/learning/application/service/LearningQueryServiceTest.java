@@ -83,7 +83,7 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionAttribute;
 
 /**
- * 공개 조회 유스케이스의 판정(learning-public-api §2·§3). 저장소·단계·대응표 포트는 목이고 규칙 파일은 실제 파일이다.
+ * 공개 조회 유스케이스의 판정(learning-public-api §1·§3·§4). 저장소·단계·대응표 포트는 목이고 규칙 파일은 실제 파일이다.
  *
  * <p>이 서비스는 초안 용어 저장소({@code LearningTermRepository})를 주입받지 않는다. 생성자에 그 타입이 없다는 것 자체가 "공개 응답을 초안
  * 용어로 만들지 않는다"는 구조적 보장이고, 아래 {@link #termSentenceComesFromSnapshot}이 값으로 확인한다.
