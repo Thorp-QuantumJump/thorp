@@ -66,7 +66,21 @@ export type GainedExp = {
   stageNumber?: number
 }
 
-export type GainedBadge = { badgeKey: string; family: string; name: string }
+/**
+ * 배지 갈래(계약 §1, data-model §12-4). 응답의 `badges`가 레벨·읽은 글·첫 답 정답·모두 맞힘·단계 완주·익힌 용어·특별
+ * 순서로 온다. 서버가 갈래를 더해도 응답 전체를 버리지 않도록 열어 두고, 화면은 모르는 갈래를 특별 갈래 자리에 둔다.
+ */
+export type BadgeFamily =
+  | 'LEVEL'
+  | 'READ'
+  | 'CORRECT'
+  | 'PERFECT'
+  | 'STAGE'
+  | 'TERMS'
+  | 'SPECIAL'
+  | (string & Record<never, never>)
+
+export type GainedBadge = { badgeKey: string; family: BadgeFamily; name: string }
 
 /** 이번 요청에서 새로 생긴 것(계약 §8). 화면은 조용한 알림으로 보인다. */
 export type Gained = {
@@ -177,7 +191,7 @@ export type PreparingReason =
 
 export type BadgeView = {
   badgeKey: string
-  family: string
+  family: BadgeFamily
   name: string
   criterion: string
   status: 'EARNED' | 'NOT_YET' | 'PREPARING' | (string & Record<never, never>)

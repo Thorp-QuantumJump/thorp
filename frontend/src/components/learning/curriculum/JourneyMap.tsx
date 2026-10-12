@@ -4,7 +4,7 @@ import { ArticleNode } from './ArticleNode'
 import { stageMarker, type ArticleProgressMap, type RoadKind } from './articleProgress'
 import { PreviousEditionCards } from './PreviousEditionCards'
 import { ReleaseBoundary } from './ReleaseBoundary'
-import { readRoadPoints, roadPointProps, stageAnchorProps } from './stageAnchors'
+import { learnerMarkProps, readRoadPoints, roadPointProps, stageAnchorProps } from './stageAnchors'
 import { StageBand } from './StageBand'
 import { isReleased } from './stages'
 import styles from './JourneyMap.module.css'
@@ -15,6 +15,8 @@ interface JourneyMapProps {
   progress?: ArticleProgressMap
   /** 단계 띠의 진행 자리(B13의 글 도장 줄과 단계 완주 메달). 없으면 글 수와 예상 읽기 시간이다 */
   renderStageProgress?: (stage: StageView) => ReactNode
+  /** 지금 이어 읽을 글(나의 학습의 '이어서 읽기'). 그 글의 카드가 빛난다 */
+  currentArticleId?: string | null
   /** 글로 옮겨 가도 처음 떠난 화면을 잃지 않게 싣는 navigation state */
   linkState?: unknown
 }
@@ -31,7 +33,7 @@ interface JourneyMapProps {
  * S자가 되고, 720px 미만에서는 노드가 한 줄로 서서 곧은 세로 길이 된다. 길을 그리는 700ms 움직임은
  * `prefers-reduced-motion: no-preference`에서만 있다. 길은 그림이라 보조 기술에 읽히지 않는다.
  */
-export function JourneyMap({ stages, progress, renderStageProgress, linkState }: JourneyMapProps) {
+export function JourneyMap({ stages, progress, renderStageProgress, currentArticleId, linkState }: JourneyMapProps) {
   const idPrefix = useId()
   const mapRef = useRef<HTMLDivElement>(null)
   const road = useMeasuredRoad(mapRef, stages, progress)
@@ -75,6 +77,7 @@ export function JourneyMap({ stages, progress, renderStageProgress, linkState }:
               stageNumber={stage.number}
               index={index}
               progress={progress?.get(article.articleId)}
+              current={article.articleId === currentArticleId}
               linkState={linkState}
             />
           ))}
@@ -90,7 +93,7 @@ export function JourneyMap({ stages, progress, renderStageProgress, linkState }:
   return (
     <div className={styles.map} ref={mapRef}>
       <h2 className={styles.srOnly}>단계별 글</h2>
-      <RoadLayer road={road} />
+      <RoadLayer road={road} tracked={progress !== undefined} />
       {released.map(region)}
       <ReleaseBoundary stages={stages} />
       {preparing.map(region)}
@@ -191,10 +194,12 @@ function useMeasuredRoad(
  * 잰 길을 그린다. 구간의 모양은 `data-kind`로 넘기고 색·굵기·점선은 `JourneyMap.module.css`가 정한다. 준비 중 단계로
  * 가는 점선 길에는 그리는 움직임을 주지 않는다.
  */
-function RoadLayer({ road }: { road: Road | null }) {
+function RoadLayer({ road, tracked }: { road: Road | null; tracked: boolean }) {
   if (!road) return null
   return (
     <svg
+      // 나의 학습 상태로 칠한 길이면 상태 표시다. 로그인 상태를 다시 확인하는 동안 화면이 숨긴다(research R33).
+      {...learnerMarkProps(tracked)}
       className={styles.road}
       width={road.width}
       height={road.height}

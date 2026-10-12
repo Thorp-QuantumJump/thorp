@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useLoginReturn } from '@/auth/useLoginReturn'
+import { useCompletionFollowUp, type CompletionFollowUp } from '@/hooks/useCompletionFollowUp'
 import type { CurrentLearningArticle, LearningReturnState } from '@/types/learning'
 import { GuestSample } from '../me/GuestSample'
+import { CompletionAnnouncement } from './CompletionAnnouncement'
 import { CompletionCard } from './CompletionCard'
 import { QuizPanel } from './QuizPanel'
-import type { Announcement, useLearnerArticle } from './useLearnerArticle'
+import type { useLearnerArticle } from './useLearnerArticle'
 import { useRestoreFocusAfterConceal } from './useRestoreFocusAfterConceal'
+import { useSettledAuth } from './useSettledAuth'
 import styles from './ArticleEnd.module.css'
 
 /** 로그인 사용자의 글 기록과 그 동작(`useLearnerArticle`). */
@@ -35,7 +38,7 @@ export type ArticleEndMode =
   | { kind: 'none' }
 
 interface ArticleEndProps {
-  article: Pick<CurrentLearningArticle, 'quiz' | 'next' | 'hasUnreleasedStages' | 'blocks'>
+  article: Pick<CurrentLearningArticle, 'quiz' | 'next' | 'hasUnreleasedStages' | 'blocks' | 'stage'>
   mode: ArticleEndMode
   /**
    * 로그인 상태를 다시 확인하는 중인가(research R33). 그동안 기록 자리(확인 문제·완료 카드·로그인 안내)를 내리지
@@ -68,12 +71,29 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   const concealable = concealed ? styles.concealed : undefined
   const unrecorded = mode.kind === 'guest' || mode.kind === 'expired'
 
-  const card = mode.kind === 'record' ? completionCard(article, mode.learner, learningReturn) : null
+  // 완료 카드의 다음 목표(레벨 길·다음 레벨까지·다음 배지)와 단계 완주 메달의 배지는 '나의 학습' 전체에서 읽는다(T204,
+  // US6 시나리오 8). 그 요청의 정산으로 생긴 것은 카드에 잇고 알린다. 받지 못해도 카드의 글자는 그대로다.
+  const { settled } = useSettledAuth()
+  const learner = mode.kind === 'record' ? mode.learner : null
+  const followUp = useCompletionFollowUp({
+    auth: settled,
+    enabled: learner !== null && hasCompletionCard(learner),
+    articleRevision: learner?.articleRevision ?? 0,
+    gainedCount: learner?.gained.length ?? 0,
+  })
+
+  const card = learner ? completionCard(article, learner, learningReturn, followUp) : null
 
   return (
     <div ref={endRef} className={styles.end}>
       {/* 새 배지·레벨 알림 영역. 완료 카드보다 먼저, 비어 있는 채로 둔다. 미리 있어야 바뀐 글자가 읽힌다(FR-030). */}
-      {mode.kind === 'record' ? <LiveAnnouncement announcement={mode.learner.announcement} /> : null}
+      {mode.kind === 'record' ? (
+        <CompletionAnnouncement
+          announcement={mode.learner.announcement}
+          notice={followUp.notice}
+          ready={followUp.finished}
+        />
+      ) : null}
 
       {mode.kind === 'expired' && mode.rejected ? (
         <div className={concealable}>
@@ -147,23 +167,10 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article
   )
 }
 
-/**
- * 새 배지·레벨의 조용한 알림(FR-030, 목업의 `#live`). 처음부터 비어 있는 영역에 방금 받은 것의 문장만 넣는다.
- * 앞서 알린 것을 다시 읽지 않고, 초점을 옮기지 않는다. 카드가 그려진 뒤에 글자를 넣도록 잠깐 기다린다.
- */
-function LiveAnnouncement({ announcement }: { announcement: Announcement | null }) {
-  const [text, setText] = useState('')
-  useEffect(() => {
-    setText('')
-    if (!announcement) return
-    const timer = setTimeout(() => setText(announcement.text), 250)
-    return () => clearTimeout(timer)
-  }, [announcement])
-  return (
-    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-      {text}
-    </p>
-  )
+/** 완료 카드가 놓이는가. 기록을 받았고 완료한 글이다. */
+function hasCompletionCard(learner: LearnerEnd): boolean {
+  if (learner.load.status !== 'loaded') return false
+  return learner.completion.status === 'done' || learner.load.record.state === 'COMPLETED'
 }
 
 /** 완료한 글이면 완료 카드를 짓는다. 기록을 받기 전이거나 아직 완료하지 않았으면 `null`이다. */
@@ -171,23 +178,28 @@ function completionCard(
   article: ArticleEndProps['article'],
   learner: LearnerEnd,
   learningReturn: LearningReturnState | undefined,
+  followUp: CompletionFollowUp,
 ) {
-  if (learner.load.status !== 'loaded') return null
+  if (learner.load.status !== 'loaded' || !hasCompletionCard(learner)) return null
   const record = learner.load.record
   const done = learner.completion.status === 'done' ? learner.completion.completion : null
-  if (!done && record.state !== 'COMPLETED') return null
 
   const terms = article.blocks.flatMap((block) => (block.type === 'term' ? [block.label] : []))
   return (
     <CompletionCard
       completedAt={done?.completedAt ?? record.completedAt ?? ''}
+      stageKey={article.stage.stageKey}
       stageProgress={done?.stageProgress ?? record.stageProgress}
       continueReading={done?.continueReading ?? record.continueReading}
-      gained={learner.gained}
+      gained={[...learner.gained, ...followUp.extra]}
       terms={terms}
       mastered={record.quiz.mastered}
       next={article.next}
       learningReturn={learningReturn}
+      overview={followUp.overview}
+      // 이 화면에서 방금 완료했으면 마지막 도장이 찍히는 움직임을 준다. 다시 연 완료 글은 최종 모습 그대로다.
+      freshCompletion={done !== null && !done.alreadyCompleted}
+      goalLateMs={followUp.lateMs}
       quiz={
         <QuizPanel
           // 글이나 기록을 다시 받으면 새 문제·새 첫 답으로 처음부터 그린다. 기록 중·실패 줄도 함께 비운다.

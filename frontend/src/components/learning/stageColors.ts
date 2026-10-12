@@ -23,6 +23,14 @@ export function stageColor(stageNumber: number): string {
 }
 
 /**
+ * 단계 색의 hex 값. 스테인드글라스처럼 단계 색을 밝히고 어둡게 섞어 여러 조각을 만드는 그림이 쓴다. 표에 없는
+ * 단계면 `null`이고, 그 그림은 단계 색 없이 그린다.
+ */
+export function stageHex(stageNumber: number): string | null {
+  return STAGE_COLORS[stageNumber] ?? null
+}
+
+/**
  * 준비 중 단계의 풍경과 머리 글자처럼 단계 색을 흐린 글자색 쪽으로 낮춘 색. 단계 색 45%다(목업 `low`). 이 비율을 쓰는
  * 곳은 이 함수 하나다.
  */

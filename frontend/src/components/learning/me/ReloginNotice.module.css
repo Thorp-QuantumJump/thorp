@@ -1,0 +1,35 @@
+/* 만료 동안의 재로그인 안내. 요약 패널 자리에 놓이는 한 줄이다. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin: 0 0 20px;
+  padding: 14px 20px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 16px;
+  background: var(--thorp-surface);
+  color: var(--thorp-copy);
+  font-size: 0.9375rem;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--thorp-brand-soft);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}
+
+@media (max-width: 719px) {
+  .notice {
+    padding: 12px 16px;
+  }
+}

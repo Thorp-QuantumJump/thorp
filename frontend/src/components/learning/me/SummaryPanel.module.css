@@ -1,0 +1,198 @@
+/*
+  '나의 학습' 요약 패널(013 design-notes §3.1, 목업 .journal). 반투명 유리 면 한 장이다. 넓은 화면에서 레벨·읽은 글·익힌
+  용어·이어서 읽기 네 칸이 한 줄이고, 좁은 화면에서 두 줄로 접힌다.
+*/
+.panel {
+  position: relative;
+  margin: 0 0 20px;
+  padding: 12px 20px 14px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--thorp-surface-raised) 80%, transparent),
+    color-mix(in srgb, var(--thorp-surface) 86%, transparent)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 7%),
+    0 24px 48px -28px rgb(0 0 0 / 90%);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .panel {
+    backdrop-filter: blur(14px);
+  }
+}
+
+/* 로그인 상태를 다시 확인하는 동안: 자리를 둔 채 보이지 않게만 한다(research R33). */
+.concealed {
+  visibility: hidden;
+}
+
+/* 기록을 받지 못했을 때의 패널. 실패 한 줄(RecordLoadFailure)의 글자 크기를 여기서 정한다. */
+.failed {
+  padding: 14px 20px;
+  font-size: 0.9375rem;
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--thorp-brand-soft);
+  outline-offset: 3px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.title {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--thorp-brand-soft);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 2.1fr 0.72fr 0.72fr 2.46fr;
+  align-items: stretch;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px 20px;
+  border-left: 1px solid var(--thorp-line);
+}
+
+.cell:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.levelCell {
+  flex-direction: row;
+  gap: 14px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.emblem {
+  display: block;
+  flex: none;
+  width: 64px;
+  height: 64px;
+}
+
+.emblem svg {
+  width: 100%;
+  height: 100%;
+}
+
+.levelText {
+  flex: 1;
+  min-width: 0;
+}
+
+.level {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  font: 800 1.65rem/1.1 var(--thorp-font-display, inherit);
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+}
+
+.sub b {
+  color: var(--thorp-foreground);
+}
+
+/* 닿을 수 없는 다음 레벨의 문장(FR-029) */
+.note {
+  margin: 2px 0 0;
+  color: var(--thorp-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.caption {
+  color: var(--thorp-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.number {
+  font: 800 1.65rem/1.15 var(--thorp-font-display, inherit);
+  letter-spacing: -0.02em;
+}
+
+.number small {
+  margin-left: 2px;
+  color: var(--thorp-copy);
+  font: 650 0.9rem var(--thorp-font-body, inherit);
+}
+
+.newBadge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--thorp-line);
+  color: var(--thorp-foreground);
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+@media (max-width: 1023px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 14px;
+  }
+
+  .levelCell,
+  .resumeCell {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .cell:nth-child(2) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 719px) {
+  .panel {
+    padding: 12px 16px 14px;
+  }
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+  }
+}

@@ -1,0 +1,11 @@
+/*
+  재질 그라디언트 가운데 의미 토큰과 같은 색(브랜드 초록 두 단)만 토큰으로 칠한다. 나머지 단은 MaterialDefs.tsx와
+  materials.ts에 값으로 있다. 토큰을 쓰므로 디자인 전환(classic)을 함께 따른다.
+*/
+.brandSoft {
+  stop-color: var(--thorp-brand-soft);
+}
+
+.brand {
+  stop-color: var(--thorp-brand-primary);
+}

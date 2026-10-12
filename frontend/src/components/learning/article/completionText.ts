@@ -54,7 +54,9 @@ function subjectParticle(value: number): string {
  * 이 응답으로 단계를 다 읽었으면 그 문장(목업 '1단계 글 4편을 모두 읽었습니다.'). 단계 완주 경험치가 생긴
  * 완료 응답에서만 짓는다. 이미 다 읽었던 단계의 글을 다시 열었을 때는 새로 일어난 일이 아니라 짓지 않는다.
  */
-export function stageCompletedSentence(entry: GainedEntry): string | null {
+export function stageCompletedSentence(
+  entry: Pick<GainedEntry, 'gained' | 'stageProgress'>,
+): string | null {
   const progress = entry.stageProgress
   if (!progress?.stageCompleted) return null
   const completedNow = entry.gained.exp.some(
@@ -67,8 +69,25 @@ export function stageCompletedSentence(entry: GainedEntry): string | null {
     : null
 }
 
+/** 새로 일어난 일(경험치·배지·레벨)이 있는 `gained`인가. */
+export function hasGainedNews(gained: Gained): boolean {
+  return gained.exp.length > 0 || gained.badges.length > 0 || gained.levelAfter > gained.levelBefore
+}
+
+/**
+ * 응답 하나에서 '새 배지'로 말할 배지. 레벨이 오른 응답에는 그 레벨의 레벨 갈래 배지가 함께 온다(서버는 배지 목록을
+ * 레벨 갈래부터 정산한다, data-model §12-4). 레벨은 '레벨 3이 되었습니다'로 따로 말하므로 그 응답의 레벨 갈래 배지는
+ * 새 배지로 다시 말하지 않는다(design-notes §7 완료 카드 상태 문장, §3.1).
+ */
+export function newBadgesOf(entry: Pick<GainedEntry, 'gained'>): GainedEntry['gained']['badges'] {
+  const { badges, levelBefore, levelAfter } = entry.gained
+  return levelAfter > levelBefore ? badges.filter((badge) => badge.family !== 'LEVEL') : badges
+}
+
 /** 받은 것 가운데 레벨이 오른 마지막 응답. 오르지 않았으면 `null`이다. */
-export function reachedLevel(entries: readonly GainedEntry[]): GainedEntry | null {
+export function reachedLevel<T extends Pick<GainedEntry, 'gained'>>(
+  entries: readonly T[],
+): T | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const { gained } = entries[index]
     if (gained.levelAfter > gained.levelBefore) return entries[index]
@@ -83,14 +102,24 @@ export function reachedLevel(entries: readonly GainedEntry[]): GainedEntry | nul
  * <p>완료 카드의 보이는 상태 문장은 이 화면에서 받은 것 전부로, 조용한 알림은 방금 받은 응답 하나로 짓는다.
  * 알림이 앞서 알린 것까지 다시 읽지 않게 하려는 것이다(quickstart §13 '한 번 읽힌다').
  */
-export function gainedNotice(entries: readonly GainedEntry[]): string {
+export function gainedNotice(
+  entries: readonly Pick<GainedEntry, 'gained' | 'stageProgress'>[],
+): string {
   const parts: string[] = []
   for (const entry of entries) {
     const stage = stageCompletedSentence(entry)
     if (stage) parts.push(stage)
-    for (const badge of entry.gained.badges) parts.push(`새 배지: ${badge.name}.`)
+    for (const badge of newBadgesOf(entry)) parts.push(`새 배지: ${badge.name}.`)
   }
   const level = reachedLevel(entries)?.gained.levelAfter
   if (level !== undefined) parts.push(`레벨 ${level}${subjectParticle(level)} 되었습니다.`)
   return parts.join(' ')
+}
+
+/**
+ * '나의 학습' 응답 하나의 `gained`를 알릴 문장(계약 §1, FR-030). 그 요청의 정산으로 새로 생긴 배지·레벨이다. 이
+ * 응답에는 단계 진행이 없어 단계를 다 읽은 문장은 짓지 않는다. 새 배지·레벨이 없으면 빈 문자열이다.
+ */
+export function settledGainedNotice(gained: Gained): string {
+  return gainedNotice([{ gained, stageProgress: null }])
 }

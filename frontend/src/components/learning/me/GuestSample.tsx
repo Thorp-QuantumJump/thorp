@@ -49,19 +49,27 @@ export function GuestSample({ place }: GuestSampleProps) {
   )
 }
 
+/**
+ * 브랜드 초록(`--thorp-accent`)을 `percent`%만 비친 색. 토큰이라 SVG 표현 속성(`fill="…"`)이 아니라 `style`로 칠한다
+ * (`stageColors.ts`와 같은 규칙).
+ */
+function accent(percent: number): string {
+  return `color-mix(in srgb, var(--thorp-accent) ${percent}%, transparent)`
+}
+
 /** 시작과 끝 높이가 같은 수평 길 위에 도장 원판 셋과 메달 실루엣을 놓은 견본(목업 `sampleArt`). */
 function SampleArt() {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const road = 'M16 78 C66 52 116 52 166 78 S 266 104 316 78'
-  const fill = 'rgb(3 199 90 / 0.18)'
-  const shade = 'rgb(3 199 90 / 0.09)'
+  const fill = accent(18)
+  const shade = accent(9)
   const groove = 'rgb(0 0 0 / 0.28)'
 
   // 도장 견본: 윤곽선 없이 채운 원판과 안쪽의 눌린 홈. 실선 회색도 점선도 아니다.
   const stamp = (x: number, y: number, face = fill) => (
     <g key={`${x}-${y}`}>
-      <ellipse cx={x} cy={y + 3.5} rx="12" ry="12" fill={shade} />
-      <circle cx={x} cy={y} r="12" fill={face} />
+      <ellipse cx={x} cy={y + 3.5} rx="12" ry="12" style={{ fill: shade }} />
+      <circle cx={x} cy={y} r="12" style={{ fill: face }} />
       <circle cx={x} cy={y} r="8.6" fill="none" stroke={groove} strokeWidth="1.2" />
       <path d={`M${x - 6.5} ${y - 6} A8.5 8.5 0 0 1 ${x + 3} ${y - 8.4}`} fill="none" stroke="rgb(255 255 255 / 0.16)" strokeWidth="1.4" strokeLinecap="round" />
     </g>
@@ -99,14 +107,14 @@ function SampleArt() {
         <path d={road} fill="none" stroke={`url(#${id}-road)`} strokeWidth="5" strokeLinecap="round" />
         {stamp(66, 60.6)}
         {stamp(116, 60.6)}
-        {stamp(166, 78, 'rgb(3 199 90 / 0.11)')}
-        <path d="M216 95.4 V74 M266 95.4 V74" stroke="rgb(3 199 90 / 0.12)" strokeWidth="1.6" />
+        {stamp(166, 78, accent(11))}
+        <path d="M216 95.4 V74 M266 95.4 V74" style={{ stroke: accent(12) }} strokeWidth="1.6" />
         {silhouette('read', 216, 50, 0.42)}
         {silhouette('first', 266, 50, 0.4)}
         {silhouette('all', 296, 22, 0.32)}
         {silhouette('terms', 240, 14, 0.32)}
         <circle cx="322" cy="56" r="26" fill={`url(#${id}-glow)`} opacity="0.35" />
-        <ellipse cx="322" cy="80" rx="15" ry="2.6" fill="rgb(3 199 90 / 0.08)" />
+        <ellipse cx="322" cy="80" rx="15" ry="2.6" style={{ fill: accent(8) }} />
         <g transform="translate(322 59.5) scale(0.42) translate(-50 -50)">
           <path d={medalPath('stage')} fill={`url(#${id}-object)`} />
           <g fill="none" stroke={groove} strokeWidth="3.2" strokeLinejoin="round">

@@ -1,0 +1,342 @@
+/*
+  완료 카드의 그림 장면(목업 '글 끝'). 기본은 움직임이 없는 최종 모습이고, 움직임은 prefers-reduced-motion:
+  no-preference에서만 더한다. 모든 움직임은 950ms 안에 끝나고 되풀이하지 않는다(design-notes §5).
+*/
+
+/*
+  단계 도장 줄: 초록 길 위의 도장과 줄 끝의 단계 완주 메달. 도장 칸은 32px에서 14px까지 줄어들어 글이 많은 단계(예:
+  아홉 편)도 375px 화면의 한 줄에 들어간다. 카드가 넘치는 부분을 잘라 내므로 줄이 넘치면 메달이 사라진다.
+*/
+.path {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  margin: 6px 0 2px;
+}
+
+.stamps {
+  position: relative;
+  display: grid;
+  flex: 0 1 auto;
+  grid-auto-columns: minmax(14px, 32px);
+  grid-auto-flow: column;
+  column-gap: clamp(4px, 1.8vw, 22px);
+  align-items: center;
+  min-width: 0;
+}
+
+.stamps::before {
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  left: 0;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
+  background: var(--thorp-brand-soft);
+  content: '';
+}
+
+.stamp {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+}
+
+.stamp svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.medal {
+  display: block;
+  flex: none;
+  width: 54px;
+  height: 54px;
+}
+
+.medal svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 방금 얻은 메달·표장(96px)과 그 뒤의 빛 한 겹. 이 카드에서 빛나는 곳은 이 둘이다(design-notes §2). */
+.hero {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 4px;
+}
+
+.hero::before {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  z-index: 0;
+  width: 210px;
+  height: 170px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--thorp-brand-soft) 20%, transparent),
+    transparent
+  );
+  content: '';
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.hero svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.flip {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+  perspective: 620px;
+}
+
+.flip > svg {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.flipFrom {
+  opacity: 0;
+}
+
+.roll {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+
+.roll > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.rollWindow {
+  position: absolute;
+  top: 51%;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 48px;
+  margin-top: -24px;
+  overflow: hidden;
+  font: 800 48px/1 var(--thorp-font-display, inherit);
+  text-align: center;
+}
+
+.rollStrip {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-50%);
+}
+
+/* 글자색은 레벨 표장 숫자와 같은 초록 금속 단이다. 단은 materials.ts 한 곳에 있고 부품이 --gtext로 넘긴다. */
+.rollStrip i {
+  display: block;
+  height: 1em;
+  background: var(--gtext);
+  background-clip: text;
+  color: transparent;
+  font-style: normal;
+}
+
+/* 다음 목표 */
+.goal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.goalText {
+  margin: 4px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.875rem;
+}
+
+.goalText b {
+  color: var(--thorp-foreground);
+  font-weight: 750;
+}
+
+/* 닿을 수 없는 다음 레벨의 문장(FR-029). 점선 길과 함께 보인다. */
+.goalNote {
+  max-width: 260px;
+  margin: 4px 0 0;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+.next {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: auto 0 0;
+  padding-top: 16px;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.next b {
+  display: block;
+  color: var(--thorp-foreground);
+  font-weight: 650;
+}
+
+.nextArt {
+  display: block;
+  flex: none;
+  width: 36px;
+  height: 36px;
+}
+
+.nextArt svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 마지막 칸의 도장이 찍힌다(240ms, 300ms 뒤) */
+  .fresh svg {
+    animation: press 240ms 300ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  }
+
+  /* 단계 완주 메달이 길 끝에 놓인다(250ms, 450ms 뒤) */
+  .planted svg {
+    animation: plant 250ms 450ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  }
+
+  /* 실선 회색 아치가 접히고 색유리가 찬 메달이 펼쳐진다 */
+  .flipFrom {
+    animation: flip-out 200ms cubic-bezier(0.4, 0, 1, 1) 250ms both;
+  }
+
+  .flipTo {
+    animation: flip-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) 450ms both;
+  }
+
+  /* 레벨 숫자가 넘어가고 새 눈금이 나타난다 */
+  .rolling {
+    animation: roll 400ms cubic-bezier(0.2, 0, 0, 1) 300ms both;
+  }
+
+  .ticksIn {
+    animation: fade-in 400ms ease 300ms both;
+  }
+
+  .hero::before {
+    animation: fade-in 400ms ease 300ms both;
+  }
+
+  .rise {
+    animation: rise 350ms cubic-bezier(0.05, 0.7, 0.1, 1) 200ms both;
+  }
+}
+
+@keyframes press {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes plant {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes flip-out {
+  0% {
+    opacity: 1;
+    transform: rotateY(0);
+  }
+
+  99% {
+    opacity: 1;
+    transform: rotateY(90deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotateY(90deg);
+  }
+}
+
+@keyframes flip-in {
+  from {
+    transform: rotateY(-90deg);
+  }
+}
+
+@keyframes roll {
+  from {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* 좁은 화면(목업 720px 미만): 방금 얻은 메달·표장을 72px로 줄인다. */
+@media (max-width: 719px) {
+  .path {
+    gap: 10px;
+  }
+
+  .hero,
+  .flip,
+  .roll {
+    width: 72px;
+    height: 72px;
+  }
+
+  .rollWindow {
+    height: 36px;
+    margin-top: -18px;
+    font-size: 36px;
+  }
+}
+
+@media (forced-colors: active) {
+  .stamps::before {
+    background: CanvasText;
+  }
+
+  .rollStrip i {
+    background: none;
+    color: CanvasText;
+  }
+}
