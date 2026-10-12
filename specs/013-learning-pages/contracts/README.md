@@ -20,7 +20,7 @@
 - 외부 경로는 `/api` 접두사가 붙고, Vite·nginx가 접두사를 떼어 백엔드에 넘긴다(014 plan). 이 문서는 백엔드 경로로 적는다.
 - DB 대리키를 내보내지 않는다. 식별자는 `articleId`·`termId`·`stageKey`·`questionId`·`choiceId`·`badgeKey`·`entryKey` 문자열이다([data-model](../data-model.md) §2).
 - 응답 예시는 계약 형식만 보이는 합성 값이다. 원고나 추천 예시가 아니다. 구현 묶음이 `docs/specs/learning-api/examples/`에 같은 모양의 픽스처를 두고 통합 테스트가 실제 응답과 대조한다(003의 `docs/specs/strategy-registry-api/examples/` 방식). **(2판)** 계약 문서의 예시는 발췌일 수 있다. 배열의 일부 원소만 보이거나(여섯 단계 가운데 둘, 배지 31개 가운데 넷) 값을 `...`로, 나머지 키를 `"...": "..."`로 줄인다. 픽스처는 줄인 자리를 모두 채운 전체 응답이며, 채운 값은 각 계약의 필드 표와 [data-model](../data-model.md)을 따른다.
-- **(2판) 배포 순서 호환**: 2판 묶음은 이미 있는 공개 응답에 필드를 더하기만 한다. LEGACY 판 글의 블록은 9월 판 모양 그대로 나간다. 그래서 백엔드 묶음이 먼저 병합되어도 9월 판 화면이 깨지지 않는다. 관리 API의 저장·게시도 9월 판 요청을 그대로 받는다. 예외는 관리 API의 글 만들기 하나다([learning-admin-api](./learning-admin-api.md) §3). 화면이 옮겨 간 뒤 지우는 옛 목록 경로는 [learning-public-api](./learning-public-api.md) §2다.
+- **(2판) 배포 순서 호환**: 2판 묶음은 이미 있는 공개 응답에 필드를 더하기만 한다. LEGACY 판 글의 블록은 9월 판 모양 그대로 나간다. 그래서 백엔드 묶음이 먼저 병합되어도 9월 판 화면이 깨지지 않는다. 관리 API의 저장·게시도 9월 판 요청을 그대로 받는다. 예외는 관리 API의 글 만들기 하나다([learning-admin-api](./learning-admin-api.md) §3). 화면이 옮겨 간 뒤 B16에서 지운 옛 목록 경로는 [learning-public-api](./learning-public-api.md) §2다.
 
 ## 013이 쓰기만 하는 계약
 

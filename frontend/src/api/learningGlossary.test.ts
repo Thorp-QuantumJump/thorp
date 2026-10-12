@@ -5,7 +5,7 @@ import { apiClient } from './client'
 import { fetchGlossaryEntry } from './learningGlossary'
 
 /**
- * 도움말 조회는 예외를 던지지 않고 세 상태로 가른다(013 term-help-ui §1, learning-public-api §3).
+ * 도움말 조회는 예외를 던지지 않고 세 상태로 가른다(013 term-help-ui §1, learning-public-api §4).
  */
 
 function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {

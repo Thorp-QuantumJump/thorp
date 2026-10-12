@@ -17,7 +17,7 @@ import type {
 /**
  * 013 배우기 화면 테스트용 응답 픽스처.
  *
- * <p><b>data-model §8에 없는 `articleId`·`termId`를 일부러 쓴다.</b> 실제 글 식별자로 만들면 화면이 그
+ * <p><b>data-model §13에 없는 `articleId`·`termId`를 일부러 쓴다.</b> 실제 글 식별자로 만들면 화면이 그
  * 글을 알고 있어도 테스트가 통과한다 — 이름을 지어내야 "응답만 보고 그린다"가 증명된다(013 FR-015).
  * `src/test/strategyRegistryFixtures.ts`가 003에서 같은 이유로 같은 방식을 쓴다.
  *
@@ -461,6 +461,7 @@ export const adminTideArticle: AdminLearningArticle = {
   },
   publishedRevisionNo: 3,
   publishedEdition: 'LEGACY',
+  hasLegacyRevision: true,
 }
 
 /** 아직 한 번도 게시하지 않은 V2 초안. 게시 취소 버튼이 없어야 하는 쪽이다. */
@@ -483,6 +484,7 @@ export const adminDraftArticle: AdminLearningArticle = {
   },
   publishedRevisionNo: null,
   publishedEdition: null,
+  hasLegacyRevision: false,
 }
 
 /**
@@ -552,6 +554,7 @@ export const adminV2Article: AdminLearningArticle = {
   },
   publishedRevisionNo: 2,
   publishedEdition: 'CURRENT',
+  hasLegacyRevision: false,
 }
 
 /** 단계 둘(2판). 1단계는 공개할 수 있고 2단계는 앞 단계를 기다린다. 2단계에는 공개 배치만 남은 글이 있다. */

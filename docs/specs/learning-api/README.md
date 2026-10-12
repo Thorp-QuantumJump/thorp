@@ -25,7 +25,6 @@
 | 요청 | 200 `data` | 실패 |
 |---|---|---|
 | `GET /learning/curriculum` | 첫 단계를 공개한 뒤: [`curriculum.json`](examples/curriculum.json)(1·2단계 공개), 공개하기 전: [`curriculum-pre-release.json`](examples/curriculum-pre-release.json). 게시된 글이 없어도 200 | 5xx는 빈 배열로 대신하지 않는다 |
-| `GET /learning/articles` | [`articles-list.json`](examples/articles-list.json). 게시된 글이 없으면 `articles: []` | 5xx는 빈 배열로 대신하지 않는다 |
 | `GET /learning/articles/{articleId}` | `edition`마다 하나: [`article-current.json`](examples/article-current.json)(`CURRENT`), [`article-previous.json`](examples/article-previous.json)(`PREVIOUS`), [`article-pre-release.json`](examples/article-pre-release.json)(`PRE_RELEASE`). [`article.json`](examples/article.json)은 9월 판 필드의 기준이다 | 404 `LEARNING_ARTICLE_UNAVAILABLE` (없음·초안·게시 취소·형식 오류를 가르지 않는다) |
 | `GET /learning/terms/{termId}` | [`term.json`](examples/term.json) | 404 `LEARNING_TERM_NOT_READY` (초안뿐·게시 취소·없음·형식 오류를 가르지 않는다) |
 
@@ -33,7 +32,7 @@
 |---|---|
 | `curriculum-pre-release.json` | JSON 동치(실제 요청) |
 | `curriculum.json` | JSON 동치. `notices`가 지금 시각에 따라 달라지므로 시계를 2026-11-20T00:00:00Z로 고정한 조회 결과와 비교한다. 실제 요청은 `notices` 밖의 값을 같은지 본다. 변경 기록에는 두 종류(`STAGE_RELEASED`·`ARTICLE_ADDED`)가 모두 있고, 7일 안의 공개 안내가 두 줄이다 |
-| `articles-list.json`, `term.json` | JSON 동치 |
+| `term.json` | JSON 동치 |
 | `article.json` | 응답 가운데 이 파일에 있는 키만 JSON 동치(9월 판 필드) |
 | `article-current.json`, `article-previous.json`, `article-pre-release.json` | JSON 동치 |
 
@@ -53,7 +52,7 @@
 | [`admin-article-v2.json`](examples/admin-article-v2.json) | §4 V2 초안 200 `data` | 키 구성. 초안의 값은 이 파일의 `draft`(문제·보기 식별자를 비운 것)를 저장 요청으로 보낸 뒤 응답 초안과 같은지 따로 본다 (`transferFrom` 값은 `LearningTermTransferIT`가 따로 단언) |
 | [`admin-preview.json`](examples/admin-preview.json) | §8 `GET …/preview` 200 `data`. §3 글 응답 모양에 `preview: true`를 더하고 `number`·`next`·`stageArticleCount`·`publishedAt`은 `null`이다 | JSON 동치 (`admin-article-v2.json`의 초안을 저장한 뒤 부른다) |
 | [`publish-check-failed-v2.json`](examples/publish-check-failed-v2.json) | §6 422 V2 게시 — **`error` 전체**다 | JSON 동치 |
-| [`admin-articles-list.json`](examples/admin-articles-list.json) | 관리 계약 §2 `GET /admin/learning/articles` 200 `data`. 첫 글은 §13-3 배치의 초안이다 | 키 구성 |
+| [`admin-articles-list.json`](examples/admin-articles-list.json) | 관리 계약 §2 `GET /admin/learning/articles` 200 `data`. 첫 글은 [data-model](../../../specs/013-learning-pages/data-model.md) §13-3 배치의 초안이다 | 키 구성 |
 | [`admin-article.json`](examples/admin-article.json) | §4 `GET /admin/learning/articles/{articleId}` 200 `data`(V1 초안 저장 200도 같은 모양. 만들기 201은 새 글이 V2라 `admin-article-v2.json` 모양이다) | 키 구성 |
 | [`publish-success.json`](examples/publish-success.json) | §6 `POST …/publish` 200 `data` | 키 구성 (`publishedAt`·`sectorMapVersion`이 실행마다 다르다) |
 | [`publish-check-failed.json`](examples/publish-check-failed.json) | §6 422 — **`error` 전체**다 | JSON 동치 |
@@ -62,6 +61,8 @@
 | [`stage-readiness.json`](examples/stage-readiness.json) | §10 `GET …/stages/{stageKey}/readiness` 200 `data`. 1단계가 공개된 뒤 2단계를 미리 검사한다 | JSON 동치 |
 | [`stage-release.json`](examples/stage-release.json) | §11 `POST …/stages/{stageKey}/release` 200 `data` | `releasedAt` 밖의 키는 JSON 동치. `releasedAt`은 실행마다 다르므로 단계의 공개일·판의 게시 시각·변경 기록의 시각과 같은지 따로 본다 |
 | [`stage-check-failed.json`](examples/stage-check-failed.json) | §11 422 — **`error` 전체**다. 걸린 글만 싣는다 | JSON 동치 |
+
+예시 파일이 없는 관리 경로는 셋이다. `GET /admin/learning/access`(§1, `{ "admin": true }`), `POST /admin/learning/articles`(§3, 201, `admin-article-v2.json` 모양), `PUT /admin/learning/articles/{articleId}`(§5, 200, 형식에 따라 `admin-article.json`·`admin-article-v2.json` 모양)다.
 
 ## 나의 학습 (로그인 사용자만)
 

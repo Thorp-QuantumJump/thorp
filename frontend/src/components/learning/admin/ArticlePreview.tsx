@@ -1,16 +1,12 @@
-import { ArrowUpRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import {
-  fetchArticlePreview,
-  type ArticlePreviewResult,
-  type IncompleteQuestion,
-} from '@/api/learningAdmin'
-import type { LearningArticleContent } from '@/api/learning'
+import { fetchArticlePreview, type ArticlePreviewResult } from '@/api/learningAdmin'
 import { ArticleBody } from '@/components/learning/article/ArticleBody'
+import { ArticleExample } from '@/components/learning/article/ArticleExample'
+import { ArticleSourceList } from '@/components/learning/article/ArticleSourceList'
 import { EditionNotice } from '@/components/learning/article/EditionNotice'
 import { QuizPanel } from '@/components/learning/article/QuizPanel'
-import { ExampleEntry } from '@/components/learning/ExampleEntry'
-import type { Edition, LearningExample } from '@/types/learning'
+import type { Edition, LearningArticleContent } from '@/types/learning'
+import type { IncompleteQuestion } from '@/types/learningAdmin'
 import reader from '@/pages/LearningArticlePage.module.css'
 import styles from './AdminEditor.module.css'
 
@@ -19,8 +15,8 @@ import styles from './AdminEditor.module.css'
  *
  * <p><b>독자 화면(`LearningArticlePage`)과 같은 구성이다.</b> 판에 따라 머리(이전 판 표시·예상 읽기 시간),
  * 본문(`ArticleBody`), 예시(섹터·비중과 '투자 권고가 아닙니다'), 확인 문제(새 기준 글), 9월 판 출처 목록(첫 단계
- * 공개 전 글), 이전 판 글 끝 안내를 같은 순서로 둔다. 모양도 독자 화면의 CSS 모듈을 그대로 쓴다. 공용 부품으로
- * 빼면 B11·B12가 고치는 글 화면 파일과 겹쳐, 지금은 같은 구조를 따르기만 한다.
+ * 공개 전 글), 이전 판 글 끝 안내를 같은 순서로 둔다. 예시와 출처 목록은 독자 화면과 같은 부품
+ * (`ArticleExample`·`ArticleSourceList`)이고, 머리는 독자 화면의 CSS 모듈을 그대로 쓴다.
  *
  * <p><b>저장된 초안을 그린다.</b> 미리 보기 응답은 서버 초안에서 오므로 저장하지 않은 편집은 보이지 않는다.
  * 그 사실을 한 줄로 알린다.
@@ -131,7 +127,7 @@ function PreviewArticle({
       <ArticleBody article={article} />
 
       {article.example ? (
-        <PreviewExample articleId={article.articleId} example={article.example} />
+        <ArticleExample articleId={article.articleId} example={article.example} headingLevel={4} />
       ) : null}
 
       {article.edition === 'CURRENT' && article.quiz.length > 0 ? (
@@ -155,50 +151,11 @@ function PreviewArticle({
       ) : null}
 
       {/* 독자 화면처럼 9월 판 글 끝 출처 목록은 첫 단계 공개 전 글에만 둔다(FR-007, FR-031). */}
-      {article.edition === 'PRE_RELEASE' && article.sources.length > 0 ? (
-        <section className={reader.sources} aria-label="출처">
-          <h4 className={reader.sourcesLabel}>출처</h4>
-          <ul>
-            {article.sources.map((source, index) => (
-              <li key={index}>
-                {source.url ? (
-                  <a href={source.url} target="_blank" rel="noopener noreferrer">
-                    {source.label}
-                    <ArrowUpRight size={14} aria-hidden="true" />
-                  </a>
-                ) : (
-                  source.label
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+      {article.edition === 'PRE_RELEASE' ? (
+        <ArticleSourceList sources={article.sources} headingLevel={4} />
       ) : null}
 
       <EditionNotice edition={article.edition} place="end" />
     </article>
-  )
-}
-
-/** 독자 화면의 예시 구역과 같은 구성이다. 섹터 이름은 지금 대응표의 이름이고 없으면 코드다. */
-function PreviewExample({ articleId, example }: { articleId: string; example: LearningExample }) {
-  return (
-    <section className={reader.example} aria-label="예시">
-      <h4 className={reader.sectionTitle}>예시</h4>
-      <div className={reader.exampleSectors}>
-        <ul className={reader.exampleList}>
-          {example.sectors.map((sector) => (
-            <li key={sector.code}>
-              <span>{sector.name ?? sector.code}</span>
-              <span className={reader.weight}>{`${(sector.weightTenths / 10).toFixed(1)}%`}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className={reader.exampleAction}>
-        <ExampleEntry articleId={articleId} example={example} />
-      </div>
-      <p className={reader.disclaimer}>설명을 위한 예시이며 투자 권고가 아닙니다.</p>
-    </section>
   )
 }

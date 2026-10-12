@@ -127,21 +127,17 @@ GET /learning/curriculum
 }
 ```
 
-`releasedStageCount = 0`이면 화면은 9월 판 목록과 같은 모습으로 `preReleaseArticles`만 보인다(FR-031 "지금 모습 그대로"). 이 배열은 §2의 응답과 같은 글·같은 순서다. 이때 `stages[].previousEditionArticles`는 비어 있다.
+`releasedStageCount = 0`이면 화면은 9월 판 목록과 같은 모습으로 `preReleaseArticles`만 보인다(FR-031 "지금 모습 그대로"). 이 배열은 공개 중인 글(LEGACY·CURRENT 모두)을 판의 `readingOrder` 오름차순, 같으면 `articleId` 오름차순으로 담는다. 이때 `stages[].previousEditionArticles`는 비어 있다.
 
 **게시된 글이 하나도 없어도 200이다.** 빈 목록은 정상 화면이다(spec Edge Cases). 서버가 응답을 만들지 못했으면 5xx이며 빈 배열로 대신하지 않는다(원칙 VI).
 
-## 2. 글 목록 (9월 판)
+## 2. 글 목록 (9월 판, 지웠다)
 
 ```
 GET /learning/articles
 ```
 
-9월 판 응답 그대로다. 공개 중인 글(LEGACY·CURRENT 모두)을 판의 `readingOrder` 오름차순, 같으면 `articleId` 오름차순으로 돌려준다. **(2판)** 새 화면은 §1을 쓴다. 이 경로는 화면이 §1로 옮긴 묶음(B11)이 배포된 뒤 별도 묶음(B16, `refactor(be)`)에서 지운다. 2판에서 공개 API를 지우는 것은 이 경로 하나다.
-
-```json
-{ "articles": [ { "articleId": "sectors-and-etf", "title": "섹터와 ETF", "question": "...", "readingOrder": 1 } ] }
-```
+**(2판)** 지운 경로다. 화면이 §1로 옮긴 묶음(B11)이 배포된 뒤 B16(`refactor(be)`)에서 지웠다. 요청하면 다른 없는 경로와 같은 응답을 받는다. 같은 글·같은 순서는 §1의 `preReleaseArticles`가 싣는다. 2판에서 공개 API를 지운 것은 이 경로 하나다.
 
 ## 3. 글 하나
 
@@ -249,11 +245,12 @@ GET /learning/articles/{articleId}
 | `blocks` | V2 블록과 글자 조각([data-model](../data-model.md) §5-2·§5-3). 화면은 글자 그대로 그리고 마크업으로 해석하지 않는다(FR-026) |
 | 언급 조각의 `owned`·`aliases` | 서버가 채운다. 화면이 처음 나오는 자리에 다른 이름과 도움말 표시를 둔다([data-model](../data-model.md) §5-4, R18) |
 | `term` 블록의 `meaning` | 도움말(§4)의 `sentence`와 **같은 판의 같은 값**이다(FR-008, SC-003) |
-| `misconception`·`table`·`diagram`·`hypothetical` | 화면이 '가상의 예'(오해의 `wrong`에는 '오해')를 자동으로 붙인다(FR-005, FR-017) |
+| `misconception`·`table`·`diagram`·`quiz` | 화면이 '가상의 예'(오해의 `wrong`에는 '오해', 확인 문제는 문제 묶음 머리에 한 번)를 자동으로 붙인다(FR-005, FR-017) |
+| `hypothetical` | 화면이 '가상의 계산 예' 이름표를 붙인다(FR-026, US1 시나리오 6) |
 | `quiz[].correctChoiceId`·`explanation` | 화면은 로그인 사용자에게는 기록이 저장된 뒤, 비로그인 사용자에게는 답한 뒤에만 보인다([research](../research.md) R22) |
 | `readingMinutes`·`minDwellSeconds` | 판에 넣은 값(R20). 로그인 사용자의 완료 판정에 쓴다(FR-021) |
 | `next` | 읽는 순서상 다음 공개된 글. 없으면 `null`이다. 그 자리에 로그인 사용자는 [나의 학습 계약](./learning-me-api.md) §2·§4의 `continueReading`으로 '이어서 읽기'와 '지금 공개된 글을 모두 읽었습니다'를 가르고, 비로그인 사용자는 '배우기 목록으로'를 본다(FR-021) |
-| `stageArticleCount` | 그 단계의 공개된 글 수. 비로그인 화면의 단계 안내에 쓴다 |
+| `stageArticleCount` | 그 단계의 공개된 글 수. 이전 판·첫 단계 공개 전 글은 `null`이다. 화면은 받아서 읽기만 하고, 지금 이 값을 그리는 자리는 없다 |
 | `hasUnreleasedStages` | '다음 단계는 준비 중입니다'를 덧붙일지(FR-020, FR-021) |
 | `example` | 예시가 없는 글은 `null`이고 '이 예시로 전략 진단하기'가 없다(FR-003). 있으면 §3-1과 같은 모양이다 |
 

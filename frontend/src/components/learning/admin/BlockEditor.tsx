@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { AdminDraftBlockV1, AdminDraftBlockV2 } from '@/types/learningAdmin'
 import { BLOCK_LABELS } from './draftLabels'
+import type { EditableBlockV2, EditableDraft } from './editableDraft'
 import { TermSelect, V2BlockFields, type TermOption } from './V2BlockFields'
 import styles from './BlockEditor.module.css'
 
@@ -18,23 +19,15 @@ import styles from './BlockEditor.module.css'
  * <p><b>`term` 블록의 `termId`는 이 글의 용어 목록에서 고른다.</b> 직접 입력을 두면 이 글에 없는
  * 용어를 가리키기 쉽고, 그것은 저장은 되지만 게시에서 `TERM_BLOCKS_MATCH`로 걸린다. 다만 이미
  * 저장된 값이 목록에 없을 수는 있으므로 그 경우에도 선택지를 만들어 값을 잃지 않게 한다.
+ *
+ * <p>초안을 통째로 받고 돌려준다. 형식에 따라 블록 타입이 달라 부르는 쪽이 형식마다 갈라 부르지 않게 하려는
+ * 것이다.
  */
 
-type BlockEditorProps =
-  | {
-      format: 'V1'
-      blocks: AdminDraftBlockV1[]
-      /** 이 글이 소유한 용어. `term` 블록의 선택지가 된다 */
-      terms: readonly TermOption[]
-      onChange: (blocks: AdminDraftBlockV1[]) => void
-    }
-  | {
-      format: 'V2'
-      /** 글자 조각 필드가 편집 문법 문자열인 블록(research R26) */
-      blocks: AdminDraftBlockV2<string>[]
-      terms: readonly TermOption[]
-      onChange: (blocks: AdminDraftBlockV2<string>[]) => void
-    }
+interface BlockEditorProps {
+  draft: EditableDraft
+  onChange: (draft: EditableDraft) => void
+}
 
 /** data-model §5-1의 상한이다. 안내 문장에만 쓰고 입력을 자르지 않는다. */
 const V1_TEXT_LIMITS: Record<string, number> = { heading: 100, paragraph: 2000, hypothetical: 1000 }
@@ -62,10 +55,7 @@ function emptyV1(type: AdminDraftBlockV1['type'], terms: readonly TermOption[]):
 }
 
 /** 새 V2 블록. 표·도식은 저장 하한(열 2개, 칸 2개, 계열 1개)을 채운 빈 모양으로 시작한다. */
-function emptyV2(
-  type: AdminDraftBlockV2['type'],
-  terms: readonly TermOption[],
-): AdminDraftBlockV2<string> {
+function emptyV2(type: AdminDraftBlockV2['type'], terms: readonly TermOption[]): EditableBlockV2 {
   switch (type) {
     case 'keySummary':
       return { type, lines: ['', '', ''] }
@@ -191,12 +181,14 @@ function BlockList<B extends { type: keyof typeof BLOCK_LABELS }>({
   )
 }
 
-export function BlockEditor(props: BlockEditorProps) {
-  if (props.format === 'V2') {
-    const { terms } = props
+export function BlockEditor({ draft, onChange }: BlockEditorProps) {
+  // 이 글이 소유한 용어가 `term` 블록의 선택지가 된다.
+  const terms = draft.terms.map((term) => ({ termId: term.termId, label: term.label }))
+
+  if (draft.format === 'V2') {
     return (
       <BlockList
-        blocks={props.blocks}
+        blocks={draft.blocks}
         types={V2_TYPES}
         maxBlocks={MAX_BLOCKS.V2}
         guide={
@@ -209,15 +201,14 @@ export function BlockEditor(props: BlockEditorProps) {
         renderFields={(block, index, replace) => (
           <V2BlockFields block={block} number={index + 1} terms={terms} onChange={replace} />
         )}
-        onChange={props.onChange}
+        onChange={(blocks) => onChange({ ...draft, blocks })}
       />
     )
   }
 
-  const { terms } = props
   return (
     <BlockList
-      blocks={props.blocks}
+      blocks={draft.blocks}
       types={V1_TYPES}
       maxBlocks={MAX_BLOCKS.V1}
       guide={
@@ -248,7 +239,7 @@ export function BlockEditor(props: BlockEditorProps) {
           </label>
         )
       }
-      onChange={props.onChange}
+      onChange={(blocks) => onChange({ ...draft, blocks })}
     />
   )
 }

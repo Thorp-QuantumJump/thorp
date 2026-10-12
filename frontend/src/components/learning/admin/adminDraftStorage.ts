@@ -1,18 +1,21 @@
-import type { EditableDraft, RenamedQuestion, TransferredTerm } from '@/types/learningAdmin'
+import { readDraftShape, readText, ShapeError } from '@/api/learningAdminShape'
+import type { RenamedQuestion, TransferredTerm } from '@/types/learningAdmin'
+import type { EditableDraft } from './editableDraft'
 
 /**
  * 관리 화면에서 저장하지 않은 편집 내용을 탭 세션 동안 보관한다(013 research R12).
  *
  * <p><b>저장 요청이 401로 끝나도 지우지 않는다.</b> 편집 중에 세션이 끝나면 작성하던 내용을 말없이
- * 버리지 않는다는 것이 이 보관의 목적이다(spec Edge Cases, 원칙 VI). 지우는 시점은 저장에
- * 성공했을 때 하나뿐이다.
+ * 버리지 않는다는 것이 이 보관의 목적이다(spec Edge Cases, 원칙 VI). 지우는 것은 편집 화면 하나이고, 그때는
+ * 저장에 성공했을 때, 운영자가 '버리기'를 골랐을 때, 이전 내용 버전 보관본을 버렸다고 알릴 때뿐이다.
  *
  * <p><b>읽기·쓰기 실패를 오류로 다루지 않는다.</b> 저장소를 막아 둔 브라우저에서도 편집은 되어야
  * 한다. 보관은 편의이지 편집의 전제가 아니다(002 `diagnosis/selectionStorage.ts`와 같은 태도).
  *
  * <p><b>(2판) 내용 버전 2다.</b> 편집기 초안(형식·배치·확인 문제, 글자 조각 필드는 편집 문법 문자열)을
- * 보관한다(data-model §15). 버전 1 보관본은 형식과 배치가 없어 2판 초안으로 옮길 수 없다. 복원하지 않고
- * 버리며, 버렸다는 사실을 화면이 알린다.
+ * 보관한다(data-model §15). 버전 1 보관본은 형식과 배치가 없어 2판 초안으로 옮길 수 없다. 읽기는 그 사실만
+ * 돌려주고 지우지 않는다. 편집 화면이 복원하지 않는다고 알린 뒤 지운다. 읽는 쪽(단계 공개 뒤 보관본 고치기 등)이
+ * 몰래 지우면 운영자가 그 사실을 끝내 모른다.
  *
  * <p>일반 사용자 배우기 화면은 저장소에 아무것도 쓰지 않는다(013 FR-012).
  */
@@ -39,8 +42,8 @@ export type UnsentDraft = {
 export type UnsentDraftLookup =
   | { status: 'none' }
   | { status: 'found'; unsent: UnsentDraft }
-  /** 이전 내용 버전의 보관본이 있어 지웠다. 화면은 복원하지 않았다는 사실을 알린다 */
-  | { status: 'discardedOutdated' }
+  /** 이전 내용 버전의 보관본이 있다. 복원할 수 없으며, 편집 화면이 알린 뒤 지운다 */
+  | { status: 'outdated' }
 
 export function adminDraftKey(articleId: string): string {
   return `${ADMIN_DRAFT_KEY_PREFIX}${articleId}`
@@ -73,23 +76,23 @@ export function saveUnsentDraft(
 }
 
 /**
- * 보관한 초안의 모양을 확인한다.
+ * 보관한 초안의 모양을 확인한다. 모양은 서버 응답·원고와 같은 `api/learningAdminShape.ts`가 정한다.
  *
  * <p><b>형식이 다르면 고쳐서 쓰지 않고 없는 것으로 다룬다.</b> 반쯤 읽은 초안을 복원하면 운영자가
  * 무엇이 빠졌는지 모르는 채로 저장하게 된다. 다만 내용의 길이·값 범위는 보지 않는다. 그 판정은
  * 서버가 하고(계약 §5), 쓰다 만 값도 편집기에 돌아와야 한다.
  */
-function isEditableDraft(value: unknown): value is EditableDraft {
-  if (!isRecord(value)) return false
-  if (value.format !== 'V1' && value.format !== 'V2') return false
-  if (typeof value.title !== 'string' || typeof value.question !== 'string') return false
-  if (typeof value.readingOrder !== 'number') return false
-  if (typeof value.stageKey !== 'string' || typeof value.stagePosition !== 'number') return false
-  return [value.blocks, value.sources, value.terms, value.quiz].every(Array.isArray)
+function readStoredDraft(value: unknown): EditableDraft | null {
+  try {
+    return readDraftShape(value, 'draft', { rich: readText, strict: false })
+  } catch (error) {
+    if (error instanceof ShapeError) return null
+    throw error
+  }
 }
 
-/** 보관본을 읽는다. 이전 내용 버전이면 지우고 그 사실을 돌려준다. */
-export function loadUnsentDraft(articleId: string): UnsentDraftLookup {
+/** 보관본을 읽기만 한다. 이전 내용 버전이면 그 사실만 돌려주고 지우지 않는다. */
+export function readUnsentDraft(articleId: string): UnsentDraftLookup {
   let raw: string | null = null
   try {
     raw = window.sessionStorage.getItem(adminDraftKey(articleId))
@@ -102,21 +105,21 @@ export function loadUnsentDraft(articleId: string): UnsentDraftLookup {
     const parsed: unknown = JSON.parse(raw)
     if (!isRecord(parsed)) return { status: 'none' }
     if (typeof parsed.version === 'number' && parsed.version < ADMIN_DRAFT_PAYLOAD_VERSION) {
-      clearUnsentDraft(articleId)
-      return { status: 'discardedOutdated' }
+      return { status: 'outdated' }
     }
     if (parsed.version !== ADMIN_DRAFT_PAYLOAD_VERSION) return { status: 'none' }
     if (typeof parsed.savedAt !== 'string' || typeof parsed.draftVersion !== 'number') {
       return { status: 'none' }
     }
-    if (!isEditableDraft(parsed.draft)) return { status: 'none' }
+    const draft = readStoredDraft(parsed.draft)
+    if (!draft) return { status: 'none' }
 
     return {
       status: 'found',
       unsent: {
         version: ADMIN_DRAFT_PAYLOAD_VERSION,
         savedAt: parsed.savedAt,
-        draft: parsed.draft,
+        draft,
         draftVersion: parsed.draftVersion,
       },
     }
@@ -125,7 +128,10 @@ export function loadUnsentDraft(articleId: string): UnsentDraftLookup {
   }
 }
 
-/** 저장에 성공했을 때만 부른다. 401 뒤에는 부르지 않는다(R12). */
+/**
+ * 저장에 성공했을 때, 운영자가 '버리기'를 골랐을 때, 이전 내용 버전 보관본을 알린 뒤에만 부른다. 401 뒤에는
+ * 부르지 않는다(R12).
+ */
 export function clearUnsentDraft(articleId: string): void {
   try {
     window.sessionStorage.removeItem(adminDraftKey(articleId))
@@ -174,9 +180,9 @@ export function applyPublishToUnsentDraft(
   renamedQuestions: readonly RenamedQuestion[],
   transferredTerms: readonly TransferredTerm[],
 ): void {
-  const lookup = loadUnsentDraft(articleId)
-  if (lookup.status !== 'found') return
   if (renamedQuestions.length === 0 && transferredTerms.length === 0) return
+  const lookup = readUnsentDraft(articleId)
+  if (lookup.status !== 'found') return
   write(articleId, {
     ...lookup.unsent,
     draft: applyPublishedChanges(

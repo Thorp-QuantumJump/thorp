@@ -1,28 +1,22 @@
 import axios from 'axios'
 import { ApiClientError, apiClient, normalizeApiError, runCsrfProtectedMutation } from './client'
-import { readArticleContent, type LearningArticleContent } from './learning'
+import { readArticleContent } from './learning'
+import { listOf, readDraftShape, ShapeError, type Reader } from './learningAdminShape'
 import type { ApiEnvelope, ApiErrorCode } from '@/types/api'
 import type {
   AdminArticleStageRef,
   AdminArticleStatus,
-  AdminDraftBlockV1,
-  AdminDraftBlockV2,
-  AdminDraftExample,
-  AdminDraftSource,
-  AdminDraftTermV1,
-  AdminDraftTermV2,
   AdminFieldViolation,
   AdminLearningArticle,
   AdminLearningArticleSummary,
   AdminLearningDraft,
   AdminPublicationRecord,
   ArticleFormat,
+  ArticlePreview,
   CreateArticleRequest,
-  DraftDiagramSeries,
-  DraftQuizChoice,
-  DraftQuizQuestion,
   DraftRun,
   DraftSourceRef,
+  IncompleteQuestion,
   PublishCheckFailure,
   PublishCheckLocation,
   PublishedEdition,
@@ -157,22 +151,6 @@ export type UnpublishArticleResult =
   | { status: 'notFound' }
   | Unauthenticated
   | LoadFailure
-
-/** 정답 보기가 하나가 아니어서 미리 보기에서 풀 수 없는 문제다. 게시 전 검사(`QUIZ`)가 막는 자리다. */
-export type IncompleteQuestion = { questionId: string; prompt: string }
-
-/**
- * 미리 보기 한 벌(계약 §8). 게시 전이라 게시 시각이 없다.
- *
- * <p>미리 보기는 검사하지 않은 초안을 그리므로 공개 글에는 없는 두 빈자리가 온다. 정답 보기가 하나가 아닌
- * 문제는 `correctChoiceId`가 `null`이고, 예시 없는 V1 초안은 9월 판 모양인데도 `example`이 `null`이다
- * (백엔드 `ArticleViewAssembler`의 미리 보기 모드). 앞의 것은 `incompleteQuestions`로 따로 두고, 뒤의 것은
- * 빈 예시로 읽는다. 둘 때문에 미리 보기 전체를 읽지 못하면 운영자가 고치는 중인 초안을 볼 수 없다.
- */
-export type ArticlePreview = {
-  article: LearningArticleContent
-  incompleteQuestions: IncompleteQuestion[]
-}
 
 export type ArticlePreviewResult =
   | { status: 'loaded'; preview: ArticlePreview }
@@ -319,215 +297,44 @@ function readSummary(value: unknown): AdminLearningArticleSummary | null {
   }
 }
 
-function readSourceRef(value: unknown): DraftSourceRef | null {
-  if (!isRecord(value) || !isString(value.label) || !isString(value.url)) return null
-  return { label: value.label, url: value.url }
-}
-
 /**
- * 초안의 글자 조각 하나를 읽는다(data-model §5-2). 조각 하나에는 키 하나만 있다 — 글자(`text`), 용어
- * 언급(`term`+`text`), 출처 표시(`source`). 서버가 `null` 키를 실어 보내도 없는 키로 본다.
+ * 서버 초안의 글자 조각 하나를 읽는다(data-model §5-2). 조각 하나에는 키 하나만 있다 — 글자(`text`), 용어
+ * 언급(`term`+`text`), 출처 표시(`source`). 서버는 빈 키를 빼고 보내지만 `null` 키가 와도 없는 키로 본다.
  */
-function readRun(value: unknown): DraftRun | null {
-  if (!isRecord(value)) return null
+const readServerRun: Reader<DraftRun> = (value, where) => {
+  if (!isRecord(value)) throw new ShapeError(where, '객체여야 합니다.')
   const has = (key: string) => value[key] !== null && value[key] !== undefined
   if (has('source')) {
-    if (has('text') || has('term')) return null
-    const source = readSourceRef(value.source)
-    return source ? { source } : null
+    const source = value.source
+    if (has('text') || has('term') || !isRecord(source)) {
+      throw new ShapeError(where, '출처 표시 조각은 source 하나만 담아야 합니다.')
+    }
+    if (!isString(source.label) || !isString(source.url)) {
+      throw new ShapeError(`${where}.source`, '출처 이름과 주소가 문자열이어야 합니다.')
+    }
+    const ref: DraftSourceRef = { label: source.label, url: source.url }
+    return { source: ref }
   }
-  if (!isString(value.text)) return null
-  if (has('term')) return isString(value.term) ? { term: value.term, text: value.text } : null
-  return { text: value.text }
-}
-
-function readRuns(value: unknown): DraftRun[] | null {
-  return readAll(value, readRun)
+  if (!isString(value.text)) throw new ShapeError(`${where}.text`, '문자열이어야 합니다.')
+  if (!has('term')) return { text: value.text }
+  if (!isString(value.term)) throw new ShapeError(`${where}.term`, '문자열이어야 합니다.')
+  return { term: value.term, text: value.text }
 }
 
 /**
- * V1 초안 블록 하나를 읽는다.
+ * 초안을 읽는다. 모양은 `learningAdminShape.ts` 한 곳이 정한다. 서버가 필드를 늘려도 읽고(모르는 키 무시),
+ * 빠진 키는 빈 값으로 채우지 않고 읽지 못한 응답으로 둔다.
  *
- * <p>공개 조회(`api/learning.ts`)와 달리 <b>모르는 `type`을 그대로 넘기지 않는다.</b> 이 값은 편집기가
- * 고쳐서 다시 저장하는 값이라, 읽지 못한 블록을 통과시키면 다음 저장에서 그 블록이 조용히 사라지거나
- * 400을 받는다. 서버도 알 수 없는 `type`을 저장에서 거절한다(data-model §5).
- */
-function readBlockV1(value: unknown): AdminDraftBlockV1 | null {
-  if (!isRecord(value) || !isString(value.type)) return null
-  switch (value.type) {
-    case 'heading':
-    case 'paragraph':
-    case 'hypothetical':
-      return isString(value.text) ? { type: value.type, text: value.text } : null
-    case 'term':
-      return isString(value.termId) ? { type: 'term', termId: value.termId } : null
-    default:
-      return null
-  }
-}
-
-function readDiagramSeries(value: unknown): DraftDiagramSeries | null {
-  if (!isRecord(value) || !isString(value.name) || !Array.isArray(value.values)) return null
-  if (!value.values.every(isNumber)) return null
-  return { name: value.name, values: [...value.values] }
-}
-
-/** V2 초안 블록 하나를 읽는다(data-model §5-3). 모르는 `type`은 V1과 같은 이유로 읽지 않는다. */
-function readBlockV2(value: unknown): AdminDraftBlockV2 | null {
-  if (!isRecord(value) || !isString(value.type)) return null
-  switch (value.type) {
-    case 'keySummary': {
-      const lines = readAll(value.lines, readRuns)
-      return lines ? { type: 'keySummary', lines } : null
-    }
-    case 'heading':
-      return isString(value.text) ? { type: 'heading', text: value.text } : null
-    case 'paragraph':
-    case 'hypothetical': {
-      const content = readRuns(value.content)
-      return content ? { type: value.type, content } : null
-    }
-    case 'term':
-      return isString(value.termId) ? { type: 'term', termId: value.termId } : null
-    case 'misconception': {
-      const wrong = readRuns(value.wrong)
-      const correction = readRuns(value.correction)
-      return wrong && correction ? { type: 'misconception', wrong, correction } : null
-    }
-    case 'list': {
-      const items = readAll(value.items, readRuns)
-      if (!items || typeof value.ordered !== 'boolean') return null
-      return { type: 'list', ordered: value.ordered, items }
-    }
-    case 'table': {
-      const rows = readAll(value.rows, (row) => readAll(row, readRuns))
-      if (!rows || !isString(value.caption) || !isStringArray(value.columns)) return null
-      return { type: 'table', caption: value.caption, columns: [...value.columns], rows }
-    }
-    case 'diagram': {
-      const series = readAll(value.series, readDiagramSeries)
-      if (value.kind !== 'bar' && value.kind !== 'line') return null
-      if (!series || !isString(value.title) || !isString(value.unit)) return null
-      if (!isStringArray(value.categories) || !isString(value.description)) return null
-      return {
-        type: 'diagram',
-        kind: value.kind,
-        title: value.title,
-        unit: value.unit,
-        categories: [...value.categories],
-        series,
-        description: value.description,
-      }
-    }
-    case 'institutionNote': {
-      const content = readRuns(value.content)
-      const asOf = value.asOf ?? null
-      const source =
-        value.source === null || value.source === undefined ? null : readSourceRef(value.source)
-      if (!content || !(asOf === null || isString(asOf))) return null
-      if (value.source !== null && value.source !== undefined && !source) return null
-      return { type: 'institutionNote', content, asOf, source }
-    }
-    default:
-      return null
-  }
-}
-
-/** 예시는 통째로 없을 수 있다. 없는 것(`null`)과 읽지 못한 것(`'invalid'`)을 가른다. */
-function readExample(value: unknown): AdminDraftExample | null | 'invalid' {
-  if (value === null || value === undefined) return null
-  if (!isRecord(value) || !Array.isArray(value.sectors)) return 'invalid'
-  const sectors = []
-  for (const item of value.sectors) {
-    if (!isRecord(item) || !isString(item.code) || typeof item.weightTenths !== 'number') {
-      return 'invalid'
-    }
-    sectors.push({ code: item.code, weightTenths: item.weightTenths })
-  }
-  return { sectors }
-}
-
-function readSource(value: unknown): AdminDraftSource | null {
-  if (!isRecord(value) || !isString(value.label)) return null
-  // 계약이 "url은 없을 수 있다"고 정했다. 키가 없는 것과 null을 같은 뜻으로 받는다.
-  if (value.url !== undefined && value.url !== null && !isString(value.url)) return null
-  return { label: value.label, url: value.url ?? null }
-}
-
-function readTermV1(value: unknown): AdminDraftTermV1 | null {
-  if (!isRecord(value) || !isString(value.termId) || !isString(value.label)) return null
-  return isString(value.sentence)
-    ? { termId: value.termId, label: value.label, sentence: value.sentence }
-    : null
-}
-
-function readTermV2(value: unknown): AdminDraftTermV2 | null {
-  if (!isRecord(value) || !isString(value.termId) || !isString(value.label)) return null
-  const aliases = value.aliases ?? []
-  if (!isStringArray(aliases)) return null
-  if (!isString(value.meaning) || !isString(value.reading) || !isString(value.caveat)) return null
-  const transferFrom = value.transferFrom ?? null
-  if (!(transferFrom === null || isString(transferFrom))) return null
-  return {
-    termId: value.termId,
-    label: value.label,
-    aliases: [...aliases],
-    meaning: value.meaning,
-    reading: value.reading,
-    caveat: value.caveat,
-    transferFrom,
-  }
-}
-
-function readQuizChoice(value: unknown): DraftQuizChoice | null {
-  if (!isRecord(value) || !isString(value.text) || typeof value.correct !== 'boolean') return null
-  const choiceId = value.choiceId ?? null
-  if (!(choiceId === null || isString(choiceId))) return null
-  return { choiceId, text: value.text, correct: value.correct }
-}
-
-function readQuizQuestion(value: unknown): DraftQuizQuestion | null {
-  if (!isRecord(value) || !isString(value.prompt) || !isString(value.explanation)) return null
-  const questionId = value.questionId ?? null
-  const choices = readAll(value.choices, readQuizChoice)
-  if (!choices || !(questionId === null || isString(questionId))) return null
-  return { questionId, prompt: value.prompt, choices, explanation: value.explanation }
-}
-
-/**
- * 초안을 읽는다. <b>`format`을 먼저 읽는다.</b> 같은 `type` 이름의 블록이 형식마다 필드가 달라 형식을
- * 모르고는 블록을 읽을 수 없다(R16).
+ * <p>모르는 블록 `type`은 넘기지 않는다. 이 값은 편집기가 고쳐서 다시 저장하는 값이라, 읽지 못한 블록을
+ * 통과시키면 다음 저장에서 그 블록이 조용히 사라지거나 400을 받는다.
  */
 function readDraft(value: unknown): AdminLearningDraft | null {
-  if (!isRecord(value) || !isString(value.title) || !isString(value.question)) return null
-  if (typeof value.readingOrder !== 'number') return null
-  const format = readFormat(value.format)
-  if (!format || !isString(value.stageKey) || !isNumber(value.stagePosition)) return null
-
-  const sources = readAll(value.sources, readSource)
-  const quiz = readAll(value.quiz ?? [], readQuizQuestion)
-  const example = readExample(value.example)
-  if (!sources || !quiz || example === 'invalid') return null
-
-  const common = {
-    title: value.title,
-    question: value.question,
-    readingOrder: value.readingOrder,
-    example,
-    stageKey: value.stageKey,
-    stagePosition: value.stagePosition,
-    sources,
-    quiz,
+  try {
+    return readDraftShape(value, 'draft', { rich: listOf(readServerRun), strict: false })
+  } catch (error) {
+    if (error instanceof ShapeError) return null
+    throw error
   }
-
-  if (format === 'V1') {
-    const blocks = readAll(value.blocks, readBlockV1)
-    const terms = readAll(value.terms, readTermV1)
-    return blocks && terms ? { ...common, format, blocks, terms } : null
-  }
-  const blocks = readAll(value.blocks, readBlockV2)
-  const terms = readAll(value.terms, readTermV2)
-  return blocks && terms ? { ...common, format, blocks, terms } : null
 }
 
 function readArticle(value: unknown): AdminLearningArticle | null {
@@ -538,22 +345,17 @@ function readArticle(value: unknown): AdminLearningArticle | null {
   const draft = readDraft(value.draft)
   if (!draft) return null
   const publishedRevisionNo = value.publishedRevisionNo
-  if (
-    publishedRevisionNo !== null &&
-    publishedRevisionNo !== undefined &&
-    typeof publishedRevisionNo !== 'number'
-  ) {
-    return null
-  }
+  if (publishedRevisionNo !== null && !isNumber(publishedRevisionNo)) return null
   const publishedEdition = readEdition(value.publishedEdition)
-  if (publishedEdition === 'invalid') return null
+  if (publishedEdition === 'invalid' || typeof value.hasLegacyRevision !== 'boolean') return null
   return {
     articleId: value.articleId,
     status,
     draftVersion: value.draftVersion,
     draft,
-    publishedRevisionNo: publishedRevisionNo ?? null,
+    publishedRevisionNo,
     publishedEdition,
+    hasLegacyRevision: value.hasLegacyRevision,
   }
 }
 
@@ -677,12 +479,12 @@ function readStage(value: unknown): StageAdminView | null {
   if (!isRecord(value) || !isString(value.stageKey) || !isNumber(value.number)) return null
   if (!isString(value.name) || !isString(value.levelLabel) || !isString(value.summary)) return null
   if (typeof value.releasable !== 'boolean') return null
-  const releasedAt = value.releasedAt ?? null
-  const releasedByUserId = value.releasedByUserId ?? null
+  const releasedAt = value.releasedAt
+  const releasedByUserId = value.releasedByUserId
   if (!(releasedAt === null || isString(releasedAt))) return null
   if (!(releasedByUserId === null || isNumber(releasedByUserId))) return null
   const articles = readAll(value.articles, readStageArticle)
-  const placementOnlyArticles = readAll(value.placementOnlyArticles ?? [], readStageArticle)
+  const placementOnlyArticles = readAll(value.placementOnlyArticles, readStageArticle)
   if (!articles || !placementOnlyArticles) return null
   return {
     stageKey: value.stageKey,
@@ -1060,11 +862,12 @@ export async function fetchArticlePreview(
 }
 
 /**
- * 미리 보기 응답을 읽는다. 정답이 정해지지 않은 문제(`correctChoiceId: null`)를 먼저 떼어 내고, 나머지는 공개
+ * 미리 보기 응답을 읽는다(모양은 `types/learningAdmin.ts`의 `ArticlePreview`). 정답이 정해지지 않은 문제(`correctChoiceId: null`)를 먼저 떼어 내고, 나머지는 공개
  * 글과 같은 해석기로 읽는다. 떼어 낸 문제도 식별자와 질문을 읽지 못하면 응답 전체를 읽지 못한 것으로 둔다.
  */
 function readPreview(value: unknown): ArticlePreview | null {
-  if (!isRecord(value) || !Array.isArray(value.quiz)) return null
+  // 미리 보기 응답이라는 표시다(계약 §8). 없으면 공개 글 응답을 미리 보기로 잘못 읽은 것이다.
+  if (!isRecord(value) || value.preview !== true || !Array.isArray(value.quiz)) return null
   const incompleteQuestions: IncompleteQuestion[] = []
   const quiz: unknown[] = []
   for (const item of value.quiz) {

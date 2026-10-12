@@ -337,6 +337,11 @@ h1.big{margin:0;font:800 44px/1.08 var(--font-d);letter-spacing:-.03em;
 .lico{width:34px;height:24px;margin-right:10px}
 .lico svg{width:100%;height:100%;display:block}
 .grp-sub{display:block;font-weight:500;font-size:13px;color:var(--copy);margin-top:4px;padding-left:44px}
+.grp-sub+.grp-sub{margin-top:2px}
+/* 공개 경계 한 줄(FR-031): 공개된 단계의 노선이 여기서 끝나고 아래로 점선 노선이 새로 시작한다 */
+.route tbody.bnd td{border-bottom:0}
+.route td.bnd-t,.rol .bnd-n{font-size:14px;font-weight:600;color:var(--copy)}
+.rol .bnd-n{position:relative;margin:0;padding:14px 4px 14px 44px}
 .route td.no{font:700 13px var(--font-d);color:var(--muted);white-space:nowrap;width:48px}
 .route td .chip{flex:none;min-width:max-content}
 .route .tt a{font-weight:650;font-size:15px}
@@ -424,13 +429,6 @@ a.station:hover{color:var(--brand-soft)}
 .term b{display:block;font-size:15px;font-weight:650}
 .term small{display:block;font-size:13px;color:var(--copy);line-height:1.45;margin-top:2px}
 .terms-c{margin:10px 0 0;font-size:14px;color:var(--copy)}
-.nextb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:8px}
-.nb{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-width:0}
-.nb svg{flex:none;width:56px;height:56px;overflow:visible}
-.nb .c{display:block;margin-top:3px;font-size:12px;color:var(--muted);line-height:1.45}
-.nb b{display:block;font-size:15px;font-weight:650}
-.nb span{display:block;font-size:13px;color:var(--copy)}
-.nb-k{margin:0 0 10px;font-size:14px;color:var(--muted);font-weight:650}
 .fam{margin-top:30px;min-width:0}
 #fam-stage+.ladder{--bw:160px}
 .fam h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:16px;font-weight:700}
@@ -493,7 +491,7 @@ h1.at{margin:4px 0 0;font:800 32px/1.25 var(--font-d);letter-spacing:-.02em}
   background:radial-gradient(closest-side,color-mix(in srgb,var(--s1) 10%,transparent),transparent)}
 .dc-sec{padding:22px 28px;border-top:1px solid var(--line)}
 .dc-sec:first-child{border-top:0}
-/* 완료 카드 머리: 보이는 순서 = 읽는 순서(제목인 완료 날짜 → 1단계 미니 길 → 1단계 4/4) */
+/* 완료 카드 머리: 보이는 순서 = 읽는 순서(제목인 완료 날짜 → 1단계 미니 길 → 1단계 · 완주 · 4편) */
 .dc-head{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 .dc-left{display:flex;align-items:center;gap:8px;min-width:0}
 .dc-path{width:266px;height:86px;flex:none}
@@ -560,24 +558,17 @@ h1.at{margin:4px 0 0;font:800 32px/1.25 var(--font-d);letter-spacing:-.02em}
 .opt.right .on{color:var(--on-brand);background:var(--brand-soft);box-shadow:none}
 .opt.right{box-shadow:inset 0 0 0 1.5px var(--brand-soft);background:rgb(3 199 90/8%);color:var(--fg)}
 .opt.picked{box-shadow:inset 0 0 0 1.5px var(--copy);color:var(--fg)}
-.ox{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 0}
-.opt.free{box-shadow:inset 0 0 0 1.5px var(--muted);color:var(--fg);cursor:pointer;justify-content:center;flex-direction:column;gap:0;min-height:56px}
-.opt.free b{font:800 20px/1.1 var(--font-d)}
-.opt.free small{font-size:13px;font-weight:600;color:var(--copy)}
+.opt.free{box-shadow:inset 0 0 0 1.5px var(--muted);color:var(--fg);cursor:pointer}
 .opt.free:hover{box-shadow:inset 0 0 0 1.5px var(--fg)}
 .qhint{margin:8px 0 0;font-size:13px;color:var(--muted)}
 .qsum{margin:12px 0 0;font-size:14px;font-weight:650;color:var(--fg)}
 .expl{margin:10px 0 0;padding:12px 14px;border-radius:10px;background:var(--raised);font-size:15px;color:var(--copy);line-height:1.65}
 .expl b{color:var(--fg);margin-right:6px}
-.nextc{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr) 24px;gap:16px;align-items:center;padding:16px 18px 16px 20px;border-radius:12px;
-  background:var(--raised);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
-.nextc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--s2)}
-.nextc .na svg{width:64px;height:46px;display:block}
+.nextc{display:grid;grid-template-columns:minmax(0,1fr) 24px;gap:16px;align-items:center;padding:16px 18px 16px 20px;border-radius:12px;
+  background:var(--raised);box-shadow:inset 0 0 0 1px var(--line)}
 .nextc .nk{display:block;font-size:13px;color:var(--copy);font-weight:650}
 .nextc .nt{display:block;font-size:20px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
 .nextc .nt span{font:700 14px var(--font-d);color:var(--muted);margin-right:8px}
-.nextc .nq{display:block;font-size:14px;color:var(--copy);margin-top:2px}
-.nextc .nm{display:block;font-size:13px;color:var(--muted);margin-top:4px}
 .nextc:hover .nt{color:var(--brand-soft)}
 .nextc .arr{color:var(--copy)}
 .qcard{border-radius:16px;border:1px solid var(--line);background:var(--surface);padding:22px 28px}
@@ -594,14 +585,12 @@ h1.at{margin:4px 0 0;font:800 32px/1.25 var(--font-d);letter-spacing:-.02em}
   .snode.press svg{animation:press .24s var(--ease-pop) both;animation-delay:calc(var(--d,0) * 60ms)}
   @keyframes press{from{transform:scale(1.12);opacity:0}to{transform:none;opacity:1}}
   .snode .arcp{animation:arcFill .6s .2s var(--ease-enter) both}
-  .arc-anim{animation:arcFill .7s var(--ease-enter) both}
   @keyframes arcFill{from{stroke-dasharray:0 100}}
   .snode .tip{animation:fadein .2s .75s both}
   .fab.show{animation:fabin .3s var(--ease-enter) both}
   @keyframes fabin{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
-  /* '새' 메달·방금 얻은 메달 위로 흰 띠가 한 번 지나간다 */
+  /* 완료 카드의 방금 얻은 메달 위로 흰 띠가 한 번 지나간다('나의 학습'의 메달에는 광택이 없다, design-notes §5) */
   .sweep{animation:sweep .5s ease-in-out .45s both}
-  .my .sweep{animation-duration:.7s;animation-delay:.2s}
   @keyframes sweep{from{transform:translateX(0)}to{transform:translateX(210px)}}
   /* 완료 카드: 1-4 칸의 호가 차고(300ms) 도장이 찍힌다(240ms) */
   .dc4 .d4a{animation:d4out .3s linear both}
@@ -739,7 +728,6 @@ h1.at{margin:4px 0 0;font:800 32px/1.25 var(--font-d);letter-spacing:-.02em}
   .stations{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:24px}
   .stations li:nth-child(3n+1)::before{display:none}
   .terms{grid-template-columns:1fr 1fr}
-  .nextb{grid-template-columns:1fr}
   /* 좁은 화면의 사다리: 줄바꿈해 끊기지 않게 세로 길로 세운다(커리큘럼 375px의 세로 길과 같은 문법). 메달 52px, 글은 오른쪽 */
   .ladder{--bsz:52px;flex-direction:column;flex-wrap:nowrap;row-gap:20px}
   .ladder>li{width:auto;padding:0;display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:14px;align-items:start;text-align:left}
@@ -776,8 +764,7 @@ h1.at{margin:4px 0 0;font:800 32px/1.25 var(--font-d);letter-spacing:-.02em}
   .ach b.big{font-size:18px;margin-top:8px}
   .ach .row{flex-wrap:wrap;row-gap:6px}
   .ach .nxt{margin-top:0;padding-top:12px}
-  .nextc{grid-template-columns:48px minmax(0,1fr) 20px;gap:12px;padding:14px 14px 14px 16px}
-  .nextc .na svg{width:48px;height:36px}
+  .nextc{grid-template-columns:minmax(0,1fr) 20px;gap:12px;padding:14px 14px 14px 16px}
   .nextc .nt{font-size:17px}
   .qcard{padding:18px 16px}
 }
@@ -896,15 +883,15 @@ const FAMS=[
  {k:'read',name:'읽은 글',items:[
    {t:'읽은 글 1편',st:'got',date:'2026-11-06',tier:1,rib:'1편'},
    {t:'읽은 글 5편',st:'yet',x:3,y:5,u:'편',tier:2,rib:'5편',crit:'글 5편을 완료합니다.'}],
-  toks:['10편','20편','27편'],line:[`준비 중인 기준: 읽은 글 10편, 20편. 단계가 더 공개된 뒤 ${CANBE}`,`읽은 글 27편 · 여섯 단계가 모두 공개된 뒤 ${CANBE}`]},
+  toks:['10편','20편','27편'],line:[`준비 중인 기준: 읽은 글 10편, 20편. 단계가 더 공개된 뒤 ${CANBE}`,`읽은 글 27편 · 준비 중 · 여섯 단계가 모두 공개된 뒤 ${CANBE}`]},
  {k:'fa',name:'첫 답 정답',items:[
    {t:'첫 답 정답 1개',st:'got',date:'2026-11-06',tier:1,rib:'1개'},
    {t:'첫 답 정답 10개',st:'yet',x:6,y:10,u:'개',tier:2,rib:'10개',crit:'확인 문제를 첫 답에서 10개 맞힙니다.'}],
-  toks:['25개','50개'],line:`준비 중인 기준: 25개, 50개. 단계가 더 공개된 뒤 ${CANBE}`},
+  toks:['25개','50개'],line:`준비 중인 기준: 첫 답 정답 25개, 50개. 단계가 더 공개된 뒤 ${CANBE}`},
  {k:'ac',name:'모두 맞힘',items:[
    {t:'모두 맞힘 1편',st:'got',date:'2026-11-09',tier:1,rib:'1편'},
    {t:'모두 맞힘 5편',st:'yet',x:2,y:5,u:'편',tier:2,rib:'5편',crit:'한 글의 확인 문제를 첫 답에서 모두 맞힌 글이 5편이 됩니다.'}],
-  toks:['15편'],line:`준비 중인 기준: 15편. 단계가 더 공개된 뒤 ${CANBE}`},
+  toks:['15편'],line:`모두 맞힘 15편 · 준비 중 · 단계가 더 공개된 뒤 ${CANBE}`},
  {k:'stage',name:'단계 완주',noLadder:true,items:[ // 단계 완주는 순서와 상관없이 따로 받으므로 사다리 선을 잇지 않는다
    {t:'1단계 완주',st:'yet',x:3,y:4,u:'편',stage:1,crit:'1단계의 글 4편을 모두 읽습니다.'},
    {t:'2단계 완주',st:'yet',x:0,y:4,u:'편',stage:2,crit:'2단계의 글 4편을 모두 읽습니다.'},
@@ -914,7 +901,7 @@ const FAMS=[
    {t:'6단계 완주',st:'pend',stage:6,crit:'6단계의 글을 모두 읽습니다.',why:`6단계가 공개된 뒤 ${CANBE}`}]},
  {k:'term',name:'익힌 용어',items:[
    {t:'익힌 용어 1개',st:'got',date:'2026-11-06',tier:1,rib:'1개'}],
-  toks:['10개','25개','전체'],line:[`준비 중인 기준: 익힌 용어 10개, 25개. 단계가 더 공개된 뒤 ${CANBE}`,`그때 게시된 용어 전체 · 여섯 단계가 모두 공개된 뒤 ${CANBE}`]},
+  toks:['10개','25개','전체'],line:[`준비 중인 기준: 익힌 용어 10개, 25개. 단계가 더 공개된 뒤 ${CANBE}`,`그때 게시된 용어 전체 · 준비 중 · 여섯 단계가 모두 공개된 뒤 ${CANBE}`]},
  {k:'sp',name:'특별',noLadder:true,items:[
    {t:'끈기',st:'yet',g:'grit',crit:'첫 답에서 하나도 맞히지 못한 글을 다시 풀어 익힘으로 바꿉니다.'},
    {t:'탐험',st:'pend',g:'explore',crit:'모든 단계에서 한&nbsp;편 이상 읽습니다.',why:`여섯 단계가 모두 공개된 뒤 ${CANBE}`}]}
@@ -922,7 +909,7 @@ const FAMS=[
 /* 확인 문제(가상의 예) */
 const Q1={opts:['살 때 한 번에 냅니다.','해마다 정한 비율을 날마다 나누어 ETF 자산에서 뺍니다.','팔 때 한 번에 냅니다.'],ans:1,pick:1,
   expl:'총보수는 연 비율로 정하지만 날마다 나누어 ETF 자산에서 빠집니다. 그래서 따로 내지 않아도 가격에 이미 들어가 있습니다.'};
-const Q2={opts:[{v:'O',s:'맞다'},{v:'X',s:'틀리다'}],ans:1,
+const Q2={opts:['맞다','아니다'],ans:1,
   expl:'총보수가 같아도 사고팔 때 드는 거래비용은 ETF마다, 거래할 때마다 다릅니다. 그래서 1년 동안 드는 비용은 같지 않을 수 있습니다.'};
 let Q2PICK=null;
 
@@ -933,7 +920,7 @@ const rgba=(h,a)=>{const [r,g,b]=hx(h);return `rgb(${r} ${g} ${b} / ${a})`};
 const low=n=>mix(STC[n],'#8b928e',.45);
 let UID=0;
 
-/* ───────── 단계 풍경(2색 선화, 160×110): 기호 하나를 띠·목록·정거장·다음 글 카드에서 다시 쓴다 ─────────
+/* ───────── 단계 풍경(2색 선화, 160×110): 기호 하나를 띠·목록·정거장에서 다시 쓴다 ─────────
    색은 currentColor, 면 채움·하이라이트·점선은 쓰는 자리(호스트 svg)의 CSS 변수로 바꾼다. */
 function landInner(n){
   const VE=' vector-effect="non-scaling-stroke"';
@@ -1197,7 +1184,7 @@ function medalSVG(kind,o){
     g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}"/>`;
     if(kind==='terms'){const c=cardGeo(0);g+=`<path d="M${R2(c.x1-c.f)} ${c.y0}V${R2(c.y0+c.f)}H${c.x1}" fill="none" stroke="#8b928e" stroke-width="${R2(1.25*u)}" stroke-linejoin="round"/>`;}
     g+=bglyph(kind,o,'#8b928e',1.25*u);
-    if(o.p>0)g+=`<path class="${o.anim?'arc-anim':''}" d="${kind==='stage'?archOpen(-4.2*u):bshape(kind,-4.2*u)}" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${o.p} 100"/>`;
+    if(o.p>0)g+=`<path d="${kind==='stage'?archOpen(-4.2*u):bshape(kind,-4.2*u)}" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${o.p} 100"/>`;
   }else{
     g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}" stroke-dasharray="${R2(4*u)} ${R2(3*u)}"/>`;
     if(kind==='stage'){
@@ -1250,7 +1237,7 @@ function emblemSVG(level,o){
     g+=ringPaths('#8b928e',1*u,.55);
     g+=ticks('#8b928e',1.1*u,.6);
     g+=num('#b8bfbb');
-    if(o.p>0)g+=`<path class="${o.anim?'arc-anim':''}" d="${bshape('level',-4.2*u)}" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${o.p} 100"/>`;
+    if(o.p>0)g+=`<path d="${bshape('level',-4.2*u)}" fill="none" stroke="#2fdc7a" stroke-width="${R2(3*u)}" stroke-linecap="round" pathLength="100" stroke-dasharray="${o.p} 100"/>`;
   }else{
     g+=`<path d="${outer}" fill="none" stroke="#8b928e" stroke-width="${R2(1.5*u)}" stroke-dasharray="${R2(4*u)} ${R2(3*u)}"/>`;
     g+=num('#8b928e');
@@ -1330,8 +1317,8 @@ function gmark(n,kind){ // 노선표 단계 구분 줄 표식 24px
 /* ───────── 배지: 갈래별 메달 ───────── */
 const FD='Geist Variable, Pretendard Variable, Pretendard, sans-serif';
 function medalFor(k,st,o){ // 이 목업의 갈래 키(level·read·fa·ac·stage·term·sp)로 메달 하나
-  if(k==='level') return emblemSVG(+o.g,{size:o.size,cls:o.cls,state:st,p:o.pct,shine:o.shine,anim:o.anim});
-  return medalSVG(BK[k],{size:o.size,cls:o.cls,state:st,p:o.pct,tier:o.tier,stage:o.stage,which:o.g,shine:o.shine,anim:o.anim});
+  if(k==='level') return emblemSVG(+o.g,{size:o.size,cls:o.cls,state:st,p:o.pct});
+  return medalSVG(BK[k],{size:o.size,cls:o.cls,state:st,p:o.pct,tier:o.tier,stage:o.stage,which:o.g});
 }
 function heroArch(){ // 완료 카드: 1단계 완주. 실선 회색 윤곽(3/4)이 접히고 민트 스테인드글라스가 펼쳐진다
   return `<span class="flip">${medalSVG('stage',{state:'yet',size:96,p:75,stage:1,cls:'fa'})}${medalSVG('stage',{state:'got',size:96,stage:1,shine:true,cls:'fb'})}</span>`;
@@ -1553,18 +1540,21 @@ function scrCurriculum(){
 
 /* ───────── ② 목록 보기(노선표) ───────── */
 function listRows(){
-  const rows=[];
+  const rows=[];let bnd=false;
   ST.forEach(st=>{
+    // 공개된 단계가 끝나는 자리에 공개 경계 한 줄(FR-031, design-notes §7)
+    if(!st.pub&&!bnd&&ST.some(s=>s.pub)){rows.push({type:'bnd',t:'지금 공개된 단계는 1·2단계입니다. 3~6단계는 준비 중입니다.'});bnd=true;}
     rows.push({type:'grp',st});
     if(st.pub) st.arts.forEach(a=>rows.push({type:'art',st,a}));
     else st.old.forEach(o=>rows.push({type:'old',st,o}));
   });
   const into=r=>{
-    if(!r.st.pub) return 'd';
+    if(r.type==='bnd'||!r.st.pub) return 'd';
     if(!IN()) return 'n';
     return (r.type==='art'&&r.a.st==='done')?'g':'s';
   };
-  rows.forEach((r,i)=>{r.top=i?into(r):'';r.bot=i<rows.length-1?into(rows[i+1]):'';});
+  // 커리큘럼 보기의 길처럼 공개 경계 앞에서 노선이 끝나고, 경계 줄에서 점선이 새로 시작한다
+  rows.forEach((r,i)=>{const nx=rows[i+1];r.top=(i&&r.type!=='bnd')?into(r):'';r.bot=(nx&&nx.type!=='bnd')?into(nx):'';});
   return rows;
 }
 const railCls=r=>`rail${r.top?' t'+r.top:''}${r.bot?' b'+r.bot:''}`;
@@ -1576,7 +1566,8 @@ function grpText(st){
     const read=st.arts.filter(a=>a.st==='done').length;
     return `<span class="grp-in">${ico}${nm}<span class="grp-p">${D}${L?`${st.arts.length}편 중 ${read}편 읽음`:`${st.arts.length}편 · 약 ${st.mins}분`}</span></span>`;
   }
-  return `<span class="grp-in">${ico}${nm}<span class="chip pend">준비 중</span></span><span class="grp-sub">이 단계의 글을 모두 준비하면 한&nbsp;번에 공개합니다.</span><span class="sr">아직 공개되지 않은 단계입니다.</span>`;
+  // 준비 중 단계: 번호·이름·수준과 '준비 중', 한 줄 설명, 사유(FR-031)
+  return `<span class="grp-in">${ico}${nm}<span class="chip pend">준비 중</span></span><span class="sr">아직 공개되지 않은 단계입니다.</span><span class="grp-sub">${st.desc}</span><span class="grp-sub">이 단계의 글을 모두 준비하면 한&nbsp;번에 공개합니다.</span>`;
 }
 function dotKind(r){
   if(r.type!=='art') return '';
@@ -1593,6 +1584,11 @@ function listTable(rows){
     <thead><tr><td class="rail" aria-hidden="true"></td><th scope="col">번호</th><th scope="col">제목과 질문</th>${L?'<th scope="col">상태</th>':''}<th scope="col">읽기</th><th scope="col">${L?'용어':'이 글의 용어'}</th></tr></thead>`;
   let open=false;
   rows.forEach(r=>{
+    if(r.type==='bnd'){
+      if(open) h+='</tbody>';
+      h+=`<tbody class="bnd"><tr><td class="${railCls(r)}" aria-hidden="true"></td><td colspan="${cols}" class="bnd-t">${r.t}</td></tr></tbody>`;
+      open=false;return;
+    }
     if(r.type==='grp'){
       if(open) h+='</tbody>';
       h+=`<tbody data-sa="${r.st.n}" class="${r.st.pub?'':'pend'}" style="--stage:var(--s${r.st.n})"><tr class="grow"><td class="${railCls(r)}" aria-hidden="true">${gmark(r.st.n,!r.st.pub?'pend':(L?'open':'neutral'))}</td><th colspan="${cols}" scope="rowgroup">${grpText(r.st)}</th></tr>`;
@@ -1613,12 +1609,14 @@ function listTable(rows){
   return h+'</tbody></table>';
 }
 function listOl(rows){
-  const L=IN();let h='<ol class="rol" aria-label="배우기 글 목록">';let open=false;
+  const L=IN();let h='<ol class="rol" aria-label="배우기 글 목록">';let open=false,bnd=null;
   rows.forEach(r=>{
+    // 좁은 화면 목록의 항목은 단계뿐이다. 공개 경계 한 줄은 그 뒤 첫 단계 항목의 맨 앞에 둔다
+    if(r.type==='bnd'){if(open) h+='</ol></li>';open=false;bnd=r;return;}
     if(r.type==='grp'){
       if(open) h+='</ol></li>';
-      h+=`<li data-sa="${r.st.n}" class="${r.st.pub?'':'pend'}" style="--stage:var(--s${r.st.n})"><div class="grp-head"><span class="${railCls(r)}" aria-hidden="true">${gmark(r.st.n,!r.st.pub?'pend':(L?'open':'neutral'))}</span><h3>${grpText(r.st)}</h3></div><ol style="list-style:none;margin:0;padding:0">`;
-      open=true;return;
+      h+=`<li data-sa="${r.st.n}" class="${r.st.pub?'':'pend'}" style="--stage:var(--s${r.st.n})">${bnd?`<p class="bnd-n"><span class="${railCls(bnd)}" aria-hidden="true"></span>${bnd.t}</p>`:''}<div class="grp-head"><span class="${railCls(r)}" aria-hidden="true">${gmark(r.st.n,!r.st.pub?'pend':(L?'open':'neutral'))}</span><h3>${grpText(r.st)}</h3></div><ol style="list-style:none;margin:0;padding:0">`;
+      open=true;bnd=null;return;
     }
     if(r.type==='art'){
       const a=r.a;
@@ -1681,7 +1679,7 @@ function stationsBlock(){
 }
 function bcard(k,it,conn,nx){ // conn: 앞 메달과 잇는 선(넓은 화면), nx: 다음 메달로 잇는 선(좁은 화면 세로 길)
   const pct=it.x!=null?Math.round(it.x/it.y*100):0;
-  const svg=dual((size,cls)=>medalFor(k,it.st,{size,cls,g:it.g,stage:it.stage,tier:it.tier,pct,shine:it.isNew}),76,52);
+  const svg=dual((size,cls)=>medalFor(k,it.st,{size,cls,g:it.g,stage:it.stage,tier:it.tier,pct}),76,52); // 광택은 완료 카드의 방금 얻은 것에만(design-notes §5)
   const rib=it.rib&&it.st!=='pend'?`<span class="rib ${it.st}" style="--en:${EN[BK[k]]||'#8b928e'}" aria-hidden="true">${it.rib}</span>`:'';
   let chip;
   if(it.st==='got') chip=`<span class="chip got">받음 ${it.date}</span>${it.isNew?NEWP:''}`;
@@ -1704,10 +1702,6 @@ function famBlock(f){
 function scrMy(){
   const back=`<a class="back" href="#" data-go="curriculum"><span aria-hidden="true">←</span> 배우기</a><h1 class="mh" tabindex="-1">나의 학습</h1>`;
   if(!IN()) return `<div class="view on"><div class="wrap">${back}<div style="margin-top:22px">${guestSample('my')}</div>${gainGrid()}</div></div>`;
-  const NB=[
-    {t:'1단계 완주',p:'3/4 · 1편 남음',sr:'4편 중 3편, 1편 남음',c:'1단계의 글 4편을 모두 읽습니다.',svg:medalSVG('stage',{state:'yet',size:56,p:75,stage:1,anim:true})},
-    {t:'레벨 3',p:'260/300 · 40 남음',sr:'경험치 300 중 260, 40 남음',c:'경험치 300에 닿습니다.',svg:emblemSVG(3,{state:'yet',size:56,p:87,anim:true})},
-    {t:'읽은 글 5편',p:'3/5 · 2편 남음',sr:'5편 중 3편, 2편 남음',c:'글 5편을 완료합니다.',svg:medalSVG('read',{state:'yet',size:56,p:60,tier:2,anim:true})}];
   return `<div class="view on"><div class="wrap my">${back}
     ${levelCard()}
     <h2 class="sec">단계별 진행</h2>${stationsBlock()}
@@ -1716,8 +1710,6 @@ function scrMy(){
     <div class="terms">${TERMS.map(t=>`<a class="term" href="#" style="--stage:var(--s${t.s})"><i aria-hidden="true"></i><span style="min-width:0"><b>${t.t}</b><small>${t.src}</small></span></a>`).join('')}</div>
     <p class="terms-c">글의 확인 문제를 하나 이상 맞히면 그 글의 용어를 익힌 것으로 셉니다.</p>
     <h2 class="sec">배지<small>받은 배지 5개 · 기준은 모두 공개합니다</small></h2>
-    <p class="nb-k">다음 배지</p>
-    <div class="nextb">${NB.map(b=>`<div class="nb">${b.svg}<div style="min-width:0"><b>${b.t}</b><span><span aria-hidden="true">${b.p}</span><span class="sr">${b.sr}</span></span><span class="c">${b.c}</span></div></div>`).join('')}</div>
     <div class="fams">${FAMS.map(famBlock).join('')}</div>
     ${logBlock()}
   </div></div>`;
@@ -1762,11 +1754,11 @@ function answered(labels,texts,ans,pick){ // 답한 문제: 단추 대신 정적
 }
 function q2Body(){
   const head=`<p class="qt" id="q2t"><span class="qn">문제 2</span><span>총보수가 같은 두 ETF는 1년 동안 드는 비용도 언제나 같습니다.</span></p>`;
-  // 한 번만 답하는 선택이라 라디오가 아니라 묶음 안의 일반 단추 두 개로 둔다
-  if(Q2PICK===null) return head+`<div class="ox" role="group" aria-labelledby="q2t" aria-describedby="q2h">${Q2.opts.map((o,i)=>`<button type="button" class="opt free" data-q2="${i}"><b>${o.v}</b><small>${o.s}</small></button>`).join('')}</div><p class="qhint" id="q2h">고르면 바로 답이 됩니다.</p>`;
+  // 한 번만 답하는 선택이라 라디오가 아니라 묶음 안의 일반 단추로 둔다. O/X 문제도 다른 문제와 같은 번호 붙은 한 줄 보기 목록이다
+  if(Q2PICK===null) return head+`<div class="opts" role="group" aria-labelledby="q2t" aria-describedby="q2h">${Q2.opts.map((t,i)=>`<button type="button" class="opt free" data-q2="${i}"><span class="on" aria-hidden="true">${i+1}</span><span class="ot">${t}</span></button>`).join('')}</div><p class="qhint" id="q2h">고르면 바로 답이 됩니다.</p>`;
   const n=1+(Q2PICK===Q2.ans?1:0),ok=Q2PICK===Q2.ans;
   // 답한 뒤 초점은 풀이로만 옮긴다. 고른 답과 맞음 여부는 풀이 안에서 한 번만 읽힌다(따로 알리지 않는다)
-  return head+answered(Q2.opts.map(o=>o.v),Q2.opts.map(o=>o.s),Q2.ans,Q2PICK)+`<p class="expl" id="ex2" tabindex="-1"><span class="sr">고른 답 ${Q2.opts[Q2PICK].v}, ${ok?'맞음':'틀린 보기'}. </span><b>풀이</b>${Q2.expl}</p><p class="qsum">2문제 중 ${n}개를 맞혔습니다.</p>`;
+  return head+answered(Q2.opts.map((t,i)=>String(i+1)),Q2.opts,Q2.ans,Q2PICK)+`<p class="expl" id="ex2" tabindex="-1"><span class="sr">고른 답 ${Q2PICK+1}번, ${ok?'맞음':'틀린 보기'}. </span><b>풀이</b>${Q2.expl}</p><p class="qsum">2문제 중 ${n}개를 맞혔습니다.</p>`;
 }
 function quiz(L){
   return `<div class="qhead"><h3 id="qh">확인 문제</h3><span class="vtag">가상의 예</span></div>
@@ -1775,10 +1767,9 @@ function quiz(L){
     <p class="expl" id="ex1"><b>풀이</b>${Q1.expl}</p></div>
   <div class="q" id="q2">${q2Body()}</div>`;
 }
-function nextCard(){
-  return `<a class="nextc" href="#"><span class="na" aria-hidden="true">${land(2,'pub')}</span><span style="min-width:0">
-    <span class="nk">다음 글 · 2단계 · 수익과 위험 읽기</span><span class="nt"><span>2-1</span>수익과 손실</span>
-    <span class="nq">마지막 수익과 중간의 하락은 왜 함께 봐야 할까요?</span><span class="nm">약 6분</span></span><span class="arr">${chev()}</span></a>`;
+function nextCard(){ // 계약 next는 {articleId, number, title}뿐이라 '다음 글' 표지·번호·제목·화살표만 그린다(단계 색 띠·풍경·질문·읽기 시간 없음)
+  return `<a class="nextc" href="#"><span style="min-width:0">
+    <span class="nk">다음 글</span><span class="nt"><span>2-1</span>수익과 손실</span></span><span class="arr">${chev()}</span></a>`;
 }
 const DONE_MSG='1단계 글 4편을 모두 읽었습니다. 새 배지: 1단계 완주. 레벨 3이 되었습니다. 다음 레벨까지 240, 다음 배지(읽은 글 5편)까지 1편입니다.';
 function doneCard(){
@@ -1786,7 +1777,7 @@ function doneCard(){
   return `<section class="done-card" aria-labelledby="dch">
     <div class="dc-sec dc-head">
       <h2 id="dch" class="dc-date">완료 · 2026-11-20</h2>
-      <div class="dc-left"><div class="dc-path">${dcPath()}</div><span class="dc-prog"><span aria-hidden="true">1단계 4/4</span><span class="sr">1단계 글 4편 중 4편을 읽었습니다</span></span></div>
+      <div class="dc-left"><div class="dc-path">${dcPath()}</div><span class="dc-prog">1단계 · 완주 · 4편</span></div>
     </div>
     <div class="dc-sec">
       <div class="dc-ach">
@@ -1798,7 +1789,7 @@ function doneCard(){
         <div class="ach a-lvx rise" style="--d:1">${mm2()}
           <div class="xpnow">경험치 <span class="xpn" aria-hidden="true"></span><span class="sr">360</span> · 다음 레벨까지 <b style="color:var(--fg)">240</b></div></div>
         <div class="ach a-xp rise" style="--d:2"><span class="k">이번에 받은 경험치</span><ul class="xp">
-          <li><span>글 완료</span><span>+20</span></li><li><span>1단계 완주</span><span>+50</span></li><li><span>첫 문제 정답</span><span>+30</span></li>
+          <li><span>글 완료</span><span>+20</span></li><li><span>1단계 완주</span><span>+50</span></li><li><span>첫 답 정답</span><span>+30</span></li>
           <li class="sum"><span>합계</span><span>+100</span></li></ul></div>
       </div>
       <p class="status">${dot}<span>1단계 글 4편을 모두 읽었습니다. <span class="nw">새 배지: 1단계 완주.</span> <span class="nw">레벨 3이 되었습니다.</span> <span class="nw">다음 레벨까지 240,</span> <span class="nw">다음 배지(읽은 글 5편)까지</span> 1편입니다.</span></p>
@@ -1814,10 +1805,10 @@ function scrEnd(){
   const L=IN();
   const pebIc=`<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="#8b928e" stroke-width="1.3"/><circle cx="8" cy="8" r="4.4" fill="none" stroke="#8b928e" stroke-width="1"/></svg>`;
   const ref=L
-    ?`<section class="ref" aria-labelledby="refe"><h2 id="refe">참고: 목업 동작</h2><p style="margin:0">문제 2의 O·X를 누르면 답한 모습을 볼 수 있습니다. 목업은 경험치와 배지 숫자를 다시 계산하지 않습니다.</p></section>`
+    ?`<section class="ref" aria-labelledby="refe"><h2 id="refe">참고: 목업 동작</h2><p style="margin:0">문제 2의 보기를 누르면 답한 모습을 볼 수 있습니다. 목업은 경험치와 배지 숫자를 다시 계산하지 않습니다.</p></section>`
     :`<section class="ref" aria-labelledby="refe"><h2 id="refe">참고: 목업 동작</h2><p style="margin:0">문제 1은 이 탭에서 방금 답한 모습입니다. 비로그인 사용자의 답은 기록하지 않으므로, 글을 다시 열면 두 문제 모두 답하지 않은 상태로 보입니다.</p></section>`;
   return `<div class="view on"><div class="wrap read">
-    ${L?'<div class="rbar" role="progressbar" aria-label="읽은 정도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i></i></div>':''}
+    ${L?'<div class="rbar" aria-hidden="true"><i></i></div>':''}
     <nav class="crumb" aria-label="경로"><a href="#" data-go="curriculum">배우기</a><span class="sep" aria-hidden="true">›</span><a href="#" data-go="curriculum" data-to="stage-1">1단계 · ETF와 국내 시장 기초</a></nav>
     <span class="a-no">1-4</span><h1 class="at" tabindex="-1">ETF 보수는 어디로 빠져나갈까?</h1><div class="a-meta">약 4분</div>
     <div class="body">

@@ -25,7 +25,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 배우기 공개 조회 세 주소를 실제로 호출한다(learning-public-api, quickstart 2-1·2-2·3-5·4-4·6-1·9-2 서버 쪽).
+ * 배우기 공개 조회 주소(글 하나·용어 하나)와 지운 9월 판 목록 경로를 실제로 호출한다(learning-public-api, quickstart
+ * 2-2·3-5·4-4·6-1·9-2 서버 쪽).
  *
  * <p><b>응답이 {@code docs/specs/learning-api/examples/}의 예시 파일과 JSON 동치인지 단언한다.</b> 계약이 구현과 어긋나면 여기서
  * 깨진다. 9월 판 글 응답 {@code article.json}만은 2판에서 필드가 더해졌으므로 응답 가운데 그 파일에 있는 키만 골라 비교한다({@link
@@ -95,65 +96,30 @@ class LearningPublicApiIT extends IntegrationTestSupport {
         seeds.seedSectorMap(names);
     }
 
-    /** articles-list.json의 두 글을 심는다. 수익과 손실은 article.json 전체로 심는다. */
-    private void publishListFixture() throws Exception {
-        JsonNode list = example("articles-list.json").get("articles");
-        JsonNode first = list.get(0);
-        seeds.publishMinimal(
-                first.get("articleId").asText(),
-                first.get("title").asText(),
-                first.get("question").asText(),
-                first.get("readingOrder").asInt());
+    /** 9월 판의 두 글을 심는다. 섹터와 ETF는 최소 판, 수익과 손실은 article.json 전체로 심는다. */
+    private void publishLegacyArticles() throws Exception {
+        seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "q", 1);
         JsonNode article = example("article.json");
         seeds.publishFromResponse(article, article.get("readingOrder").asInt());
     }
 
-    // --- §1 목록 ---
+    // --- 9월 판 목록(지웠다) ---
 
     @Test
-    @DisplayName("게시된 글이 없으면 200 articles: []다 (quickstart 2-1)")
-    void emptyListBeforePublishing() throws Exception {
-        JsonNode data = data("/learning/articles");
+    @DisplayName("9월 판 목록 경로는 지웠다 — 글이 게시돼 있어도 404다 (B16)")
+    void legacyListRouteIsGone() throws Exception {
+        publishLegacyArticles();
 
-        assertThat(data.get("articles").isArray()).isTrue();
-        assertThat(data.get("articles")).isEmpty();
+        mockMvc.perform(get("/learning/articles")).andExpect(status().isNotFound());
     }
 
-    @Test
-    @DisplayName("목록 응답이 articles-list.json과 같다")
-    void listMatchesExample() throws Exception {
-        seedFullSectorMap();
-        publishListFixture();
-
-        assertThat(data("/learning/articles")).isEqualTo(example("articles-list.json"));
-    }
+    // --- §3 글 하나 ---
 
     @Test
-    @DisplayName("목록은 판의 readingOrder, articleId 순이고 초안 컬럼의 순서를 따르지 않는다")
-    void listIsOrderedByRevisionReadingOrderThenArticleId() throws Exception {
-        // 넣는 차례를 기대하는 차례와 다르게 둔다. 초안 reading_order는 backtest 6, transaction-cost 7,
-        // sectors-and-etf 1이지만 판에는 1·1·2를 준다 — 초안 컬럼으로 정렬하면 순서가 달라진다.
-        seeds.publishMinimal("transaction-cost", "거래비용", "q", 2);
-        seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "q", 1);
-        seeds.publishMinimal("backtest", "백테스트", "q", 1);
-
-        JsonNode articles = data("/learning/articles").get("articles");
-
-        assertThat(articles)
-                .extracting(item -> item.get("articleId").asText())
-                .containsExactly("backtest", "sectors-and-etf", "transaction-cost");
-    }
-
-    // --- §2 글 하나 ---
-
-    @Test
-    @DisplayName("초안뿐인 글은 목록에 없고 단건은 404 LEARNING_ARTICLE_UNAVAILABLE이다 (quickstart 2-2, SC-006)")
+    @DisplayName("초안뿐인 글은 404 LEARNING_ARTICLE_UNAVAILABLE이다 (quickstart 2-2, SC-006)")
     void draftArticleIsUnavailable() throws Exception {
         seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "q", 1);
 
-        assertThat(data("/learning/articles").get("articles"))
-                .extracting(item -> item.get("articleId").asText())
-                .doesNotContain(ARTICLE);
         assertErrorCode("/learning/articles/" + ARTICLE, "LEARNING_ARTICLE_UNAVAILABLE");
     }
 
@@ -168,7 +134,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("9월 판 필드는 article.json과 같다 (2판 필드는 더해질 뿐이다)")
     void articleMatchesExample() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
 
         JsonNode expected = example("article.json");
         assertThat(onlyKeysOf(data("/learning/articles/" + ARTICLE), expected)).isEqualTo(expected);
@@ -178,7 +144,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("단계를 하나도 공개하지 않았으면 LEGACY 판은 article-pre-release.json과 같다 (quickstart 6-1)")
     void preReleaseArticleMatchesExample() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
 
         assertThat(data("/learning/articles/" + ARTICLE))
                 .isEqualTo(example("article-pre-release.json"));
@@ -188,7 +154,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("공개된 단계가 있으면 LEGACY 판은 article-previous.json과 같다 (quickstart 9-5 서버 쪽)")
     void previousArticleMatchesExample() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
         seeds.markStageReleased("etf-market-basics");
 
         assertThat(data("/learning/articles/" + ARTICLE))
@@ -252,22 +218,6 @@ class LearningPublicApiIT extends IntegrationTestSupport {
         assertThat(fieldNames(term)).containsExactlyElementsOf(fieldNames(example("term.json")));
     }
 
-    @Test
-    @DisplayName("9월 판 목록 경로는 CURRENT 글도 같은 모양으로 싣는다")
-    void legacyListIncludesCurrentArticles() throws Exception {
-        publishCurrentFixture();
-
-        assertThat(data("/learning/articles").get("articles"))
-                .extracting(item -> item.get("articleId").asText())
-                .contains("volatility-is-not-loss", "returns-and-losses");
-        assertThat(data("/learning/articles").get("articles"))
-                .allSatisfy(
-                        item ->
-                                assertThat(fieldNames(item))
-                                        .containsExactly(
-                                                "articleId", "title", "question", "readingOrder"));
-    }
-
     /** {@code actual}에서 {@code expected}의 최상위 키만 남긴다. 2판에서 더한 필드를 빼고 9월 판 필드만 비교할 때 쓴다. */
     private ObjectNode onlyKeysOf(JsonNode actual, JsonNode expected) {
         ObjectNode subset = objectMapper.createObjectNode();
@@ -290,7 +240,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("게시 뒤 초안 용어 문장을 바꿔도 글·용어 응답의 문장은 판의 값 그대로다 (SC-006, quickstart 3-5)")
     void draftTermChangesDoNotLeakIntoPublicResponses() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
         String published = example("term.json").get("sentence").asText();
 
         // 초안의 이름·제목·순서는 seeds.reset()이 되돌리지 않으므로 이 테스트가 직접 되돌린다.
@@ -324,7 +274,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @Test
     @DisplayName("대응표가 없으면 200에 available=false, SECTOR_MAP_NOT_READY, 이름 null이다")
     void exampleUnavailableWhenMapNotReady() throws Exception {
-        publishListFixture();
+        publishLegacyArticles();
 
         JsonNode example = data("/learning/articles/" + ARTICLE).get("example");
 
@@ -362,7 +312,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("대응표에서 코드 하나가 빠지면 SECTOR_NOT_IN_MAP과 빠진 코드다 (quickstart 4-4 서버 쪽)")
     void exampleUnavailableWhenSectorMissing() throws Exception {
         seeds.seedSectorMap(Map.of("SEMICONDUCTOR", "반도체"));
-        publishListFixture();
+        publishLegacyArticles();
 
         JsonNode example = data("/learning/articles/" + ARTICLE).get("example");
 
@@ -373,14 +323,14 @@ class LearningPublicApiIT extends IntegrationTestSupport {
                 .containsExactly("BATTERY");
     }
 
-    // --- §3 용어 ---
+    // --- §4 용어 ---
 
     /** 글의 term 블록과 문장이 같은지는 게시 경로를 거치는 B02의 {@code LearningAdminApiIT}가 본다(SC-003). */
     @Test
     @DisplayName("게시된 용어 응답이 term.json과 같다")
     void termMatchesExample() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
 
         JsonNode term = data("/learning/terms/max-drawdown");
 
@@ -391,7 +341,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("초안뿐인 용어, 없는 용어, 형식이 틀린 용어는 모두 404 LEARNING_TERM_NOT_READY다 (quickstart 2-2)")
     void unpublishedTermsAreNotReady() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
 
         assertErrorCode("/learning/terms/rebalancing", "LEARNING_TERM_NOT_READY");
         assertErrorCode("/learning/terms/no-such-term", "LEARNING_TERM_NOT_READY");
@@ -402,7 +352,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {
     @DisplayName("색인 행을 지우면(게시 취소의 서버 결과) 같은 404다")
     void termIsNotReadyAfterIndexIsCleared() throws Exception {
         seedFullSectorMap();
-        publishListFixture();
+        publishLegacyArticles();
         data("/learning/terms/max-drawdown");
 
         jdbcTemplate.update("DELETE FROM learning_published_term WHERE term_key = 'max-drawdown'");

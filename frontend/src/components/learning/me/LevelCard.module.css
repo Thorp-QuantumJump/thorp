@@ -1,0 +1,174 @@
+/* '나의 학습' 레벨 카드(목업 .lvcard·.lv-head·.lv-nums). */
+.card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 22px;
+  padding: 24px 28px 22px;
+  border: 1px solid var(--thorp-line);
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      80% 140% at 0% 0%,
+      color-mix(in srgb, var(--thorp-accent) 7%, transparent),
+      transparent 55%
+    ),
+    var(--thorp-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+
+.head {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.emblem {
+  display: block;
+  flex: none;
+  width: 112px;
+  height: 112px;
+}
+
+.emblem svg {
+  width: 100%;
+  height: 100%;
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.level {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  font: 800 2.6rem/1 var(--thorp-font-display, inherit);
+  letter-spacing: -0.03em;
+}
+
+.sub {
+  margin: 0;
+  color: var(--thorp-copy);
+  font-size: 0.9375rem;
+}
+
+.sub b {
+  color: var(--thorp-foreground);
+  font-weight: 700;
+}
+
+.numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--thorp-line);
+}
+
+.count {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  padding: 0 20px;
+  border-left: 1px solid var(--thorp-line);
+}
+
+.count:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: visible;
+}
+
+.iconShape {
+  fill: var(--thorp-surface);
+  stroke: var(--thorp-brand-soft);
+}
+
+.iconFill {
+  fill: color-mix(in srgb, var(--thorp-accent) 10%, transparent);
+}
+
+.iconLine {
+  fill: none;
+  stroke: var(--thorp-brand-soft);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.iconMark {
+  fill: var(--thorp-brand-soft);
+  opacity: 0.42;
+}
+
+.caption {
+  display: block;
+  color: var(--thorp-muted);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.value {
+  display: block;
+  font: 800 1.65rem/1.15 var(--thorp-font-display, inherit);
+  letter-spacing: -0.02em;
+}
+
+.value small {
+  margin-left: 3px;
+  color: var(--thorp-copy);
+  font: 650 0.9rem var(--thorp-font-body, inherit);
+}
+
+.extra {
+  display: block;
+  color: var(--thorp-copy);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 719px) {
+  .card {
+    padding: 18px 16px;
+  }
+
+  .head {
+    gap: 16px;
+  }
+
+  .emblem {
+    width: 80px;
+    height: 80px;
+  }
+
+  .level {
+    font-size: 2rem;
+  }
+
+  .numbers {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 14px;
+  }
+
+  .count {
+    padding: 0;
+    border-left: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .iconShape,
+  .iconLine {
+    stroke: CanvasText;
+  }
+}

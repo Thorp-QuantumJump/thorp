@@ -44,6 +44,8 @@
 }
 
 .card {
+  position: relative;
+  isolation: isolate;
   display: block;
   min-width: 0;
   padding: 12px 16px;
@@ -56,6 +58,32 @@
 .stop:hover .card,
 .stop:focus-visible .card {
   border-color: var(--thorp-line-strong);
+}
+
+/*
+  지금 이어 읽을 글: 이 화면에서 빛나는 곳 하나(design-notes §2). 초록 테두리와 옅은 빛을 카드 뒤의 따로 된 층에 그려,
+  로그인 상태를 다시 확인하는 동안 그 층만 숨길 수 있게 한다(research R33).
+*/
+.glow {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--thorp-accent) 45%, transparent);
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--thorp-accent) 8%, transparent),
+    transparent 70%
+  );
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--thorp-accent) 6%, transparent);
+  pointer-events: none;
+}
+
+.goHint {
+  color: var(--thorp-brand-soft);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .main {
@@ -107,6 +135,7 @@
   .chips {
     display: grid;
     grid-template-columns: 112px 56px 70px;
+    grid-auto-flow: row;
     gap: 8px;
     justify-content: end;
     justify-items: start;
@@ -115,6 +144,12 @@
 
   .chipsGuest {
     grid-template-columns: 56px 70px;
+  }
+
+  /* '이어서 읽기 →'는 꼬리표 줄 아래 한 줄을 다 쓰고 오른쪽에 붙는다(목업 .go-hint). */
+  .goHint {
+    grid-column: 1 / -1;
+    justify-self: end;
   }
 }
 

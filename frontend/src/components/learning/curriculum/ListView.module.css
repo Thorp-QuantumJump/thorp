@@ -76,6 +76,19 @@
   background: var(--rail-neutral);
 }
 
+/* 나의 학습 상태를 알면 읽은 글로 가는 노선은 초록, 그 밖은 회색 실선이다(목업 .rail.tg·.ts). */
+.railTop[data-kind='read'],
+.railBottom[data-kind='read'] {
+  width: 4px;
+  margin-left: -2px;
+  background: var(--thorp-brand-soft);
+}
+
+.railTop[data-kind='unread'],
+.railBottom[data-kind='unread'] {
+  background: var(--rail-unread);
+}
+
 /* 준비 중 단계로 가는 노선만 점선이다. */
 .railTop[data-kind='preparing'],
 .railBottom[data-kind='preparing'] {
@@ -104,9 +117,34 @@
   height: 14px;
 }
 
-/* 상태를 모르는 정거장 점. 상태 모양(완료·읽는 중·안 읽음)은 나의 학습(B13)이 더한다. */
-.dot circle {
+/* 상태를 모르는 정거장 점 */
+.dot[data-kind='neutral'] circle {
   fill: var(--station-neutral);
+}
+
+/* 완료: 초록 채움과 체크 */
+.dot[data-kind='done'] circle {
+  fill: var(--thorp-brand-soft);
+}
+
+.dot[data-kind='done'] path {
+  stroke: var(--thorp-action-foreground);
+}
+
+/* 읽는 중·안 읽음: 실선 회색 칸. 읽는 중은 바깥에 초록 진행 호 */
+.dot[data-kind='reading'] circle:not(.dotArc),
+.dot[data-kind='unread'] circle {
+  fill: var(--thorp-surface);
+  stroke: var(--thorp-muted);
+}
+
+.dot .dotArc {
+  fill: none;
+  stroke: var(--thorp-brand-soft);
+}
+
+.status {
+  white-space: nowrap;
 }
 
 .groupMark {
@@ -140,6 +178,11 @@
 /* 단계 표식: 공개된 단계는 채운 원판, 준비 중은 바탕색 위의 점선 칸과 흐린 번호다. */
 .groupMark[data-kind='neutral'] circle {
   fill: var(--rail-neutral);
+}
+
+.groupMark[data-kind='open'] circle {
+  fill: var(--thorp-surface);
+  stroke: var(--thorp-muted);
 }
 
 .groupMark[data-kind='preparing'] {
@@ -420,5 +463,40 @@
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
+  }
+}
+
+/*
+  강제 색 모드에서도 정거장 점의 상태 모양과 노선의 실선·점선이 남는다. 이 모드는 바탕색을 화면 바탕으로 바꾸고
+  그라디언트를 지우므로, 실선 노선은 시스템 색으로 칠하고 점선 노선은 테두리 점선으로 다시 그린다.
+*/
+@media (forced-colors: active) {
+  :is(.railTop, .railBottom):is([data-kind='neutral'], [data-kind='unread']) {
+    background: CanvasText;
+  }
+
+  :is(.railTop, .railBottom)[data-kind='read'] {
+    background: Highlight;
+  }
+
+  :is(.railTop, .railBottom)[data-kind='preparing'] {
+    width: 0;
+    border-left: 3px dashed CanvasText;
+    background: none;
+  }
+
+  .dot[data-kind='reading'] circle:not(.dotArc),
+  .dot[data-kind='unread'] circle,
+  .groupMark[data-kind='open'] circle,
+  .groupMark[data-kind='preparing'] circle {
+    stroke: CanvasText;
+  }
+
+  .dot[data-kind='done'] circle {
+    fill: Highlight;
+  }
+
+  .dot .dotArc {
+    stroke: Highlight;
   }
 }

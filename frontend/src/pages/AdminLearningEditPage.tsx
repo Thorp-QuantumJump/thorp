@@ -15,32 +15,31 @@ import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'
 import {
   applyPublishToUnsentDraft,
   clearUnsentDraft,
-  loadUnsentDraft,
+  readUnsentDraft,
   saveUnsentDraft,
   type UnsentDraft,
 } from '@/components/learning/admin/adminDraftStorage'
+import panels from '@/components/learning/admin/AdminEditPanels.module.css'
 import { ArticlePreview } from '@/components/learning/admin/ArticlePreview'
 import { BlockEditor } from '@/components/learning/admin/BlockEditor'
-import { describeFieldPath } from '@/components/learning/admin/draftLabels'
+import { EditActionNotice, type ActionState } from '@/components/learning/admin/EditActionNotice'
 import {
   toEditableDraft,
   toServerDraft,
   withEmptyBody,
-  type DraftSyntaxIssue,
+  type EditableDraft,
 } from '@/components/learning/admin/editableDraft'
 import { ExampleEditor } from '@/components/learning/admin/ExampleEditor'
 import { knownQuizIds } from '@/components/learning/admin/manuscript'
 import { ManuscriptTransfer } from '@/components/learning/admin/ManuscriptTransfer'
 import { PlacementEditor } from '@/components/learning/admin/PlacementEditor'
-import { PublishCheckResultList } from '@/components/learning/admin/PublishCheckResultList'
 import { QuizEditor } from '@/components/learning/admin/QuizEditor'
+import { RestorePrompt } from '@/components/learning/admin/RestorePrompt'
+import { SourceListEditor } from '@/components/learning/admin/SourceListEditor'
 import { TermListEditor } from '@/components/learning/admin/TermListEditor'
 import type {
-  AdminFieldViolation,
   AdminLearningArticle,
   DraftQuizQuestion,
-  EditableDraft,
-  PublishCheckFailure,
   PublishedEdition,
   PublishResult,
   StageAdminView,
@@ -54,8 +53,8 @@ import styles from './AdminLearningEditPage.module.css'
  * (spec Edge Cases) 둘 다 운영자가 쓴 내용을 말없이 버리지 않는다. 자동 병합도 자동 재전송도 하지
  * 않는다. 덮어쓰기를 막으려고 만든 거절을 화면이 자동으로 뚫으면 막은 뜻이 사라진다.
  *
- * <p><b>보관본은 저장에 성공했을 때만 지운다.</b> 401 뒤에 지우면 재로그인해서 돌아온 운영자가
- * 복원할 것을 잃는다(R12).
+ * <p><b>보관본은 저장에 성공했을 때, 운영자가 버리기를 골랐을 때, 이전 내용 버전 보관본을 알렸을 때만
+ * 지운다.</b> 401 뒤에 지우면 재로그인해서 돌아온 운영자가 복원할 것을 잃는다(R12).
  *
  * <p><b>게시 전 검사 문장을 새로 짓지 않는다.</b> 걸린 항목은 서버가 준 그대로 `PublishCheckResultList`
  * 가 보인다(계약 §6).
@@ -63,7 +62,11 @@ import styles from './AdminLearningEditPage.module.css'
  * <p><b>(2판) 편집기는 편집 문법 문자열을 들고 있다.</b> 저장할 때 글자 조각으로 바꾸며, 문법 오류가 있으면
  * 요청을 보내지 않고 위치를 보인다(R26). <b>게시에 성공하면 초안을 다시 읽는다.</b> 게시가 초안 번호를 올리지
  * 않고 문제 식별자와 `transferFrom`을 바꾸므로, 다시 읽지 않고 저장하면 400·409를 받는다(계약 §6). 이 탭에
- * 보관한 이 글의 편집 내용도 같은 두 가지를 고친다.
+ * 보관한 이 글의 편집 내용도 같은 두 가지를 고친다. 다시 읽기가 401이면 게시 결과는 그대로 두고 다시 로그인해
+ * 새로 불러오라고 알린다. 화면 전체를 로그인 안내로 바꾸면 게시가 끝났다는 사실과 그 결과를 잃는다.
+ *
+ * <p>복원 안내·출처 목록·작업 결과 안내는 따로 둔 조각(`RestorePrompt`·`SourceListEditor`·`EditActionNotice`)이
+ * 그린다. 이 화면은 상태와 서버 요청만 가진다.
  *
  * <p>관리 화면은 FR-019 대상이 아니지만 폼 요소는 `label`을 가진다.
  */
@@ -75,36 +78,6 @@ type LoadState =
   | { status: 'loaded' }
   | { status: 'notFound' }
   | { status: 'failed'; message?: string }
-
-/** 게시한 뒤 초안을 다시 읽는 중인가, 읽지 못했는가(계약 §6). */
-type RereadState = 'reading' | 'done' | 'failed'
-
-/** 저장·게시·게시 취소가 끝난 뒤 그 자리에 보일 것이다. 셋이 한 자리를 쓴다. */
-type ActionState =
-  | { kind: 'idle' }
-  | { kind: 'saved' }
-  | { kind: 'syntaxErrors'; issues: DraftSyntaxIssue[] }
-  | { kind: 'draftChanged'; message: string; currentDraftVersion: number | null }
-  | { kind: 'termIdTaken'; message: string; termId: string | null; ownerArticleId: string | null }
-  | {
-      kind: 'termTransferInvalid'
-      message: string
-      termId: string | null
-      ownerArticleId: string | null
-    }
-  | { kind: 'invalid'; message: string; fields: AdminFieldViolation[] }
-  | {
-      kind: 'checkFailed'
-      /** 서버 문장. 항목을 하나도 읽지 못해도 이 문장은 보인다(계약 §6) */
-      message: string
-      checkVersion: string | null
-      failures: PublishCheckFailure[]
-    }
-  | { kind: 'published'; result: PublishResult; reread: RereadState }
-  | { kind: 'unpublished'; revisionNo: number | null }
-  | { kind: 'stageNotReleased'; message: string }
-  | { kind: 'formatOutdated'; message: string }
-  | { kind: 'notice'; message: string }
 
 export function AdminLearningEditPage() {
   const { articleId = '' } = useParams<{ articleId: string }>()
@@ -125,6 +98,8 @@ export function AdminLearningEditPage() {
   const [baseVersion, setBaseVersion] = useState(0)
   const [publishedRevisionNo, setPublishedRevisionNo] = useState<number | null>(null)
   const [publishedEdition, setPublishedEdition] = useState<PublishedEdition | null>(null)
+  /** 9월 판(LEGACY)을 공개한 적이 있는가. V1로 되돌리기를 보일지 정한다(계약 §4·§5) */
+  const [hasLegacyRevision, setHasLegacyRevision] = useState(false)
   const [draft, setDraft] = useState<EditableDraft | null>(null)
   /** 마지막으로 불러오거나 저장한 초안이다. 화면의 초안과 다르면 저장하지 않은 변경이 있다 */
   const [savedDraft, setSavedDraft] = useState<EditableDraft | null>(null)
@@ -136,7 +111,7 @@ export function AdminLearningEditPage() {
 
   const [action, setAction] = useState<ActionState>({ kind: 'idle' })
   const [pendingRestore, setPendingRestore] = useState<UnsentDraft | null>(null)
-  /** 이전 내용 버전의 보관본을 버렸다. 복원하지 않았다는 사실을 알린다 */
+  /** 이전 내용 버전의 보관본이 있어 버렸다. 복원하지 않았다는 사실을 알린다 */
   const [discardedOutdated, setDiscardedOutdated] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -165,9 +140,11 @@ export function AdminLearningEditPage() {
         applyArticle(result.article)
         setLoad({ status: 'loaded' })
         // 보관본이 있으면 먼저 묻는다. 묻지 않고 덮으면 서버 값이 소리 없이 사라진다(R12).
-        const lookup = loadUnsentDraft(result.article.articleId)
+        const lookup = readUnsentDraft(result.article.articleId)
         setPendingRestore(lookup.status === 'found' ? lookup.unsent : null)
-        setDiscardedOutdated(lookup.status === 'discardedOutdated')
+        // 복원할 수 없는 보관본은 알린 뒤 지운다. 알리지 않고 지우는 곳은 없다.
+        if (lookup.status === 'outdated') clearUnsentDraft(result.article.articleId)
+        setDiscardedOutdated(lookup.status === 'outdated')
         return
       }
       if (result.status === 'notFound') {
@@ -208,6 +185,7 @@ export function AdminLearningEditPage() {
     setBaseVersion(article.draftVersion)
     setPublishedRevisionNo(article.publishedRevisionNo)
     setPublishedEdition(article.publishedEdition)
+    setHasLegacyRevision(article.hasLegacyRevision)
     setDraft(editable)
     setSavedDraft(editable)
     setSavedQuiz(article.draft.quiz)
@@ -245,12 +223,6 @@ export function AdminLearningEditPage() {
     setBaseVersion(unsent.draftVersion)
     setPendingRestore(null)
   }
-
-  /** 화면 초안에서 그 용어에 적힌 넘겨받기다. V1 초안이나 없는 용어면 `null`이다. */
-  const transferFromOf = (termId: string): string | null =>
-    draft?.format === 'V2'
-      ? (draft.terms.find((term) => term.termId === termId)?.transferFrom ?? null)
-      : null
 
   /** V2 초안의 용어 하나에 넘겨받기를 걸거나 비운다(R24). 저장은 운영자가 누른다. */
   const setTransferFrom = (termId: string, transferFrom: string | null) => {
@@ -346,7 +318,8 @@ export function AdminLearningEditPage() {
       return
     }
     if (reread.status === 'unauthenticated') {
-      setAccess({ status: 'unauthenticated' })
+      // 보관본은 지우지 않았다. 다시 로그인해 이 글을 열면 게시 결과대로 고친 보관본을 복원할 수 있다.
+      setAction({ kind: 'published', result, reread: 'unauthenticated' })
       return
     }
     setAction({ kind: 'published', result, reread: 'failed' })
@@ -358,36 +331,36 @@ export function AdminLearningEditPage() {
     if (busy || hasUnsavedChanges) return
     setBusy(true)
     setAction({ kind: 'idle' })
-    const result = await publishArticle(articleId, baseVersion)
+    const outcome = await publishArticle(articleId, baseVersion)
 
-    switch (result.status) {
+    switch (outcome.status) {
       case 'published':
-        setStatus(result.result.status)
-        setPublishedRevisionNo(result.result.revisionNo)
-        setPublishedEdition(result.result.edition)
+        setStatus(outcome.result.status)
+        setPublishedRevisionNo(outcome.result.revisionNo)
+        setPublishedEdition(outcome.result.edition)
         applyPublishToUnsentDraft(
           articleId,
-          result.result.renamedQuestions,
-          result.result.transferredTerms,
+          outcome.result.renamedQuestions,
+          outcome.result.transferredTerms,
         )
-        await rereadAfterPublish(result.result)
+        await rereadAfterPublish(outcome.result)
         break
       case 'checkFailed':
         setAction({
           kind: 'checkFailed',
-          message: result.message,
-          checkVersion: result.checkVersion,
-          failures: result.failures,
+          message: outcome.message,
+          checkVersion: outcome.checkVersion,
+          failures: outcome.failures,
         })
         break
       case 'stageNotReleased':
-        setAction({ kind: 'stageNotReleased', message: result.message })
+        setAction({ kind: 'stageNotReleased', message: outcome.message })
         break
       case 'invalid':
-        setAction({ kind: 'invalid', message: result.message, fields: result.fields })
+        setAction({ kind: 'invalid', message: outcome.message, fields: outcome.fields })
         break
       default:
-        handleRejection(result)
+        handleRejection(outcome)
     }
     setBusy(false)
   }
@@ -399,24 +372,24 @@ export function AdminLearningEditPage() {
     }
     setBusy(true)
     setAction({ kind: 'idle' })
-    const result = await unpublishArticle(articleId)
+    const outcome = await unpublishArticle(articleId)
     setBusy(false)
 
-    if (result.status === 'unpublished') {
-      setStatus(result.result.status)
+    if (outcome.status === 'unpublished') {
+      setStatus(outcome.result.status)
       setPublishedRevisionNo(null)
-      setAction({ kind: 'unpublished', revisionNo: result.result.unpublishedRevisionNo })
+      setAction({ kind: 'unpublished', revisionNo: outcome.result.unpublishedRevisionNo })
       return
     }
-    if (result.status === 'unauthenticated') {
+    if (outcome.status === 'unauthenticated') {
       setAccess({ status: 'unauthenticated' })
       return
     }
-    if (result.status === 'notFound') {
+    if (outcome.status === 'notFound') {
       setLoad({ status: 'notFound' })
       return
     }
-    setAction({ kind: 'notice', message: result.message })
+    setAction({ kind: 'notice', message: outcome.message })
   }
 
   if (access.status === 'checking') {
@@ -485,8 +458,6 @@ export function AdminLearningEditPage() {
     )
   }
 
-  const termOptions = draft.terms.map((term) => ({ termId: term.termId, label: term.label }))
-
   return (
     <main className={styles.main} aria-labelledby="admin-edit-title">
       <h1 id="admin-edit-title" className={styles.title}>
@@ -503,39 +474,22 @@ export function AdminLearningEditPage() {
       </p>
 
       {discardedOutdated ? (
-        <p role="status" className={styles.detail}>
+        <p role="status" className={panels.detail}>
           이전 편집기에서 보관한 편집 내용이 있었지만 지금 편집기의 모양과 달라 복원하지 않고
           버렸습니다.
         </p>
       ) : null}
 
       {pendingRestore === null ? null : (
-        <section className={styles.restore} aria-labelledby="admin-edit-restore-title">
-          <h2 id="admin-edit-restore-title">저장하지 못한 편집 내용이 있습니다</h2>
-          <p>{new Date(pendingRestore.savedAt).toLocaleString('ko-KR')}에 보관한 내용입니다.</p>
-          {pendingRestore.draftVersion === draftVersion ? null : (
-            <p role="alert">
-              보관한 뒤 다른 곳에서 초안이 바뀌었습니다(보관본 {pendingRestore.draftVersion}번, 지금{' '}
-              {draftVersion}번). 복원해 저장하면 초안이 바뀌었다는 안내를 받습니다. 새 초안에 옮길
-              내용을 확인하는 데 쓰세요.
-            </p>
-          )}
-          <p>복원할지 정하기 전에는 편집할 수 없습니다.</p>
-          <div className={styles.actions}>
-            <button type="button" onClick={() => restoreUnsentDraft(pendingRestore)}>
-              복원하기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                clearUnsentDraft(articleId)
-                setPendingRestore(null)
-              }}
-            >
-              버리기
-            </button>
-          </div>
-        </section>
+        <RestorePrompt
+          unsent={pendingRestore}
+          draftVersion={draftVersion}
+          onRestore={restoreUnsentDraft}
+          onDiscard={() => {
+            clearUnsentDraft(articleId)
+            setPendingRestore(null)
+          }}
+        />
       )}
 
       {/*
@@ -544,7 +498,7 @@ export function AdminLearningEditPage() {
       */}
       <fieldset className={styles.editorArea} disabled={pendingRestore !== null}>
         <div className={styles.fields}>
-          <label className={styles.field}>
+          <label className={panels.field}>
             <span>제목</span>
             <input
               type="text"
@@ -552,7 +506,7 @@ export function AdminLearningEditPage() {
               onChange={(event) => updateDraft({ ...draft, title: event.target.value })}
             />
           </label>
-          <label className={styles.field}>
+          <label className={panels.field}>
             <span>질문</span>
             <textarea
               rows={2}
@@ -562,7 +516,7 @@ export function AdminLearningEditPage() {
           </label>
           {/* V2 글은 읽는 순서 대신 단계 안 순서를 쓴다(계약 §3). V1 글만 지금처럼 고친다. */}
           {draft.format === 'V1' ? (
-            <label className={styles.field}>
+            <label className={panels.field}>
               <span>읽는 순서</span>
               <input
                 type="number"
@@ -580,7 +534,7 @@ export function AdminLearningEditPage() {
           stageKey={draft.stageKey}
           stagePosition={draft.stagePosition}
           stages={stages}
-          canRevertToV1={publishedEdition === 'LEGACY'}
+          canRevertToV1={hasLegacyRevision}
           onPlacementChange={(placement) => updateDraft({ ...draft, ...placement })}
           onFormatChange={(format) => updateDraft(withEmptyBody(draft, format))}
         />
@@ -594,21 +548,7 @@ export function AdminLearningEditPage() {
           onImport={updateDraft}
         />
 
-        {draft.format === 'V1' ? (
-          <BlockEditor
-            format="V1"
-            blocks={draft.blocks}
-            terms={termOptions}
-            onChange={(blocks) => updateDraft({ ...draft, blocks })}
-          />
-        ) : (
-          <BlockEditor
-            format="V2"
-            blocks={draft.blocks}
-            terms={termOptions}
-            onChange={(blocks) => updateDraft({ ...draft, blocks })}
-          />
-        )}
+        <BlockEditor draft={draft} onChange={updateDraft} />
 
         <ExampleEditor
           example={draft.example}
@@ -616,103 +556,15 @@ export function AdminLearningEditPage() {
           onChange={(example) => updateDraft({ ...draft, example })}
         />
 
-        {draft.format === 'V1' ? (
-          <TermListEditor
-            format="V1"
-            terms={draft.terms}
-            savedTermIds={savedTermIds}
-            onChange={(terms) => updateDraft({ ...draft, terms })}
-          />
-        ) : (
-          <TermListEditor
-            format="V2"
-            terms={draft.terms}
-            savedTermIds={savedTermIds}
-            onChange={(terms) => updateDraft({ ...draft, terms })}
-          />
-        )}
+        <TermListEditor draft={draft} savedTermIds={savedTermIds} onChange={updateDraft} />
 
         {draft.format === 'V2' ? (
           <QuizEditor questions={draft.quiz} onChange={(quiz) => updateDraft({ ...draft, quiz })} />
         ) : null}
 
-        {/* V2 초안은 출처를 글자 옆 출처 표시로 둔다(계약 §5). 남아 있는 목록만 지울 수 있게 보인다. */}
-        {draft.format === 'V1' || draft.sources.length > 0 ? (
-          <section className={styles.sources} aria-labelledby="admin-edit-sources-title">
-            <h3 id="admin-edit-sources-title">출처</h3>
-            {draft.format === 'V2' ? (
-              <p className={styles.detail}>
-                V2 글에는 글 끝 출처 목록을 둘 수 없습니다. 글자 옆 출처 표시로 옮긴 뒤 지워 주세요.
-              </p>
-            ) : null}
-            <ul className={styles.sourceList}>
-              {draft.sources.map((source, index) => (
-                // 출처는 라벨이 겹칠 수 있어 순번으로 자리를 잡는다.
-                <li key={index} className={styles.sourceRow}>
-                  <label className={styles.field}>
-                    <span>이름</span>
-                    <input
-                      type="text"
-                      value={source.label}
-                      onChange={(event) =>
-                        updateDraft({
-                          ...draft,
-                          sources: draft.sources.map((item, position) =>
-                            position === index ? { ...item, label: event.target.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span>주소</span>
-                    <input
-                      type="url"
-                      value={source.url ?? ''}
-                      onChange={(event) =>
-                        updateDraft({
-                          ...draft,
-                          sources: draft.sources.map((item, position) =>
-                            position === index
-                              ? {
-                                  ...item,
-                                  url: event.target.value === '' ? null : event.target.value,
-                                }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateDraft({
-                        ...draft,
-                        sources: draft.sources.filter((_, position) => position !== index),
-                      })
-                    }
-                    aria-label={`${index + 1}번째 출처 삭제`}
-                  >
-                    삭제
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {draft.format === 'V1' ? (
-              <button
-                type="button"
-                onClick={() =>
-                  updateDraft({ ...draft, sources: [...draft.sources, { label: '', url: null }] })
-                }
-              >
-                출처 추가
-              </button>
-            ) : null}
-          </section>
-        ) : null}
+        <SourceListEditor draft={draft} onChange={updateDraft} />
 
-        <div className={styles.actions}>
+        <div className={panels.actions}>
           <button type="button" onClick={() => void onSave()} disabled={busy}>
             저장
           </button>
@@ -731,215 +583,19 @@ export function AdminLearningEditPage() {
           ) : null}
         </div>
         {hasUnsavedChanges ? (
-          <p id="admin-edit-unsaved" className={styles.detail}>
+          <p id="admin-edit-unsaved" className={panels.detail}>
             저장한 뒤 게시할 수 있습니다.
           </p>
         ) : null}
       </fieldset>
 
-      {action.kind === 'saved' ? <p role="status">초안을 저장했습니다.</p> : null}
-
-      {action.kind === 'syntaxErrors' ? (
-        <section className={styles.conflict}>
-          <p role="alert">
-            편집 문법이 틀린 칸이 있어 저장하지 않았습니다. 아래 위치를 고쳐 주세요.
-          </p>
-          <ul>
-            {action.issues.map((issue, index) => (
-              <li key={index}>
-                {issue.where} {issue.line}줄 {issue.column}칸: {issue.message}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {action.kind === 'draftChanged' ? (
-        <section className={styles.conflict}>
-          <p role="alert">다른 곳에서 초안이 바뀌었습니다. 새로 불러온 뒤 다시 고쳐 주세요.</p>
-          <p className={styles.detail}>
-            {action.message}
-            {action.currentDraftVersion === null
-              ? ''
-              : ` (서버 초안 번호 ${action.currentDraftVersion})`}
-          </p>
-          <button type="button" onClick={reload}>
-            새로 불러오기
-          </button>
-        </section>
-      ) : null}
-
-      {action.kind === 'termIdTaken' ? (
-        <section className={styles.conflict}>
-          <p role="alert">
-            {action.message}
-            {action.termId === null ? '' : ` (용어 ${action.termId}`}
-            {action.ownerArticleId === null ? '' : `, 쓰는 글 ${action.ownerArticleId}`}
-            {action.termId === null ? '' : ')'}
-          </p>
-          {draft.format === 'V2' &&
-          action.termId !== null &&
-          action.ownerArticleId !== null &&
-          draft.terms.some((term) => term.termId === action.termId) ? (
-            <>
-              <p className={styles.detail}>
-                이 용어를 이 글로 옮기려면 넘겨받기를 걸고 다시 저장하세요. 이 글이 게시될 때{' '}
-                {action.ownerArticleId} 글에서 이 글로 넘어옵니다.
-              </p>
-              <button
-                type="button"
-                onClick={() => setTransferFrom(action.termId ?? '', action.ownerArticleId)}
-              >
-                이 글로 넘겨받기
-              </button>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      {action.kind === 'termTransferInvalid' ? (
-        <section className={styles.conflict}>
-          <p role="alert">
-            {action.message}
-            {action.termId === null ? '' : ` (용어 ${action.termId})`}
-          </p>
-          {action.termId !== null && action.ownerArticleId === null ? (
-            <>
-              <p className={styles.detail}>
-                지금 이 용어를 소유한 글이 없습니다. 넘겨받기를 비우고 다시 저장하세요.
-              </p>
-              <button type="button" onClick={() => setTransferFrom(action.termId ?? '', null)}>
-                넘겨받기 비우기
-              </button>
-            </>
-          ) : null}
-          {action.termId !== null && action.ownerArticleId === articleId ? (
-            <>
-              <p className={styles.detail}>
-                이 용어는 이미 이 글로 넘어왔습니다. 넘겨받기를 비우고 다시 저장하세요.
-              </p>
-              <button type="button" onClick={() => setTransferFrom(action.termId ?? '', null)}>
-                넘겨받기 비우기
-              </button>
-            </>
-          ) : null}
-          {action.termId !== null &&
-          action.ownerArticleId !== null &&
-          action.ownerArticleId !== articleId &&
-          action.ownerArticleId === transferFromOf(action.termId) ? (
-            <p className={styles.detail}>
-              넘겨받기에 적은 글은 지금 소유 글과 같지만, 지금은 넘겨받을 수 없습니다. 다른 글이
-              같은 용어를 넘겨받는 중인지 관리 목록의 &lsquo;넘겨받는 중&rsquo;을 확인하세요.
-            </p>
-          ) : null}
-          {action.termId !== null &&
-          action.ownerArticleId !== null &&
-          action.ownerArticleId !== articleId &&
-          action.ownerArticleId !== transferFromOf(action.termId) ? (
-            <>
-              <p className={styles.detail}>
-                지금 이 용어를 소유한 글은 {action.ownerArticleId}입니다.
-              </p>
-              <button
-                type="button"
-                onClick={() => setTransferFrom(action.termId ?? '', action.ownerArticleId)}
-              >
-                {action.ownerArticleId}에서 넘겨받기로 고치기
-              </button>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      {action.kind === 'invalid' ? (
-        <section className={styles.conflict}>
-          <p role="alert">{action.message}</p>
-          <ul>
-            {action.fields.map((field) => (
-              <li key={`${field.field}:${field.message}`}>
-                {describeFieldPath(field.field)}: {field.message}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {action.kind === 'checkFailed' ? (
-        <section className={styles.conflict}>
-          {/* 항목을 하나도 읽지 못하면 목록이 비므로, 그때는 이 문장이 거절을 알린다(계약 §6). */}
-          <p role={action.failures.length === 0 ? 'alert' : undefined}>{action.message}</p>
-          <PublishCheckResultList failures={action.failures} checkVersion={action.checkVersion} />
-        </section>
-      ) : null}
-
-      {action.kind === 'formatOutdated' ? (
-        <section className={styles.conflict}>
-          <p role="alert">{action.message}</p>
-          <p className={styles.detail}>
-            V1로 되돌리는 저장은 9월 판(LEGACY)을 공개한 적이 있는 글에서만 됩니다. 공개된 단계의
-            글은 V1 초안으로 게시할 수 없으니 V2 원고를 가져와 저장한 뒤 게시하세요.
-          </p>
-        </section>
-      ) : null}
-
-      {action.kind === 'stageNotReleased' ? (
-        <section className={styles.conflict}>
-          <p role="alert">{action.message}</p>
-          <p className={styles.detail}>
-            공개 전 단계의 새 기준 글은 관리 목록의 &lsquo;단계 공개&rsquo;로 함께 게시됩니다.
-          </p>
-        </section>
-      ) : null}
-
-      {action.kind === 'published' ? (
-        <section className={styles.conflict}>
-          <p role="status">
-            {action.result.revisionNo}판({action.result.edition})으로 게시했습니다. 검사 규칙{' '}
-            {action.result.checkVersion} · 대응표 {action.result.sectorMapVersion} ·{' '}
-            {action.result.publishedAt}
-          </p>
-          {action.result.renamedQuestions.length > 0 ? (
-            <p className={styles.detail}>
-              이 문제는 이미 답한 사용자에게도 새 문제로 보입니다:{' '}
-              {action.result.renamedQuestions
-                .map((rename) => `${rename.from} → ${rename.to}`)
-                .join(', ')}
-            </p>
-          ) : null}
-          {action.result.transferredTerms.length > 0 ? (
-            <p className={styles.detail}>
-              넘겨받은 용어:{' '}
-              {action.result.transferredTerms
-                .map((term) => `${term.termId}(${term.fromArticleId}에서)`)
-                .join(', ')}
-            </p>
-          ) : null}
-          {action.reread === 'reading' ? (
-            <p role="status">게시한 초안을 다시 읽는 중입니다.</p>
-          ) : null}
-          {action.reread === 'failed' ? (
-            <>
-              <p role="alert">
-                게시한 뒤 초안을 다시 읽지 못했습니다. 게시가 바꾼 문제 식별자를 받아야 다음 저장이
-                거절되지 않습니다.
-              </p>
-              <button type="button" onClick={reload}>
-                새로 불러오기
-              </button>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      {action.kind === 'unpublished' ? (
-        <p role="status">
-          {action.revisionNo === null
-            ? '이미 초안이라 바뀐 것이 없습니다.'
-            : `${action.revisionNo}판의 게시를 취소했습니다.`}
-        </p>
-      ) : null}
-
-      {action.kind === 'notice' ? <p role="alert">{action.message}</p> : null}
+      <EditActionNotice
+        action={action}
+        articleId={articleId}
+        draft={draft}
+        onReload={reload}
+        onSetTransferFrom={setTransferFrom}
+      />
 
       <ArticlePreview
         articleId={articleId}

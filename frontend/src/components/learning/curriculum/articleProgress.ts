@@ -1,10 +1,11 @@
 import type { StageView } from '@/types/learning'
+import type { LearnerArticleEntry, LearnerStageEntry } from '@/types/learningMe'
 import type { ArticleStampState } from '../me/ArticleStamp'
 
 /**
  * 커리큘럼 보기에 넘기는 글 하나의 나의 학습 상태(013 FR-020·FR-023).
  *
- * <p>값은 '나의 학습' 조회(B13 T192)가 채운다. 이 묶음(B11)의 부품은 값을 받으면 그리고, 받지 않으면 상태 글자·
+ * <p>값은 '나의 학습' 조회(`progressMapOf`)가 채운다. 부품은 값을 받으면 그리고, 받지 않으면 상태 글자·
  * 익힌 용어 수를 비우고 중립 모양으로 그린다. 비로그인 사용자와 기록을 불러오지 못한 때가 그 경우이며, 어느 경우도
  * '안 읽음'이나 0편으로 채우지 않는다(FR-020).
  */
@@ -18,8 +19,41 @@ export type ArticleProgress = (
   masteredTermCount: number
 }
 
+/** 단계 하나의 완료 수(계약 §1 `stages[]`). 공개된 단계만 둘 다 있다. */
+export type StageCount = { completedCount: number; publishedCount: number; completed: boolean }
+
 /** 글 id로 찾는 상태표. 없는 글은 상태를 모르는 글이다. */
 export type ArticleProgressMap = ReadonlyMap<string, ArticleProgress>
+
+/** '나의 학습' 응답의 글별 기록(계약 §1 `articles`)으로 상태표를 만든다. */
+export function progressMapOf(articles: readonly LearnerArticleEntry[]): ArticleProgressMap {
+  const map = new Map<string, ArticleProgress>()
+  for (const entry of articles) {
+    const masteredTermCount = entry.masteredTermCount
+    if (entry.state === 'COMPLETED') map.set(entry.articleId, { state: 'done', masteredTermCount })
+    else if (entry.state === 'READING') map.set(entry.articleId, { state: 'reading', percent: entry.percent, masteredTermCount })
+    else map.set(entry.articleId, { state: 'unread', masteredTermCount })
+  }
+  return map
+}
+
+/**
+ * '나의 학습' 응답의 단계별 진행(계약 §1 `stages`)에서 공개된 단계의 완료 수만 모은다. 준비 중 단계와 글이 0편인
+ * 단계는 넣지 않는다.
+ */
+export function stageCountsOf(stages: readonly LearnerStageEntry[]): ReadonlyMap<number, StageCount> {
+  const map = new Map<number, StageCount>()
+  for (const stage of stages) {
+    if (stage.status !== 'OPEN' || stage.completedCount === null || stage.publishedCount === null) continue
+    if (stage.publishedCount === 0) continue
+    map.set(stage.number, {
+      completedCount: stage.completedCount,
+      publishedCount: stage.publishedCount,
+      completed: stage.completed,
+    })
+  }
+  return map
+}
 
 /** 상태 글자(design-notes §4). 색과 모양은 보조이고 이 글자가 원본이다. */
 export function progressLabel(progress: ArticleProgress): string {
@@ -31,6 +65,19 @@ export function progressLabel(progress: ArticleProgress): string {
     case 'unread':
       return '안 읽음'
   }
+}
+
+/**
+ * 단계 진행 글자(design-notes §3.1·§3.3). 다 읽었으면 '완주 · 4편', 아니면 '4편 중 3편 읽음'이다. 단계 띠·목록 보기의
+ * 단계 구분 줄·'나의 학습'의 정거장·완료 카드가 같은 글자를 쓴다.
+ */
+export function stageProgressLabel({ completed, completedCount, publishedCount }: StageCount): string {
+  return completed ? `완주 · ${publishedCount}편` : `${publishedCount}편 중 ${completedCount}편 읽음`
+}
+
+/** 단계에서 읽은 비율(0~100, 반올림). 공개된 글이 없으면 0이다. 단계 완주 메달의 진행 호가 쓴다. */
+export function stagePercent({ completedCount, publishedCount }: Pick<StageCount, 'completedCount' | 'publishedCount'>): number {
+  return publishedCount > 0 ? Math.round((completedCount / publishedCount) * 100) : 0
 }
 
 /** 글 도장의 모양. 상태를 모르면 중립 모양이다. */
