@@ -84,10 +84,10 @@ cd frontend && npm run lint && npm run build && npm test
 ### 2-1. 게시 전 빈 목록
 
 ```bash
-curl -s localhost:8080/learning/articles
+curl -s localhost:8080/learning/curriculum
 ```
 
-**기대**: `success: true`, `data.articles: []`. 오류가 아니다(spec Edge Cases).
+**기대**: `success: true`, `data.preReleaseArticles: []`. 오류가 아니다(spec Edge Cases). 9월 판 목록 경로 `GET /learning/articles`는 B16에서 지웠으므로 404다.
 
 ### 2-2. 없는 글과 준비 안 된 용어
 
@@ -249,7 +249,7 @@ curl -s localhost:8080/learning/curriculum
 curl -s localhost:8080/learning/articles/returns-and-losses
 ```
 
-**기대**: 커리큘럼은 `releasedStageCount: 0`, `preReleaseArticles`에 §2-1과 같은 글·순서, 모든 단계 `PREPARING`, `previousEditionArticles`는 비어 있음. 글은 `edition: PRE_RELEASE`, 블록은 9월 판 모양, `quiz: []`. 화면은 §4-1과 같다(FR-031).
+**기대**: 커리큘럼은 `releasedStageCount: 0`, `preReleaseArticles`에 §3-3에서 게시한 글이 판의 `readingOrder`, `articleId` 순서로 있음, 모든 단계 `PREPARING`, `previousEditionArticles`는 비어 있음. 글은 `edition: PRE_RELEASE`, 블록은 9월 판 모양, `quiz: []`. 화면은 §4-1과 같다(FR-031).
 
 ### 6-2. 게시 방식 (R16)
 

@@ -40,7 +40,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 커리큘럼 조회(learning-public-api §1, quickstart 6-1·8-4·8-7·11-2 서버 부분, tasks T127).
+ * 커리큘럼 조회(learning-public-api §1, quickstart 2-1·6-1·8-4·8-7·11-2 서버 부분, tasks T127).
  *
  * <p>{@code curriculum-pre-release.json}은 실제 요청과 JSON 동치다. {@code curriculum.json}의 {@code
  * notices}는 지금 시각에 따라 달라지므로, 공개 안내를 보는 경우는 시계를 고정한 {@link LearningQueryService}를 이 테스트 안에서 만들어 부른다.
@@ -117,9 +117,9 @@ class LearningCurriculumIT extends IntegrationTestSupport {
                 readOnly.execute(status -> CurriculumResponse.from(service.curriculum())));
     }
 
-    /** {@code articles-list.json}의 두 글을 LEGACY 판으로 심는다. 9월 판 목록과 같은 글·순서다. */
+    /** {@code curriculum-pre-release.json}의 {@code preReleaseArticles} 두 글을 LEGACY 판으로 심는다. */
     private void seedPreReleaseArticles() throws Exception {
-        for (JsonNode article : example("articles-list.json").get("articles")) {
+        for (JsonNode article : example("curriculum-pre-release.json").get("preReleaseArticles")) {
             seeds.publishMinimal(
                     article.get("articleId").asText(),
                     article.get("title").asText(),
@@ -209,21 +209,27 @@ class LearningCurriculumIT extends IntegrationTestSupport {
 
     @Test
     @DisplayName(
-            "첫 단계 공개 전에는 curriculum-pre-release.json과 같다 — 9월 판 목록과 같은 글·순서, 모든 단계 준비 중 (quickstart 6-1)")
+            "첫 단계 공개 전에는 curriculum-pre-release.json과 같다 — 공개 중인 글만 판의 읽는 순서로, 모든 단계 준비 중 (quickstart 6-1)")
     void preReleaseMatchesExample() throws Exception {
         seedPreReleaseArticles();
 
         JsonNode curriculum = requestCurriculum();
 
         assertThat(curriculum).isEqualTo(example("curriculum-pre-release.json"));
-        // 첫 단계 공개 전 목록은 9월 판 목록 경로와 같은 글·순서다.
-        String list =
-                mockMvc.perform(get("/learning/articles"))
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString(StandardCharsets.UTF_8);
-        assertThat(curriculum.get("preReleaseArticles"))
-                .isEqualTo(objectMapper.readTree(list).at("/data/articles"));
+    }
+
+    @Test
+    @DisplayName("첫 단계 공개 전 글은 판의 readingOrder, articleId 순이고 초안 컬럼의 순서를 따르지 않는다")
+    void preReleaseArticlesAreOrderedByRevisionReadingOrderThenArticleId() throws Exception {
+        // 넣는 차례를 기대하는 차례와 다르게 둔다. 초안 reading_order는 backtest 6, transaction-cost 7,
+        // sectors-and-etf 1이지만 판에는 1·1·2를 준다 — 초안 컬럼으로 정렬하면 순서가 달라진다.
+        seeds.publishMinimal("transaction-cost", "거래비용", "q", 2);
+        seeds.publishMinimal("sectors-and-etf", "섹터와 ETF", "q", 1);
+        seeds.publishMinimal("backtest", "백테스트", "q", 1);
+
+        assertThat(requestCurriculum().get("preReleaseArticles"))
+                .extracting(item -> item.get("articleId").asText())
+                .containsExactly("backtest", "sectors-and-etf", "transaction-cost");
     }
 
     @Test
@@ -365,9 +371,12 @@ class LearningCurriculumIT extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("게시된 글이 하나도 없어도 200이고 여섯 단계가 모두 준비 중이다")
+    @DisplayName("게시된 글이 하나도 없어도 200이고 여섯 단계가 모두 준비 중이다 (quickstart 2-1)")
     void emptyCurriculumIsOk() throws Exception {
         JsonNode curriculum = requestCurriculum();
+
+        // 공개 전 목록은 null이 아니라 빈 배열이다. 화면은 배열인지로 첫 단계 공개 전을 가른다(계약 §1).
+        assertThat(curriculum.get("preReleaseArticles").isArray()).isTrue();
 
         assertThat(curriculum.get("stages")).hasSize(6);
         assertThat(curriculum.get("stages"))
