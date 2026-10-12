@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { indexCssBlock } from '@/test/cssRule'
 
 /**
  * 배우기 커리큘럼 화면과 '나의 학습'·완료 카드는 의미 토큰과 같은 색을 값으로 박지 않는다.
@@ -14,32 +15,6 @@ import { describe, expect, it } from 'vitest'
  */
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
-
-/** `index.css`에서 `head`로 시작하는 규칙 블록 하나를 꺼낸다. */
-function indexCssBlock(head: string): string {
-  const css = readFileSync(resolve(sourceRoot, 'index.css'), 'utf-8')
-  const start = css.indexOf(head)
-  let depth = 0
-  let end = start
-  for (let i = css.indexOf('{', start); i < css.length; i += 1) {
-    if (css[i] === '{') depth += 1
-    if (css[i] === '}') depth -= 1
-    if (depth === 0) {
-      end = i
-      break
-    }
-  }
-  return css.slice(start, end)
-}
-
-/**
- * classic에서 `initial`로 비우는 토큰. 개편 뒤 새로 생긴 토큰이라 각 자리는 `var(--토큰, 예전 값)`으로 써야 classic이
- * 예전 화면으로 돌아간다(frontend/CLAUDE.md).
- */
-function classicClearedTokens(): string[] {
-  const block = indexCssBlock(":root[data-design='classic'] {")
-  return [...block.matchAll(/(--thorp-[\w-]+):\s*initial\s*;/g)].map((match) => match[1])
-}
 
 function rootTokenColors(): Map<string, string> {
   const block = indexCssBlock(':root {')
@@ -74,40 +49,6 @@ const TARGETS = [
   resolve(sourceRoot, 'pages/LearningMePage.module.css'),
 ]
 
-/**
- * 새 디자인에만 쓰는 규칙의 표지. `:global(:root:not([data-design='classic'])) .item { … }`처럼 classic 밖으로 한정한
- * 규칙은 classic에서 쓰이지 않으니, 그 안에서는 classic에서 비우는 토큰을 대체값 없이 써도 된다.
- */
-const NEW_DESIGN_ONLY = "not([data-design='classic'])"
-
-/**
- * 주석을 지운 소스에서 `index` 자리의 선언이 classic에서도 쓰이는가. 그 선언이 속한 규칙의 선택자(바로 앞 `{`와 그 앞의
- * `}`·`;`·`{` 사이 글자)를 쉼표로 나눠, 하나라도 classic 밖으로 한정되지 않았으면 쓰인다고 본다.
- */
-function appliesInClassic(css: string, index: number): boolean {
-  const open = css.lastIndexOf('{', index)
-  const start = Math.max(
-    css.lastIndexOf('}', open),
-    css.lastIndexOf(';', open),
-    css.lastIndexOf('{', open - 1),
-  )
-  const selector = css.slice(start + 1, open)
-  // `:is(.a, .b)`처럼 괄호 안에 있는 쉼표에서는 나누지 않는다.
-  const selectors: string[] = []
-  let depth = 0
-  let from = 0
-  for (let i = 0; i < selector.length; i += 1) {
-    if (selector[i] === '(') depth += 1
-    if (selector[i] === ')') depth -= 1
-    if (selector[i] === ',' && depth === 0) {
-      selectors.push(selector.slice(from, i))
-      from = i + 1
-    }
-  }
-  selectors.push(selector.slice(from))
-  return selectors.some((part) => !part.includes(NEW_DESIGN_ONLY))
-}
-
 /** 소스에 값으로 쓴 색을 hex로 모은다. `#rrggbb`와 `rgb(r g b)`·`rgb(r, g, b)`(투명도를 붙인 것 포함)다. */
 function writtenColors(text: string): { written: string; hex: string }[] {
   const hexes = [...text.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((match) => ({
@@ -141,29 +82,6 @@ describe('배우기 화면의 색', () => {
       '#03c75a',
       '#01170a',
     ])
-  })
-
-  it('classic 밖으로 한정한 규칙만 classic에서 쓰이지 않는다고 본다', () => {
-    const rule = (selector: string) => `${selector} { padding: var(--thorp-pad-card); }`
-    const scoped = rule(`:global(:root:${NEW_DESIGN_ONLY}) :is(.item, .row)`)
-    expect(appliesInClassic(scoped, scoped.indexOf('var('))).toBe(false)
-    const mixed = rule(`:global(:root:${NEW_DESIGN_ONLY}) .item, .row`)
-    expect(appliesInClassic(mixed, mixed.indexOf('var('))).toBe(true)
-  })
-
-  it('classic에서도 쓰는 규칙은 classic에서 비우는 토큰을 예전 값과 함께 쓴다', () => {
-    const cleared = classicClearedTokens()
-    // 확인 창 배경막처럼 개편 뒤 생긴 토큰이 들어 있어야 이 검사가 뜻이 있다.
-    expect(cleared).toContain('--thorp-overlay')
-    const found: string[] = []
-    for (const path of TARGETS) {
-      const text = readFileSync(path, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '')
-      for (const match of text.matchAll(/var\((--thorp-[\w-]+)\s*\)/g)) {
-        if (cleared.includes(match[1]) && appliesInClassic(text, match.index ?? 0))
-          found.push(`${path.slice(sourceRoot.length + 1)}: ${match[0]}`)
-      }
-    }
-    expect(found).toEqual([])
   })
 
   it('의미 토큰과 같은 색을 hex나 rgb()로 박지 않는다', () => {
