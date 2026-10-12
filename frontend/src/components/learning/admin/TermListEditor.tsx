@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AdminDraftTermV1, AdminDraftTermV2 } from '@/types/learningAdmin'
+import type { EditableDraft } from './editableDraft'
 import styles from './TermListEditor.module.css'
 
 /**
@@ -14,22 +15,19 @@ import styles from './TermListEditor.module.css'
  * <p><b>(2판) 형식에 따라 칸이 다르다.</b> V1 용어는 설명 문장 하나이고, V2 용어는 다른 이름·뜻·읽는 법·한계다
  * (data-model §7-1). 넘겨받는 중인 용어(`transferFrom`)는 그 사실과 취소 단추를 보인다. 넘겨받기를 거는 일은
  * 저장이 `LEARNING_TERM_ID_TAKEN`을 받았을 때 편집 화면이 제안한다(R24).
+ *
+ * <p>초안을 통째로 받고 돌려준다. 형식에 따라 용어 타입이 달라 부르는 쪽이 형식마다 갈라 부르지 않게 하려는
+ * 것이다.
  */
 
-type TermListEditorProps =
-  | {
-      format: 'V1'
-      terms: AdminDraftTermV1[]
-      /** 서버에 이미 저장된 식별자. 이 목록에 있는 행은 `termId`를 바꿀 수 없다 */
-      savedTermIds: readonly string[]
-      onChange: (terms: AdminDraftTermV1[]) => void
-    }
-  | {
-      format: 'V2'
-      terms: AdminDraftTermV2[]
-      savedTermIds: readonly string[]
-      onChange: (terms: AdminDraftTermV2[]) => void
-    }
+interface TermListEditorProps {
+  draft: EditableDraft
+  /** 서버에 이미 저장된 식별자. 이 목록에 있는 행은 `termId`를 바꿀 수 없다 */
+  savedTermIds: readonly string[]
+  onChange: (draft: EditableDraft) => void
+}
+
+type AnyTerm = AdminDraftTermV1 | AdminDraftTermV2
 
 const LABEL_MAX_LENGTH = 50
 const SENTENCE_MAX_LENGTH = 300
@@ -37,46 +35,55 @@ const V2_SENTENCE_MAX_LENGTH = 200
 const ALIAS_MAX_LENGTH = 40
 const MAX_ALIASES = 4
 
-function replaceAt<T>(items: readonly T[], index: number, patch: Partial<T>): T[] {
+function patchAt<T>(items: readonly T[], index: number, patch: Partial<T>): T[] {
   return items.map((item, position) => (position === index ? { ...item, ...patch } : item))
 }
 
-export function TermListEditor(props: TermListEditorProps) {
+/**
+ * 용어 목록을 바꾼 초안이다. 형식마다 용어 타입이 달라, 두 형식에 함께 쓰는 변경(`edit`)을 형식별 목록에 그대로
+ * 건다. 두 형식이 함께 가진 칸(식별자·이름)과 행 지우기·추가만 이 길로 간다.
+ */
+function withTerms(
+  draft: EditableDraft,
+  edit: <T extends AnyTerm>(terms: readonly T[], create: (termId: string) => T) => T[],
+): EditableDraft {
+  if (draft.format === 'V1') {
+    return { ...draft, terms: edit(draft.terms, (termId) => ({ termId, label: '', sentence: '' })) }
+  }
+  return {
+    ...draft,
+    terms: edit(draft.terms, (termId) => ({
+      termId,
+      label: '',
+      aliases: [],
+      meaning: '',
+      reading: '',
+      caveat: '',
+      transferFrom: null,
+    })),
+  }
+}
+
+export function TermListEditor({ draft, savedTermIds, onChange }: TermListEditorProps) {
   const [newTermId, setNewTermId] = useState('')
 
   const addTerm = () => {
     const termId = newTermId.trim()
     if (termId === '') return
-    if (props.format === 'V1') {
-      props.onChange([...props.terms, { termId, label: '', sentence: '' }])
-    } else {
-      props.onChange([
-        ...props.terms,
-        {
-          termId,
-          label: '',
-          aliases: [],
-          meaning: '',
-          reading: '',
-          caveat: '',
-          transferFrom: null,
-        },
-      ])
-    }
+    onChange(withTerms(draft, (terms, create) => [...terms, create(termId)]))
     setNewTermId('')
   }
 
-  // 두 형식이 함께 가진 칸(식별자·이름)을 고치고 행을 지운다. 형식마다 갈라 부르는 것은 `onChange`의 타입을
-  // 형식에 맞춰 좁히기 위해서다.
   const patchCommon = (index: number, patch: { termId?: string; label?: string }) => {
-    if (props.format === 'V1') props.onChange(replaceAt(props.terms, index, patch))
-    else props.onChange(replaceAt(props.terms, index, patch))
+    onChange(
+      withTerms(draft, (terms) =>
+        terms.map((term, position) => (position === index ? { ...term, ...patch } : term)),
+      ),
+    )
   }
 
   const removeAt = (index: number) => {
-    if (props.format === 'V1')
-      props.onChange(props.terms.filter((_, position) => position !== index))
-    else props.onChange(props.terms.filter((_, position) => position !== index))
+    onChange(withTerms(draft, (terms) => terms.filter((_, position) => position !== index)))
   }
 
   return (
@@ -87,8 +94,8 @@ export function TermListEditor(props: TermListEditorProps) {
       </p>
 
       <ul className={styles.list}>
-        {props.terms.map((term, index) => {
-          const isSaved = props.savedTermIds.includes(term.termId)
+        {draft.terms.map((term, index) => {
+          const isSaved = savedTermIds.includes(term.termId)
           return (
             // 순번을 키로 쓴다. `termId`는 새 행에서 고칠 수 있는 값이라 키로 쓰면 글자마다 행이
             // 다시 만들어져 초점을 잃고, 같은 식별자 두 행이 키를 다툰다. 입력은 모두 제어 입력이라
@@ -116,27 +123,30 @@ export function TermListEditor(props: TermListEditorProps) {
                 />
               </label>
 
-              {props.format === 'V1' ? (
+              {draft.format === 'V1' ? (
                 <label className={styles.field}>
                   <span>
                     설명 문장 (최대 {SENTENCE_MAX_LENGTH}자, 지금{' '}
-                    {props.terms[index].sentence.length}
+                    {draft.terms[index].sentence.length}
                     자)
                   </span>
                   <textarea
                     rows={3}
-                    value={props.terms[index].sentence}
+                    value={draft.terms[index].sentence}
                     onChange={(event) =>
-                      props.onChange(
-                        replaceAt(props.terms, index, { sentence: event.target.value }),
-                      )
+                      onChange({
+                        ...draft,
+                        terms: patchAt(draft.terms, index, { sentence: event.target.value }),
+                      })
                     }
                   />
                 </label>
               ) : (
                 <V2TermFields
-                  term={props.terms[index]}
-                  onChange={(patch) => props.onChange(replaceAt(props.terms, index, patch))}
+                  term={draft.terms[index]}
+                  onChange={(patch) =>
+                    onChange({ ...draft, terms: patchAt(draft.terms, index, patch) })
+                  }
                 />
               )}
 
@@ -152,7 +162,7 @@ export function TermListEditor(props: TermListEditorProps) {
         })}
       </ul>
 
-      {props.terms.length === 0 ? <p className={styles.empty}>용어가 없습니다.</p> : null}
+      {draft.terms.length === 0 ? <p className={styles.empty}>용어가 없습니다.</p> : null}
 
       <div className={styles.add}>
         <label className={styles.field}>

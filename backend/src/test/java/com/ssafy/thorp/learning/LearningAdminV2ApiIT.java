@@ -524,6 +524,22 @@ class LearningAdminV2ApiIT extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("hasLegacyRevision은 LEGACY 판 이력이다. 게시를 취소해도 참이고, LEGACY 판이 없는 글은 거짓이다")
+    void hasLegacyRevisionFollowsRevisionHistory() throws Exception {
+        seeds.publishMinimal("returns-and-losses", "수익과 손실", "q", 8);
+        calls.adminData(post("/admin/learning/articles/returns-and-losses/unpublish"), 200);
+
+        JsonNode unpublished =
+                calls.adminData(get("/admin/learning/articles/returns-and-losses"), 200);
+        assertThat(unpublished.get("publishedEdition").isNull()).isTrue();
+        assertThat(unpublished.get("hasLegacyRevision").asBoolean()).isTrue();
+
+        JsonNode fresh = calls.adminData(get("/admin/learning/articles/" + V2_ARTICLE), 200);
+        assertThat(fresh.get("hasLegacyRevision").isBoolean()).isTrue();
+        assertThat(fresh.get("hasLegacyRevision").asBoolean()).isFalse();
+    }
+
+    @Test
     @DisplayName("지금 초안에 없는 문제·보기 식별자는 400이고, 없는 stageKey는 404다")
     void fabricatedIdsAndUnknownStage() throws Exception {
         freeVolatilityTerm();

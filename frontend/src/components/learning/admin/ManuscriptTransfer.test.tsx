@@ -2,8 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adminV2Article } from '@/test/learningFixtures'
-import type { EditableDraft, PublishedEdition } from '@/types/learningAdmin'
-import { toEditableDraft, toServerDraft } from './editableDraft'
+import type { PublishedEdition } from '@/types/learningAdmin'
+import { toEditableDraft, toServerDraft, type EditableDraft } from './editableDraft'
 import { knownQuizIds, readManuscript, writeManuscript } from './manuscript'
 import { ManuscriptTransfer } from './ManuscriptTransfer'
 
@@ -40,6 +40,7 @@ function renderTransfer(dirty = false, publishedEdition: PublishedEdition | null
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('원고 왕복', () => {
@@ -83,6 +84,20 @@ describe('원고 왕복', () => {
     })
   })
 
+  // 빠진 키를 빈 값으로 채우면 저장할 때 그 내용이 말없이 사라진다(원칙 VI). 출처 없는 글도 `sources: []`를 쓴다.
+  it.each(['articleId', 'quiz', 'sources', 'example'])(
+    '%s 키가 빠진 원고는 빈 값으로 채우지 않고 거절한다',
+    (key) => {
+      const file = JSON.parse(writeManuscript(ARTICLE_ID, editable))
+      delete file[key]
+
+      expect(readManuscript(JSON.stringify(file), ARTICLE_ID, known)).toEqual({
+        ok: false,
+        issues: [{ where: key, message: '키가 없습니다.' }],
+      })
+    },
+  )
+
   it('블록 모양이 틀리면 그 블록의 위치를 알린다', () => {
     const file = JSON.parse(writeManuscript(ARTICLE_ID, editable))
     file.blocks[1].content = [{ text: '조각 배열은 원고 모양이 아니다' }]
@@ -120,6 +135,35 @@ describe('ManuscriptTransfer', () => {
 
     expect(await screen.findByText(/다른 글\(harbor-notes\)의 원고입니다/)).not.toBeNull()
     expect(onImport).not.toHaveBeenCalled()
+  })
+
+  it('내보내기를 할 수 없는 브라우저면 내려받지 못했다고 알린다', async () => {
+    vi.stubGlobal('URL', { ...URL, createObjectURL: undefined })
+    renderTransfer()
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: '원고 내보내기' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('원고를 파일로 내려받을 수 없습니다')
+  })
+
+  it('내보내기에 성공하면 원고 파일을 내려받고 안내를 남기지 않는다', async () => {
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => 'blob:manuscript')
+    const revokeObjectURL = vi.fn<(url: string) => void>()
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    renderTransfer()
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: '원고 내보내기' }))
+
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(await createObjectURL.mock.calls[0][0].text()).toBe(
+      writeManuscript(ARTICLE_ID, editable),
+    )
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:manuscript')
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('JSON이 아니면 거절한다', async () => {

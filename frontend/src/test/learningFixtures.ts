@@ -461,6 +461,7 @@ export const adminTideArticle: AdminLearningArticle = {
   },
   publishedRevisionNo: 3,
   publishedEdition: 'LEGACY',
+  hasLegacyRevision: true,
 }
 
 /** 아직 한 번도 게시하지 않은 V2 초안. 게시 취소 버튼이 없어야 하는 쪽이다. */
@@ -483,6 +484,7 @@ export const adminDraftArticle: AdminLearningArticle = {
   },
   publishedRevisionNo: null,
   publishedEdition: null,
+  hasLegacyRevision: false,
 }
 
 /**
@@ -552,6 +554,7 @@ export const adminV2Article: AdminLearningArticle = {
   },
   publishedRevisionNo: 2,
   publishedEdition: 'CURRENT',
+  hasLegacyRevision: false,
 }
 
 /** 단계 둘(2판). 1단계는 공개할 수 있고 2단계는 앞 단계를 기다린다. 2단계에는 공개 배치만 남은 글이 있다. */

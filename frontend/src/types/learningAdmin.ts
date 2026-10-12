@@ -10,8 +10,13 @@
  * 필드가 다르다(V1 `paragraph`의 `text`, V2 `paragraph`의 `content`). 그래서 초안 타입을 `format`으로
  * 가르는 합집합으로 두고, 형식을 모르고는 블록을 읽지 않는다.
  *
+ * **이 파일에는 서버와 주고받는 모양만 둔다.** 관리 편집기가 들고 있는 초안(글자 조각 필드가 편집 문법
+ * 문자열인 것)과 원고 파일의 모양은 `components/learning/admin/`의 `editableDraft.ts`·`manuscript.ts`에 있다.
+ *
  * **글 본문·용어 문장을 이 코드에 상수로 두지 않는다(013 FR-015).** 운영자가 서버에 넣은 값만 그린다.
  */
+
+import type { LearningArticleContent } from './learning'
 
 /** 글의 게시 상태. `PUBLISHED`일 때만 게시 취소가 있다(계약 §7). */
 export type AdminArticleStatus = 'DRAFT' | 'PUBLISHED'
@@ -86,27 +91,19 @@ export type AdminDraftBlockV1 =
   | { type: 'term'; termId: string }
   | { type: 'hypothetical'; text: string }
 
-/** 1판 코드가 쓰던 이름이다. V1 블록과 같다. */
-export type AdminDraftBlock = AdminDraftBlockV1
-
 /** 가상 도식의 계열 하나. `values` 길이는 `categories` 길이와 같아야 한다(서버 저장 검사). */
 export type DraftDiagramSeries = { name: string; values: number[] }
 
-/**
- * 새 기준 형식(V2) 초안 블록(data-model §5-3).
- *
- * `R`은 글자 조각 필드의 표현이다. 서버와 주고받는 초안은 조각 배열(`DraftRun[]`)이고, 관리 편집기와 원고는
- * 편집 문법 문자열(`string`)이다(research R26). 블록의 모양은 둘이 같고 글자 조각 필드만 다르다.
- */
-export type AdminDraftBlockV2<R = DraftRun[]> =
-  | { type: 'keySummary'; lines: R[] }
+/** 새 기준 형식(V2) 초안 블록(data-model §5-3). 글자 조각 필드는 조각 배열이다. */
+export type AdminDraftBlockV2 =
+  | { type: 'keySummary'; lines: DraftRun[][] }
   | { type: 'heading'; text: string }
-  | { type: 'paragraph'; content: R }
+  | { type: 'paragraph'; content: DraftRun[] }
   | { type: 'term'; termId: string }
-  | { type: 'hypothetical'; content: R }
-  | { type: 'misconception'; wrong: R; correction: R }
-  | { type: 'list'; ordered: boolean; items: R[] }
-  | { type: 'table'; caption: string; columns: string[]; rows: R[][] }
+  | { type: 'hypothetical'; content: DraftRun[] }
+  | { type: 'misconception'; wrong: DraftRun[]; correction: DraftRun[] }
+  | { type: 'list'; ordered: boolean; items: DraftRun[][] }
+  | { type: 'table'; caption: string; columns: string[]; rows: DraftRun[][][] }
   | {
       type: 'diagram'
       kind: 'bar' | 'line'
@@ -118,7 +115,7 @@ export type AdminDraftBlockV2<R = DraftRun[]> =
     }
   | {
       type: 'institutionNote'
-      content: R
+      content: DraftRun[]
       /** `YYYY-MM-DD` */
       asOf: string | null
       source: DraftSourceRef | null
@@ -135,9 +132,6 @@ export type AdminDraftSource = { label: string; url: string | null }
 
 /** V1 용어 설명 한 줄. `termId`는 만든 뒤 바꾸지 않는다(research R4). */
 export type AdminDraftTermV1 = { termId: string; label: string; sentence: string }
-
-/** 1판 코드가 쓰던 이름이다. V1 용어와 같다. */
-export type AdminDraftTerm = AdminDraftTermV1
 
 /** V2 용어 설명 한 줄(data-model §7-1). */
 export type AdminDraftTermV2 = {
@@ -166,7 +160,8 @@ export type DraftQuizQuestion = {
   explanation: string
 }
 
-type DraftCommon = {
+/** 형식과 관계없이 모든 초안이 가진 필드다(계약 §4·§5). */
+export type AdminDraftCommon = {
   title: string
   question: string
   readingOrder: number
@@ -177,7 +172,7 @@ type DraftCommon = {
 }
 
 /** V1 초안. 확인 문제가 없다(계약 §4). */
-export type AdminLearningDraftV1 = DraftCommon & {
+export type AdminLearningDraftV1 = AdminDraftCommon & {
   format: 'V1'
   blocks: AdminDraftBlockV1[]
   sources: AdminDraftSource[]
@@ -185,10 +180,10 @@ export type AdminLearningDraftV1 = DraftCommon & {
   quiz: DraftQuizQuestion[]
 }
 
-/** V2 초안. `R`은 글자 조각 필드의 표현이다(`AdminDraftBlockV2` 참고). */
-export type AdminLearningDraftV2<R = DraftRun[]> = DraftCommon & {
+/** V2 초안. */
+export type AdminLearningDraftV2 = AdminDraftCommon & {
   format: 'V2'
-  blocks: AdminDraftBlockV2<R>[]
+  blocks: AdminDraftBlockV2[]
   sources: AdminDraftSource[]
   terms: AdminDraftTermV2[]
   quiz: DraftQuizQuestion[]
@@ -196,12 +191,6 @@ export type AdminLearningDraftV2<R = DraftRun[]> = DraftCommon & {
 
 /** 초안 한 벌. 저장 요청은 이 값을 통째로 보낸다 — 빠진 용어는 초안에서 빠진다(계약 §5). */
 export type AdminLearningDraft = AdminLearningDraftV1 | AdminLearningDraftV2
-
-/**
- * 관리 편집기가 들고 있는 초안이다. V2의 글자 조각 필드가 편집 문법 문자열이다(research R26). 원고 파일과
- * 탭 보관본도 이 모양이다. 저장할 때 `components/learning/admin/editableDraft.ts`가 조각으로 바꾼다.
- */
-export type EditableDraft = AdminLearningDraftV1 | AdminLearningDraftV2<string>
 
 /** `GET`·`PUT`·`POST`(만들기) 응답 본문(계약 §3·§4·§5). */
 export type AdminLearningArticle = {
@@ -214,6 +203,11 @@ export type AdminLearningArticle = {
   publishedRevisionNo: number | null
   /** **(2판)** 공개 중인 판의 종류. 게시되지 않았으면 `null`이다 */
   publishedEdition: PublishedEdition | null
+  /**
+   * **(2판)** 9월 판(`LEGACY`) 판이 한 번이라도 있었는가. 게시를 취소해도 `true`로 남는다. V2 초안을 V1로
+   * 되돌리는 저장은 이것이 `true`일 때만 받는다(계약 §4·§5, research R16)
+   */
+  hasLegacyRevision: boolean
 }
 
 /** `POST /admin/learning/articles` 요청 본문(계약 §3). **(2판)** 새 글은 단계에 속한다. */
@@ -373,12 +367,21 @@ export type StageCheckFailedArticle = { articleId: string; failures: PublishChec
 /** `409 LEARNING_STAGE_CHANGED`가 싣는 서버의 공개 집합(계약 §11). */
 export type StageArticleVersion = { articleId: string; draftVersion: number }
 
+/** 정답 보기가 하나가 아니어서 미리 보기에서 풀 수 없는 문제다. 게시 전 검사(`QUIZ`)가 막는 자리다. */
+export type IncompleteQuestion = { questionId: string; prompt: string }
+
 /**
- * 원고 파일(research R26, `docs/learning-content/README.md`). 편집기 상태를 그대로 쓴 JSON이며 모양은 저장
- * 요청에서 `expectedDraftVersion`을 뺀 것과 같고 글자 조각 필드만 편집 문법 문자열이다. `articleId`는 다른
- * 글의 원고를 잘못 가져오는 일을 막는 표지다.
+ * `GET /admin/learning/articles/{articleId}/preview` 응답(계약 §8)을 화면이 읽은 모양이다.
+ *
+ * <p>응답은 공개 글 응답(공개 계약 §3)과 같은 모양에 `preview: true`가 붙고 게시 전이라 `publishedAt`이 `null`이다.
+ * 해석기는 `preview: true`를 확인하고 게시 시각은 읽지 않는다. 검사하지 않은 초안이라 공개 글에 없는 두 빈자리가
+ * 온다. 정답 보기가 하나가 아닌 문제는 `correctChoiceId`가 `null`이고(`incompleteQuestions`로 따로 둔다), 예시 없는 V1
+ * 초안은 9월 판 모양인데도 `example`이 `null`이다(백엔드 `ArticleViewAssembler`의 미리 보기 모드).
  */
-export type ManuscriptFile = EditableDraft & { articleId: string }
+export type ArticlePreview = {
+  article: LearningArticleContent
+  incompleteQuestions: IncompleteQuestion[]
+}
 
 /**
  * 배우기 관리가 내보내는 서버 오류 신호 이름이다(계약 §3·§5·§6·§9~§11).
