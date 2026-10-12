@@ -140,7 +140,8 @@ GET /admin/learning/articles/{articleId}
     "quiz": []
   },
   "publishedRevisionNo": 3,
-  "publishedEdition": "LEGACY"
+  "publishedEdition": "LEGACY",
+  "hasLegacyRevision": true
 }
 ```
 
@@ -178,13 +179,15 @@ GET /admin/learning/articles/{articleId}
     ]
   },
   "publishedRevisionNo": null,
-  "publishedEdition": null
+  "publishedEdition": null,
+  "hasLegacyRevision": false
 }
 ```
 
 - 초안의 `term` 블록은 `termId`만 담는다. 문장은 `terms`에 있다([data-model](../data-model.md) §5).
 - 초안의 언급 조각에는 `owned`·`aliases`가 없다. 그것은 공개 응답과 미리 보기(§8)에서 서버가 채운다.
 - `publishedRevisionNo`는 공개 중인 판 번호다. 초안이면 `null`이다.
+- **(2판)** `hasLegacyRevision`은 이 글에 9월 판(`LEGACY`) 판이 한 번이라도 있었는지다. 게시를 취소해도 `true`로 남는다. V2 초안을 V1로 되돌리는 저장(§5)은 이것이 `true`일 때만 받으므로 관리 화면은 이 값으로 되돌리기를 보인다.
 
 ### 실패
 

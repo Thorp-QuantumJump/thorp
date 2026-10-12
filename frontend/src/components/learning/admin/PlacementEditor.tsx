@@ -11,10 +11,9 @@ import styles from './AdminEditor.module.css'
  * <p><b>형식을 바꾸면 본문·용어·확인 문제·출처를 비운다.</b> 두 형식 사이를 짐작해 옮기면 일부가 말없이 사라진다
  * (원칙 VI). 그래서 바꾸기 전에 확인을 받고, 그 형식의 원고를 가져오라고 안내한다(R25).
  *
- * <p><b>V2에서 V1로 되돌리기는 지금 9월 판(LEGACY)이 공개 중인 글에서만 보인다.</b> 서버는 LEGACY 판이 한
- * 번이라도 있었던 글이면 받지만(계약 §5), 관리 응답에는 판 이력이 없어 화면은 지금 공개 중인 판만 안다. 게시를
- * 취소한 옛 글은 단추가 없고, `current/`의 V1 원고를 가져와 되돌린다. 이력이 없는 글은 서버가 409
- * `LEARNING_FORMAT_OUTDATED`로 거절한다.
+ * <p><b>V2에서 V1로 되돌리기는 9월 판(LEGACY)을 공개한 적이 있는 글에서만 보인다.</b> 서버가 V1 저장을 받는
+ * 조건과 같다(계약 §5). 관리 응답의 `hasLegacyRevision`이 그 이력이라, 게시를 취소한 옛 글에도 단추가 있다.
+ * 이력이 없는 글에 단추를 두면 누를 때마다 409 `LEARNING_FORMAT_OUTDATED`를 받는다.
  */
 
 interface PlacementEditorProps {
@@ -23,7 +22,7 @@ interface PlacementEditorProps {
   stagePosition: number
   /** 단계 목록. 받지 못했으면 `null`이고 지금 단계만 선택지로 둔다 */
   stages: readonly StageAdminView[] | null
-  /** 공개 중인 판이 9월 판(LEGACY)인가. 그때만 V1로 되돌리기를 보인다 */
+  /** 9월 판(LEGACY)을 공개한 적이 있는가(`hasLegacyRevision`). 그때만 V1로 되돌리기를 보인다 */
   canRevertToV1: boolean
   onPlacementChange: (placement: { stageKey: string; stagePosition: number }) => void
   /** 확인을 받은 뒤에만 부른다 */

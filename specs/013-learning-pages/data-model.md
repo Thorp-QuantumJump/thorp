@@ -803,7 +803,8 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에�
 |---|---|---|
 | `LearningArticleSummary`, `LearningArticle`, `ArticleBlock`, `LearningExample`, `LearningTermEntry` | `frontend/src/types/learning.ts` | 공개 조회 응답과 1:1. **(2판)** `Curriculum`, `StageView`, `ReleaseLogEntry`, `Run`, `QuizQuestion`, `edition`을 더한다 |
 | `LearnerOverview`, `LearnerArticleRecord`, `CompletionResult`, `AnswerResult`, `BadgeView`, `LevelView`, `PreparingReason` **(2판)** | `frontend/src/types/learningMe.ts` | 나의 학습 응답과 1:1 |
-| `AdminLearningArticleSummary`, `AdminLearningArticle`, `PublishCheckFailure` | `frontend/src/types/learningAdmin.ts` | 관리 응답과 1:1. **(2판)** `format`, 배치, 확인 문제 초안, `StageAdminView`, `StageReadiness`, `ManuscriptFile` |
+| `AdminLearningArticleSummary`, `AdminLearningArticle`, `PublishCheckFailure` | `frontend/src/types/learningAdmin.ts` | 관리 응답과 1:1. **(2판)** `format`, 배치, 확인 문제 초안, `hasLegacyRevision`, `StageAdminView`, `StageReadiness`, `ArticlePreview` |
+| `EditableDraft`, `ManuscriptFile` **(2판)** | `frontend/src/components/learning/admin/editableDraft.ts`, `manuscript.ts` | 관리 화면의 편집 모양(글자 조각 필드가 편집 문법 문자열, R26)과 원고 파일 모양. 서버 DTO가 아니라 `types/`에 두지 않는다. 초안 모양은 `frontend/src/api/learningAdminShape.ts` 한 곳이 정한다 |
 | `LearningReturnState` | `frontend/src/types/learning.ts` | navigation state `learningReturn: { path, label }` (R11). **(2판)** `label`은 더 쓰지 않고 문구는 `returnTargets.ts` 표가 정한다(R35). 모양은 호환을 위해 그대로 둔다 |
 | `learningResume` **(2판)** | navigation state | '이어서 읽기'로 연 글은 기록된 위치로 간다(FR-020). 값은 `true`이고, `continueReading.kind`가 `RESUME`일 때 완료 카드·요약 패널·떠 있는 '이어서 읽기'·'나의 학습' 화면의 '이어서 읽기'가 싣는다. 글 화면은 받은 글 기록의 `percent` 위치로 간다 |
 | `thorp.learning.adminDraft.{articleId}` | `sessionStorage` | 저장하지 않은 관리 편집 내용(R12). **(2판)** 내용 버전 2(형식·배치·확인 문제 포함) |

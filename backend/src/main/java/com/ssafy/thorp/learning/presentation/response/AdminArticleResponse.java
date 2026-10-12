@@ -36,7 +36,8 @@ import java.util.Locale;
  *
  * <p>초안의 {@code term} 블록은 {@code termId}만 담는다. 문장은 {@code terms}에 있다. 초안의 언급 조각에는 {@code
  * owned}·{@code aliases}가 없다. 그것은 공개 응답과 미리 보기가 채운다. {@code example}·{@code
- * publishedRevisionNo}·{@code publishedEdition}은 없으면 명시적 null이다.
+ * publishedRevisionNo}·{@code publishedEdition}은 없으면 명시적 null이다. {@code hasLegacyRevision}은 9월
+ * 판(LEGACY) 판이 한 번이라도 있었는지이며 게시를 취소해도 참으로 남는다(V2 초안을 V1로 되돌릴 수 있는 조건, research R16).
  */
 public record AdminArticleResponse(
         String articleId,
@@ -44,7 +45,8 @@ public record AdminArticleResponse(
         int draftVersion,
         Draft draft,
         Integer publishedRevisionNo,
-        String publishedEdition) {
+        String publishedEdition,
+        boolean hasLegacyRevision) {
 
     public static AdminArticleResponse from(AdminArticleResult result) {
         LearningArticle article = result.article();
@@ -77,7 +79,8 @@ public record AdminArticleResponse(
                         article.placement().position(),
                         article.quiz().stream().map(AdminArticleResponse::question).toList()),
                 result.publishedRevisionNo(),
-                result.publishedEdition() == null ? null : result.publishedEdition().name());
+                result.publishedEdition() == null ? null : result.publishedEdition().name(),
+                result.hasLegacyRevision());
     }
 
     private static DraftBlock block(ArticleBlock block, boolean v1) {
