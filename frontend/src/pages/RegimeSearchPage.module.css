@@ -1,40 +1,40 @@
 .page { min-height: 100svh; color: var(--thorp-foreground); background: var(--thorp-background); }
 .main { width: min(1320px, calc(100% - 80px)); margin: 0 auto; padding: 36px 0 80px; }
-.hero { border-bottom: 1px solid var(--thorp-line-strong); padding: 16px 0 32px; }
-.eyebrow { margin: 0; color: var(--thorp-eyebrow, var(--thorp-accent-soft)); font: 600 .68rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
+.hero { padding: 16px 0 32px; }
+.eyebrow { margin: 0; color: var(--thorp-eyebrow); font: 600 .68rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }
 .hero h1 { margin: 10px 0; font: 600 clamp(2rem, 3vw, 2.7rem)/1.15 var(--thorp-font-body); letter-spacing: -.04em; }
 .hero > p:last-child { margin: 0; color: var(--thorp-copy); font-size: .88rem; }
-.searchForm { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 26px 0; }
+.searchForm { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
 .searchForm label { width: 100%; color: var(--thorp-copy); font-size: .8rem; }
-.searchForm select { min-width: min(100%, 280px); min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 5px); color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }
+.searchForm select { min-width: min(100%, 280px); min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control); color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }
 .monthControl { display: grid; gap: 6px; }
 .monthControl label { width: auto; }
-.monthControl input { min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 5px); color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }
-.searchForm button { min-height: 46px; padding: 8px 20px; border: 1px solid var(--thorp-accent); border-radius: var(--thorp-radius-control, 5px); color: var(--thorp-action-foreground); background: var(--thorp-accent); font: 600 .85rem/1.3 var(--thorp-font-body); cursor: pointer; }
+.monthControl input { min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control); color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }
+.searchForm button { min-height: 46px; padding: 8px 20px; border: 1px solid var(--thorp-accent); border-radius: var(--thorp-radius-control); color: var(--thorp-action-foreground); background: var(--thorp-accent); font: 600 .85rem/1.3 var(--thorp-font-body); cursor: pointer; }
 .searchForm button:disabled { opacity: .55; cursor: not-allowed; }
 .searchForm .compositeButton { color: var(--thorp-foreground); background: var(--thorp-surface); border-color: var(--thorp-line-strong); }
 .searchForm .compositeButton[aria-pressed='true'] { color: var(--thorp-background, #0b0d0c); background: var(--thorp-accent, #86f2a8); border-color: var(--thorp-accent, #86f2a8); font-weight: 700; }
 .searchForm select:focus-visible, .searchForm button:focus-visible, .monthControl input:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 .loading { margin: 24px 0; color: var(--thorp-copy); font-size: .85rem; }
 .results { min-width: 0; }
-.resultHeading { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--thorp-line-strong); padding: 22px 0; }
+.resultHeading { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px; }
 .resultHeading h2 { margin: 4px 0 0; font-size: 1.5rem; }
 .resultHeading > p { margin: 0; color: var(--thorp-copy); font-size: .82rem; }
 .resultHeading strong { color: var(--thorp-foreground); font-variant-numeric: tabular-nums; }
-.disclosures { display: grid; gap: 8px; margin-bottom: 20px; }
+.disclosures { display: grid; margin-bottom: 20px; }
 @media (max-width: 800px) { .main { width: calc(100% - 32px); padding-top: 18px; } }
 @media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button, .monthControl, .monthControl input { width: 100%; } }
 
-/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
-:global(:root:not([data-design='classic'])) .hero { border-bottom: 0; padding-bottom: 24px; }
-:global(:root:not([data-design='classic'])) .searchForm { margin-bottom: 24px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }
-:global(:root:not([data-design='classic'])) .searchForm .compositeButton:hover:not(:disabled) { border-color: var(--thorp-line-control-hover); }
-:global(:root:not([data-design='classic'])) .resultHeading { border-top: 0; padding: 4px 2px 16px; }
-:global(:root:not([data-design='classic'])) .disclosures { gap: 8px; }
+/* 디자인 개편 카드 층(S15P21E205-425). 구역을 카드로 묶는다. */
+.hero { border-bottom: 0; padding-bottom: 24px; }
+.searchForm { margin-bottom: 24px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }
+.searchForm .compositeButton:hover:not(:disabled) { border-color: var(--thorp-line-control-hover); }
+.resultHeading { border-top: 0; padding: 4px 2px 16px; }
+.disclosures { gap: 8px; }
 
 /* 사례 상세의 '이 기간으로 전략 비교'(S15P21E205-450). 이동이라 링크이지만 눈에 띄는 버튼 모양으로 둔다. */
 .caseActionRow { margin: 16px 0 0; }
-.caseAction { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-accent); color: var(--thorp-background); font-weight: 700; text-decoration: none; }
-.caseAction:hover { background: var(--thorp-accent-hover, var(--thorp-accent-soft)); }
+.caseAction { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border-radius: var(--thorp-radius-control); background: var(--thorp-accent); color: var(--thorp-background); font-weight: 700; text-decoration: none; }
+.caseAction:hover { background: var(--thorp-accent-hover); }
 .caseAction:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
 

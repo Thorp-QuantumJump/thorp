@@ -3,11 +3,11 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
-  font-family: var(--thorp-font-page, inherit);
+  font-family: var(--thorp-font-page);
 }
 
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow));
   margin: 0 auto;
   padding: min(var(--thorp-page-top), 16px) 0 var(--thorp-page-bottom);
 }
@@ -27,7 +27,7 @@
 .summaryLabel {
   margin: 0 0 -12px;
   color: var(--thorp-accent-soft, var(--thorp-copy));
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -59,7 +59,7 @@
   align-items: center;
   gap: 7px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   font-weight: 660;
   text-decoration: none;
 }
@@ -75,16 +75,16 @@
 
 .title {
   margin: 0;
-  font-size: var(--thorp-text-title, clamp(1.7rem, 4.5vw, 2.6rem));
-  line-height: var(--thorp-title-leading, 1.1);
-  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  font-size: var(--thorp-text-title);
+  line-height: var(--thorp-title-leading);
+  letter-spacing: var(--thorp-title-tracking);
   font-weight: 700;
 }
 
 .status {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.95rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.7;
 }
 
@@ -96,14 +96,14 @@
 }
 
 .retry {
-  padding: var(--thorp-control-pad-block, 8px) 14px;
+  padding: var(--thorp-control-pad-block) 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 10px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
   cursor: pointer;
-  min-height: var(--thorp-control, auto);
+  min-height: var(--thorp-control);
 }
 
 .retry:focus-visible {
@@ -113,7 +113,7 @@
 
 .sentence {
   margin: 0;
-  font-size: var(--thorp-text-heading, 1rem);
+  font-size: var(--thorp-text-heading);
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
@@ -134,7 +134,7 @@
 .source {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
 }
 
 /*
@@ -142,10 +142,10 @@
   행동 단(40px)으로 올린다.
 */
 .compareButton {
-  height: var(--thorp-control, 2rem);
+  height: var(--thorp-control);
   padding-inline: 16px;
-  font-size: var(--thorp-control-font, 0.875rem);
-  font-weight: var(--thorp-control-weight, 500);
+  font-size: var(--thorp-control-font);
+  font-weight: var(--thorp-control-weight);
 }
 
 /* '경제환경이 비슷했던 과거 보기'. 그래프 오른쪽 아래에 두는 이동 링크다(행동 버튼과 무게를 가른다). */
@@ -159,13 +159,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: var(--thorp-control, 40px);
+  min-height: var(--thorp-control);
   padding: 0 16px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   color: var(--thorp-foreground);
-  font-size: var(--thorp-control-font, 0.82rem);
-  font-weight: var(--thorp-control-weight, 600);
+  font-size: var(--thorp-control-font);
+  font-weight: var(--thorp-control-weight);
   text-decoration: none;
 }
 

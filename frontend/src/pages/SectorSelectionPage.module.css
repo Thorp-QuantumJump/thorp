@@ -3,7 +3,7 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
-  font-family: var(--thorp-font-page, inherit);
+  font-family: var(--thorp-font-page);
 }
 
 /*
@@ -13,23 +13,23 @@
   않기 위해서다.
 */
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, 1320px));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow));
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .title {
   margin: 0 0 12px;
-  font-size: var(--thorp-text-title, clamp(1.7rem, 4.4vw, 2.6rem));
-  line-height: var(--thorp-title-leading, 1.1);
-  letter-spacing: var(--thorp-title-tracking, -0.04em);
+  font-size: var(--thorp-text-title);
+  line-height: var(--thorp-title-leading);
+  letter-spacing: var(--thorp-title-tracking);
   font-weight: 700;
 }
 
 .lead {
   margin: 0 0 24px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-lead, clamp(0.92rem, 1.7vw, 1rem));
+  font-size: var(--thorp-text-lead);
   line-height: 1.7;
 }
 
@@ -55,7 +55,7 @@
   margin: 0;
   padding: 0 0 3px 22px;
   border-left: 1px solid var(--thorp-line-strong);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.65;
   word-break: keep-all;
 }
@@ -82,7 +82,7 @@
 .loading {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.95rem);
+  font-size: var(--thorp-text-body);
 }
 
 /*
@@ -96,32 +96,32 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
-  padding: var(--thorp-pad-card, 22px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
 .notice p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.95rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.7;
 }
 
 .notice button {
-  padding: var(--thorp-control-pad-block, 9px) 16px;
+  padding: var(--thorp-control-pad-block) 16px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 999px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-control-font, var(--thorp-text-body, 0.88rem));
+  font-size: var(--thorp-control-font);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--thorp-control, auto);
+  min-height: var(--thorp-control);
 }
 
 .notice button:hover {
@@ -143,24 +143,24 @@
 /* 목록이 예시 대응표에서 왔다는 표시다. 상품 정보의 예시 표시와는 다른 자리에 둔다. */
 .sampleNotice {
   margin: 0;
-  padding: var(--thorp-pad-notice, 10px 14px);
+  padding: var(--thorp-pad-notice);
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 10px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.86rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
 /* 보관해 둔 값을 그대로 쓰지 못했다는 한 문장이 놓이는 자리다. */
 .restoreNotice {
   margin: 0;
-  padding: var(--thorp-pad-notice, 10px 14px);
+  padding: var(--thorp-pad-notice);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 10px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.86rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
@@ -172,9 +172,9 @@
 */
 .browserCard {
   position: relative;
-  padding: var(--thorp-pad-card, 20px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-card, 18px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
@@ -221,11 +221,11 @@
   min-height: 30px;
   padding: 0 10px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 10px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface);
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -269,17 +269,17 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: var(--thorp-control-pad-block, 10px) 13px;
+  padding: var(--thorp-control-pad-block) 13px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 12px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-body, 0.88rem);
+  font-size: var(--thorp-text-body);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.14s ease, background-color 0.14s ease, color 0.14s ease;
-  min-height: var(--thorp-control, auto);
+  min-height: var(--thorp-control);
 }
 
 .browserCard [data-slot='pill']:hover {
@@ -338,7 +338,7 @@
 
 .browserCard [data-slot='detail-name'] {
   margin: 0;
-  font-size: var(--thorp-text-heading, 1.2rem);
+  font-size: var(--thorp-text-heading);
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
@@ -350,7 +350,7 @@
   gap: 6px;
   margin: 5px 0 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
 }
 
 /* 구분점은 뒤따르는 사실에 붙인다. 따로 떼면 줄이 바뀔 때 점만 앞 줄 끝에 남는다. */
@@ -384,9 +384,9 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: var(--thorp-pad-card, 20px);
+  padding: var(--thorp-pad-card);
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface-raised);
   color: var(--thorp-muted);
   text-align: center;
@@ -394,23 +394,23 @@
 
 .browserCard [data-slot='chart'] p {
   margin: 0;
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.7;
 }
 
 .browserCard [data-slot='chart'] button {
-  padding: var(--thorp-control-pad-block, 6px) 12px;
+  padding: var(--thorp-control-pad-block) 12px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 999px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
+  min-height: var(--thorp-control-sm);
 }
 
 .browserCard [data-slot='chart'] button:hover {
@@ -442,7 +442,7 @@
 .browserCard [data-slot='chart-note'] {
   margin: 28px 0 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.6;
   text-align: right;
 }
@@ -450,7 +450,7 @@
 .browserCard [data-slot='profile-loading'] {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.86rem);
+  font-size: var(--thorp-text-body);
 }
 
 /* 패널 안의 '아직 줄 것이 없다' 표시다. */
@@ -459,31 +459,31 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding: var(--thorp-pad-inset, 14px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-inset, 10px);
+  border-radius: var(--thorp-radius-inset);
 }
 
 .browserCard [data-slot='profile-notice'] p {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
 .browserCard [data-slot='profile-notice'] button {
-  padding: var(--thorp-control-pad-block, 6px) 12px;
+  padding: var(--thorp-control-pad-block) 12px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-control, 999px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
+  min-height: var(--thorp-control-sm);
 }
 
 .browserCard [data-slot='profile-body'] {
@@ -502,19 +502,19 @@
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: 10px 18px;
   margin: 0;
-  padding: var(--thorp-pad-inset, 12px 14px);
-  border-radius: var(--thorp-radius-inset, 10px);
+  padding: var(--thorp-pad-inset);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
 }
 
 .browserCard [data-slot='profile-facts'] dt {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.7rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .browserCard [data-slot='profile-facts'] dd {
   margin: 3px 0 0;
-  font-size: var(--thorp-text-body, 0.85rem);
+  font-size: var(--thorp-text-body);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -522,7 +522,7 @@
 .browserCard [data-slot='profile-methodology'] {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.85rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.75;
 }
 
@@ -530,7 +530,7 @@
 .browserCard [data-slot='profile-source'] {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.6;
 }
 
@@ -538,9 +538,9 @@
   margin: 0;
   padding: 8px 12px;
   border: 1px dashed var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-inset, 8px);
+  border-radius: var(--thorp-radius-inset);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
 }
 
@@ -550,23 +550,23 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: var(--thorp-pad-inset, 14px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 12px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
   animation: card-expand-in 160ms ease-out both;
 }
 
 .browserCard [data-slot='holdings-title'] {
   margin: 0;
-  font-size: var(--thorp-text-body, 0.86rem);
+  font-size: var(--thorp-text-body);
   letter-spacing: -0.01em;
 }
 
 .browserCard [data-slot='holdings-empty'] {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
 }
 
 /* 상위 종목이 전체에서 차지하는 몫을 먼저 눈에 보인다. */
@@ -624,7 +624,7 @@
   align-items: baseline;
   gap: 6px;
   padding: 3px 0;
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
 }
 
 .browserCard [data-slot='holding']::after {
@@ -654,7 +654,7 @@
   padding-left: 9px;
   border-left: 2px solid var(--thorp-warning);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.6;
 }
 
@@ -729,7 +729,7 @@
   right: calc(100% + 4px);
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -765,7 +765,6 @@
   }
 }
 
-
 /* 아직 상장하지 않은 대상 때문에 공통 구간이 없을 때만 타임라인 대신 보인다. */
 .listingNotice {
   margin: 0;
@@ -774,21 +773,21 @@
   border-radius: 0 10px 10px 0;
   background: var(--thorp-surface-raised);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.7;
 }
 
 .constraintNotice {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
 }
 
 .attribution {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   text-align: right;
 }
 
@@ -800,7 +799,7 @@
 .browserCard [data-slot='footer'] [data-slot='source'] {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   text-align: right;
 }
 
@@ -845,15 +844,15 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px var(--thorp-pad-card, 20px);
+  padding: 14px var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-card, 18px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
 .timeline [data-slot='timeline-title'] {
   margin: 0;
-  font-size: var(--thorp-text-body, 0.95rem);
+  font-size: var(--thorp-text-body);
   letter-spacing: -0.01em;
 }
 
@@ -869,7 +868,7 @@
   height: 1rem;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-label, 0.68rem);
+  font-size: var(--thorp-text-label);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   pointer-events: none;
@@ -911,7 +910,7 @@
 
 .timeline [data-slot='timeline-today'] {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-label, 0.64rem);
+  font-size: var(--thorp-text-label);
 }
 
 /* 비조작형 범위 그림이다. 키보드 포커스는 상세 정보를 여는 용도로만 쓴다. */
@@ -997,7 +996,7 @@
   left: 0;
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-label, 0.68rem);
+  font-size: var(--thorp-text-label);
   line-height: 1;
 }
 
@@ -1031,9 +1030,9 @@
   align-items: center;
   gap: 12px 24px;
   margin-bottom: var(--card-gap);
-  padding: var(--thorp-pad-card, 18px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-card, 18px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
@@ -1043,7 +1042,7 @@
   gap: 6px;
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;

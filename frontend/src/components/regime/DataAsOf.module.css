@@ -1,4 +1,4 @@
-.section { border-top: 1px solid var(--thorp-line); padding: 18px 0 24px; color: var(--thorp-copy); font-size: .78rem; line-height: 1.6; }
+.section { border-top: 1px solid var(--thorp-line); color: var(--thorp-copy); font-size: .78rem; line-height: 1.6; }
 .section h3 { margin: 0 0 8px; color: var(--thorp-foreground); font-size: .95rem; }
 .section p { margin: 0 0 8px; }
 .section dl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
@@ -6,5 +6,5 @@
 .section dt { color: var(--thorp-foreground); }
 .section dd { margin: 0; }
 
-/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
-:global(:root:not([data-design='classic'])) .section { margin-bottom: 16px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }
+/* 디자인 개편 카드 층(S15P21E205-425). 구역을 카드로 묶는다. */
+.section { margin-bottom: 16px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }

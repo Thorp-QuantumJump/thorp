@@ -1,5 +1,5 @@
 /*
-  글 도장의 색. 모두 index.css 의미 토큰이라 디자인 전환(classic)을 함께 따른다. 모양과 굵기는 ArticleStamp.tsx가
+  글 도장의 색. 모두 index.css 의미 토큰이다. 모양과 굵기는 ArticleStamp.tsx가
   정한다. 안쪽 고리의 단계 장식 색만 --stamp-ring으로 받는다(design-notes §4).
 */
 .stamp {

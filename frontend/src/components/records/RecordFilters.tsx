@@ -48,7 +48,7 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {
 
   return (
     <form className={styles.filters} aria-label="기록 필터" onSubmit={(event) => event.preventDefault()}>
-      {/* 첫 줄은 분석 기간과 정렬, 그 아래 접이식 상세 필터다. classic에서는 묶음이 없는 것처럼 흐른다. */}
+      {/* 첫 줄은 분석 기간과 정렬, 그 아래 접이식 상세 필터다. */}
       <div className={`${styles.filterColumn} ${styles.primary}`}>
         <fieldset className={`${styles.group} ${styles.side}`}>
           <legend>분석 기간</legend>

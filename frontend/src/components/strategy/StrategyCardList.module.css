@@ -60,13 +60,13 @@
 .loading {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.76rem);
+  font-size: var(--thorp-text-caption);
 }
 
 /* 자리 표시. 실제 카드(이름과 두 줄 설명)와 비슷한 높이·모서리로 두어 목록이 오면 줄이 덜 튄다. */
 .placeholder {
   min-height: 76px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, var(--thorp-radius-card, 8px));
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
 }

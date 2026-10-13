@@ -12,9 +12,9 @@
   flex-direction: column;
   gap: 22px;
   min-width: 0;
-  padding: var(--thorp-pad-card, 22px 24px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
@@ -28,7 +28,7 @@
 
 .panelTitle {
   margin: 0;
-  font-size: var(--thorp-text-heading, 1.2rem);
+  font-size: var(--thorp-text-heading);
   letter-spacing: -0.02em;
 }
 
@@ -58,23 +58,18 @@
 
 .itemTitle {
   margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.85rem);
-  font-weight: 600;
 }
 
 .subTitle {
   margin: 0;
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   font-weight: 600;
 }
 
 .value {
   margin: 0;
-  font-family: var(--thorp-font-number, var(--thorp-font-mono));
+  font-family: var(--thorp-font-number);
   font-variant-numeric: tabular-nums;
-  font-size: var(--thorp-text-heading, 1.05rem);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -82,7 +77,7 @@
 .copy {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
@@ -90,7 +85,7 @@
 .muted {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
 }
 
@@ -100,7 +95,7 @@
   padding-left: 10px;
   border-left: 2px solid var(--thorp-warning);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
@@ -109,7 +104,7 @@
   grid-template-columns: max-content 1fr;
   gap: 4px 16px;
   margin: 0;
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
 }
 
 .facts dt {
@@ -136,14 +131,14 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   font-variant-numeric: tabular-nums;
 }
 
 .table caption {
   padding-bottom: 6px;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.76rem);
+  font-size: var(--thorp-text-caption);
   text-align: left;
 }
 
@@ -191,7 +186,7 @@
   flex-direction: column;
   gap: 4px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
 }
 
 .field input,
@@ -199,11 +194,11 @@
   min-height: 32px;
   padding: 4px 8px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
 }
 
 .field input:focus-visible,
@@ -215,7 +210,7 @@
 .alert {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
@@ -231,7 +226,7 @@
 .profile [data-slot='profile-sample'] {
   margin: 0 0 8px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.7;
 }
 
@@ -272,7 +267,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
   font-variant-numeric: tabular-nums;
 }
 
@@ -285,18 +280,18 @@
 
 .profile [data-slot='profile-facts'] dt {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .profile [data-slot='profile-facts'] dd {
   margin: 2px 0 0;
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
 }
 
 .profile [data-slot='profile-source'] {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .profileList {
@@ -310,7 +305,7 @@
 
 @media (max-width: 600px) {
   .panel {
-    padding: var(--thorp-pad-card, 18px 16px);
+    padding: var(--thorp-pad-card);
   }
 }
 
@@ -318,27 +313,27 @@
   디자인 개편(S15P21E205-451): 탭 안의 항목을 하나씩 상자에 담고, 제목은 밝은 글자·한 단계 큰 크기로 본문(회색)과
   가른다. 제목과 본문이 같은 색·크기라 무엇이 제목인지 읽히지 않았다.
 */
-:global(:root:not([data-design='classic'])) .grid > .item,
-:global(:root:not([data-design='classic'])) .stack > .item {
+.grid > .item,
+.stack > .item {
   gap: 8px;
   padding: 16px 18px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-control, 10px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised, var(--thorp-surface));
 }
 
-:global(:root:not([data-design='classic'])) .itemTitle {
+.itemTitle {
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-heading, 1.05rem);
+  font-size: var(--thorp-text-heading);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
-:global(:root:not([data-design='classic'])) .subTitle {
+.subTitle {
   color: var(--thorp-foreground);
 }
 
-:global(:root:not([data-design='classic'])) .value {
+.value {
   color: var(--thorp-foreground);
   font-size: 1.25rem;
 }

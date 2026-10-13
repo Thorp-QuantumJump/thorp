@@ -7,7 +7,7 @@
   isolation: isolate;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--thorp-accent) 35%, transparent);
-  border-radius: var(--thorp-radius-card, 16px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
   box-shadow:
     0 0 0 6px color-mix(in srgb, var(--thorp-accent) 6%, transparent),
@@ -57,7 +57,7 @@
 .date {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   font-weight: 650;
   letter-spacing: 0;
 }
@@ -65,7 +65,7 @@
 .progress {
   margin: 0;
   color: var(--thorp-foreground);
-  font-family: var(--thorp-font-number, inherit);
+  font-family: var(--thorp-font-number);
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -111,7 +111,7 @@
   align-self: stretch;
   margin-bottom: 10px;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   font-weight: 650;
 }
 
@@ -145,7 +145,7 @@
   border-radius: 999px;
   background: var(--thorp-accent-muted);
   color: var(--thorp-accent-soft);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -160,7 +160,7 @@
   background: var(--thorp-accent-muted);
   box-shadow: inset 0 0 0 1px var(--thorp-accent-soft);
   color: var(--thorp-accent-soft);
-  font-size: var(--thorp-text-caption, 0.75rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -178,12 +178,12 @@
   gap: 10px;
   padding: 3px 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
 }
 
 .points {
   color: var(--thorp-foreground);
-  font-family: var(--thorp-font-number, inherit);
+  font-family: var(--thorp-font-number);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -207,7 +207,7 @@
   gap: 10px;
   margin: 20px 0 0;
   padding: 12px 14px;
-  border-radius: var(--thorp-radius-inset, 10px);
+  border-radius: var(--thorp-radius-inset);
   background: rgb(255 255 255 / 2.5%);
   color: var(--thorp-copy);
   font-size: 0.95rem;
@@ -233,7 +233,7 @@
   align-items: center;
   gap: 10px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
 }
 
 .termList {
@@ -255,7 +255,7 @@
   border-radius: 999px;
   box-shadow: inset 0 0 0 1.5px var(--thorp-accent-soft);
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -273,7 +273,7 @@
   gap: 16px;
   min-height: 44px;
   padding: 16px 18px 16px 20px;
-  border-radius: var(--thorp-radius-inset, 12px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
   box-shadow: inset 0 0 0 1px var(--thorp-line);
   color: var(--thorp-foreground);
@@ -288,7 +288,7 @@
 
 .nextLabel {
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   font-weight: 650;
 }
 
@@ -301,8 +301,8 @@
 .nextNumber {
   margin-right: 8px;
   color: var(--thorp-muted);
-  font-family: var(--thorp-font-number, inherit);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-family: var(--thorp-font-number);
+  font-size: var(--thorp-text-body);
   font-weight: 700;
 }
 

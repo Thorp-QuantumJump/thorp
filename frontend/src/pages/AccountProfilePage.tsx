@@ -97,7 +97,6 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
           </p>
         ) : null}
         <div className={styles.heading}>
-          <span className={`${styles.eyebrow} ${heading.classicOnly}`}>ACCOUNT / PROFILE</span>
           <p className={heading.eyebrow} aria-hidden="true">ACCOUNT</p>
           <h1 className={styles.title}>
             <em className={heading.emphasis}>회원정보</em> 수정
@@ -107,7 +106,6 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
 
         <section className={styles.section} aria-labelledby="profile-section-title">
           <div className={styles.sectionHeading}>
-            <span className={`${styles.sectionIndex} ${heading.classicOnly}`}>01</span>
             <span className={styles.sectionIcon} aria-hidden="true">
               <UserRound size={18} />
             </span>
@@ -169,7 +167,6 @@ export function AccountProfilePage({ preview = false }: { preview?: boolean }) {
         {learning !== 'off' ? (
           <section className={styles.section} aria-labelledby="learning-section-title">
             <div className={styles.sectionHeading}>
-              <span className={`${styles.sectionIndex} ${heading.classicOnly}`}>02</span>
               <span className={styles.sectionIcon} aria-hidden="true">
                 <BookOpenCheck size={18} />
               </span>

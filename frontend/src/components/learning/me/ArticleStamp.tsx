@@ -51,7 +51,7 @@ const TILTS = [-4, 3, -2, 5]
  * 원본이다(design-notes §6). 필터 식별자는 `useId`로 만들어 같은 도장이 여러 번 그려져도 겹치지 않는다.
  *
  * <p><b>색은 의미 토큰이다.</b> 선과 면의 색은 `ArticleStamp.module.css`가 `index.css` 토큰으로 정하고 이 파일은
- * 모양과 굵기만 정한다. 그래서 디자인 전환(`classic`)을 함께 따른다. 단계 장식 색만 `--stamp-ring`으로 넘긴다.
+ * 모양과 굵기만 정한다. 단계 장식 색만 `--stamp-ring`으로 넘긴다.
  * 각 부분에는 `data-part`를 붙여 둔다.
  */
 export function ArticleStamp({
