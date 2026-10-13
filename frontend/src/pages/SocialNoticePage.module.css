@@ -4,7 +4,7 @@
   gap: 14px;
   padding: 18px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset);
+  border-radius: var(--thorp-radius-inset, 4px);
 }
 
 .notice p {

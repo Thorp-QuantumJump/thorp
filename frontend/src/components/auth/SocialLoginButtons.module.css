@@ -40,7 +40,7 @@
   gap: 10px;
   padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: var(--thorp-radius-control);
+  border-radius: var(--thorp-radius-control, 4px);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
