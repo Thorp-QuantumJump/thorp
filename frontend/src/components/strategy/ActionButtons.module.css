@@ -20,7 +20,7 @@
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   cursor: pointer;
   text-align: right;
 }
@@ -44,7 +44,7 @@
 .reason {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.76rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.55;
   text-align: right;
   word-break: keep-all;

@@ -36,7 +36,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: var(--thorp-text-heading, 1.02rem);
+  font-size: var(--thorp-text-heading);
   font-weight: 650;
 }
 
@@ -52,7 +52,7 @@
   gap: 4px 14px;
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -125,13 +125,13 @@
   align-items: center;
   gap: 8px;
   height: 100%;
-  min-height: var(--thorp-control, 44px);
+  min-height: var(--thorp-control);
   padding: 8px 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-inset, 8px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-muted, transparent);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -183,12 +183,12 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  min-height: var(--thorp-control, 44px);
+  min-height: var(--thorp-control);
   padding: 6px 18px;
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   font: inherit;
-  font-size: var(--thorp-control-font, 0.84rem);
-  font-weight: var(--thorp-control-weight, 680);
+  font-size: var(--thorp-control-font);
+  font-weight: var(--thorp-control-weight);
   line-height: 1.25;
   text-decoration: none;
   white-space: nowrap;
@@ -210,7 +210,7 @@
 }
 
 .backtest:hover:not(:disabled) {
-  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+  background: var(--thorp-accent-hover);
 }
 
 .secondary {
@@ -250,7 +250,7 @@
   gap: 6px 18px;
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -295,7 +295,7 @@
   min-height: 24px;
   padding: 0 8px;
   border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;
@@ -310,13 +310,13 @@
   gap: 8px 12px;
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
 }
 
 .loading {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
 }
 
 .notes {
@@ -328,7 +328,7 @@
 .emptyNote {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.55;
 }
 
@@ -345,7 +345,7 @@
 .dataAsOf p {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.5;
 }
 
@@ -353,7 +353,7 @@
 .reason {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.55;
 }
 
@@ -362,7 +362,7 @@
   margin-right: 8px;
   padding: 1px 8px;
   border-radius: 4px;
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 650;
 }
 
@@ -428,18 +428,18 @@
   align-items: center;
   gap: 2px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .monthField input {
-  min-height: var(--thorp-control, 42px);
+  min-height: var(--thorp-control);
   padding: 6px 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   color: var(--thorp-foreground);
   background: var(--thorp-surface-muted, transparent);
   font: inherit;
-  font-size: var(--thorp-text-body, 0.88rem);
+  font-size: var(--thorp-text-body);
   font-variant-numeric: tabular-nums;
 }
 
@@ -456,12 +456,12 @@
 .resetButton {
   display: inline-flex;
   align-items: center;
-  min-height: var(--thorp-control, 42px);
+  min-height: var(--thorp-control);
   padding: 6px 16px;
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   font: inherit;
-  font-size: var(--thorp-control-font, 0.84rem);
-  font-weight: var(--thorp-control-weight, 650);
+  font-size: var(--thorp-control-font);
+  font-weight: var(--thorp-control-weight);
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 180ms ease, border-color 150ms ease, color 150ms ease;
@@ -474,7 +474,7 @@
 }
 
 .findButton:hover:not(:disabled) {
-  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+  background: var(--thorp-accent-hover);
 }
 
 .findButton:disabled {
@@ -509,7 +509,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--thorp-warning) 16%, transparent);
   color: var(--thorp-warning);
-  font-size: var(--thorp-text-label, 0.66rem);
+  font-size: var(--thorp-text-label);
   font-weight: 650;
 }
 
@@ -520,7 +520,7 @@
   gap: 4px 10px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.55;
 }
 
@@ -534,7 +534,7 @@
   align-items: center;
   gap: 8px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
 }
 
@@ -571,14 +571,14 @@
   margin: 0 0 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--thorp-line);
-  font-size: var(--thorp-text-heading, 1.05rem);
+  font-size: var(--thorp-text-heading);
   font-weight: 650;
   letter-spacing: -0.02em;
 }
 
 .fieldGroupTitle span {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -591,7 +591,7 @@
   gap: 4px 12px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.55;
 }
 
@@ -600,7 +600,7 @@
   border-radius: 4px;
   background: var(--thorp-line);
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 650;
 }
 
@@ -627,21 +627,21 @@
 .compositeHead h2 {
   margin: 0;
   color: var(--thorp-warning);
-  font: 600 1.6rem/1.2 var(--thorp-font-page, var(--thorp-font-body));
+  font: 600 1.6rem/1.2 var(--thorp-font-page);
   letter-spacing: -0.045em;
 }
 
 .compositeLead {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.55;
 }
 
 .basis {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -660,9 +660,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px 24px;
-  padding: var(--thorp-pad-inset, 12px 14px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 8px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-muted);
 }
 
@@ -682,14 +682,14 @@
 
 .caseRange strong {
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.86rem);
+  font-size: var(--thorp-text-body);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
 
 .caseRange span {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .caseActions {
@@ -703,33 +703,33 @@
 .pick {
   display: inline-flex;
   align-items: center;
-  min-height: var(--thorp-control, 40px);
+  min-height: var(--thorp-control);
   padding: 0 16px;
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-accent);
   color: var(--thorp-action-foreground);
-  font-size: var(--thorp-control-font, 0.82rem);
-  font-weight: var(--thorp-control-weight, 680);
+  font-size: var(--thorp-control-font);
+  font-weight: var(--thorp-control-weight);
   text-decoration: none;
   white-space: nowrap;
 }
 
 .pick:hover {
-  background: var(--thorp-accent-hover, var(--thorp-accent-soft));
+  background: var(--thorp-accent-hover);
 }
 
 .detailButton {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: var(--thorp-control, 40px);
+  min-height: var(--thorp-control);
   padding: 0 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised);
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-control-font, 0.82rem);
+  font-size: var(--thorp-control-font);
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;

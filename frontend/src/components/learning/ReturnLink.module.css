@@ -8,7 +8,7 @@
   min-height: 44px;
   margin-bottom: 20px;
   color: var(--thorp-accent-soft);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
 }
 
 .link:focus-visible {

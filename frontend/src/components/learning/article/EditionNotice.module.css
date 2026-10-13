@@ -5,7 +5,7 @@
   border: 1px solid var(--thorp-line-strong);
   border-radius: 999px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   font-weight: 500;
 }
 
@@ -13,9 +13,9 @@
   display: grid;
   gap: 10px;
   justify-items: start;
-  padding: var(--thorp-pad-inset, 16px 18px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 12px);
+  border-radius: var(--thorp-radius-inset);
 }
 
 .end p {
@@ -30,7 +30,7 @@
   /* 누르는 곳은 44×44px 이상이다(design-notes §6). */
   min-height: 44px;
   color: var(--thorp-accent-soft);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
 }
 
 .listLink:focus-visible {

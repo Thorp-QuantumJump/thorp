@@ -163,7 +163,7 @@
 }
 
 .step {
-  font-size: var(--thorp-text-caption, 0.7rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 700;
   letter-spacing: 0.08em;
   opacity: 0.8;
@@ -224,15 +224,6 @@
   mask-position: calc(var(--orb-size) * -0.76) 0;
 }
 
-.orb[data-stage='1'] .fill {
-  --thorp-orb-fill: color-mix(in oklab, var(--thorp-accent) 58%, var(--thorp-surface-raised, #1f2321));
-
-  border-radius: 47% 53% 53% 47% / 50% 50% 50% 50%;
-  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--thorp-accent) 70%, #fff 10%);
-  -webkit-mask-position: calc(var(--orb-size) * -0.42) 0;
-  mask-position: calc(var(--orb-size) * -0.42) 0;
-}
-
 .orb:disabled > .step,
 .orb:disabled > .label,
 .orb:disabled > .arrow,
@@ -255,6 +246,12 @@
 }
 
 .orb[data-stage='1'] .fill {
+  --thorp-orb-fill: color-mix(in oklab, var(--thorp-accent) 58%, var(--thorp-surface-raised, #1f2321));
+
+  border-radius: 47% 53% 53% 47% / 50% 50% 50% 50%;
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--thorp-accent) 70%, #fff 10%);
+  -webkit-mask-position: calc(var(--orb-size) * -0.42) 0;
+  mask-position: calc(var(--orb-size) * -0.42) 0;
   animation: orb-nudge var(--orb-motion);
 }
 
@@ -396,11 +393,11 @@
   max-width: 260px;
   padding: 7px 10px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised, #1f2321);
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.5;
   opacity: 0;
   pointer-events: none;

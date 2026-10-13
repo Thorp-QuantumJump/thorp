@@ -6,7 +6,7 @@
 .note {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
   word-break: keep-all;
   overflow-wrap: break-word;
@@ -24,9 +24,9 @@
   display: grid;
   justify-self: stretch;
   gap: 8px;
-  padding: var(--thorp-pad-notice, 14px 16px);
+  padding: var(--thorp-pad-notice);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 12px);
+  border-radius: var(--thorp-radius-card);
 }
 
 /* 대상 하나의 비중을 다루는 줄이다. 슬라이더와 숫자 칸이 같은 값을 보인다. */
@@ -48,14 +48,14 @@
   align-items: center;
   gap: 6px 12px;
   padding: 8px 10px;
-  border-radius: var(--thorp-radius-inset, 10px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
 }
 
 .weightRow [data-slot='weight-label'] {
   flex: 0 0 8rem;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   overflow-wrap: anywhere;
 }
 
@@ -83,26 +83,26 @@
 
 .weightRow [data-slot='weight-field'] {
   width: 5.5rem;
-  padding: var(--thorp-control-pad-block, 6px) 10px;
+  padding: var(--thorp-control-pad-block) 10px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-control, var(--thorp-radius-inset, 8px));
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface);
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-text-body, 0.86rem);
-  min-height: var(--thorp-control-sm, auto);
+  font-size: var(--thorp-text-body);
+  min-height: var(--thorp-control-sm);
 }
 
 .weightRow [data-slot='weight-unit'] {
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
 }
 
 /* 받지 않은 입력을 알리는 한 문장이다. 그 자리에 둔다. */
 .weightRow [data-slot='weight-error'] {
   flex-basis: 100%;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.5;
 }
 
@@ -113,16 +113,16 @@
   align-items: center;
   gap: 8px 14px;
   margin-top: 4px;
-  padding: var(--thorp-pad-inset, 10px 12px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 10px);
+  border-radius: var(--thorp-radius-inset);
 }
 
 .weightTotal p {
   grid-column: 1;
   grid-row: 1;
   margin: 0;
-  font-size: var(--thorp-text-body, 0.86rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
@@ -165,18 +165,18 @@
 .weightTotal button {
   grid-column: 2;
   grid-row: 1;
-  padding: var(--thorp-control-pad-block, 6px) 12px;
+  padding: var(--thorp-control-pad-block) 12px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 999px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
+  min-height: var(--thorp-control-sm);
 }
 
 .weightTotal button:hover {
@@ -194,11 +194,11 @@
   min-height: 26px;
   padding: 0 4px;
   border: 0;
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
 }
 
@@ -213,11 +213,11 @@
 
 .violations {
   margin: 0;
-  padding: var(--thorp-pad-inset, 10px 14px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-warning);
-  border-radius: var(--thorp-radius-inset, 10px);
+  border-radius: var(--thorp-radius-inset);
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 

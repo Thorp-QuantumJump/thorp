@@ -32,8 +32,6 @@ export default defineConfig({
       'src/hooks/*.test.ts',
       'src/components/records/*.test.ts',
       'src/test/resultFixtures.test.ts',
-      // 저장소 전체 스타일이 classic에서 비우는 토큰을 대체값과 함께 쓰는지 본다.
-      'src/test/classicTokenFallbacks.test.ts',
       'src/diagnosis/**/*.test.ts',
       'src/marketflow/**/*.test.ts',
       'src/utils/analysisPeriod.test.ts',

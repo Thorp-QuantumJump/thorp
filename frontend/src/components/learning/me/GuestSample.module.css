@@ -79,7 +79,7 @@
   min-width: 44px;
   min-height: 44px;
   color: var(--thorp-accent-soft);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   font-weight: 650;
   text-decoration: underline;
   text-underline-offset: 3px;

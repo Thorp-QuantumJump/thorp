@@ -43,10 +43,6 @@ npm run lint && npm run build && npm test
   가입 성공 시 지운다.
 - `sessionStorage` 키 `thorp.auth.loginEmail`은 로그인 화면에 쳐 둔 이메일을 보관한다.
   **비밀번호는 넣지 않는다.** 로그인 성공 시 지운다.
-- `localStorage` 키 `thorp.design`은 디자인 개편 전후 전환값(`classic`·`new`)이다. `index.html`이 `?design=`에서 받아
-  저장하고, `classic`이면 `<html data-design="classic">`을 붙인다. 새 색·모서리 토큰은 `index.css`의 기본 `:root`에,
-  예전 값은 `[data-design='classic']`에 둔다. 개편 뒤 새로 생긴 토큰은 각 자리에서 `var(--토큰, 예전 값)`으로 쓰고
-  classic에서 `initial`로 비운다 — 이 폴백을 빼면 classic이 예전 화면으로 돌아가지 않는다.
 - 값의 오르내림(수익률 부호 등)은 `--thorp-up`·`--thorp-down`(상승 빨강·하락 파랑)을 쓴다. `--thorp-positive`·
   `--thorp-negative`는 성공·오류 상태 색이다. 시장 지표의 `tone`은 오르내림이 아니라 판단(좋음·나쁨)이라 여기에 섞지 않는다.
 - `sessionStorage` 키: `thorp.strategySettings`(003 설정값), `thorp.diagnosis.sectorSelection`(002 인계 계약). 둘 다 탭 수명이며, 003은 002의 `diagnosis/selectionStorage`를 통해 섹터 선택을 읽는다. 이전 대역 키 `thorp.sectorSelection`은 사용하지 않는다.

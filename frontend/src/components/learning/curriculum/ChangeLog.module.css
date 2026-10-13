@@ -2,7 +2,7 @@
   margin-top: 20px;
   padding-top: 14px;
   border-top: 1px solid var(--thorp-line);
-  scroll-margin-top: calc(var(--thorp-header-height, 64px) + 16px);
+  scroll-margin-top: calc(var(--thorp-header-height) + 16px);
 }
 
 .summary {

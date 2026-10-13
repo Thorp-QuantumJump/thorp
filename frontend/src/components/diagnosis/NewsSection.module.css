@@ -5,10 +5,10 @@
 .section {
   display: grid;
   gap: 16px;
-  margin-top: var(--thorp-flow-gap, 28px);
-  padding: var(--thorp-pad-card, 20px 24px);
+  margin-top: var(--thorp-flow-gap);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 12px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
@@ -32,7 +32,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: var(--thorp-text-heading, 1.05rem);
+  font-size: var(--thorp-text-heading);
   font-weight: 650;
 }
 
@@ -45,7 +45,7 @@
 .meta {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -54,7 +54,7 @@
 .empty {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
 }
 
 .empty,
@@ -75,13 +75,13 @@
 
 .group {
   position: relative;
-  min-height: var(--thorp-control-sm, 32px);
+  min-height: var(--thorp-control-sm);
   padding: 0 2px;
   border: 0;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   font-weight: 600;
   cursor: pointer;
   transition: color 150ms ease;
@@ -116,14 +116,14 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  min-height: var(--thorp-control-sm, 32px);
+  min-height: var(--thorp-control-sm);
   padding: 0 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
@@ -174,7 +174,7 @@
 .partTitle {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   font-weight: 650;
 }
 
@@ -194,7 +194,7 @@
   gap: 8px;
   padding: 18px 20px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 8px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-muted, transparent);
 }
 
@@ -217,7 +217,7 @@
 .summary {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
   word-break: keep-all;
 }
@@ -238,7 +238,7 @@
   padding: 10px 0 0;
   border-top: 1px dashed var(--thorp-line);
   list-style: none;
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .reports li {
@@ -277,7 +277,7 @@
   background: transparent;
   color: var(--thorp-muted);
   font: inherit;
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
   cursor: pointer;
 }
 
@@ -314,7 +314,7 @@
 
 .itemTitle {
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.88rem);
+  font-size: var(--thorp-text-body);
   font-weight: 600;
   line-height: 1.45;
   text-decoration: none;
@@ -343,7 +343,7 @@
   padding-bottom: 6px;
   border-bottom: 1px solid var(--thorp-line-strong);
   color: var(--thorp-accent-soft);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   font-weight: 680;
 }
 
@@ -353,7 +353,7 @@
   align-items: center;
   gap: 8px 12px;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
 }
 
 .failure p {
@@ -364,11 +364,11 @@
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid var(--thorp-line-control, var(--thorp-line-strong));
-  border-radius: var(--thorp-radius-control, 6px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   cursor: pointer;
 }
 

@@ -9,12 +9,6 @@
   min-width: 0;
 }
 
-:global([data-design='classic']) .figure {
-  --result-line-secondary: #0876a9;
-  --result-line-tertiary: #7952ae;
-  --result-line-quaternary: #a3681c;
-}
-
 .seriesKey {
   display: flex;
   flex-wrap: wrap;
@@ -85,13 +79,13 @@
 
 /* 확대를 풀고 전체 기간으로 돌아가는 단추. 눈금 단추와 같은 높이·글자로 둔다. */
 .zoomReset {
-  min-height: var(--thorp-control-sm, auto);
-  padding: var(--thorp-control-pad-block, 3px) 12px;
+  min-height: var(--thorp-control-sm);
+  padding: var(--thorp-control-pad-block) 12px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-control, 999px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface);
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
   cursor: pointer;
 }
@@ -112,7 +106,7 @@
 
 .heading {
   margin: 0;
-  font-size: var(--thorp-text-heading, 1.1rem);
+  font-size: var(--thorp-text-heading);
   font-weight: 650;
 }
 
@@ -126,20 +120,20 @@
   padding: 2px;
   border: 1px solid var(--thorp-line);
   /* 안쪽 버튼 모서리에 틀의 여백(2px)과 테두리(1px)를 더한다. */
-  border-radius: calc(var(--thorp-radius-control, 996px) + 3px);
+  border-radius: calc(var(--thorp-radius-control) + 3px);
   background: var(--thorp-surface);
 }
 
 .scaleButton {
-  padding: var(--thorp-control-pad-block, 3px) 12px;
+  padding: var(--thorp-control-pad-block) 12px;
   border: 0;
-  border-radius: var(--thorp-radius-control, 999px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
   cursor: pointer;
-  min-height: var(--thorp-control-sm, auto);
+  min-height: var(--thorp-control-sm);
 }
 
 .scaleButton:hover {
@@ -169,7 +163,7 @@
   width: 100%;
   min-width: 0;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 
   /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */
@@ -189,7 +183,7 @@
   flex-wrap: wrap;
   gap: 6px 18px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
 }
 

@@ -1,13 +1,13 @@
 .panel {
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 12px);
-  padding: var(--thorp-pad-card, 16px);
+  border-radius: var(--thorp-radius-card);
+  padding: var(--thorp-pad-card);
   background: var(--thorp-surface);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .panel h2 {
-  font-size: var(--thorp-text-heading, 1rem);
+  font-size: var(--thorp-text-heading);
   margin: 0 0 12px;
 }
 .panel p {
@@ -21,7 +21,7 @@
 }
 .candidates p {
   margin: 6px 0 0;
-  font-size: var(--thorp-text-body, 0.85rem);
+  font-size: var(--thorp-text-body);
   color: var(--thorp-copy);
 }
 .actions {
@@ -44,9 +44,9 @@
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100svh - 32px);
   overflow-y: auto;
-  padding: var(--thorp-pad-card, 24px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 16px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   line-height: 1.7;
@@ -63,7 +63,7 @@
   overflow: hidden;
   padding: 16px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 12px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   box-shadow: 0 14px 36px rgb(0 0 0 / 24%);
@@ -225,7 +225,7 @@ button.chipBody:focus-visible {
   min-height: 32px;
   padding: 4px 8px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   font: inherit;
