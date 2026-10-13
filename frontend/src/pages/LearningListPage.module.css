@@ -3,20 +3,20 @@
   overflow-x: clip;
   background: var(--thorp-background);
   color: var(--thorp-foreground);
-  font-family: var(--thorp-font-page, inherit);
+  font-family: var(--thorp-font-page);
 }
 
 .main {
-  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow, var(--thorp-page-width)));
+  width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width-flow));
   margin: 0 auto;
   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);
 }
 
 .title {
   margin: 0;
-  font-size: var(--thorp-text-title, clamp(1.9rem, 5vw, 3.2rem));
-  line-height: var(--thorp-title-leading, 1.05);
-  letter-spacing: var(--thorp-title-tracking, -0.05em);
+  font-size: var(--thorp-text-title);
+  line-height: var(--thorp-title-leading);
+  letter-spacing: var(--thorp-title-tracking);
   font-weight: 700;
 }
 
@@ -24,14 +24,12 @@
 .empty {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.95rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.7;
 }
 
 .list {
-  display: flex;
   flex-direction: column;
-  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -41,16 +39,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: var(--thorp-pad-card, 18px 20px);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
   color: inherit;
   text-decoration: none;
-}
-
-.item:hover {
-  border-color: var(--thorp-line-strong);
 }
 
 .item:focus-visible {
@@ -58,42 +51,25 @@
   outline-offset: var(--thorp-focus-offset);
 }
 
-.itemTitle {
-  font-size: var(--thorp-text-heading, 1.05rem);
-  font-weight: 600;
-}
-
-.itemQuestion {
-  color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.92rem);
-  line-height: 1.6;
-}
-
-/* 글 번호와 화살표. classic에는 없던 요소라 기본은 숨기고 새 디자인에서 켠다. */
-.itemIndex,
-.itemArrow {
-  display: none;
-}
-
 /*
-  새 디자인: 목록을 첫 화면 카드처럼 격자로 늘어놓는다. 카드는 번호·제목·질문·화살표 네 줄이고, 올리면
+  목록을 첫 화면 카드처럼 격자로 늘어놓는다. 카드는 번호·제목·질문·화살표 네 줄이고, 올리면
   테두리가 밝아지며 살짝 떠오른다.
 */
-:global(:root:not([data-design='classic'])) .list {
+.list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
 @media (max-width: 1000px) {
-  :global(:root:not([data-design='classic'])) .list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
-  :global(:root:not([data-design='classic'])) .list { grid-template-columns: 1fr; }
+  .list { grid-template-columns: 1fr; }
 }
 
-:global(:root:not([data-design='classic'])) .item {
+.item {
   position: relative;
   height: 100%;
   min-height: 176px;
@@ -101,12 +77,12 @@
   transition: border-color 180ms ease, transform 180ms ease;
 }
 
-:global(:root:not([data-design='classic'])) .item:hover {
+.item:hover {
   border-color: var(--thorp-line-control-hover);
   transform: translateY(var(--thorp-cta-lift));
 }
 
-:global(:root:not([data-design='classic'])) .itemIndex {
+.itemIndex {
   display: block;
   margin-bottom: 6px;
   color: var(--thorp-ornament);
@@ -115,18 +91,19 @@
   font-variant-numeric: tabular-nums;
 }
 
-:global(:root:not([data-design='classic'])) .itemTitle {
+.itemTitle {
   font-size: var(--thorp-text-heading);
   font-weight: 650;
 }
 
-:global(:root:not([data-design='classic'])) .itemQuestion {
+.itemQuestion {
+  line-height: 1.6;
   padding-right: 28px;
   color: var(--thorp-muted);
   font-size: var(--thorp-text-body);
 }
 
-:global(:root:not([data-design='classic'])) .itemArrow {
+.itemArrow {
   display: block;
   position: absolute;
   right: 20px;
@@ -135,14 +112,14 @@
   transition: transform 180ms ease;
 }
 
-:global(:root:not([data-design='classic'])) .item:hover .itemArrow {
+.item:hover .itemArrow {
   transform: translate(2px, -2px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(:root:not([data-design='classic'])) .item,
-  :global(:root:not([data-design='classic'])) .itemArrow { transition: none; }
-  :global(:root:not([data-design='classic'])) .item:hover { transform: none; }
+  .item,
+  .itemArrow { transition: none; }
+  .item:hover { transform: none; }
 }
 
 /* 첫 단계를 공개한 뒤: 보기 전환과 읽는 순서 안내를 한 줄에 둔다(design-notes §3.1, 목업 .vrow). */

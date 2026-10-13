@@ -12,7 +12,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--thorp-line-control);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;

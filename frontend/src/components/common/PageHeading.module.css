@@ -1,13 +1,9 @@
 /*
   화면 제목 머리(PageHeading 계열). 첫 화면 구역 제목과 같은 짜임이다 — 초록 영문 작은 제목(eyebrow)과
   제목 한 낱말에 얹는 초록 그라데이션(emphasis). 화면마다 베껴 두지 않고 여기 하나만 둔다.
-  classic에는 없던 요소라 작은 제목은 숨기고 강조는 글자 그대로 둔다.
 */
-.eyebrow {
-  display: none;
-}
 
-:global(:root:not([data-design='classic'])) .eyebrow {
+.eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -18,7 +14,7 @@
   letter-spacing: 0.19em;
 }
 
-:global(:root:not([data-design='classic'])) .eyebrow::before {
+.eyebrow::before {
   width: 28px;
   height: 1px;
   background: var(--thorp-accent);
@@ -27,9 +23,6 @@
 
 .emphasis {
   font-style: normal;
-}
-
-:global(:root:not([data-design='classic'])) .emphasis {
   background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);
   background-clip: text;
   color: transparent;
@@ -55,18 +48,9 @@
   padding: 0 0 3px 22px;
   border-left: 1px solid var(--thorp-line-strong);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.65;
   word-break: keep-all;
-}
-
-/* classic 에는 없던 머리다. 예전 화면으로 돌아가도록 안내 문장은 숨기고 제목만 한 칸으로 둔다. */
-:global(:root[data-design='classic']) .hero {
-  display: block;
-}
-
-:global(:root[data-design='classic']) .lead {
-  display: none;
 }
 
 /* 안내 문장은 뜻이 나뉘는 자리에서 줄을 바꾼다. 줄마다 span 하나다. */
@@ -86,9 +70,4 @@
     padding: 0;
     border: 0;
   }
-}
-
-/* 새 디자인 머리 짜임으로 바뀌며 자리를 내준 예전 요소(영문 작은 제목, 구역 번호). classic에서만 보인다. */
-:global(:root:not([data-design='classic'])) .classicOnly {
-  display: none;
 }

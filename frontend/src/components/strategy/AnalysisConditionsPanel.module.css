@@ -1,7 +1,7 @@
 /* 행 안 폼에서만 쓰는 작은 규칙. 행·묶음의 모양은 SettingRow.module.css 가 갖는다. */
 .dateLabel {
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
 }
 
 /* '최대 범위 선택'을 되돌리는 아이콘. 행 이름 옆 기본값 복원 아이콘(SettingRow .reset)과 같은 모양이다. */

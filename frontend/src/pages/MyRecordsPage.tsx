@@ -1,4 +1,3 @@
-import { FolderClock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getRegimeBaselineMonths } from '@/api/regime'
@@ -94,11 +93,6 @@ export function MyRecordsPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.main} aria-labelledby="records-title">
-        {/* classic은 예전의 아이콘 작은 제목, 새 디자인은 첫 화면과 같은 선 작은 제목이다. */}
-        <p className={`${styles.eyebrow} ${heading.classicOnly}`}>
-          <FolderClock size={15} aria-hidden="true" />
-          MY RECORDS
-        </p>
         {/* 다른 주요 화면과 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다. */}
         <header className={heading.hero}>
           <div>

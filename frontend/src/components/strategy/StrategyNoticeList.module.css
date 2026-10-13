@@ -15,7 +15,7 @@
   align-items: flex-start;
   gap: 8px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.55;
   word-break: keep-all;
   overflow-wrap: break-word;

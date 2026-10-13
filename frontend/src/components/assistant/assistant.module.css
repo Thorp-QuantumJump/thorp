@@ -64,7 +64,7 @@
   max-height: min(600px, var(--radix-popover-content-available-height, calc(100svh - 32px)));
   overflow: hidden;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 12px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   box-shadow: 0 14px 36px rgb(0 0 0 / 24%);
@@ -80,7 +80,7 @@
   max-height: 80svh;
   border: 1px solid var(--thorp-line-strong);
   border-bottom: 0;
-  border-radius: var(--thorp-radius-card, 12px) var(--thorp-radius-card, 12px) 0 0;
+  border-radius: var(--thorp-radius-card) var(--thorp-radius-card) 0 0;
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
   box-shadow: 0 -10px 30px rgb(0 0 0 / 22%);
@@ -133,7 +133,7 @@
 .notice {
   margin: 0;
   padding: 8px 10px;
-  border-radius: var(--thorp-radius-inset, 8px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-accent-soft, var(--thorp-background));
   font-size: 0.85rem;
   color: var(--thorp-action-foreground, var(--thorp-copy));
@@ -254,7 +254,7 @@
   resize: vertical;
   padding: 8px 10px;
   border: 1px solid var(--thorp-line-control, var(--thorp-line));
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-background);
   color: var(--thorp-foreground);
   font: inherit;

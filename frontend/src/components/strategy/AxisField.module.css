@@ -16,14 +16,14 @@
   width: min(100%, 180px);
   text-align: right;
   font-variant-numeric: tabular-nums;
-  padding: var(--thorp-control-pad-block, 7px) 12px;
+  padding: var(--thorp-control-pad-block) 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-text-body, 0.9rem);
-  min-height: var(--thorp-control, auto);
+  font-size: var(--thorp-text-body);
+  min-height: var(--thorp-control);
 }
 
 .input[aria-invalid="true"] {
@@ -50,11 +50,11 @@
   max-width: min(440px, 80vw);
   padding: 7px 10px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: var(--thorp-surface-raised, var(--thorp-surface));
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.5;
   pointer-events: none;
   word-break: keep-all;
@@ -71,7 +71,7 @@
 .hint {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   text-align: right;
   word-break: keep-all;
   overflow-wrap: break-word;
@@ -80,7 +80,7 @@
 .problem {
   margin: 0;
   color: var(--thorp-warning);
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
   line-height: 1.6;
   text-align: right;
   word-break: keep-all;
@@ -95,20 +95,20 @@
 }
 
 .quickAddButton {
-  padding: var(--thorp-control-pad-block, 4px) 11px;
+  padding: var(--thorp-control-pad-block) 11px;
   border: 1px solid var(--thorp-line-strong);
   border-radius: 999px;
   background: transparent;
   color: var(--thorp-copy);
   font: inherit;
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: border-color 0.14s ease, color 0.14s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--thorp-control-sm, auto);
+  min-height: var(--thorp-control-sm);
 }
 
 .quickAddButton:hover:not(:disabled) {

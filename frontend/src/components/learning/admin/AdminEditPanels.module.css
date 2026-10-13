@@ -24,7 +24,7 @@
 .field textarea {
   padding: 9px 12px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 8px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-foreground);
   font: inherit;
@@ -43,9 +43,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  padding: var(--thorp-pad-card, 20px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
@@ -70,9 +70,9 @@
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 10px;
-  padding: var(--thorp-pad-inset, 12px);
+  padding: var(--thorp-pad-inset);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-inset, 10px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
 }
 
@@ -82,9 +82,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding: var(--thorp-pad-notice, 18px);
+  padding: var(--thorp-pad-notice);
   border: 1px solid var(--thorp-negative);
-  border-radius: var(--thorp-radius-card, 14px);
+  border-radius: var(--thorp-radius-card);
 }
 
 .restore h2 {

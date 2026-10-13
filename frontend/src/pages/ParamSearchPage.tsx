@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronDown, LogIn, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, ChevronDown, LogIn } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'
@@ -343,11 +343,6 @@ export function ParamSearchPage() {
       <AppHeader />
 
       <main className={styles.main} aria-labelledby="param-search-title">
-        {/* classic은 예전의 한글 작은 제목, 새 디자인은 첫 화면과 같은 영문 작은 제목이다. */}
-        <div className={`${styles.eyebrow} ${heading.classicOnly}`}>
-          <SlidersHorizontal size={16} aria-hidden="true" />
-          설정 조합 자동 비교
-        </div>
         <p className={heading.eyebrow} aria-hidden="true">STEP 02 · AUTO COMPARE</p>
         <div className={styles.headline}>
           <h1 id="param-search-title">한 번에 여러 설정을 <em className={heading.emphasis}>같은 조건</em>으로 비교합니다</h1>
