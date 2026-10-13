@@ -39,7 +39,7 @@
 }
 
 .table tbody {
-  scroll-margin-top: calc(var(--thorp-header-height, 64px) + 16px);
+  scroll-margin-top: calc(var(--thorp-header-height) + 16px);
 }
 
 .table .rail {
@@ -349,7 +349,7 @@
 
 .narrowList > li {
   position: relative;
-  scroll-margin-top: calc(var(--thorp-header-height, 64px) + 16px);
+  scroll-margin-top: calc(var(--thorp-header-height) + 16px);
 }
 
 .groupHead {

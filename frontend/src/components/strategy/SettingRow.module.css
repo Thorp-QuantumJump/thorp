@@ -18,7 +18,7 @@
 .groupTitle {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -66,7 +66,7 @@
   gap: 2px;
   min-width: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -74,7 +74,7 @@
 .unit {
   margin-left: 4px;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 400;
 }
 
@@ -161,7 +161,7 @@
   justify-content: flex-end;
   gap: 6px;
   min-width: 0;
-  font-size: var(--thorp-text-body, 0.88rem);
+  font-size: var(--thorp-text-body);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -191,7 +191,7 @@
 .caption {
   margin: -4px 0 10px;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.55;
   text-align: right;
   word-break: keep-all;
@@ -232,7 +232,7 @@
   border: 1px solid transparent;
   border-radius: 999px;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease;
@@ -288,7 +288,7 @@
   background: var(--thorp-surface-raised, var(--thorp-surface));
   color: inherit;
   font: inherit;
-  font-size: var(--thorp-text-small, 0.8rem);
+  font-size: var(--thorp-text-small);
 }
 
 .select:focus-visible {

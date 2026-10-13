@@ -12,7 +12,7 @@
 .retryError {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.9rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.7;
   overflow-wrap: anywhere;
 }

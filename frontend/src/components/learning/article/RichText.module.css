@@ -37,10 +37,10 @@
   max-width: min(260px, calc(100vw - 32px));
   padding: 6px 10px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-inset, 8px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-raised);
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-caption, 0.75rem);
+  font-size: var(--thorp-text-caption);
   line-height: 1.4;
   text-decoration: none;
   vertical-align: baseline;

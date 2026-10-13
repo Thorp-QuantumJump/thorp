@@ -75,7 +75,7 @@
 .region {
   position: relative;
   z-index: 1;
-  scroll-margin-top: calc(var(--thorp-header-height, 64px) + 16px);
+  scroll-margin-top: calc(var(--thorp-header-height) + 16px);
 }
 
 .pendingRegion {

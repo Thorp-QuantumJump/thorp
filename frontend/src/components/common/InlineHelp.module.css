@@ -36,9 +36,9 @@
   width: min(320px, calc(100vw - 32px));
   max-height: calc(100svh - 32px);
   overflow-y: auto;
-  padding: var(--thorp-pad-notice, 14px 16px);
+  padding: var(--thorp-pad-notice);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 12px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface-raised);
   box-shadow: var(--thorp-shadow);
   color: var(--thorp-foreground);

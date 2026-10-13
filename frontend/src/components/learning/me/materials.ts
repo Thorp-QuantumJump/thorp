@@ -8,7 +8,7 @@ import type { MedalKind } from './medalShapes'
  *
  * <p><b>식별자는 그림마다 따로다.</b> 같은 그림이 한 화면에 여러 번 그려지므로 부르는 쪽이 `useId`로 만든 앞머리를
  * 넘기고, 여기서 `{앞머리}-{재질}`로 붙인다. <b>의미 토큰과 같은 색은 값으로 쓰지 않는다.</b> 브랜드 초록 두 단은
- * `materials.module.css`의 클래스가 토큰으로 칠한다(디자인 전환 `classic`을 함께 따른다).
+ * `materials.module.css`의 클래스가 토큰으로 칠한다.
  */
 
 /**

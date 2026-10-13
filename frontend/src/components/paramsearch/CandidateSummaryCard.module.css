@@ -1,9 +1,9 @@
 .card {
   display: grid;
   gap: 12px;
-  padding: var(--thorp-pad-card, 15px 16px);
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-card, 6px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
@@ -15,7 +15,7 @@
 
 .strategy {
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-body, 0.84rem);
+  font-size: var(--thorp-text-body);
   font-weight: 700;
 }
 
@@ -33,20 +33,20 @@
   min-width: 0;
   padding: 6px 10px;
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-inset, 5px);
+  border-radius: var(--thorp-radius-inset);
   background: var(--thorp-surface-muted, transparent);
 }
 
 .settings dt {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-label, 0.64rem);
+  font-size: var(--thorp-text-label);
   line-height: 1.3;
 }
 
 .settings dd {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-small, 0.78rem);
+  font-size: var(--thorp-text-small);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1.3;
@@ -55,7 +55,7 @@
 .noParameters {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.72rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .metrics {
@@ -79,14 +79,14 @@
 
 .metrics dt {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-label, 0.66rem);
+  font-size: var(--thorp-text-label);
   line-height: 1.35;
 }
 
 .metrics dd {
   margin: 0;
   color: var(--thorp-foreground);
-  font-size: var(--thorp-text-heading, 1.02rem);
+  font-size: var(--thorp-text-heading);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -102,7 +102,7 @@
 
 .absent {
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-caption, 0.76rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 600;
 }
 
@@ -129,7 +129,7 @@
 .compare label {
   color: var(--thorp-copy);
   cursor: pointer;
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
 }
 
 .compare input:focus-visible {
@@ -138,14 +138,14 @@
 }
 
 .detailButton {
-  min-height: var(--thorp-control, 34px);
+  min-height: var(--thorp-control);
   padding: 0 13px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 5px);
+  border-radius: var(--thorp-radius-control);
   background: transparent;
   color: var(--thorp-foreground);
   cursor: pointer;
-  font-size: var(--thorp-text-caption, 0.74rem);
+  font-size: var(--thorp-text-caption);
   font-weight: 700;
 }
 

@@ -14,7 +14,7 @@
 .sourcesLabel {
   margin: 0;
   color: var(--thorp-muted);
-  font-size: var(--thorp-text-small, 0.82rem);
+  font-size: var(--thorp-text-small);
   font-weight: 500;
 }
 

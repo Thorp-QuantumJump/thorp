@@ -17,8 +17,8 @@
   min-height: 48px;
   padding: 0 14px;
   border: 1px solid var(--thorp-line-strong);
-  border-radius: var(--thorp-radius-control, 5px);
-  background: var(--thorp-overlay, rgb(3 8 5 / 72%));
+  border-radius: var(--thorp-radius-control);
+  background: var(--thorp-overlay);
   color: var(--thorp-foreground);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
@@ -29,7 +29,7 @@
 }
 
 .field input:hover:not(:disabled) {
-  border-color: var(--thorp-input-hover, rgb(134 242 168 / 38%));
+  border-color: var(--thorp-input-hover);
 }
 
 .field input:focus-visible {
@@ -113,7 +113,7 @@
 .submitButton,
 .secondaryButton {
   min-height: 48px;
-  border-radius: var(--thorp-radius-control, 4px);
+  border-radius: var(--thorp-radius-control);
   font-weight: 720;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;

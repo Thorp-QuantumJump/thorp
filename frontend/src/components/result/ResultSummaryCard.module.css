@@ -21,7 +21,7 @@
   gap: 4px 16px;
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.88rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -50,7 +50,7 @@
 */
 .metricLabel {
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-heading, 1.1rem);
+  font-size: var(--thorp-text-heading);
   font-weight: 650;
   display: inline-flex;
   align-items: center;
@@ -61,58 +61,58 @@
 
 .metricValue {
   margin: 0;
-  font-family: var(--thorp-font-number, var(--thorp-font-mono));
+  font-family: var(--thorp-font-number);
   font-variant-numeric: tabular-nums;
   font-size: clamp(1.5rem, 2.6vw, 2rem);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  font-weight: var(--thorp-number-weight, 400);
+  font-weight: var(--thorp-number-weight);
 }
 
 /*
-  디자인 개편: 세 지표를 한 상자에 담고 칸 사이를 세로줄로 나눈다(S15P21E205-451). classic은 예전처럼 상자 없이 둔다.
+  디자인 개편: 세 지표를 한 상자에 담고 칸 사이를 세로줄로 나눈다(S15P21E205-451).
 */
-:global(:root:not([data-design='classic'])) .card {
-  padding: var(--thorp-pad-card, 20px 24px);
+.card {
+  padding: var(--thorp-pad-card);
   border: 1px solid var(--thorp-line);
-  border-radius: var(--thorp-radius-card, 12px);
+  border-radius: var(--thorp-radius-card);
   background: var(--thorp-surface);
 }
 
-:global(:root:not([data-design='classic'])) .metric + .metric {
+.metric + .metric {
   padding-left: 32px;
   border-left: 1px solid var(--thorp-line);
 }
 
 @media (max-width: 600px) {
-  :global(:root:not([data-design='classic'])) .metric + .metric {
+  .metric + .metric {
     padding-left: 0;
     border-left: 0;
   }
 
-  :global(:root:not([data-design='classic'])) .metric:nth-child(2) {
+  .metric:nth-child(2) {
     padding-left: 16px;
     border-left: 1px solid var(--thorp-line);
   }
 }
 
-/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */
-:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }
-:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }
+/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. */
+.metricValue[data-direction='up'] { color: var(--thorp-up); }
+.metricValue[data-direction='down'] { color: var(--thorp-down); }
 
 .note {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.88rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.65;
 }
 
 .valuationNote {
   margin: 0;
   color: var(--thorp-copy);
-  font-size: var(--thorp-text-body, 0.85rem);
+  font-size: var(--thorp-text-body);
   line-height: 1.6;
 }
 
@@ -126,10 +126,6 @@
 }
 
 @media (max-width: 600px) {
-  .card {
-    padding: 8px 0;
-  }
-
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
